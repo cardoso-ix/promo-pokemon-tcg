@@ -1,0 +1,1 @@
+=INSERT INTO promos_log (item_id, decision, reason) VALUES (NULL, 'varredura_loja', '{{ $('Extrair Ofertas das Lojas').item.json.reason }}');

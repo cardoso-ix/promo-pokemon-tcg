@@ -39,4 +39,5 @@ mexer em Code node ou em consulta.
 
 | Data | O que estava valendo |
 | --- | --- |
+| 2026-08-14 | Cupom só em `cupons_itens`, `wid` no link, reconferência de preço no Publisher. Scanner `983e2ec5`, Publisher `9f003450` ([Decisão 39](../docs/historico-de-decisoes.md#decisão-39--cupom-só-no-produto-testado-e-link-com-wid)). |
 | 2026-08-13 | Trava de afiliado e de foto no Publisher, filtro de título só-TCG, link `matt_word` + `matt_tool`. **Atenção:** este snapshot é da **tarde**. A noite de 13/08 ainda mudou o ritmo para Scanner **5 min** / Publisher **2 min**, ligou o Health Alert e o repost por queda de preço. Em **14/08** o teto horário passou a **6**/hora e o filtro passou a aceitar acessórios TCG com Pokémon. Restaurar só esta pasta **sem** olhar o n8n volta intervalos, teto e filtro velhos. |

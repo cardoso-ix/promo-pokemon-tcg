@@ -1,13 +1,15 @@
 # Estado atual — o que está rodando e o que falta decidir
 
-**Última atualização:** 14/08/2026, ~18h43 BRT
+**Última atualização:** 14/08/2026, ~18h55 BRT
 **Situação:** **o bot está no ar de ponta a ponta e só publica com link de afiliado e com
 foto.** Nove lojas ativas, desconto mínimo **10%** em `pokemon`/`copag` e **15%** nas outras
 ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)), teto
 **40**/dia e **6**/hora. Scanner a cada **5 min**, Publisher a cada **2 min** (8h–22h BRT).
 Item **já postado** cuja vitrine ficou mais barata (≥ 5% ou ≥ R$ 5) volta para a fila
 ([Decisão 33](historico-de-decisoes.md#decisão-33--repostar-se-o-preço-da-vitrine-cair-depois-do-post)).
-Cupom `BRINQUEDOS` **desligado** ([Decisão 36](historico-de-decisoes.md#decisão-36--desligar-brinquedos-não-dá-para-saber-qual-item-aceita)).
+Cupom `BRINQUEDOS` **ligado até 16/08 23h59 BRT**, só nos 10 produtos testados
+([Decisão 39](historico-de-decisoes.md#decisão-39--cupom-só-no-produto-testado-e-link-com-wid)).
+Link de compra agora leva `wid`. Publisher `9f003450`, Scanner `983e2ec5`.
 Filtro vigente: cartas Pokémon (plural) e acessórios TCG com Pokémon no título
 ([Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)).
 A listagem completa da loja via ScraperAPI foi investigada e **não foi construída**.

@@ -1,0 +1,1 @@
+=INSERT INTO promos_log (item_id, decision, reason) VALUES ('{{ $("Format PT-BR Message").item.json.item_id }}', 'posted', 'publicado no telegram');

@@ -143,22 +143,37 @@ existiu um `TMP Pokemon SQL Console 3`, que foi arquivado; se você encontrar al
 
 ## 3. Cadastrar um cupom
 
-Quando o Mercado Livre anunciar uma campanha de cupom (você recebe isso pelos canais
-oficiais de afiliados), cadastre aqui e o cupom passa a aparecer nos posts automaticamente,
-sem precisar mexer em workflow nenhum.
+**Caminho normal (14/08 em diante):** teste o código no Mercado Livre, depois mande neste
+chat: código, o que ele faz, mínimo, validade e **os links/MLB que aceitaram**. O agente
+grava em `cupons` + `cupons_itens`. Sem produto na lista, o post sai **sem** cupom.
+
+Modelo da mensagem:
+
+- Código `BRINQUEDOS`
+- 15% OFF, mínimo R$ 59, até 16/08/2026 23h59
+- Liberado em: `MLB4836905147` e este link `https://www.mercadolivre.com.br/...`
+
+Para desligar: “desliga o BRINQUEDOS”. Para incluir outro: “libera também este link”.
+
+SQL direto ainda funciona, mas **um INSERT só em `cupons` não cola em ninguém** — falta
+a linha em `cupons_itens`.
 
 ### Cadastrar 🟡
 
 ```sql
 INSERT INTO cupons (codigo, descricao, valor_minimo_cents, valido_ate, prioridade, observacao)
 VALUES (
-    'MELI10',                                 -- o código digitável
-    '10% OFF em Cartas Colecionáveis',        -- o texto que aparece no post
-    7900,                                     -- pedido mínimo em CENTAVOS (R$ 79,00)
-    '2026-08-20 23:59:00-03',                 -- validade, com o -03 do fuso de Brasília
-    100,                                      -- prioridade: o maior vence se houver vários
+    'MELI10',
+    '10% OFF em Cartas Colecionáveis',
+    7900,
+    '2026-08-20 23:59:00-03',
+    100,
     'campanha de agosto, veio pelo canal de afiliados'
 );
+
+INSERT INTO cupons_itens (cupom_id, item_id, catalog_id)
+SELECT id, 'MLB4836905147', 'MLB74460211'
+FROM cupons WHERE codigo = 'MELI10';
 ```
 
 **Cuidados ao preencher:**
@@ -171,10 +186,9 @@ VALUES (
 | `valido_ate` | Sempre com o `-03` no fim, que é o fuso de Brasília. Sem isso o banco assume UTC e o cupom expira 3 horas antes do que você quer |
 | `prioridade` | Só importa se houver mais de um cupom válido ao mesmo tempo |
 
-**Não use `categoria_id = 'MLB6899'` nos posts atuais.** Os itens do Store Scanner entram
-com `category_id` NULL; o JOIN só casa se o cupom também tiver `categoria_id` NULL (ou se
-os dois tiverem o mesmo valor). Com `MLB6899` no cupom, o post sai **sem** a linha.
-Deixe `categoria_id` de fora — vale para qualquer produto que o bot postar.
+**Não use cupom “para todos”.** O JOIN exige `cupons_itens` (anúncio `wid` ou catálogo
+`/p/` `/up/` no permalink) **e** preço >= mínimo. `categoria_id` NULL sozinho **não**
+cola mais — foi o furo do `BRINQUEDOS` no blister (Decisão 36).
 
 ### Desligar um cupom 🟡
 

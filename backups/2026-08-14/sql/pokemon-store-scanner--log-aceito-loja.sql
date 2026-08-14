@@ -1,0 +1,1 @@
+=INSERT INTO promos_log (item_id, decision, reason) VALUES ('{{ $('Extrair Ofertas das Lojas').item.json.item_id }}', '{{ $json.decision ? $json.decision : ($json.item_id ? 'aceito' : 'duplicado') }}', '{{ $json.reason_repost ? $json.reason_repost : $('Extrair Ofertas das Lojas').item.json.reason }}');

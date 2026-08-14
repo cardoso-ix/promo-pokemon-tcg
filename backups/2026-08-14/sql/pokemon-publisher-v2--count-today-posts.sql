@@ -1,0 +1,1 @@
+SELECT (SELECT COUNT(*)::int FROM promos WHERE posted_at::date = CURRENT_DATE AND status = 'posted') AS post_count, (SELECT COUNT(*)::int FROM promos WHERE status = 'posted' AND posted_at > now() - interval '1 hour') AS hour_count;

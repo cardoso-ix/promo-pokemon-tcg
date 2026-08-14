@@ -495,20 +495,18 @@ novo. Como identificar e destravar: [troubleshooting, P8](troubleshooting.md#p8-
 **Onde:** tabela `cupons` no banco. O Publisher lê no node `Fetch Next Pending`, num
 `LEFT JOIN LATERAL`.
 
-**Como o cupom é escolhido:** entre os cupons `ativo = TRUE`, dentro do prazo
-(`valido_de` já começou e `valido_ate` não passou) e compatíveis com a categoria do produto
-(`categoria_id` igual à do produto **ou** vazio, que significa "vale para tudo"), ganha o
-de **maior `prioridade`**; em caso de empate, o que vence mais cedo.
+**Como o cupom é escolhido (Decisão 39):** entre os cupons `ativo = TRUE`, dentro do prazo,
+com preço do item >= `valor_minimo_cents`, **e** com o produto em `cupons_itens` (`item_id`
+igual ao anúncio **ou** `catalog_id` no permalink). Ganha o de maior `prioridade`. Cupom
+sem linha em `cupons_itens` **não cola em ninguém**.
 
-**Pegadinha do Store Scanner:** os itens das lojas entram com `category_id` NULL. Um cupom
-com `categoria_id = 'MLB6899'` **não casa** e o post sai sem cupom. Campanha que deve
-aparecer nos posts atuais precisa de `categoria_id` NULL.
+Cadastro: neste chat, depois que o Eduardo testar o código no anúncio. O post **nunca
+calcula preço com cupom** — só mostra código + mínimo + validade.
 
-**Campanha `BRINQUEDOS` (13/08/2026):** cadastrada e depois **desligada** na mesma noite
-([Decisão 36](historico-de-decisoes.md#decisão-36--desligar-brinquedos-não-dá-para-saber-qual-item-aceita)).
-Era cupom ML público de brinquedos (produtos selecionados). A lista oficial vive em
-`lista.mercadolivre.com.br` (anti-bot); o checkout é quem decide se o código cola. O
-blister de teste do canal **não aceitava**. Sem cupom `ativo = TRUE`, a linha some do post.
+**Campanha `BRINQUEDOS` (14–16/08/2026):** religada na [Decisão 39](historico-de-decisoes.md#decisão-39--cupom-só-no-produto-testado-e-link-com-wid)
+só nos 10 anúncios testados (`cupons_itens`), mínimo R$ 59, até **16/08/2026 23h59 BRT**.
+Antes disso tinha sido desligada ([Decisão 36](historico-de-decisoes.md#decisão-36--desligar-brinquedos-não-dá-para-saber-qual-item-aceita))
+porque o código não cola em qualquer item.
 
 Se não houver cupom válido, o post sai normalmente, só sem a linha de cupom. **Cupom
 vencido nunca vai ao ar**, porque o filtro de data está na própria consulta.

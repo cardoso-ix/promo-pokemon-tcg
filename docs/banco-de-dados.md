@@ -357,6 +357,26 @@ CREATE TABLE IF NOT EXISTS cupons (
 CREATE INDEX IF NOT EXISTS idx_cupons_ativos ON cupons (ativo, prioridade DESC, valido_ate);
 ```
 
+## Tabela `cupons_itens`
+
+Allowlist do produto que o Eduardo testou. Sem linha aqui, o cupom **não aparece** no post
+([Decisão 39](historico-de-decisoes.md#decisão-39--cupom-só-no-produto-testado-e-link-com-wid)).
+
+| Coluna | Tipo | O que significa |
+| --- | --- | --- |
+| `id` | `BIGSERIAL` | Chave primária |
+| `cupom_id` | `BIGINT` | FK para `cupons.id` |
+| `item_id` | `TEXT` | Anúncio (`wid`, ex. `MLB4836905147`) |
+| `catalog_id` | `TEXT` | Ficha `/p/MLB…` ou `/up/MLBU…` — casa outros anúncios da mesma ficha |
+| `created_at` | `TIMESTAMPTZ` | Quando foi liberado |
+
+`promos` ganhou `loja_slug` (cópia estável do slug da loja). O `utm_link` novo leva `wid=`.
+
+> **Schema Setup v2 ainda não cria esta tabela.** Foi aplicada no banco vivo em 14/08/2026
+> via SQL Console. Recriar o banco do zero exige o SQL em
+> `backups/2026-08-14/sql/migracao-cupons-itens.sql` (ou pedir ao agente para rodar de novo).
+> Sem isso, o `Fetch Next Pending` quebra no `EXISTS cupons_itens`.
+
 ---
 
 ## Tabela `vendedores_bloqueados`

@@ -10,7 +10,7 @@ mudaria a decisão.
 **Números vigentes** (ritmo, lojas, teto, desconto mínimo) estão em
 [regras-de-negocio.md](regras-de-negocio.md) e no [README](../README.md). As decisões mais
 antigas abaixo podem citar 10 min / 5 min / teto 30 / duas lojas — isso era verdade **na
-hora em que foram escritas**. A última operacional é a [Decisão 38](#decisão-38--teto-horário-de-6-posts).
+hora em que foram escritas**. A última operacional é a [Decisão 39](#decisão-39--cupom-só-no-produto-testado-e-link-com-wid).
 
 ---
 
@@ -1180,6 +1180,32 @@ Pokémon) ou carta avulsa na Escala.
 espalha o canal (Publisher a cada 2 min) sem despejar 40 posts na primeira hora.
 
 **O que mudaria esta decisão:** voltar a 4 se o canal ficar barulhento com gente no grupo.
+
+---
+
+## Decisão 39 — Cupom só no produto testado, e link com `wid`
+
+**Data:** 14/08/2026, ~18h55 BRT · **Quem pediu:** Eduardo
+
+**O que aconteceu.** O post `message_id` 35 (Makuhita 19 Cards) mostrou **R$ 30,89** da
+vitrine da loja Pokémon (`MLB6637088258`) e o botão mandou para o catálogo `/p/MLB67071615`
+**sem `wid`**. O checkout fechou em ~R$ 39 — outro anúncio da mesma ficha.
+
+No mesmo dia o Eduardo pediu o `BRINQUEDOS` até domingo, só nos produtos que ele testou.
+
+**A decisão.**
+
+1. Cupom **não cola** sem linha em `cupons_itens`. Cadastro: neste chat, depois do teste
+   no ML. `BRINQUEDOS` ativo até **16/08/2026 23h59 BRT**, 10 produtos, mínimo R$ 59.
+2. O botão de compra leva `wid={item_id}` além do afiliado. Scanner (`Injetar Wid e Loja`)
+   e Publisher (`Garantir Wid`).
+3. Antes do Telegram o Publisher GET a URL com `wid`. Se o preço subir mais de R$ 1, o
+   item vira `blocked` e **não posta**. Se a página falhar, segue o preço da fila (não
+   mata o canal). Não calcula “preço com cupom”.
+4. Publisher publicado `9f003450`. Scanner publicado `983e2ec5`.
+
+**O que mudaria esta decisão:** o ML expor o anúncio da vitrine no `/p/` sem `wid`, ou
+uma API de cupom por `item_id`.
 
 ---
 
