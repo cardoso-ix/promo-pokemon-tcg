@@ -27,9 +27,10 @@ pode rodar sem medo. As marcadas com 🟡 **alteram dados**; leia antes de rodar
 
 ## 1. Ligar e desligar o bot
 
-> **Estado em 13/08/2026, ~22h40 BRT: Store Scanner, Publisher e Health Alert estão ativos.**
-> Scanner a cada **5 min**, Publisher a cada **2 min** (8h–22h BRT, teto 40/dia e 4/hora).
-> Mínimo **10%** em `pokemon`/`copag`, **15%** nas outras. O passo a passo
+> **Estado em 14/08/2026, ~18h43 BRT: Store Scanner, Publisher e Health Alert estão ativos.**
+> Scanner a cada **5 min**, Publisher a cada **2 min** (8h–22h BRT, teto 40/dia e 6/hora).
+> Mínimo **10%** em `pokemon`/`copag`, **15%** nas outras. Filtro: cartas Pokémon +
+> acessórios TCG com Pokémon no título (Decisão 37). O passo a passo
 > abaixo continua valendo para quando você quiser desligar ou religar.
 
 ### Antes de religar depois de uma mudança
@@ -84,8 +85,9 @@ Pronto, o bot está no ar. A partir daí:
 - O Scanner varre as vitrines das lojas a cada **5 minutos**, com uma espera aleatória de até 60
   segundos antes de acessar o site (por isso o intervalo real varia de ~4 a ~6 minutos).
   **Não baixe para 2 minutos:** são 9 lojas HTTP por ciclo.
-- O Publisher publica 1 promoção a cada **2 minutos**, do maior desconto para o menor, dentro da
-  janela de 8h às 22h BRT, até o teto de 40 posts por dia
+- O Publisher publica 1 promoção a cada **2 minutos**, na ordem de qualidade (Pokémon →
+  COPAG → economia em R$ → %), dentro da janela de 8h às 22h BRT, até o teto de 40 posts
+  por dia e 6 na última hora corrida
 
 **Ordem recomendada:** ligue o Publisher primeiro só se você já conferiu a fila. Se houver
 itens antigos na fila que você não quer publicar, resolva isso antes
@@ -332,11 +334,19 @@ Leitura do resultado:
 
 ```sql
 SELECT count(*) AS postados_hoje,
-       30 - count(*) AS ainda_cabem
+       40 - count(*) AS ainda_cabem_hoje,
+       (SELECT count(*) FROM promos
+        WHERE status = 'posted'
+          AND posted_at > now() - interval '1 hour') AS postados_ultima_hora,
+       6 - (SELECT count(*) FROM promos
+            WHERE status = 'posted'
+              AND posted_at > now() - interval '1 hour') AS ainda_cabem_na_hora
 FROM promos
 WHERE status = 'posted'
   AND posted_at::date = CURRENT_DATE;
 ```
+
+Teto vigente: **40**/dia e **6** na última hora corrida (não é relógio cheio).
 
 ### A próxima promoção que vai sair 🟢
 
@@ -353,7 +363,11 @@ SELECT item_id, left(title, 80) AS titulo,
             ELSE 'ok' END AS foto
 FROM promos
 WHERE status = 'pending'
-ORDER BY discount_pct DESC
+ORDER BY CASE WHEN search_term = 'loja:pokemon' THEN 0
+              WHEN search_term = 'loja:copag' THEN 1
+              ELSE 2 END,
+         (COALESCE(original_price_cents, price_cents) - price_cents) DESC,
+         discount_pct DESC
 LIMIT 5;
 ```
 
@@ -732,9 +746,11 @@ por quê.
 Desde 13/08/2026 o bot publica ofertas de lojas oficiais do Mercado Livre cadastradas em
 `lojas_confiaveis`. Quem varre é o `Pokemon Store Scanner`. **Nove lojas ativas** hoje:
 `pokemon`, `copag`, `brinkjr`, `attack-toys`, `cade-meu-jogo`, `psz3d`,
-`ilusoes-industriais`, `parolar` e `escala-miniaturas`. Quase todas usam o mesmo
-`filtro_titulo` (Regra 0b); a Escala Miniaturas usa um filtro **mais apertado**, só
-lacrado, porque a vitrine mistura carta avulsa. Desde ~22h35 de 13/08/2026, o desconto
+`ilusoes-industriais`, `parolar` e `escala-miniaturas`. Oito usam o mesmo
+`filtro_titulo` (Regra 0b / [Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)):
+cartas Pokémon no plural **e** acessórios de TCG (sleeve, playmat, binder…) **com Pokémon
+no título**. A Escala Miniaturas **não** tem `\bcartas\b`, porque a vitrine mistura
+single tipo “Carta Pokémon Nymble 9/94”. Desde ~22h35 de 13/08/2026, o desconto
 mínimo é **10%** em `pokemon` e `copag`, **15%** nas outras sete
 ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)).
 O experimento de 5% em todas (Decisão 29) acabou.
@@ -744,7 +760,7 @@ vários itens dentro dela — os cards mostram "COPAG por Pokémon" com selo de 
 Incluí-la não afrouxa o critério de procedência; é o mesmo vendedor por outra porta.
 BrinkJr, Attack Toys, Cadê Meu Jogo, Psz3D, Ilusões Industriais, PAROLAR e
 Escala Miniaturas entraram depois, também como loja oficial ML (não da marca Pokémon),
-só com produto TCG lacrado que passa no filtro.
+só com produto TCG (lacrado ou acessório Pokémon) que passa no filtro.
 
 ### Ver as lojas cadastradas e se estão ativas 🟢
 
@@ -795,9 +811,11 @@ mexer nele afeta diretamente o que pode ir ao canal.
 
 ### O filtro de título: como mexer sem quebrar 🔴
 
-Desde 13/08/2026 as duas lojas usam **o mesmo** `filtro_titulo`, que exige produto de TCG e
-barra produto licenciado (boneco, pelúcia, caneca). A regra completa, com o texto da regex e
-o porquê de cada parte, está na
+Desde 14/08/2026 ([Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título))
+oito lojas usam **o mesmo** `filtro_titulo`: exige Pokémon no título + vocabulário de carta
+**ou** acessório (sleeve, playmat, binder, deck box, toploader) e barra Funko, lote, kit e
+avulso. A Escala Miniaturas usa a variante **sem** `\bcartas\b`. A regra completa, com o
+texto da regex e o porquê de cada parte, está na
 [Regra 0b das regras de negócio](regras-de-negocio.md#regra-0b--só-produto-de-tcg-não-qualquer-produto-pokémon).
 
 Para ver o que está valendo agora:
@@ -815,12 +833,12 @@ const norm = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 const re = new RegExp(SUA_REGEX, 'i');
 const passa = (t) => re.test(t) || re.test(norm(t));
 
-['Box Pokémon Coleção Mega Gengar Ex', 'Boneco Funko Pop! Pokémon - Slowpoke']
+['Box Pokémon Coleção Mega Gengar Ex', 'Sleeves Pokémon Charizard', 'Boneco Funko Pop! Pokémon - Slowpoke']
   .forEach(t => console.log(passa(t) ? 'PASSA ' + t : 'BARRA ' + t));
 ```
 
-Salve num arquivo e rode com `node arquivo.js`. Se o primeiro não passar ou o segundo passar,
-não grave.
+Salve num arquivo e rode com `node arquivo.js`. Se o box ou o sleeve não passar, ou o Funko
+passar, não grave.
 
 Dois cuidados que já custaram tempo:
 
@@ -858,10 +876,10 @@ ON CONFLICT (slug) DO NOTHING;
 O que decidir em cada campo:
 
 - `filtro_titulo` — **obrigatório sempre**, inclusive na loja oficial da Pokémon. Copie o
-  filtro que as duas lojas ativas já usam (`SELECT filtro_titulo FROM lojas_confiaveis LIMIT 1`)
-  em vez de escrever um novo. Deixar `NULL` significa "aceita tudo", e foi assim que um Funko
-  Pop foi parar no canal em 13/08/2026: a loja oficial estava sem filtro, e nem toda loja
-  oficial da marca vende só carta.
+  filtro da loja `pokemon` (`SELECT filtro_titulo FROM lojas_confiaveis WHERE slug = 'pokemon'`),
+  **não** o da Escala Miniaturas e **não** um `LIMIT 1` cego. Deixar `NULL` significa
+  "aceita tudo", e foi assim que um Funko Pop foi parar no canal em 13/08/2026: a loja
+  oficial estava sem filtro, e nem toda loja oficial da marca vende só carta.
 - `desconto_minimo` — o corte de desconto daquela loja. **Vigente (Decisão 35):**
   `pokemon` e `copag` em **10%**; as outras sete ativas em **15%**. Não é mais o
   experimento de 5% da Decisão 29.

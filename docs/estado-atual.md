@@ -1,13 +1,15 @@
 # Estado atual — o que está rodando e o que falta decidir
 
-**Última atualização:** 13/08/2026, ~23h15 BRT
+**Última atualização:** 14/08/2026, ~18h43 BRT
 **Situação:** **o bot está no ar de ponta a ponta e só publica com link de afiliado e com
 foto.** Nove lojas ativas, desconto mínimo **10%** em `pokemon`/`copag` e **15%** nas outras
 ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)), teto
-**40**/dia e **4**/hora. Scanner a cada **5 min**, Publisher a cada **2 min** (8h–22h BRT).
+**40**/dia e **6**/hora. Scanner a cada **5 min**, Publisher a cada **2 min** (8h–22h BRT).
 Item **já postado** cuja vitrine ficou mais barata (≥ 5% ou ≥ R$ 5) volta para a fila
 ([Decisão 33](historico-de-decisoes.md#decisão-33--repostar-se-o-preço-da-vitrine-cair-depois-do-post)).
 Cupom `BRINQUEDOS` **desligado** ([Decisão 36](historico-de-decisoes.md#decisão-36--desligar-brinquedos-não-dá-para-saber-qual-item-aceita)).
+Filtro vigente: cartas Pokémon (plural) e acessórios TCG com Pokémon no título
+([Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)).
 A listagem completa da loja via ScraperAPI foi investigada e **não foi construída**.
 
 Este documento existe para permitir retomar sem repetir nenhum teste pago e sem refazer
@@ -15,7 +17,8 @@ investigação que já foi feita.
 
 **Como retomar em 5 minutos**
 
-1. README → o bot está no ar? 9 lojas, 5 min / 2 min, teto 40 + 4/hora, mínimo 10%/15%.
+1. README → o bot está no ar? 9 lojas, 5 min / 2 min, teto 40 + 6/hora, mínimo 10%/15%,
+   filtro de cartas + acessórios (Decisão 37).
 2. Este arquivo → versões publicadas, ScraperAPI, o que falta decidir.
 3. n8n: `versionId` = `activeVersionId` nos três ativos. Salvar ≠ publicar ([P18](troubleshooting.md#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada)).
 4. Não gaste crédito de ScraperAPI sem ler a seção da listagem completa, abaixo.
@@ -33,11 +36,12 @@ investigação que já foi feita.
    Com isso, o [P8](troubleshooting.md#p8--a-fila-travou-o-mesmo-item-tenta-publicar-toda-vez-e-falha)
    está fechado nas duas causas conhecidas.
 3. **Volume: nove lojas, qualidade primeiro (Decisão 35, ~22h35).** Mínimo **10%** em
-   `pokemon`/`copag`, **15%** nas outras sete. Teto **40**/dia e **4**/hora. Fila ordena
-   Pokémon → COPAG → economia em R$ → %. O experimento de 5% (Decisão 29) acabou: o clique
-   de afiliado já estava provado. A varredura das ~20h rendeu **1 pending novo** (Attack Toys,
-   9,75%), já publicado (`message_id` 23) — na época o mínimo ainda era 5%; hoje 9,75% na
-   Attack Toys **não** entra. **Psz3D cadastrada** depois, a pedido do Eduardo.
+   `pokemon`/`copag`, **15%** nas outras sete. Teto **40**/dia e **6**/hora (era 4 na
+   noite de 13/08; [Decisão 38](historico-de-decisoes.md#decisão-38--teto-horário-de-6-posts)).
+   Fila ordena Pokémon → COPAG → economia em R$ → %. O experimento de 5% (Decisão 29) acabou.
+   A varredura das ~20h de 13/08 rendeu **1 pending novo** (Attack Toys, 9,75%), já publicado
+   (`message_id` 23) — na época o mínimo ainda era 5%; hoje 9,75% na Attack Toys **não**
+   entra. **Psz3D cadastrada** depois, a pedido do Eduardo.
 4. **Catálogo completo da loja (113 produtos em vez de 3): comprovado, mas não construído.**
    O custo por requisição é 10× maior do que o previsto, e isso precisa de decisão do Eduardo.
 5. **Repost por queda de preço (Decisão 33, ~22h).** Mesmo `item_id` já `posted` com polycard
@@ -48,8 +52,9 @@ investigação que já foi feita.
    de 5 para **2 min**. Conferido ao vivo: Scanner dispara :00/:05/:10…; Publisher :00/:02/:04…
    e depois das 22h BRT termina em ~10 ms na janela fechada. **Não voltar o Scanner para 2 min**
    (9 HTTP por ciclo).
-7. **Pacote A no ar (Decisão 35, ~22h35).** Publisher publicado `a621b8c9`. Banco: 10%/15%.
-   Pending abaixo do novo mínimo: zero na hora da troca.
+7. **Pacote A no ar (Decisão 35, ~22h35).** Publisher naquela hora: `a621b8c9`. Em 14/08
+   o teto horário subiu para 6 e a versão publicada passou a `57c2826e`. Banco: 10%/15%.
+   Pending abaixo do novo mínimo: zero na hora da troca de 13/08.
 
 **Alerta privado no ar (19h35).** O `Pokemon Health Alert` avisa no mesmo chat do alerta
 LinkedIn se o bot quebrar. Fila vazia **não** é alerta. Ver
@@ -60,14 +65,14 @@ LinkedIn se o bot quebrar. Fila vazia **não** é alerta. Ver
 
 ## Estado dos workflows no n8n
 
-Conferido diretamente no n8n em 13/08/2026, **22h40 BRT**, comparando `versionId` com
-`activeVersionId` em cada um — porque salvar e publicar são coisas diferentes
+Conferido no n8n em **14/08/2026 ~18h43 BRT** (Publisher) e em 13/08 ~22h40 (os demais),
+comparando `versionId` com `activeVersionId` — porque salvar e publicar são coisas diferentes
 ([P18](troubleshooting.md#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada)).
 
 | Workflow | ID | Estado | Produção em dia? |
 | --- | --- | --- | --- |
 | `Pokemon Store Scanner` | `PNwaF3BYhj5KA8eY` | **Ativo**, a cada **5 min** + jitter 0–60s | Sim, `2f6fa3c8` — repost por queda de preço ([Decisão 33](historico-de-decisoes.md#decisão-33--repostar-se-o-preço-da-vitrine-cair-depois-do-post)). Node do relógio: `A Cada 5 Minutos` |
-| `Pokemon Publisher v2` | `FXNWeT9C7dEA0DUY` | **Ativo**, a cada **2 min** | Sim, `a621b8c9` — Pacote A: ordem qualidade + teto 4/hora + teto 40. Node do relógio: `Every 2 Minutes`. Superou `286b533e` (layout limpo) nesta noite |
+| `Pokemon Publisher v2` | `FXNWeT9C7dEA0DUY` | **Ativo**, a cada **2 min** | Sim, `57c2826e` — teto **6**/hora (14/08) + Pacote A (ordem qualidade + teto 40). Node do relógio: `Every 2 Minutes` |
 | `Pokemon Scanner v2` | `39kdRchYI6CwsbNY` | Inativo, fora de escopo | Nunca publicado; link de afiliado já corrigido no código salvo |
 | `Pokemon Schema Setup v2` | `F8jVi6NFxeDHfAkb` | Inativo, roda sob demanda | Nunca publicado |
 | `Pokemon Catalog Scanner` | — | **não existe** | Nunca foi criado; ver a seção do ScraperAPI |
@@ -79,8 +84,33 @@ Os dois inativos nunca terem sido publicados é inofensivo enquanto ninguém os 
 vira armadilha no dia em que forem ativados. Publique antes de contar com eles.
 
 A pasta [`backups/2026-08-13/`](../backups/) tem os 4 workflows originais do dia, Code nodes
-e SQL. **Não** inclui Health Alert, o ritmo 5/2 min, o Pacote A nem o Console 2. O n8n continua sendo a
-fonte; o backup é paraquedas da manhã/tarde de 13/08.
+e SQL. **Não** inclui Health Alert, o ritmo 5/2 min, o Pacote A, o teto 6/hora, o filtro de
+acessórios nem o Console 2. O n8n continua sendo a fonte; o backup é paraquedas da manhã/tarde
+de 13/08.
+
+---
+
+## 14/08 — teste de fim de semana (~18h43 BRT)
+
+O bot **não estava parado**. Scanner e Publisher ativos, versões publicadas, zero erro.
+O canal ficou mudo o dia inteiro porque as ofertas da vitrine **já estavam `posted`**:
+um `item_id` só entra na fila uma vez, salvo queda de preço (Decisão 33). Às 18:20 o
+Scanner marcou 7 `aceito` (15–33% OFF) e o `INSERT ON CONFLICT DO NOTHING` não
+reenfileirou nenhum.
+
+Para o teste de fim de semana, os 7 voltaram a `pending` (zerando `posted_at` e
+`telegram_message_id`). Primeiro post: Box Mega Zygarde ex, 18:26 BRT, `message_id` 31,
+link de afiliado ok. **Não republicar esses 7 de novo.**
+
+Na mesma tarde:
+
+| O quê | Onde | Versão / dado |
+| --- | --- | --- |
+| Filtro: cartas (plural) + acessórios TCG com Pokémon | `lojas_confiaveis.filtro_titulo` | [Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título). Escala Miniaturas **sem** `\bcartas\b` |
+| Teto horário 4 → **6**/hora | Publisher `Under Hourly Limit?` | [Decisão 38](historico-de-decisoes.md#decisão-38--teto-horário-de-6-posts), publicado `57c2826e` |
+
+A varredura das ~18:40 aceitou *Makuhita 19 Cards* (loja oficial, 28% OFF). Sleeve ainda
+não apareceu nas 9 homepages.
 
 ---
 
@@ -194,7 +224,7 @@ Eduardo — as opções estão no [README](../README.md#o-que-depende-de-uma-dec
 - **O clique de afiliado já foi atribuído** (5 cliques em 13/08, conta do Eduardo). **Venda
   e comissão ainda não.** A URL está correta.
 - **O escopo das lojas não foi ampliado de novo no Pacote A.** O que mudou foi o corte de
-  qualidade (10%/15%) e o ritmo do canal (4/hora). Cadastrar loja nova ou religar o Scanner
+  qualidade (10%/15%) e o ritmo do canal (6/hora). Cadastrar loja nova ou religar o Scanner
   v2 continuam sendo decisões do Eduardo, listadas no
   [README](../README.md#o-que-depende-de-uma-decisão-do-eduardo).
 - **Nenhuma mensagem do canal foi apagada,** inclusive a do Funko.

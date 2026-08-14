@@ -10,7 +10,7 @@ mudaria a decisão.
 **Números vigentes** (ritmo, lojas, teto, desconto mínimo) estão em
 [regras-de-negocio.md](regras-de-negocio.md) e no [README](../README.md). As decisões mais
 antigas abaixo podem citar 10 min / 5 min / teto 30 / duas lojas — isso era verdade **na
-hora em que foram escritas**. A última operacional é a [Decisão 36](#decisão-36--desligar-brinquedos-não-dá-para-saber-qual-item-aceita).
+hora em que foram escritas**. A última operacional é a [Decisão 38](#decisão-38--teto-horário-de-6-posts).
 
 ---
 
@@ -1142,6 +1142,47 @@ login, que dê para cruzar com a fila.
 
 ---
 
+## Decisão 37 — Cartas Pokémon (plural) e acessórios de TCG, com Pokémon no título
+
+**Data:** 14/08/2026, ~18h36 BRT · **Quem pediu:** Eduardo, para o teste de fim de semana
+e para o grupo na semana seguinte.
+
+**A decisão.** O canal passa a aceitar, além do lacrado (box, deck, blister, ETB):
+
+1. Produto de **cartas Pokémon** no título (plural `cartas`, `baralho`, `tcg`).
+2. **Acessório de TCG** com Pokémon no título: sleeve, playmat, binder/fichário,
+   porta-cartas, deck box, toploader, capas para cartas, tapete de jogo.
+
+Continua **fora:** Funko e merch, lote/avulso/kit, carta avulsa numerada, acessório
+**sem** a palavra Pokémon (Dragon Shield cru, playmat Lorcana).
+
+**Por que dois filtros.** Nas 8 lojas o positivo tem `\bcartas\b`. Na Escala Miniaturas
+**não**: a vitrine mistura single ("Carta Pokémon Nymble 9/94"). Testado contra a
+varredura das 18:20 — 15 singles da Escala passariam com `cartas?` e foram deixados
+de fora. Sleeve/playmat Pokémon passariam na Escala.
+
+**Onde mora:** `lojas_confiaveis.filtro_titulo`. Não mexeu em workflow. Pacote A
+(10%/15%) segue igual.
+
+**O que mudaria esta decisão:** o Eduardo pedir sleeve genérico (Dragon Shield sem
+Pokémon) ou carta avulsa na Escala.
+
+---
+
+## Decisão 38 — Teto horário de 6 posts
+
+**Data:** 14/08/2026, ~18h43 BRT · **Quem pediu:** Eduardo, no teste de fim de semana.
+
+**A decisão.** O IF `Under Hourly Limit?` do Publisher passou de `hour_count < 4` para
+`< 6`. Teto diário continua 40. Publicado `57c2826e` (`versionId` = `activeVersionId`).
+
+**O porquê.** Quatro por hora atrasava o esvaziamento da fila no teste; seis ainda
+espalha o canal (Publisher a cada 2 min) sem despejar 40 posts na primeira hora.
+
+**O que mudaria esta decisão:** voltar a 4 se o canal ficar barulhento com gente no grupo.
+
+---
+
 ## Histórico de sustos: o que já deu errado na infraestrutura
 
 Não são decisões, são cicatrizes. Valem registro porque a chance de repetição não é zero.
@@ -1173,3 +1214,11 @@ quebra está em [troubleshooting P14](troubleshooting.md#p14--mexi-no-workflow-e
 **A correção do prefixo `=` se perdeu e teve de ser refeita.** Uma edição posterior sobrescreveu
 uma correção anterior. É o argumento mais forte a favor de rodar o workflow na mão depois de
 cada mudança, em vez de confiar que "eu já arrumei isso".
+
+**14/08: canal mudo o dia inteiro com o bot saudável.** Scanner e Publisher ativos, zero
+erro, fila `pending = 0`. Às 18:20 o Scanner marcou 7 `aceito` (15–33% OFF) que já
+estavam `posted`. `INSERT ON CONFLICT DO NOTHING` não reenfileira. Lição: `aceito` no
+log **não** significa item novo na fila. Só volta se o preço cair (Decisão 33) ou se
+alguém devolver o status a `pending` à mão — e isso não deve ser feito duas vezes no
+mesmo lote. Detalhe em [estado-atual](estado-atual.md#1408--teste-de-fim-de-semana-18h43-brt)
+e [troubleshooting P1](troubleshooting.md#p1--o-bot-não-está-postando-nada).

@@ -33,7 +33,7 @@ valiosos: são as armadilhas reais desta montagem.
 
 **Sintoma:** o canal está parado, mesmo em horário comercial.
 
-**Causa:** são cinco possibilidades, e vale checar nesta ordem, da mais provável para a
+**Causa:** são várias possibilidades, e vale checar nesta ordem, da mais provável para a
 menos.
 
 **Solução — o roteiro de diagnóstico:**
@@ -54,13 +54,38 @@ SELECT count(*) AS postados_hoje FROM promos
 WHERE status = 'posted' AND posted_at::date = CURRENT_DATE;
 ```
 
+**3b. Já bateu o teto de 6 na última hora?** O Publisher conta a hora **corrida**
+(`posted_at > now() - interval '1 hour'`), não o relógio cheio. Se a última execução
+terminar em `Hourly Limit Reached`, o bot está saudável e só espera.
+
+```sql
+SELECT count(*) AS postados_ultima_hora FROM promos
+WHERE status = 'posted' AND posted_at > now() - interval '1 hour';
+```
+
 **4. Tem item na fila?**
 
 ```sql
 SELECT count(*) AS na_fila FROM promos WHERE status = 'pending';
 ```
 
-Se der zero, o problema é do **Scanner**, não do Publisher: nada novo está entrando. Vá para
+Se der zero, o problema é do **Scanner**, não do Publisher: nada novo está entrando. Antes
+de ir ao parser, confira se o Scanner **aceitou** itens que já estão `posted` — em 14/08
+o canal ficou mudo o dia inteiro assim: sete ofertas válidas (15–33% OFF) no log `aceito`,
+fila `pending = 0`, porque `INSERT ON CONFLICT DO NOTHING` não reenfileira. Só volta à
+fila se o preço cair o bastante ([Decisão 33](historico-de-decisoes.md#decisão-33--repostar-se-o-preço-da-vitrine-cair-depois-do-post)).
+Não reenfileire à mão o mesmo lote duas vezes.
+
+```sql
+SELECT l.item_id, left(p.title, 60) AS titulo, p.status, p.posted_at
+FROM promos_log l
+JOIN promos p ON p.item_id = l.item_id
+WHERE l.decision = 'aceito'
+  AND l.created_at > now() - interval '3 hours'
+ORDER BY l.created_at DESC;
+```
+
+Se isso não explicar, vá para
 [P2](#p2--promos_erros-enchendo-com-error_stepbusca--o-parser-quebrou) e
 [P13](#p13--a-fila-vive-vazia-e-o-canal-posta-pouco).
 
@@ -70,10 +95,10 @@ Se der zero, o problema é do **Scanner**, não do Publisher: nada novo está en
 SELECT * FROM promos_erros ORDER BY created_at DESC LIMIT 10;
 ```
 
-**Se todos os cinco estiverem bem** e ainda assim nada sai: no n8n, vá em **Executions**,
+**Se todos os passos estiverem bem** e ainda assim nada sai: no n8n, vá em **Executions**,
 ache a última execução do Publisher e clique nela. Você vai ver visualmente por qual node o
-fluxo passou e onde parou. Um fluxo que termina em `Outside Posting Window` ou
-`Daily Limit Reached` está funcionando como projetado.
+fluxo passou e onde parou. Um fluxo que termina em `Outside Posting Window`,
+`Daily Limit Reached` ou `Hourly Limit Reached` está funcionando como projetado.
 
 ---
 
@@ -471,9 +496,11 @@ a mexer em [regras-de-negocio.md](regras-de-negocio.md#mapa-rápido-onde-mora-ca
 sempre em zero.
 
 **Causa: provavelmente nada está errado.** O Store Scanner só vê a **vitrine** de cada loja
-oficial (a Pokémon tem ~3 produtos na homepage). Com filtro só-TCG, mínimo 10%/15% e
-deduplicação, o volume novo por dia fica bem abaixo do teto de **40** posts. A página geral
-de ofertas (`Pokemon Scanner v2`) rendia ~9 produtos por varredura e está **desligada**.
+oficial (a Pokémon tem ~3 produtos na homepage). Com filtro de TCG + acessórios Pokémon,
+mínimo 10%/15% e deduplicação, o volume **novo** por dia fica bem abaixo do teto de **40**
+posts. Em 14/08 o Scanner aceitou ofertas que já estavam `posted` e a fila ficou em zero —
+veja [P1, passo 4](#p1--o-bot-não-está-postando-nada). A página geral de ofertas
+(`Pokemon Scanner v2`) rendia ~9 produtos por varredura e está **desligada**.
 
 Vale confirmar que é isso mesmo, e não filtro apertado demais ou workflow parado:
 

@@ -19,7 +19,7 @@ as decisões foram tomadas assim*, mais uma cópia de segurança dos workflows e
 
 ---
 
-## ▶️ O BOT ESTÁ NO AR (conferido em 13/08/2026, ~22h40 BRT)
+## ▶️ O BOT ESTÁ NO AR (conferido em 14/08/2026, ~18h43 BRT)
 
 Religado à tarde, depois que o link de afiliado foi confirmado, corrigido nos dois scanners
 e regravado na fila. Formato em produção:
@@ -33,19 +33,20 @@ Histórico: [troubleshooting, P16](docs/troubleshooting.md#p16--resolvido-o-link
 | Workflow | Ritmo | Papel |
 | --- | --- | --- |
 | `Pokemon Store Scanner` | a cada **5 min** + jitter 0–60s | Enche a fila a partir de **9 lojas** oficiais |
-| `Pokemon Publisher v2` | a cada **2 min**, só 8h–22h BRT, teto **40**/dia e **4**/hora | Publica 1 item por disparo, ordem de qualidade |
+| `Pokemon Publisher v2` | a cada **2 min**, só 8h–22h BRT, teto **40**/dia e **6**/hora | Publica 1 item por disparo, ordem de qualidade |
 | `Pokemon Health Alert` | 1× ao dia às 21h BRT + manual | Alerta **privado** se o bot quebrar. Fila vazia **não** avisa |
 
-Desconto mínimo vigente ([Decisão 35](docs/historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)): **10%** em `pokemon` e `copag`; **15%** nas outras sete. Item já postado cuja vitrine ficar mais barata (≥ 5% ou ≥ R$ 5, no máximo 1/dia) volta para a fila ([Decisão 33](docs/historico-de-decisoes.md#decisão-33--repostar-se-o-preço-da-vitrine-cair-depois-do-post)).
+Desconto mínimo vigente ([Decisão 35](docs/historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)): **10%** em `pokemon` e `copag`; **15%** nas outras sete. Filtro de título: cartas Pokémon (plural) e acessórios de TCG com Pokémon no nome ([Decisão 37](docs/historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)). Item já postado cuja vitrine ficar mais barata (≥ 5% ou ≥ R$ 5, no máximo 1/dia) volta para a fila ([Decisão 33](docs/historico-de-decisoes.md#decisão-33--repostar-se-o-preço-da-vitrine-cair-depois-do-post)).
 
 **Não use 2 minutos no Scanner.** São 9 requisições HTTP por ciclo. O aviso está na descrição do próprio workflow no n8n e na [Decisão 34](docs/historico-de-decisoes.md#decisão-34--ritmo-em-produção-scanner-5-min-publisher-2-min).
 
 ### 🤔 Por que o canal pode estar quieto
 
-Há **duas** razões, e nenhuma é pane:
+Há **três** razões comuns, e nenhuma é pane:
 
 1. **Fora da janela (22h–8h BRT).** O Publisher acorda a cada 2 min, vê a hora e termina em milissegundos em `Outside Posting Window`. A fila espera. Volta sozinho às 8h.
-2. **Acabou o produto em oferta nas vitrines.** A varredura das ~22h10 BRT confirmou: 9 lojas varridas com sucesso, **zero aceitos**. Exemplo: o *Dragapult Ex League Battle Deck* na loja Pokémon estava a preço cheio; o *Box Mega Luar Mega Gengar Ex* na COPAG estava com 2,14% (abaixo de 10%); o resto caiu no filtro de título (Truco, Harry Potter, brinquedo).
+2. **Acabou o produto *novo* em oferta nas vitrines.** O Scanner pode marcar `aceito` e a fila continuar vazia: `INSERT ON CONFLICT DO NOTHING` não reenfileira o que já está `posted`. Foi o que deixou o canal mudo em 14/08 até o teste de fim de semana (sete ofertas válidas já tinham ido ao ar em 13/08).
+3. **Desconto abaixo do mínimo ou título fora do filtro.** Exemplo da noite de 13/08: o *Dragapult Ex League Battle Deck* na loja Pokémon estava a preço cheio; o *Box Mega Luar Mega Gengar Ex* na COPAG estava com 2,14% (abaixo de 10%); o resto caiu no filtro (Truco, Harry Potter, brinquedo).
 
 À tarde (18h10), com só `pokemon` + `copag` e mínimo ainda em 15%, o funil era este — histórico, não o estado da noite:
 
@@ -93,7 +94,7 @@ certa; quem fecha a comissão é o painel registrar a venda.
 
 Loja-mãe: <https://www.mercadolivre.com.br/loja/pokemon>
 
-O que isso implica na prática **hoje** (noite de 13/08):
+O que isso implica na prática **hoje** (14/08/2026):
 
 - A **página geral de ofertas** (`ofertas?category=MLB6899`) **saiu de escopo**. Era a fonte
   do `Pokemon Scanner v2`, que por isso está **desativado** — preservado inteiro para uso
@@ -101,12 +102,12 @@ O que isso implica na prática **hoje** (noite de 13/08):
 - O scanner ativo é o **`Pokemon Store Scanner`**, que varre lojas oficiais cadastradas em
   `lojas_confiaveis` com `ativa = TRUE`.
 - **Nove lojas ativas:** `pokemon`, `copag`, `brinkjr`, `attack-toys`, `cade-meu-jogo`,
-  `psz3d`, `ilusoes-industriais`, `parolar`, `escala-miniaturas`. A COPAG entrou no mesmo dia
-  ([Decisão 21](docs/historico-de-decisoes.md#decisão-21--a-copag-entra-no-escopo-por-ser-o-vendedor-de-dentro-da-loja-oficial)); as outras, à noite, para volume com TCG lacrado
+  `psz3d`, `ilusoes-industriais`, `parolar`, `escala-miniaturas`. A COPAG entrou em 13/08
+  ([Decisão 21](docs/historico-de-decisoes.md#decisão-21--a-copag-entra-no-escopo-por-ser-o-vendedor-de-dentro-da-loja-oficial)); as outras, à noite daquele dia
   ([Decisão 29](docs/historico-de-decisoes.md#decisão-29--volume-do-canal-5-de-desconto-teto-40-e-alerta-acima-de-40)). Qualquer loja além dessas nove depende de decisão nova.
-- **Filtro de título (Regra 0b):** exige vocabulário de TCG e a palavra Pokémon; barra Funko,
-  pelúcia, caneca, etc. A Escala Miniaturas usa um filtro **mais apertado** (só lacrado),
-  porque a vitrine mistura carta avulsa.
+- **Filtro de título (Regra 0b / Decisão 37):** exige Pokémon no título + vocabulário de carta
+  **ou** acessório (sleeve, playmat, binder…). Barra Funko, pelúcia, lote, kit. Oito lojas
+  usam `\bcartas\b` no plural; a Escala Miniaturas **não**, porque a vitrine mistura single.
 - **Por que a COPAG não afrouxa o critério:** a loja oficial da Pokémon é *multiseller*, e a
   COPAG é o vendedor real de vários itens dentro dela — os cards trazem "COPAG por Pokémon".
 
@@ -128,7 +129,7 @@ retomar em 30 segundos.
 | Credencial do banco no n8n | Funcionando, vinculada node a node |
 | Bot e canal do Telegram | Funcionando. Posts reais no dia 13/08, todos com link de afiliado (à tarde saíram 4; à noite saíram mais, ex. Attack Toys `message_id` 23) |
 | **Pokemon Store Scanner** | **Ativo**, 9 lojas, a cada **5 min**, publicado `2f6fa3c8` (repost por queda de preço) |
-| **Pokemon Publisher v2** | **Ativo**, a cada **2 min**, 8h–22h BRT, teto 40/dia + 4/hora, ordem qualidade, publicado `a621b8c9` |
+| **Pokemon Publisher v2** | **Ativo**, a cada **2 min**, 8h–22h BRT, teto 40/dia + 6/hora, ordem qualidade, publicado `57c2826e` |
 | **Pokemon Health Alert** | **Ativo**, 21h BRT + manual, publicado `b5e4b758` |
 | **Pokemon Scanner v2** | **Desativado de propósito**, preservado inteiro |
 | **Pokemon Schema Setup v2** | Desativado (só sob demanda) |
@@ -177,7 +178,7 @@ trilha de publicação.
    como `descartado`.
 7. ~~**Item sem foto ainda trava a fila.**~~ **Resolvido** para thumbnail vazio / sem `http`.
    Ainda pode falhar se o Telegram recusar uma URL que *parece* válida.
-8. **Backup em `backups/2026-08-13/` não inclui o ritmo 5 min / 2 min, o Health Alert nem o Pacote A.**
+8. **Backup em `backups/2026-08-13/` não inclui o ritmo 5 min / 2 min, o Health Alert, o Pacote A, o teto 6/hora nem o filtro de acessórios (Decisão 37).**
    Restaurar da pasta sem republicar do n8n voltaria intervalos velhos, mínimo 5% e fila só por %.
 9. **Health Alert manda Telegram por URL HTTP** (token no node, não em credencial). Não
    copie esse token para esta pasta. Trocar para credencial do n8n é melhoria de segurança.
@@ -230,7 +231,7 @@ No n8n, um **workflow** é um fluxo de trabalho: uma sequência de caixinhas (ch
 | Workflow | ID (o endereço dele) | O que faz | Estado |
 | --- | --- | --- | --- |
 | **Pokemon Store Scanner** | `PNwaF3BYhj5KA8eY` | Varre as lojas oficiais de `lojas_confiaveis` e grava as ofertas na fila | **Ativo**, a cada **5 minutos** + jitter 0–60s |
-| **Pokemon Publisher v2** | `FXNWeT9C7dEA0DUY` | Tira o próximo item da fila e publica no Telegram | **Ativo**, a cada **2 minutos**, das 8h às 22h BRT, teto 40 |
+| **Pokemon Publisher v2** | `FXNWeT9C7dEA0DUY` | Tira o próximo item da fila e publica no Telegram | **Ativo**, a cada **2 minutos**, das 8h às 22h BRT, teto 40/dia + 6/hora, publicado `57c2826e` |
 | **Pokemon Health Alert** | `3irgeWFKZGZZrJ5u` | Alerta privado se parser/vitrine/publisher quebrar | **Ativo**, 21h BRT + manual |
 | **Pokemon Scanner v2** | `39kdRchYI6CwsbNY` | Lê a página geral de ofertas do ML, classifica por desconto e autenticidade | **Desativado** — fonte fora de escopo desde 13/08/2026 |
 | **Pokemon Schema Setup v2** | `F8jVi6NFxeDHfAkb` | Cria as tabelas do banco | Desativado, só sob demanda |

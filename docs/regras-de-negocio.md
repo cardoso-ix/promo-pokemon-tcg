@@ -61,19 +61,29 @@ de exclusão que só case na forma acentuada não barra nada**, porque o item es
 sem acento. Por isso todo termo acentuado do filtro é escrito com classe — `pel[uú]cia`,
 `cole[cç][aã]o`, `[aá]lbum` — e nunca só `pelúcia`.
 
-**O filtro em produção desde 13/08/2026** (o mesmo nas duas lojas ativas):
+**O filtro em produção desde 14/08/2026** ([Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)):
+produto de carta Pokémon **e** acessório de TCG (sleeve, playmat, binder, deck box,
+toploader, porta-cartas), **sempre com a palavra Pokémon no título**. Funko, lote avulso,
+kit e marca genérica sem Pokémon continuam fora.
+
+Oito lojas (todas menos a Escala) usam `\bcartas\b` no **plural**, para pegar coleção/
+baralho e **não** a carta avulsa "Carta Pokémon Nymble 9/94". A Escala Miniaturas **não**
+tem `\bcartas\b`: a vitrine mistura single, e o filtro dela já era mais apertado.
+
+Filtro das 8 lojas (trecho positivo extra vs. 13/08: `cartas` plural, `baralho`, `tcg`,
+sleeves, playmat, binder, deck box, toploader, capas para cartas, tapete de jogo):
 
 ```
-^(?!.*(?:funko|\bpop\b|pel[uú]cia|bonec[oa]s?|action figure|\bfigures?\b|chaveiro|caneca|camiseta|moletom|mochila|quebra[ -]?cabe[cç]as?|[aá]lbum de figurinhas|figurinhas?|fantasia|pijama|almofada|adesivos?|sticker|mouse ?pad|lumin[aá]ria|rel[oó]gio|lancheira|squeeze|garrafa|toalha|meias?))(?=.*pok[eé]mon)(?=.*(?:\bcartas?\b|booster|\bbox\b|\bdecks?\b|blister|display|expans[aã]o|cole[cç][aã]o|elite trainer|\betb\b|\blatas?\b|\btins?\b|\bpacks?\b|bundle|trading card|\btcg\b))
+^(?!.*(?:funko|\bpop\b|pel[uú]cia|bonec[oa]s?|action figure|\bfigures?\b|chaveiro|caneca|camiseta|moletom|mochila|quebra[ -]?cabe[cç]as?|[aá]lbum de figurinhas|figurinhas?|fantasia|pijama|almofada|adesivos?|sticker|mouse ?pad|lumin[aá]ria|rel[oó]gio|lancheira|squeeze|garrafa|toalha|meias?|\bkits?\b|\blotes?\b|avuls[ao]s?|sem repetir|sortidas?|aleat[oó]ri|\bdados?\b|moedas?))(?=.*pok[eé]mon)(?=.*(?:booster|\bbox\b|\bdecks?\b|blister|display|expans[aã]o|cole[cç][aã]o|elite trainer|\betb\b|\blatas?\b|\btins?\b|\bpacks?\b|bundle|trading card|\btcg\b|\bcartas\b|baralho|lacrad[oa]s?|selad[oa]s?|\bsleeves?\b|playmat|fich[aá]rio|\bbinder\b|porta[ -]?cartas?|deck ?box|toploader|top loader|protetor(?:es)? de cartas?|capas? para cartas?|tapete de jogo))
 ```
 
 São três exigências ao mesmo tempo, e o título precisa cumprir **as três**:
 
 | Parte | O que faz | Por que |
 | --- | --- | --- |
-| `(?!.*(?:funko\|...))` | **Barra** o vocabulário de produto licenciado que não é carta | Um Funko Pop tem "Pokémon" no nome e passaria por qualquer filtro que só procure a marca |
-| `(?=.*pok[eé]mon)` | **Exige** a palavra Pokémon | A COPAG vende Truco, Harry Potter, Bicycle, NFL e **Lorcana**. Sem esta linha, "Jogo de Cartas Copag" entraria |
-| `(?=.*(?:cartas?\|booster\|box\|deck\|...))` | **Exige** vocabulário de TCG | É o que separa a carta do chaveiro |
+| `(?!.*(?:funko\|...))` | **Barra** licenciado (Funko) e lote/avulso/kit | Um Funko tem "Pokémon" no nome; "Kit 100 Cartas" não é produto lacrado |
+| `(?=.*pok[eé]mon)` | **Exige** a palavra Pokémon | Sem isso entra playmat Lorcana, sleeve Dragon Shield e Truco da COPAG |
+| `(?=.*(?:cartas\|booster\|sleeve\|playmat\|...))` | **Exige** vocabulário de TCG **ou** acessório | Carta/box/deck **e** sleeve/binder/playmat, desde que Pokémon esteja no título |
 
 **As duas primeiras exigências se cobrem.** O Funko é barrado duas vezes: por conter "funko"
 e por não ter vocabulário de TCG. Isso é de propósito — a lista de exclusão nunca vai
@@ -118,7 +128,7 @@ inválido, para não deixar passar produto fora do tema). O passo a passo do tes
 | Teto diário de posts | **40** | Publisher | `Under Daily Limit?` | valor de comparação `40` |
 | Posts por execução | 1 | Publisher | `Fetch Next Pending` | `LIMIT 1` na consulta |
 | Ordem da fila | `pokemon`, depois `copag`, depois economia em R$, depois % | Publisher | `Fetch Next Pending` | `ORDER BY CASE search_term …, economia DESC, discount_pct DESC` |
-| Teto por hora | **4** posts na última hora corrida | Publisher | `Under Hourly Limit?` | valor de comparação `4`; o `hour_count` vem do `Count Today Posts` |
+| Teto por hora | **6** posts na última hora corrida | Publisher | `Under Hourly Limit?` | valor de comparação `6`; o `hour_count` vem do `Count Today Posts` |
 | Canal do Telegram | `@promopokemontcg` | Publisher | `Post to Telegram` | campo **Chat ID** |
 | Texto do botão de compra | 🛒 Comprar no Mercado Livre | Publisher | `Post to Telegram` | dentro de **Reply Markup → Inline Keyboard** |
 | Layout do post | limpo (sem 🃏); **SUPER OFERTA · X% OFF** se `discount_pct > 40` | Publisher | `Format PT-BR Message` | a função `build(t)` e a flag `superOferta` |
@@ -405,24 +415,25 @@ teto de 40 (subido de 30 em 13/08/2026, [Decisão 29](historico-de-decisoes.md#d
 
 **Efeito colateral conhecido, agora mitigado:** sem teto por hora, 40 posts cabiam nas
 primeiras ~80 minutos. Desde a [Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)
-existe também o teto de **4 posts na última hora corrida** (`Under Hourly Limit?`).
+existe também o teto de **6 posts na última hora corrida** (`Under Hourly Limit?`).
 
 Na prática o teto diário de 40 talvez nunca seja alcançado: as nove lojas ativas, com o
 corte 10%/15%, rendem poucos itens novos por dia.
 
 ---
 
-## 5b. Teto por hora: 4 posts na última hora corrida
+## 5b. Teto por hora: 6 posts na última hora corrida
 
 **Onde:** Publisher → `Count Today Posts` devolve `hour_count`; o IF `Under Hourly Limit?`
-compara com `4`. Se passou, o fluxo termina em `Hourly Limit Reached`.
+compara com `6`. Se passou, o fluxo termina em `Hourly Limit Reached`.
 
 **O que faz:** conta itens `posted` com `posted_at > now() - interval '1 hour'` (hora
-corrida, não relógio cheio). Só busca o próximo `pending` se forem menos de 4.
+corrida, não relógio cheio). Só busca o próximo `pending` se forem menos de 6.
 
-**O porquê:** com Publisher a cada 2 min, 40 posts cabiam em ~80 minutos da manhã. Quatro
+**O porquê:** com Publisher a cada 2 min, 40 posts cabiam em ~80 minutos da manhã. Seis
 por hora espalha o canal ao longo do dia sem atrasar uma oferta boa quando a fila está
-vazia. [Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume).
+vazia. Era 4 ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume));
+em 14/08/2026 o Eduardo subiu para 6 no teste de fim de semana.
 
 **Cuidado:** o número **não** está no `Count Today Posts`. Está no IF seguinte, igual ao
 teto diário de 40.

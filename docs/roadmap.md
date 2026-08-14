@@ -10,14 +10,17 @@ comportamento real por alguns dias.** Otimizar antes de ter dados é chutar.
 
 ## Pendências imediatas (não são roadmap, são o que falta fechar)
 
-Revisado em 13/08/2026, **noite (~22h40 BRT)**, conferindo o estado real no n8n.
+Revisado em 14/08/2026, **~18h43 BRT**, conferindo o estado real no n8n.
 
 1. ~~**Regravar o `utm_link` dos itens da fila e religar o `Pokemon Publisher v2`.**~~
    **Feito em 13/08/2026.**
 2. ~~**Confirmar no painel de afiliados que o clique de um post real foi atribuído.**~~
    **Feito em 13/08:** 5 cliques (conta do Eduardo). **Venda/comissão ainda não.**
 2b. ~~**Pacote A: qualidade antes de volume.**~~ **Feito em 13/08 ~22h35** ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)):
-    mínimo 10%/15%, fila por qualidade, teto 4/hora, Publisher `a621b8c9`.
+    mínimo 10%/15%, fila por qualidade. Teto horário subiu de 4 para **6** em 14/08
+    ([Decisão 38](historico-de-decisoes.md#decisão-38--teto-horário-de-6-posts)), Publisher `57c2826e`.
+2c. ~~**Filtro: cartas Pokémon e acessórios TCG.**~~ **Feito em 14/08 ~18h36** ([Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)):
+    `filtro_titulo` nas 9 lojas. Escala Miniaturas sem `\bcartas\b`.
 3. **Conferir se os quatro nodes da trilha de revisão do `Pokemon Scanner v2` têm credencial do
    banco vinculada** (`Insert Review`, `Queue Review`, `Log Review`, `Log Review Error`). Esse
    workflow está desativado por escopo — a checagem só importa se ele voltar a ser usado.

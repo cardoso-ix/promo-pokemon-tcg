@@ -2,7 +2,7 @@
 
 Este documento explica **como as peças do bot se encaixam**. Se você entender só um
 arquivo desta pasta, entenda este. Valores de relógio e teto vigentes: Store Scanner
-**5 min**, Publisher **2 min**, teto **40** — ver [regras-de-negocio.md](regras-de-negocio.md).
+**5 min**, Publisher **2 min**, teto **40**/dia e **6**/hora — ver [regras-de-negocio.md](regras-de-negocio.md).
 
 ---
 
@@ -108,7 +108,7 @@ flowchart TD
         B2 -->|"dentro"| B4["Count Today Posts<br/>hoje + última hora"]
         B4 --> B5{"Under Daily Limit?<br/>menos de 40?"}
         B5 -->|"teto batido"| B6["Daily Limit Reached<br/>(fim)"]
-        B5 -->|"ok"| B5b{"Under Hourly Limit?<br/>menos de 4 na última hora?"}
+        B5 -->|"ok"| B5b{"Under Hourly Limit?<br/>menos de 6 na última hora?"}
         B5 -->|"ok"| B5c["Registrar Pendentes Impublicaveis"]
         B5b -->|"teto/hora"| B6b["Hourly Limit Reached<br/>(fim)"]
         B5b -->|"ok"| B7["Fetch Next Pending<br/>pokemon, copag, economia, %,<br/>LIMIT 1, ja traz o cupom"]
@@ -186,9 +186,11 @@ silêncio.
 ### O que o Code node decide, na ordem
 
 1. **Filtro de título** da loja (coluna `filtro_titulo`). É o que impede baralho de Truco da
-   COPAG **e boneco Funko da loja oficial** de virarem post de Pokémon TCG. Desde 13/08/2026
-   as duas lojas usam a mesma regex, que exige vocabulário de TCG e barra produto licenciado
-   ([Regra 0b](regras-de-negocio.md#regra-0b--só-produto-de-tcg-não-qualquer-produto-pokémon)).
+   COPAG **e boneco Funko da loja oficial** de virarem post de Pokémon TCG. Oito lojas usam
+   a mesma regex (cartas no plural + acessórios com Pokémon no título); a Escala Miniaturas
+   não tem `\bcartas\b`, porque a vitrine mistura single
+   ([Regra 0b](regras-de-negocio.md#regra-0b--só-produto-de-tcg-não-qualquer-produto-pokémon),
+   [Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)).
    O teste roda no título original **e** no normalizado, e uma regex inválida aborta a
    varredura daquela loja de propósito.
 2. **É oferta de verdade?** Sem preço "de/por", o produto não entra. Preço cheio não é
@@ -403,7 +405,7 @@ A cada **2 minutos** o Publisher acorda e passa por **quatro** portões, em orde
 2. **`Count Today Posts`** → **`Under Daily Limit?`** — conta quantos posts já saíram hoje
    (`status = 'posted'` com `posted_at` de hoje) e segue só se for menos de **40**.
 3. **`Under Hourly Limit?`** — o mesmo `Count Today Posts` também devolve `hour_count`
-   (posts `posted` na última hora corrida). Segue só se for menos de **4**. Senão termina
+   (posts `posted` na última hora corrida). Segue só se for menos de **6**. Senão termina
    em `Hourly Limit Reached`. Em paralelo, `Registrar Pendentes Impublicaveis` continua
    ligado no ramo verdadeiro do teto diário.
 4. **`Fetch Next Pending`** — pega o próximo item da fila.
@@ -565,14 +567,14 @@ porque tudo que importa está no banco.
 
 ## 8. Divergências conhecidas entre plano e realidade
 
-Levantadas de novo em 13/08/2026 ~22h40 BRT, conferindo o n8n ao vivo. **Onde houver conflito, o n8n vale.**
+Levantadas de novo em 14/08/2026 ~18h43 BRT, conferindo o n8n ao vivo. **Onde houver conflito, o n8n vale.**
 
 | Item | O que o plano dizia | O que está no n8n |
 | --- | --- | --- |
 | Intervalo do Store Scanner | 45 min no plano antigo; 10 min na tarde de 13/08 | **5 minutos**, node `A Cada 5 Minutos`, mais jitter 0–60s. Não usar 2 min (9 HTTP/ciclo) |
 | Intervalo do Publisher | 5 minutos na maior parte de 13/08 | **2 minutos**, node `Every 2 Minutes` |
 | Teto diário | 30 no plano / manhã | **40**, node `Under Daily Limit?` |
-| Teto por hora | nenhum no plano | **4** na última hora corrida, node `Under Hourly Limit?` |
+| Teto por hora | nenhum no plano | **6** na última hora corrida, node `Under Hourly Limit?` |
 | Ordem da fila | maior `discount_pct` | Pokémon → COPAG → economia em R$ → % |
 | Hashtags no post | Eduardo pediu para remover | **Já removidas** do `Format PT-BR Message` |
 | Filtro de autenticidade | Listado como Fase 3, com IA | **Já implementado** no Scanner v2 (desligado); o Store Scanner **não** o usa |
