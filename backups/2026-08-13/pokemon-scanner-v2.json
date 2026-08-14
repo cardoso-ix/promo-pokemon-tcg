@@ -1,0 +1,628 @@
+{
+  "id": "39kdRchYI6CwsbNY",
+  "name": "Pokemon Scanner v2",
+  "active": false,
+  "versionId": "a05999fd-7e17-4d3a-abd3-6abb65b8366a",
+  "activeVersionId": null,
+  "description": "Varre ofertas do MercadoLivre a cada 10min (com jitter aleatorio ate 60s), classifica por desconto e por score de autenticidade, e roteia para promos, promos_review ou bloqueio no PostgreSQL.",
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.mercadolivre.com.br/ofertas?category=MLB6899",
+        "sendQuery": false,
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+            },
+            {
+              "name": "Accept-Language",
+              "value": "pt-BR,pt;q=0.9,en;q=0.8"
+            },
+            {
+              "name": "Upgrade-Insecure-Requests",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "81e670fd-279a-4722-94ec-9e64868387c1",
+      "name": "Search MercadoLivre",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const raw = $input.first().json.data || $input.first().json.body || '';\nconst html = typeof raw === 'string' ? raw : JSON.stringify(raw);\n\nconst ML_MIN = 15;\nconst ML_MAX = 60;\n// ===== Link de afiliado =====\n// Conferido em 13/08/2026 contra dois links reais do painel do Eduardo.\n// matt_word = apelido da conta de afiliado; matt_tool = ID numerico da etiqueta.\n// O painel gera /social/<apelido>?...&ref=<token assinado>, e esse token nao pode\n// ser produzido fora do painel. Detalhes em docs/regras-de-negocio.md, secao 10.\nconst AFILIADO_APELIDO = 'caed1312314';\nconst AFILIADO_TOOL_ID = '96097202';\n\nfunction montarLinkAfiliado(urlProduto) {\n  const limpa = String(urlProduto == null ? '' : urlProduto).split('#')[0].split('?')[0];\n  if (!limpa) return '';\n  return limpa + '?matt_word=' + AFILIADO_APELIDO + '&matt_tool=' + AFILIADO_TOOL_ID + '&forceInApp=true';\n}\n\n// Cartas Colecionaveis T.C.G. A URL de ofertas ja filtra a categoria no servidor,\n// entao nao ha filtro de categoria nem de palavra-chave aqui.\nconst CATEGORY = 'MLB6899';\nconst SEARCH_TERM = 'ofertas MLB6899';\n\n// ===== Limiares do filtro de autenticidade =====\nconst AUTH_BLOCK = -40;   // score <= -40  -> bloqueado como suspeita de falsificacao\nconst AUTH_ACCEPT = 25;   // score >= +25  -> aceito; entre os dois -> revisao humana\nconst POS_KW_CAP = 55;    // teto dos sinais positivos de titulo (anti keyword stuffing)\n\nconst esc = (s) => String(s == null ? '' : s).replace(/'/g, \"''\");\n// remove acentos e caixa alta para que os regex sejam simples e tolerantes\nconst norm = (s) => String(s == null ? '' : s).toLowerCase()\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n\n// ===== Idioma da carta =====\n// O Mercado Livre monta o titulo da pagina de ofertas anexando o idioma no fim.\n// Quando o termo aparece como ultima palavra a deteccao e quase certa (0.97);\n// no meio do titulo vale menos (0.85). Dois idiomas no mesmo titulo viram\n// 'ambiguo' e o Publisher omite a linha - melhor calar do que errar.\nconst normIdioma = (t) => norm(t).replace(/[^a-z0-9/\\- ]/g, ' ').replace(/\\s+/g, ' ').trim();\n\nconst REGRAS_IDIOMA = [\n  ['ja', /(japones|japonesa|japonesas|japoneses|japanese|\\bjapan\\b)/],\n  ['en', /(ingles|inglesa|\\benglish\\b|\\beng\\b)/],\n  ['pt', /(portugues|portuguesa|\\bnacional\\b|\\bptbr\\b|\\bcopag\\b)/],\n  ['ko', /(coreano|coreana|korean)/],\n  ['zh', /(chines|chinesa|chinese)/]\n];\n\nfunction detectarIdioma(titulo) {\n  const n = normIdioma(titulo);\n  const achados = [];\n  for (const r of REGRAS_IDIOMA) if (r[1].test(n) && achados.indexOf(r[0]) < 0) achados.push(r[0]);\n  if (achados.length === 0) return { idioma: 'desconhecido', confianca: 0 };\n  if (achados.length > 1) return { idioma: 'ambiguo', confianca: 0.4 };\n  const ultima = n.split(' ').pop() || '';\n  let re = null;\n  for (const r of REGRAS_IDIOMA) if (r[0] === achados[0]) re = r[1];\n  return { idioma: achados[0], confianca: re.test(ultima) ? 0.97 : 0.85 };\n}\n\n// ===== Lista de bloqueio de vendedores =====\n// Vem da tabela vendedores_bloqueados, carregada pelo node \"Load Seller Blocklist\".\n// E lista de BLOQUEIO apenas: nome de vendedor NUNCA soma ponto de autenticidade e\n// nao estar na lista nao e sinal a favor de nada.\nconst normNome = (s) => norm(s).replace(/[^a-z0-9 ]/g, ' ').replace(/\\s+/g, ' ').trim();\nconst BLOQUEADOS = [];\ntry {\n  const bl = $('Load Seller Blocklist').first().json.bloqueados;\n  const arr = Array.isArray(bl) ? bl : (typeof bl === 'string' ? JSON.parse(bl) : []);\n  for (const nome of (arr || [])) {\n    const k = normNome(nome);\n    if (k && BLOQUEADOS.indexOf(k) < 0) BLOQUEADOS.push(k);\n  }\n} catch (e) { /* banco indisponivel: varre sem bloquear por vendedor */ }\n\n// Termos em que o proprio anuncio admite nao ser produto licenciado.\nconst HARD_FAKE = [\n  [/\\breplicas?\\b/, 'replica'],\n  [/\\bproxys?\\b|\\bproxies\\b/, 'proxy'],\n  [/\\boricas?\\b/, 'orica'],\n  [/\\bfan\\s?made\\b/, 'fan made'],\n  [/\\bcustom\\b|\\bcustomizad[oa]s?\\b/, 'custom'],\n  [/\\bpersonalizad[oa]s?\\b/, 'personalizada'],\n  [/\\bartesanal\\b|\\bartesanais\\b/, 'artesanal'],\n  [/\\bhand\\s?made\\b/, 'handmade'],\n  [/\\bnao\\s+(oficial|licenciad|original|autentic)/, 'nao oficial'],\n  [/\\bsem\\s+licenc/, 'sem licenca'],\n  [/\\bgeneric[oa]s?\\b/, 'generica'],\n  [/\\binspirad[oa]s?\\b/, 'inspirado em'],\n  [/\\bsimilar(es)?\\b/, 'similar'],\n  [/\\bestilo\\s+pokemon\\b/, 'estilo pokemon'],\n  [/\\bimitac(ao|oes)\\b/, 'imitacao'],\n  [/\\bcopias?\\b/, 'copia'],\n  [/\\bversao\\s+alternativa\\b/, 'versao alternativa'],\n  [/\\bimpress[ao]\\s+(propria|caseira)\\b/, 'impressao caseira'],\n  [/\\bfeit[oa]s?\\s+a\\s+mao\\b/, 'feito a mao'],\n  [/\\bdiy\\b/, 'DIY'],\n  [/\\bnao\\s+e\\s+original\\b/, 'nao e original'],\n  [/\\bpaper\\s+card\\b/, 'paper card']\n];\n\n// \"Cartas gold/douradas/metalizadas\" nao existem como linha oficial vendida a granel no Brasil.\nconst METAL_FAKE = [\n  [/\\bgold\\b/, 'gold'],\n  [/\\bdourad[oa]s?\\b/, 'dourada'],\n  [/\\bmetalizad[oa]s?\\b/, 'metalizada'],\n  [/\\bmetalic[oa]s?\\b/, 'metalica'],\n  [/\\bpratead[oa]s?\\b/, 'prateada'],\n  [/\\bbanhad[oa]s?\\b/, 'banhada'],\n  [/\\bcartas?\\s+de\\s+metal\\b/, 'carta de metal'],\n  [/\\bmetal\\s+cards?\\b/, 'metal card']\n];\n\n// Chamarizes de raridade. So pontuam contra quando aparecem em contexto de lote.\nconst HYPE_HIGH = [\n  [/\\bultra\\s+rara?s?\\b/, 'ultra rara'],\n  [/\\bhiper\\s+rara?s?\\b/, 'hiper rara'],\n  [/\\bsecreta?s?\\b|\\bsecret\\s+rare\\b/, 'secreta'],\n  [/\\brainbow\\b/, 'rainbow'],\n  [/\\barco[\\s-]?iris\\b/, 'arco iris'],\n  [/\\bshiny\\b/, 'shiny']\n];\n\nconst HYPE_MED = [\n  [/\\bbrilhante?s?\\b/, 'brilhante'],\n  [/\\bholografic[oa]s?\\b|\\bholo\\b/, 'holografica'],\n  [/\\bcromad[oa]s?\\b/, 'cromada']\n];\n\n// ===== Sinais positivos =====\n// REGRA DURA: nada AUTODECLARADO pelo anunciante pode somar ponto aqui.\n// A marca do anuncio (\"POKEMON\") e escolhida por quem anuncia, e o selo\n// \"Loja oficial\" do Mercado Livre significa apenas que aquele vendedor tem uma\n// loja oficial na plataforma - NAO que seja a loja oficial da Pokemon. Foram\n// encontrados anuncios de carta Pokemon com marca POKEMON e selo \"Loja oficial\"\n// pertencendo a \"Lehadry Joias\" e a \"Vikn Comercio de Auto Pecas\".\n// Por isso \"original\", \"oficial\", \"licenciado\", \"autentico\" e \"selo\" no titulo\n// nao valem mais ponto nenhum: falsificador escreve todas essas palavras.\n// Nenhum campo brand / official_store / seller entra no score.\nconst POS_KW = [\n  [/\\bcopag\\b/, 45, 'Copag, distribuidora licenciada no Brasil'],\n  [/\\blacrad[oa]s?\\b|\\bselad[oa]s?\\b|\\blacre\\b/, 25, 'produto lacrado'],\n  [/\\bbooster\\s+box\\b|\\bbooster\\s+pack\\b|\\bbooster\\b|\\bblister\\b|\\belite\\s+trainer\\s+box\\b|\\betb\\b|\\btrainer\\s+box\\b|\\bcolecao\\s+(especial|premium)\\b|\\bpremium\\s+collection\\b|\\blatas?\\b|\\btins?\\b|\\bdeck\\b|\\bbaralho\\b/, 25, 'linha selada oficial'],\n  [/\\bportugues\\b|\\bnacional\\b|\\bpt-?br\\b/, 12, 'versao nacional em portugues'],\n  [/\\bnm\\b|\\bnear\\s+mint\\b|\\bmint\\b|\\bpsa\\b|\\bbgs\\b|\\bcgc\\b/, 8, 'vocabulario de colecionador'],\n  [/\\bnota\\s+fiscal\\b|\\bnf-?e\\b/, 5, 'emite nota fiscal']\n];\n\n// Quantidade declarada no titulo (\"kit 5 cartas\", \"lote 20 cartas\", \"100 cartas\").\nfunction extractQty(t) {\n  let q = null;\n  const pats = [\n    /\\b(\\d{1,4})\\s*(?:un(?:idades?)?\\.?\\s*)?cartas?\\b/,\n    /\\b(?:kit|lote|combo|conjunto|pacote|pack)\\s*(?:com\\s*)?(\\d{1,4})\\b/,\n    /\\b(\\d{1,4})\\s*(?:pcs|pecas)\\b/\n  ];\n  for (const p of pats) {\n    const m = t.match(p);\n    if (m) {\n      const n = parseInt(m[1], 10);\n      if (n >= 2 && n <= 5000) q = (q == null) ? n : Math.max(q, n);\n    }\n  }\n  return q;\n}\n\nfunction qtyPenalty(q) {\n  if (q == null) return 0;\n  if (q >= 100) return 40;\n  if (q >= 50) return 30;\n  if (q >= 30) return 25;\n  if (q >= 10) return 12;\n  if (q >= 5) return 5;\n  return 3;\n}\n\n// Score combinado. Positivos de titulo tem teto porque vendedor de falsificado\n// tambem escreve palavra bonita no anuncio.\nfunction authenticity(rawTitle, priceReais, ratingKnown, rating, sales, idioma) {\n  const t = norm(rawTitle);\n  const negWhy = [];\n  const posWhy = [];\n  let neg = 0;\n  let posKw = 0;\n  let posSeller = 0;\n\n  for (const rule of HARD_FAKE) {\n    if (rule[0].test(t)) {\n      neg -= 150;\n      negWhy.push('termo explicito de produto nao original: \"' + rule[1] + '\"');\n      break;\n    }\n  }\n\n  // Metal/dourado so vale como sinal de falsificacao se o anuncio for mesmo de carta.\n  const isCard = /\\bcarta|\\bcard|pokemon/.test(t);\n  let metal = null;\n  if (isCard) {\n    for (const rule of METAL_FAKE) {\n      if (rule[0].test(t)) { metal = rule[1]; break; }\n    }\n  }\n  if (metal) {\n    neg -= 30;\n    negWhy.push('carta \"' + metal + '\" nao corresponde a linha oficial do Pokemon TCG');\n  }\n\n  const qty = extractQty(t);\n  if (qty != null) {\n    const qp = qtyPenalty(qty);\n    neg -= qp;\n    negWhy.push('lote de ' + qty + ' cartas');\n  }\n\n  let unitPrice = null;\n  if (qty != null && qty >= 2 && priceReais > 0) unitPrice = priceReais / qty;\n\n  const hypeHits = [];\n  for (const rule of HYPE_HIGH) if (rule[0].test(t)) hypeHits.push({ w: 25, label: rule[1] });\n  for (const rule of HYPE_MED) if (rule[0].test(t)) hypeHits.push({ w: 15, label: rule[1] });\n  hypeHits.sort((a, b) => b.w - a.w);\n  if (qty != null && qty >= 2 && hypeHits.length > 0) {\n    let hp = hypeHits[0].w + (hypeHits.length - 1) * 10;\n    if (hp > 45) hp = 45;\n    neg -= hp;\n    negWhy.push('chamariz de raridade em lote: ' + hypeHits.map(h => h.label).join(' + '));\n  }\n\n  // Preco por carta: chamariz de raridade alta a poucos reais nao existe no mercado real.\n  const highHype = hypeHits.some(h => h.w === 25) || !!metal;\n  if (unitPrice != null) {\n    if (highHype && unitPrice < 15) {\n      neg -= 35;\n      negWhy.push('preco por carta implausivel: R$ ' + unitPrice.toFixed(2) + ' para carta anunciada como rara');\n    } else if (unitPrice < 1) {\n      neg -= 10;\n      negWhy.push('preco por carta de R$ ' + unitPrice.toFixed(2) + ', volume sem valor colecionavel');\n    }\n  }\n\n  // IDIOMA NUNCA PENALIZA SOZINHO. Carta japonesa legitima existe e e valorizada\n  // por colecionador - varias sao mais caras que a versao ocidental. A suspeita so\n  // nasce da COMBINACAO de lote grande (>=10 cartas) com preco unitario implausivel\n  // (< R$ 5 por carta), que e o padrao das replicas vendidas a granel.\n  if (idioma === 'ja' && qty != null && qty >= 10 && unitPrice != null && unitPrice < 5) {\n    neg -= 25;\n    negWhy.push('lote grande de ' + qty + ' cartas japonesas a R$ ' + unitPrice.toFixed(2) + ' por carta');\n  }\n\n  for (const rule of POS_KW) {\n    if (rule[0].test(t)) { posKw += rule[1]; posWhy.push(rule[2]); }\n  }\n  if (posKw > POS_KW_CAP) posKw = POS_KW_CAP;\n\n  if (!ratingKnown) {\n    posSeller -= 6;\n    negWhy.push('vendedor sem reputacao publicada');\n  } else if (rating >= 4.8) {\n    posSeller += 10;\n    posWhy.push('reputacao do vendedor ' + rating);\n  } else if (rating >= 4.5) {\n    posSeller += 5;\n    posWhy.push('reputacao do vendedor ' + rating);\n  } else if (rating < 4.0) {\n    posSeller -= 12;\n    negWhy.push('reputacao baixa do vendedor: ' + rating);\n  }\n\n  if (sales >= 1000) { posSeller += 10; posWhy.push('mais de 1000 vendas'); }\n  else if (sales >= 500) { posSeller += 6; posWhy.push('mais de 500 vendas'); }\n  else if (sales >= 100) { posSeller += 3; posWhy.push('mais de 100 vendas'); }\n  else { posSeller -= 10; negWhy.push('vendedor com apenas ' + sales + ' vendas registradas'); }\n\n  const score = Math.round(posKw + posSeller + neg);\n  const level = score <= AUTH_BLOCK ? 'suspeito' : (score >= AUTH_ACCEPT ? 'confiavel' : 'duvidoso');\n  const parts = [];\n  if (negWhy.length) parts.push('contra: ' + negWhy.join('; '));\n  if (posWhy.length) parts.push('a favor: ' + posWhy.join('; '));\n\n  return {\n    score: score,\n    level: level,\n    qty: qty,\n    unit_price: unitPrice == null ? null : Math.round(unitPrice * 100) / 100,\n    detail: parts.join(' | ') || 'nenhum sinal relevante no titulo'\n  };\n}\n\n// ===== Estrategia 0 (prioritaria): _n.ctx.r dentro de __NORDIC_RENDERING_CTX__ =====\nfunction extractCtx(h) {\n  const i = h.indexOf('_n.ctx.r=');\n  if (i < 0) return null;\n  const s = h.indexOf('{', i);\n  if (s < 0) return null;\n  let depth = 0, inStr = false, escaped = false;\n  for (let j = s; j < h.length; j++) {\n    const ch = h[j];\n    if (inStr) {\n      if (escaped) escaped = false;\n      else if (ch === '\\\\') escaped = true;\n      else if (ch === '\"') inStr = false;\n    } else {\n      if (ch === '\"') inStr = true;\n      else if (ch === '{') depth++;\n      else if (ch === '}') { depth--; if (depth === 0) return h.slice(s, j + 1); }\n    }\n  }\n  return null;\n}\n\nfunction findContainer(o, d) {\n  if (!o || d > 8 || typeof o !== 'object') return null;\n  if (Array.isArray(o.items) && o.items.length && o.items[0] && o.items[0].card) return o;\n  for (const k of Object.keys(o)) { const r = findContainer(o[k], d + 1); if (r) return r; }\n  return null;\n}\n\nfunction comp(card, type) {\n  return (card.components || []).find(c => c && c.type === type)\n    || (card.widget_components || []).find(c => c && c.type === type);\n}\n\n// A pagina de ofertas nao traz seller_reputation estruturado como a API antiga.\n// O componente review_compacted traz nota e volume de vendas em TEXTO.\nfunction parseReview(card) {\n  const out = { rating: null, sales: 0 };\n  const rc = comp(card, 'review_compacted');\n  if (!rc) return out;\n  let blob = '';\n  try { blob = JSON.stringify(rc); } catch (e) { return out; }\n\n  const pats = [\n    /\"rating\"\\s*:\\s*\"?([0-5](?:[.,]\\d+)?)\"?/i,\n    /\"(?:label|text|value)\"\\s*:\\s*\"([0-5](?:[.,]\\d)?)\"/,\n    /\"([0-5][.,]\\d)\"/\n  ];\n  for (const p of pats) {\n    const m = blob.match(p);\n    if (m) {\n      const v = parseFloat(String(m[1]).replace(',', '.'));\n      if (!isNaN(v) && v >= 0 && v <= 5) { out.rating = v; break; }\n    }\n  }\n\n  const ms = blob.match(/\\+?\\s*([\\d.]+)\\s*(mil|mi)?\\s*vendid/i);\n  if (ms) {\n    let n = parseFloat(String(ms[1]).replace(/\\./g, ''));\n    if (!isNaN(n)) {\n      const unit = String(ms[2] || '').toLowerCase();\n      if (unit === 'mil') n = n * 1000;\n      else if (unit === 'mi') n = n * 1000000;\n      out.sales = Math.round(n);\n    }\n  }\n  return out;\n}\n\n// Nome do vendedor. Vem no componente \"seller\", no formato\n// \"{marca} por {Nome do Vendedor} {icone}\". So ~3% dos anuncios expoem isso,\n// mas quando expoem e o unico jeito de aplicar a lista de bloqueio.\n// A marca que vem antes do \"por\" e AUTODECLARADA e nao e usada para nada.\nfunction parseSeller(card) {\n  const sc = comp(card, 'seller');\n  if (!sc) return '';\n  let txt = '';\n  if (sc.seller && typeof sc.seller.text === 'string') txt = sc.seller.text;\n  if (!txt) {\n    try {\n      const m = JSON.stringify(sc).match(/\"text\"\\s*:\\s*\"([^\"]{2,120})\"/);\n      if (m) txt = m[1];\n    } catch (e) { return ''; }\n  }\n  if (!txt) return '';\n  const low = String(txt).toLowerCase();\n  const i = low.indexOf(' por ');\n  let nome = i >= 0 ? String(txt).slice(i + 5) : String(txt);\n  nome = nome.replace(/[^0-9A-Za-z\\u00C0-\\u00FF&.,'\\- ]/g, ' ').replace(/\\s+/g, ' ').trim();\n  return nome.slice(0, 120);\n}\n\nfunction normalizeNordic(it) {\n  const card = (it && it.card) || {};\n  const md = card.metadata || {};\n  const t = comp(card, 'title');\n  const p = comp(card, 'price');\n  const price = (p && p.price && p.price.current_price) ? p.price.current_price.value : null;\n  let prev = null;\n  const labels = (p && p.price && p.price.price_labels) || [];\n  for (const lb of labels) {\n    for (const v of ((lb && lb.values) || [])) {\n      if (v && v.type === 'price' && v.price) prev = v.price.value;\n    }\n  }\n  const pics = (card.pictures && card.pictures.pictures) || [];\n  const picId = pics[0] ? pics[0].id : null;\n  const url = md.url ? String(md.url) : '';\n  const rev = parseReview(card);\n  return {\n    id: md.id,\n    title: (t && t.title && t.title.text) || '',\n    price: price,\n    original_price: prev || price,\n    permalink: url ? (url.indexOf('http') === 0 ? url : 'https://' + url) : '',\n    thumbnail: picId ? 'https://http2.mlstatic.com/D_NQ_NP_' + picId + '-O.webp' : '',\n    category_id: CATEGORY,\n    _rating: rev.rating,\n    _sales: rev.sales,\n    _vendedor: parseSeller(card)\n  };\n}\n\nlet items = [];\nlet source = '';\nlet parseErr = null;\nconst antiBot = html.indexOf('suspicious-traffic') >= 0;\n\nif (!antiBot) {\n  try {\n    const blob = extractCtx(html);\n    if (!blob) {\n      parseErr = '_n.ctx.r nao encontrado no HTML (formato da pagina de ofertas mudou?)';\n    } else {\n      const container = findContainer(JSON.parse(blob), 0);\n      if (!container) {\n        parseErr = 'container de cards nao encontrado dentro de _n.ctx.r';\n      } else {\n        items = container.items.map(normalizeNordic).filter(x => x && x.id);\n        source = 'nordic';\n      }\n    }\n  } catch (e) {\n    parseErr = 'falha ao parsear _n.ctx.r: ' + (e && e.message ? e.message : String(e));\n  }\n}\n\n// ===== Fallbacks legados (pagina de busca / API) =====\nif (!antiBot && items.length === 0) {\n  try {\n    const stateMatch = html.match(/__PRELOADED_STATE__\\s*=\\s*({[\\s\\S]*?});\\s*<\\/script>/);\n    if (stateMatch) {\n      const state = JSON.parse(stateMatch[1]);\n      const results = state?.initialState?.results || state?.results || [];\n      if (Array.isArray(results) && results.length > 0) { items = results; source = 'preloaded_state'; }\n    }\n  } catch(e) {}\n}\n\nif (!antiBot && items.length === 0) {\n  try {\n    const ldMatches = html.match(/<script type=\"application\\/ld\\+json\">([\\s\\S]*?)<\\/script>/g);\n    if (ldMatches) {\n      for (const m of ldMatches) {\n        const jsonStr = m.replace(/<script[^>]*>/, '').replace(/<\\/script>/, '');\n        const parsed = JSON.parse(jsonStr);\n        if (parsed['@type'] === 'ItemList' && parsed.itemListElement) {\n          items = parsed.itemListElement.map(i => i.item || i); source = 'ld_json'; break;\n        }\n        if (Array.isArray(parsed)) { items = parsed; source = 'ld_json'; break; }\n      }\n    }\n  } catch(e) {}\n}\n\nif (!antiBot && items.length === 0) {\n  try {\n    const scriptMatches = html.match(/<script[^>]*>([\\s\\S]*?)<\\/script>/g) || [];\n    for (const s of scriptMatches) {\n      const content = s.replace(/<script[^>]*>/, '').replace(/<\\/script>/, '').trim();\n      if (content.includes('\"results\"') && content.includes('\"price\"')) {\n        const jsonStart = content.indexOf('{');\n        const jsonEnd = content.lastIndexOf('}');\n        if (jsonStart >= 0 && jsonEnd > jsonStart) {\n          try {\n            const obj = JSON.parse(content.substring(jsonStart, jsonEnd + 1));\n            const found = obj.results || obj.data?.results || obj.initialProps?.pageProps?.results || [];\n            if (Array.isArray(found) && found.length > 0) { items = found; source = 'script_json'; break; }\n          } catch(e2) {}\n        }\n      }\n    }\n  } catch(e) {}\n}\n\nif (!antiBot && items.length === 0) {\n  try {\n    const cardPattern = /class=\"[^\"]*ui-search-result[^\"]*\"[\\s\\S]*?<a[^>]*href=\"(https:\\/\\/[^\"]+)\"[\\s\\S]*?<span[^>]*class=\"[^\"]*price-tag-fraction[^\"]*\"[^>]*>(\\d[\\d.]*)<\\/span>/g;\n    let match;\n    while ((match = cardPattern.exec(html)) !== null) {\n      const permalink = match[1].split('?')[0];\n      const priceStr = match[2].replace(/\\./g, '');\n      items.push({ id: permalink.split('-')[1] || permalink.slice(-12), permalink: permalink, price: parseInt(priceStr), title: '' });\n      source = 'html_cards';\n    }\n  } catch(e) {}\n}\n\nif (!antiBot && items.length === 0) {\n  try {\n    const parsed = JSON.parse(html);\n    if (parsed.results && Array.isArray(parsed.results)) { items = parsed.results; source = 'json'; }\n    else if (Array.isArray(parsed)) { items = parsed; source = 'json'; }\n  } catch(e) {}\n}\n\n// ===== Normalizacao comum + regras de negocio =====\nconst output = [];\nconst seen = new Set();\n\nfor (const r of items) {\n  const id = String(r.id || r.item_id || r.permalink || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);\n  if (!id || seen.has(id)) continue;\n\n  const price = parseFloat(r.price || r.current_price || 0);\n  if (!price || price <= 0) continue;\n  seen.add(id);\n\n  const origPrice = parseFloat(r.original_price || r.was_price || r.list_price || price);\n  const priceCents = Math.round(price * 100);\n  const origCents = Math.round(origPrice * 100);\n  const disc = origPrice > price ? parseFloat(((origPrice - price) / origPrice * 100).toFixed(2)) : 0;\n\n  let sellerSales, sellerRep, ratingKnown;\n  if (r._rating != null || r._sales != null) {\n    sellerSales = r._sales || 0;\n    ratingKnown = r._rating != null;\n    sellerRep = ratingKnown ? r._rating : (sellerSales > 1000 ? 4.0 : sellerSales > 100 ? 3.5 : 3.0);\n  } else {\n    const srep = (r.seller && r.seller.seller_reputation) || {};\n    sellerSales = (srep.transactions && srep.transactions.total) || 0;\n    const pss = (r.seller && r.seller.power_seller_status) || srep.power_seller_status || '';\n    ratingKnown = !!pss;\n    sellerRep = pss === 'platinum' ? 5.0 : pss === 'gold' ? 4.5 : pss === 'silver' ? 4.0 : sellerSales > 100 ? 3.5 : 3.0;\n  }\n  sellerRep = Math.round(Math.max(0, Math.min(5, sellerRep)) * 10) / 10;\n\n  const catId = r.category_id || CATEGORY;\n  const thumbnail = r.thumbnail || r.image || '';\n  const permalink = r.permalink || r.link || r.url || '';\n  const title = r.title || r.name || '';\n  const utmLink = montarLinkAfiliado(permalink);\n  const vendedor = String(r._vendedor || '').trim();\n\n  const idi = detectarIdioma(title);\n  const auth = authenticity(title, price, ratingKnown, sellerRep, sellerSales, idi.idioma);\n  const authSummary = 'autenticidade ' + (auth.score > 0 ? '+' : '') + auth.score + ' (' + auth.level + ') - ' + auth.detail;\n\n  const vendKey = normNome(vendedor);\n  const vendBloqueado = !!(vendKey && BLOQUEADOS.indexOf(vendKey) >= 0);\n\n  let decision, reason, status = null, blockedReason = null;\n  if (vendBloqueado) {\n    decision = 'bloqueado';\n    status = 'blocked';\n    blockedReason = 'vendedor em lista de bloqueio: ' + vendedor;\n    reason = 'vendedor bloqueado (' + vendedor + ') | desconto ' + disc + '% | ' + authSummary;\n  } else if (disc > ML_MAX) {\n    decision = 'bloqueado';\n    reason = 'desconto ' + disc + '% > ' + ML_MAX + '% | ' + authSummary;\n    status = 'blocked';\n    blockedReason = 'suspeita de golpe: desconto ' + disc + '% acima do limite de ' + ML_MAX + '%';\n  } else if (auth.score <= AUTH_BLOCK) {\n    decision = 'bloqueado';\n    reason = 'desconto ' + disc + '% ok | ' + authSummary;\n    status = 'blocked';\n    blockedReason = 'suspeita de falsificacao (score ' + auth.score + '): ' + auth.detail;\n  } else if (disc < ML_MIN) {\n    decision = 'descartado';\n    reason = 'desconto ' + disc + '% < ' + ML_MIN + '% | ' + authSummary;\n  } else if (auth.score >= AUTH_ACCEPT) {\n    decision = 'aceito';\n    reason = 'desconto ' + disc + '% ok | ' + authSummary;\n    status = 'pending';\n  } else {\n    decision = 'revisao';\n    reason = 'desconto ' + disc + '% ok | ' + authSummary;\n    status = 'review';\n    blockedReason = 'autenticidade duvidosa (score ' + auth.score + '): ' + auth.detail;\n  }\n\n  output.push({ json: {\n    item_id: id,\n    title: esc(String(title).slice(0, 300)),\n    price_cents: priceCents,\n    original_price_cents: origCents,\n    discount_pct: disc,\n    seller_reputation: sellerRep,\n    seller_sales: sellerSales,\n    category_id: esc(catId),\n    thumbnail: esc(thumbnail),\n    permalink: esc(permalink),\n    utm_link: esc(utmLink),\n    status: status,\n    blocked_reason: blockedReason == null ? null : esc(String(blockedReason).slice(0, 500)),\n    search_term: SEARCH_TERM,\n    decision: decision,\n    reason: esc(String(reason).slice(0, 500)),\n    auth_score: auth.score,\n    auth_level: auth.level,\n    auth_detail: esc(String(auth.detail).slice(0, 500)),\n    auth_qty: auth.qty,\n    auth_unit_price: auth.unit_price,\n    idioma: idi.idioma,\n    idioma_confianca: idi.confianca,\n    vendedor: esc(vendedor.slice(0, 120)),\n    vendedor_bloqueado: vendBloqueado,\n    _source: source || 'desconhecida'\n  }});\n}\n\nif (output.length > 0) return output;\n\n// ===== Nada extraido: registra o motivo em promos_erros =====\nlet msg;\nif (antiBot) msg = 'anti-bot do MercadoLivre: HTML contem suspicious-traffic';\nelse if (parseErr) msg = parseErr;\nelse if (!html || html.length === 0) msg = 'resposta vazia do MercadoLivre';\nelse if (items.length > 0) msg = items.length + ' cards encontrados mas nenhum normalizavel (sem id ou sem preco)';\nelse msg = 'parser extraiu 0 itens de um HTML de ' + html.length + ' bytes';\n\nconst payload = {\n  motivo: msg,\n  anti_bot: antiBot,\n  html_length: html.length,\n  cards_brutos: items.length,\n  fonte: source || 'nenhuma',\n  html_snippet: String(html).slice(0, 600)\n};\n\nreturn [{ json: {\n  _parse_error: true,\n  item_id: null,\n  decision: 'erro_parser',\n  reason: esc(String(msg).slice(0, 400)),\n  error_msg: esc(String(msg).slice(0, 400)),\n  payload_json: esc(JSON.stringify(payload))\n}}];"
+      },
+      "id": "365885d6-eb25-4d40-92ee-4552d89a852d",
+      "name": "Normalize and Classify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "aceito"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "bloqueado"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "erro_parser"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "revisao"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Descartado"
+        }
+      },
+      "id": "17baa7e8-bb68-4887-a965-28ba6290be03",
+      "name": "Route by Decision",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        672,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos (item_id, title, price_cents, original_price_cents, discount_pct, seller_reputation, seller_sales, category_id, thumbnail, permalink, utm_link, status, search_term, idioma, idioma_confianca, vendedor) VALUES ('{{ $json.item_id }}', '{{ $json.title }}', {{ $json.price_cents }}, {{ $json.original_price_cents }}, {{ $json.discount_pct }}, {{ $json.seller_reputation }}, {{ $json.seller_sales }}, '{{ $json.category_id }}', '{{ $json.thumbnail }}', '{{ $json.permalink }}', '{{ $json.utm_link }}', 'pending', '{{ $json.search_term }}', '{{ $json.idioma }}', {{ $json.idioma_confianca }}, NULLIF('{{ $json.vendedor }}', '')) ON CONFLICT (item_id) DO NOTHING RETURNING item_id;",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "id": "1e5f5f69-58a6-45da-8100-8832107ac1e3",
+      "name": "Insert Promo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        896,
+        96
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos_log (item_id, decision, reason) VALUES ('{{ $(\"Normalize and Classify\").item.json.item_id }}', '{{ $json.item_id ? \"aceito\" : \"duplicado\" }}', '{{ $(\"Normalize and Classify\").item.json.reason }}');",
+        "options": {}
+      },
+      "id": "2ab2c971-c1e8-4857-bf33-030ce01d0a8e",
+      "name": "Log Aceito",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos_erros (item_id, payload, error_step, error_msg) VALUES ('{{ $json.item_id }}', '{{ JSON.stringify({ item_id: $json.item_id, title: $json.title, price_cents: $json.price_cents, discount_pct: $json.discount_pct, permalink: $json.permalink }).replace(/'/g, \"''\") }}'::jsonb, 'busca', '{{ String($json.error || \"insert promo failed\").replace(/'/g, \"''\").slice(0, 500) }}');",
+        "options": {}
+      },
+      "id": "f7fb0c84-8b6e-4eb6-b06c-bcbee6537af4",
+      "name": "Log Insert Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        192
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos (item_id, title, price_cents, original_price_cents, discount_pct, seller_reputation, seller_sales, category_id, thumbnail, permalink, utm_link, status, blocked_reason, search_term, idioma, idioma_confianca, vendedor) VALUES ('{{ $json.item_id }}', '{{ $json.title }}', {{ $json.price_cents }}, {{ $json.original_price_cents }}, {{ $json.discount_pct }}, {{ $json.seller_reputation }}, {{ $json.seller_sales }}, '{{ $json.category_id }}', '{{ $json.thumbnail }}', '{{ $json.permalink }}', '{{ $json.utm_link }}', 'blocked', '{{ $json.blocked_reason }}', '{{ $json.search_term }}', '{{ $json.idioma }}', {{ $json.idioma_confianca }}, NULLIF('{{ $json.vendedor }}', '')) ON CONFLICT (item_id) DO NOTHING RETURNING item_id;",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "id": "c519da92-728c-46f4-8cc3-2091290ed27e",
+      "name": "Insert Blocked",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        896,
+        480
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos_log (item_id, decision, reason) VALUES ('{{ $(\"Normalize and Classify\").item.json.item_id }}', '{{ $json.item_id ? \"bloqueado\" : \"duplicado\" }}', '{{ $(\"Normalize and Classify\").item.json.reason }}');",
+        "options": {}
+      },
+      "id": "07bd766c-570a-4b5e-ad87-98c5035d0fb0",
+      "name": "Log Bloqueado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        384
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos_erros (item_id, payload, error_step, error_msg) VALUES ('{{ $json.item_id }}', '{{ JSON.stringify({ item_id: $json.item_id, title: $json.title, price_cents: $json.price_cents, discount_pct: $json.discount_pct, permalink: $json.permalink }).replace(/'/g, \"''\") }}'::jsonb, 'filtro', '{{ String($json.error || \"insert blocked failed\").replace(/'/g, \"''\").slice(0, 500) }}');",
+        "options": {}
+      },
+      "id": "66862c38-3444-4f9d-abde-e98ec1bb6329",
+      "name": "Log Block Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        576
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos_log (item_id, decision, reason) VALUES ('{{ $json.item_id }}', '{{ $json.decision }}', '{{ $json.reason }}');",
+        "options": {}
+      },
+      "id": "409d57b2-5b28-40c7-b839-43c68cfaad7e",
+      "name": "Log Descartado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        896,
+        672
+      ],
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "c817c68f-5d7c-4c15-9f94-39af49f899ca",
+      "name": "Every 10 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -224,
+        480
+      ]
+    },
+    {
+      "id": "1c68a70c-66cf-402a-8ed1-26884727e1d4",
+      "name": "Log Parse Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        896,
+        864
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos_erros (item_id, payload, error_step, error_msg) VALUES (NULL, '{{ $json.payload_json }}'::jsonb, 'busca', '{{ $json.error_msg }}');",
+        "options": {}
+      },
+      "notes": "Grava em promos_erros quando o parser nao consegue extrair produtos (formato do ML mudou, anti-bot voltou, ou zero itens).",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "7753f81b-cb72-4680-8cfe-23a1b2f8b45c",
+      "name": "Insert Review",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        896,
+        1056
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos (item_id, title, price_cents, original_price_cents, discount_pct, seller_reputation, seller_sales, category_id, thumbnail, permalink, utm_link, status, blocked_reason, search_term, idioma, idioma_confianca, vendedor) VALUES ('{{ $json.item_id }}', '{{ $json.title }}', {{ $json.price_cents }}, {{ $json.original_price_cents }}, {{ $json.discount_pct }}, {{ $json.seller_reputation }}, {{ $json.seller_sales }}, '{{ $json.category_id }}', '{{ $json.thumbnail }}', '{{ $json.permalink }}', '{{ $json.utm_link }}', 'review', '{{ $json.blocked_reason }}', '{{ $json.search_term }}', '{{ $json.idioma }}', {{ $json.idioma_confianca }}, NULLIF('{{ $json.vendedor }}', '')) ON CONFLICT (item_id) DO NOTHING RETURNING item_id;",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "notes": "Itens na zona cinzenta do score de autenticidade entram em promos com status review, fora da fila de publicacao.",
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "c086d078-ef90-4afb-8ae2-a9da50e95044",
+      "name": "Log Review",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1344,
+        1056
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos_log (item_id, decision, reason) VALUES ('{{ $(\"Normalize and Classify\").item.json.item_id }}', 'revisao', '{{ $(\"Normalize and Classify\").item.json.reason }}');",
+        "options": {}
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "f43a3936-0a39-4d06-acf0-997f445808e0",
+      "name": "Log Review Error",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        1248
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos_erros (item_id, payload, error_step, error_msg) VALUES ('{{ $json.item_id }}', '{{ JSON.stringify({ item_id: $json.item_id, title: $json.title, price_cents: $json.price_cents, discount_pct: $json.discount_pct, permalink: $json.permalink }).replace(/'/g, \"''\") }}'::jsonb, 'revisao', '{{ String($json.error || \"insert review failed\").replace(/'/g, \"''\").slice(0, 500) }}');",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "8fa48a7f-c1ab-4a5e-8ad9-a8d8ca5cb1ae",
+      "name": "Random Jitter",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        480
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ Math.floor(Math.random() * 61) }}",
+        "unit": "seconds"
+      },
+      "notes": "Espera um numero aleatorio de segundos antes de bater no MercadoLivre, para o trafego nao sair num padrao exato de 10 em 10 minutos. A faixa fica abaixo de 65s de proposito: acima disso o n8n persiste a execucao no banco e o WaitTracker so a retoma no proximo poll, o que atrasaria e tornaria o jitter impreciso. Passa os itens adiante sem alterar nada.",
+      "webhookId": "164f4636-06c5-4449-b0fd-e10e1a0de396"
+    },
+    {
+      "id": "ecc86576-a1a6-4d64-804c-0a06f38ed41f",
+      "name": "Queue Review",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        1056
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=INSERT INTO promos_review (item_id, title, price_cents, discount_pct, motivo) SELECT '{{ $(\"Normalize and Classify\").item.json.item_id }}', '{{ $(\"Normalize and Classify\").item.json.title }}', {{ $(\"Normalize and Classify\").item.json.price_cents }}, {{ $(\"Normalize and Classify\").item.json.discount_pct }}, '{{ $(\"Normalize and Classify\").item.json.blocked_reason }}' WHERE NOT EXISTS (SELECT 1 FROM promos_review WHERE item_id = '{{ $(\"Normalize and Classify\").item.json.item_id }}');",
+        "options": {
+          "queryBatching": "independently"
+        }
+      },
+      "notes": "Fila de curadoria humana. O NOT EXISTS evita reenfileirar o mesmo item a cada varredura do scanner.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "5a2f951f-5175-4704-adf0-849cf1b4c1cb",
+      "name": "Load Seller Blocklist",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        112,
+        480
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE TABLE IF NOT EXISTS vendedores_bloqueados (id BIGSERIAL PRIMARY KEY, nome TEXT NOT NULL UNIQUE, motivo TEXT, ativo BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ DEFAULT now()); SELECT COALESCE(json_agg(nome), '[]'::json) AS bloqueados FROM vendedores_bloqueados WHERE ativo = TRUE;",
+        "options": {}
+      },
+      "notes": "Carrega a lista de bloqueio por nome de vendedor antes de bater no ML. Devolve UMA linha com um array JSON, de proposito: se devolvesse uma linha por vendedor, o node de HTTP rodaria uma vez por linha. O CREATE TABLE IF NOT EXISTS deixa o scanner de pe mesmo que o Schema Setup nunca tenha rodado.",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Search MercadoLivre": {
+      "main": [
+        [
+          {
+            "node": "Normalize and Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize and Classify": {
+      "main": [
+        [
+          {
+            "node": "Route by Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Decision": {
+      "main": [
+        [
+          {
+            "node": "Insert Promo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Parse Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Insert Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Descartado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Promo": {
+      "main": [
+        [
+          {
+            "node": "Log Aceito",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Insert Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Blocked": {
+      "main": [
+        [
+          {
+            "node": "Log Bloqueado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Block Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Review": {
+      "main": [
+        [
+          {
+            "node": "Queue Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Review Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 10 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Random Jitter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue Review": {
+      "main": [
+        [
+          {
+            "node": "Log Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Random Jitter": {
+      "main": [
+        [
+          {
+            "node": "Load Seller Blocklist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Seller Blocklist": {
+      "main": [
+        [
+          {
+            "node": "Search MercadoLivre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

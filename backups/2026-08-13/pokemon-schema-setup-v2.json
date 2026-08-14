@@ -1,0 +1,114 @@
+{
+  "id": "F8jVi6NFxeDHfAkb",
+  "name": "Pokemon Schema Setup v2",
+  "active": false,
+  "versionId": "9622c247-43f1-4ea8-bc43-24454c0b18ad",
+  "activeVersionId": null,
+  "description": "Cria de forma idempotente todo o schema PostgreSQL do bot Pokemon TCG: tabelas promos, promos_erros, promos_review, promos_log e cupons, mais todos os indices de desempenho. Rodar num banco vazio deixa o sistema 100% funcional, sem passo manual.",
+  "settings": { "executionOrder": "v1", "availableInMCP": true, "binaryMode": "separate" },
+  "nodes": [
+    {
+      "id": "710386db-fda2-47a8-8be6-82914e333e00",
+      "name": "Run Once",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "63a1282e-01c2-4af3-97c8-0016ee868815",
+      "name": "Create promos",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [224, 0],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "CREATE TABLE IF NOT EXISTS promos (id BIGSERIAL PRIMARY KEY, item_id TEXT NOT NULL UNIQUE, title TEXT NOT NULL, price_cents INTEGER NOT NULL, original_price_cents INTEGER, discount_pct NUMERIC(5,2), seller_reputation NUMERIC(3,1), seller_sales INTEGER DEFAULT 0, category_id TEXT, thumbnail TEXT, permalink TEXT, utm_link TEXT, status TEXT NOT NULL DEFAULT 'pending', blocked_reason TEXT, telegram_message_id BIGINT, search_term TEXT, created_at TIMESTAMPTZ DEFAULT now(), posted_at TIMESTAMPTZ); CREATE INDEX IF NOT EXISTS idx_promos_status ON promos(status); CREATE INDEX IF NOT EXISTS idx_promos_created ON promos(created_at); CREATE INDEX IF NOT EXISTS idx_promos_pending_disc ON promos(discount_pct DESC) WHERE status = 'pending'; CREATE INDEX IF NOT EXISTS idx_promos_posted_at ON promos(posted_at) WHERE status = 'posted';"
+      }
+    },
+    {
+      "id": "989d3d38-6978-4af7-963e-7dc402110528",
+      "name": "Create promos_erros",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [448, 0],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "CREATE TABLE IF NOT EXISTS promos_erros (id BIGSERIAL PRIMARY KEY, item_id TEXT, payload JSONB, error_step TEXT, error_msg TEXT, retries INTEGER DEFAULT 0, created_at TIMESTAMPTZ DEFAULT now()); CREATE INDEX IF NOT EXISTS idx_promos_erros_created ON promos_erros(created_at);"
+      }
+    },
+    {
+      "id": "d9d6b7ab-7114-4d48-a07e-ef2a4a0c7691",
+      "name": "Create promos_review",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [672, 0],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "CREATE TABLE IF NOT EXISTS promos_review (id BIGSERIAL PRIMARY KEY, item_id TEXT, title TEXT, price_cents INTEGER, discount_pct NUMERIC(5,2), motivo TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMPTZ DEFAULT now()); CREATE INDEX IF NOT EXISTS idx_promos_review_status ON promos_review(status);"
+      }
+    },
+    {
+      "id": "315c7ae1-b241-492a-9d5f-75e092243655",
+      "name": "Create promos_log",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [896, 0],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "CREATE TABLE IF NOT EXISTS promos_log (id BIGSERIAL PRIMARY KEY, item_id TEXT, decision TEXT, reason TEXT, created_at TIMESTAMPTZ DEFAULT now()); CREATE INDEX IF NOT EXISTS idx_promos_log_item ON promos_log(item_id); CREATE INDEX IF NOT EXISTS idx_promos_log_created ON promos_log(created_at);"
+      }
+    },
+    {
+      "id": "bb050b98-33f5-4fc5-97d8-3f785b07e8fc",
+      "name": "Create cupons",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1120, 0],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "CREATE TABLE IF NOT EXISTS cupons (id BIGSERIAL PRIMARY KEY, codigo TEXT, descricao TEXT NOT NULL, valor_minimo_cents INTEGER, categoria_id TEXT, valido_de TIMESTAMPTZ DEFAULT now(), valido_ate TIMESTAMPTZ, ativo BOOLEAN NOT NULL DEFAULT TRUE, prioridade INTEGER NOT NULL DEFAULT 0, observacao TEXT, created_at TIMESTAMPTZ DEFAULT now()); CREATE INDEX IF NOT EXISTS idx_cupons_ativos ON cupons(ativo, prioridade DESC, valido_ate);"
+      }
+    },
+    {
+      "id": "ca6a39b8-9fbe-4c91-98e0-ebf260fb4412",
+      "name": "Create vendedores_bloqueados",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1344, 0],
+      "notes": "Lista de bloqueio por nome de vendedor. E lista de BLOQUEIO apenas: estar fora dela nao soma ponto de autenticidade nenhum. Para bloquear mais alguem basta um INSERT.",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "CREATE TABLE IF NOT EXISTS vendedores_bloqueados (id BIGSERIAL PRIMARY KEY, nome TEXT NOT NULL UNIQUE, motivo TEXT, ativo BOOLEAN NOT NULL DEFAULT TRUE, created_at TIMESTAMPTZ DEFAULT now()); CREATE INDEX IF NOT EXISTS idx_vendedores_bloqueados_ativo ON vendedores_bloqueados(ativo); INSERT INTO vendedores_bloqueados (nome, motivo) VALUES ('Lehadry Jóias', 'vende carta Pokemon com marca POKEMON autodeclarada e selo Loja oficial do ML; e joalheria, nao loja oficial da Pokemon'), ('Vikn Comércio de Auto Peças', 'vende carta Pokemon com marca POKEMON autodeclarada e selo Loja oficial do ML; e loja de auto pecas') ON CONFLICT (nome) DO NOTHING;"
+      }
+    },
+    {
+      "id": "f1e6ec7d-8fc3-4714-8a84-36c76ec35180",
+      "name": "Alter promos idioma e vendedor",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [1568, 0],
+      "notes": "Colunas novas em promos: idioma da carta detectado pelo titulo, confianca da deteccao e nome do vendedor (para o Eduardo saber quem candidatar a lista de bloqueio).",
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {},
+        "query": "ALTER TABLE promos ADD COLUMN IF NOT EXISTS idioma TEXT; ALTER TABLE promos ADD COLUMN IF NOT EXISTS idioma_confianca NUMERIC(3,2); ALTER TABLE promos ADD COLUMN IF NOT EXISTS vendedor TEXT; CREATE INDEX IF NOT EXISTS idx_promos_vendedor ON promos(vendedor);"
+      }
+    }
+  ],
+  "connections": {
+    "Run Once": { "main": [[{ "node": "Create promos", "type": "main", "index": 0 }]] },
+    "Create promos": { "main": [[{ "node": "Create promos_erros", "type": "main", "index": 0 }]] },
+    "Create promos_erros": { "main": [[{ "node": "Create promos_review", "type": "main", "index": 0 }]] },
+    "Create promos_review": { "main": [[{ "node": "Create promos_log", "type": "main", "index": 0 }]] },
+    "Create promos_log": { "main": [[{ "node": "Create cupons", "type": "main", "index": 0 }]] },
+    "Create cupons": { "main": [[{ "node": "Create vendedores_bloqueados", "type": "main", "index": 0 }]] },
+    "Create vendedores_bloqueados": { "main": [[{ "node": "Alter promos idioma e vendedor", "type": "main", "index": 0 }]] }
+  }
+}

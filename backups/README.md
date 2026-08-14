@@ -1,0 +1,42 @@
+# Backups dos workflows
+
+Cópia dos workflows do n8n guardada no repositório, em pastas com a data da exportação.
+
+**Por que isso existe:** os workflows deste projeto já sumiram uma vez, num redeploy do n8n
+([troubleshooting, P6](../docs/troubleshooting.md#p6--os-workflows-desapareceram-do-n8n)).
+O n8n é a fonte de verdade; isto aqui é o paraquedas.
+
+## O que tem em cada pasta
+
+| Caminho | Conteúdo |
+| --- | --- |
+| `<data>/*.json` | O workflow inteiro: nodes, parâmetros e ligações |
+| `<data>/code-nodes/*.js` | Só o JavaScript dos Code nodes, legível e diffável |
+| `<data>/sql/*.sql` | Só as consultas dos nodes Postgres, uma por arquivo |
+
+Os arquivos `.js` e `.sql` são derivados dos `.json` — existem para você conseguir ler e
+comparar o que mudou sem abrir um JSON de 70 KB. Nada aqui é executado a partir do repositório.
+
+**Credenciais não estão aqui, e é de propósito.** O JSON exportado não carrega senha nem
+token. Ao restaurar, os nodes de banco e do Telegram vão precisar da credencial religada à mão
+([P7](../docs/troubleshooting.md#p7--node-vermelho-reclamando-de-credencial)).
+
+## Como restaurar
+
+1. No n8n, crie um workflow novo e use **Import from File** com o `.json` desejado.
+2. Religue a credencial em cada node de Postgres e no node do Telegram.
+3. Rode na mão e confira o resultado ([runbook, seção 8](../docs/runbook.md#8-rodar-um-workflow-manualmente-sem-ativar)).
+4. **Publique.** Salvar não coloca no ar
+   ([P18](../docs/troubleshooting.md#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada)).
+
+## Como gerar um backup novo
+
+Não há automação: exporte pelo n8n (menu de três pontos → **Download**) para a pasta
+`backups/<AAAA-MM-DD>/`, ou peça a um agente com acesso ao MCP do n8n. Vale fazer sempre que
+mexer em Code node ou em consulta.
+
+## Histórico
+
+| Data | O que estava valendo |
+| --- | --- |
+| 2026-08-13 | Trava de afiliado e de foto no Publisher, filtro de título só-TCG, link `matt_word` + `matt_tool`. **Atenção:** este snapshot é da **tarde**. A noite de 13/08 ainda mudou o ritmo para Scanner **5 min** / Publisher **2 min**, ligou o Health Alert e o repost por queda de preço. Restaurar só esta pasta **sem** olhar o n8n volta intervalos velhos. |

@@ -1,0 +1,4 @@
+-- Pokemon Schema Setup v2 > node "Create promos"
+-- Backup de 13/08/2026.
+
+CREATE TABLE IF NOT EXISTS promos (id BIGSERIAL PRIMARY KEY, item_id TEXT NOT NULL UNIQUE, title TEXT NOT NULL, price_cents INTEGER NOT NULL, original_price_cents INTEGER, discount_pct NUMERIC(5,2), seller_reputation NUMERIC(3,1), seller_sales INTEGER DEFAULT 0, category_id TEXT, thumbnail TEXT, permalink TEXT, utm_link TEXT, status TEXT NOT NULL DEFAULT 'pending', blocked_reason TEXT, telegram_message_id BIGINT, search_term TEXT, created_at TIMESTAMPTZ DEFAULT now(), posted_at TIMESTAMPTZ); CREATE INDEX IF NOT EXISTS idx_promos_status ON promos(status); CREATE INDEX IF NOT EXISTS idx_promos_created ON promos(created_at); CREATE INDEX IF NOT EXISTS idx_promos_pending_disc ON promos(discount_pct DESC) WHERE status = 'pending'; CREATE INDEX IF NOT EXISTS idx_promos_posted_at ON promos(posted_at) WHERE status = 'posted';

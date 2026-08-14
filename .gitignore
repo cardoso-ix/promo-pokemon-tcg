@@ -1,0 +1,24 @@
+# Rascunhos do agente (dumps, HTML, scripts de inspeção)
+.tmp-agente/
+
+# Secrets e ambiente
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+credentials.json
+secrets/
+
+# Dependências e build
+node_modules/
+dist/
+.cache/
+
+# SO e editor
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+*.swp
