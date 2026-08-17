@@ -27,11 +27,12 @@ pode rodar sem medo. As marcadas com 🟡 **alteram dados**; leia antes de rodar
 
 ## 1. Ligar e desligar o bot
 
-> **Estado em 14/08/2026, ~18h43 BRT: Store Scanner, Publisher e Health Alert estão ativos.**
+> **Estado em 16/08/2026, ~23h10 BRT: Store Scanner, Publisher e Health Alert estão ativos.**
 > Scanner a cada **5 min**, Publisher a cada **2 min** (8h–22h BRT, teto 40/dia e 6/hora).
-> Mínimo **10%** em `pokemon`/`copag`, **15%** nas outras. Filtro: cartas Pokémon +
-> acessórios TCG com Pokémon no título (Decisão 37). O passo a passo
-> abaixo continua valendo para quando você quiser desligar ou religar.
+> Mínimo **10%** em `pokemon`/`copag`, **15%** nas outras. Filtro: cartas/acessório TCG +
+> figura Pokémon (Decisão 41). O **Pokemon Catalog Scanner** (`2ckVyvFPvtqwECDI`) existe e
+> **fica inativo** — não publique, não ligue `ultra_premium` ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
+> O passo a passo abaixo continua valendo para quando você quiser desligar ou religar.
 
 ### Antes de religar depois de uma mudança
 
@@ -80,11 +81,16 @@ Como conferir, em ordem de confiança:
 5. O **Pokemon Health Alert** (`3irgeWFKZGZZrJ5u`) também deve ficar ativo — alerta privado,
    não publica no canal
 
+**Não ligue o Pokemon Catalog Scanner** (`2ckVyvFPvtqwECDI`). Ele existe, fica inativo e
+**não se publica** enquanto `lista.mercadolivre.com.br` devolver HTTP 500 no ScraperAPI
+([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
+O Scanner v2 (`39kdRchYI6CwsbNY`) continua fora de escopo.
+
 Pronto, o bot está no ar. A partir daí:
 
 - O Scanner varre as vitrines das lojas a cada **5 minutos**, com uma espera aleatória de até 60
   segundos antes de acessar o site (por isso o intervalo real varia de ~4 a ~6 minutos).
-  **Não baixe para 2 minutos:** são 9 lojas HTTP por ciclo.
+  **Não baixe para 2 minutos:** são 10 lojas HTTP por ciclo.
 - O Publisher publica 1 promoção a cada **2 minutos**, na ordem de qualidade (Pokémon →
   COPAG → economia em R$ → %), dentro da janela de 8h às 22h BRT, até o teto de 40 posts
   por dia e 6 na última hora corrida
@@ -575,6 +581,7 @@ esteja ativo, e é a única forma de descobrir erro de digitação em Code node.
 | Workflow | Sinal de que deu certo |
 | --- | --- |
 | **Scanner** | O node `Normalize and Classify` mostra vários itens de saída (uns 9), cada um com `decision` preenchido. Nenhum node de erro acionado. A execução leva até um minuto a mais por causa do node `Random Jitter`, que espera de propósito — não é travamento |
+| **Catalog Scanner** | **Não rode sem ler a Decisão 42.** Se for retomar: `TESTE_SO_POKEMON = true`, Name da credencial = `api_key`, uma execução **manual**. HTTP 200 com `_n.ctx.r` e produtos = avançar; 208 bytes / 500 = parar. **Não publique.** |
 | **Publisher** | Se houver item na fila e você estiver dentro da janela de horário, um post aparece no canal. Se a fila estiver vazia, o node `Fetch Next Pending` mostra 0 itens e o fluxo para ali — isso está correto, não é erro |
 | **Schema Setup** | Os 5 nodes de banco ficam verdes (`promos`, `promos_erros`, `promos_review`, `promos_log` e `cupons`). É seguro rodar quantas vezes quiser: usa só `CREATE TABLE IF NOT EXISTS` e `CREATE INDEX IF NOT EXISTS`, então não apaga nem altera nada |
 
@@ -758,23 +765,25 @@ por quê.
 ## 13. Escopo: quais lojas o bot pode publicar
 
 Desde 13/08/2026 o bot publica ofertas de lojas oficiais do Mercado Livre cadastradas em
-`lojas_confiaveis`. Quem varre é o `Pokemon Store Scanner`. **Nove lojas ativas** hoje:
+`lojas_confiaveis`. Quem varre é o `Pokemon Store Scanner`. **Dez lojas ativas** hoje:
 `pokemon`, `copag`, `brinkjr`, `attack-toys`, `cade-meu-jogo`, `psz3d`,
-`ilusoes-industriais`, `parolar` e `escala-miniaturas`. Oito usam o mesmo
-`filtro_titulo` (Regra 0b / [Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)):
-cartas Pokémon no plural **e** acessórios de TCG (sleeve, playmat, binder…) **com Pokémon
-no título**. A Escala Miniaturas **não** tem `\bcartas\b`, porque a vitrine mistura
-single tipo “Carta Pokémon Nymble 9/94”. Desde ~22h35 de 13/08/2026, o desconto
-mínimo é **10%** em `pokemon` e `copag`, **15%** nas outras sete
+`ilusoes-industriais`, `parolar`, `escala-miniaturas` e `dalo-vendas`. Nove usam o mesmo
+`filtro_titulo` (Regra 0b / [Decisão 41](historico-de-decisoes.md#decisão-41--figuras-pokémon-no-filtro-e-nenhuma-loja-oficial-nova)):
+cartas Pokémon no plural, acessórios de TCG **ou** boneco/figura, **com Pokémon no
+título**. Funko, pelúcia, merch e lote continuam fora. A Escala Miniaturas **não** tem
+`\bcartas\b`, porque a vitrine mistura single tipo “Carta Pokémon Nymble 9/94”. Desde
+~22h35 de 13/08/2026, o desconto mínimo é **10%** em `pokemon` e `copag`, **15%** nas
+outras oito
 ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)).
-O experimento de 5% em todas (Decisão 29) acabou.
+O experimento de 5% em todas (Decisão 29) acabou. A busca de 16/08 não achou homepage
+oficial nova com TCG/figura para cadastrar.
 
 A COPAG entrou porque a loja oficial da Pokémon é *multiseller* e a COPAG é o vendedor real de
 vários itens dentro dela — os cards mostram "COPAG por Pokémon" com selo de loja oficial.
 Incluí-la não afrouxa o critério de procedência; é o mesmo vendedor por outra porta.
-BrinkJr, Attack Toys, Cadê Meu Jogo, Psz3D, Ilusões Industriais, PAROLAR e
-Escala Miniaturas entraram depois, também como loja oficial ML (não da marca Pokémon),
-só com produto TCG (lacrado ou acessório Pokémon) que passa no filtro.
+BrinkJr, Attack Toys, Cadê Meu Jogo, Psz3D, Ilusões Industriais, PAROLAR,
+Escala Miniaturas e Dalo Vendas entraram depois, também como loja oficial ML (não da marca Pokémon),
+só com produto TCG (lacrado, acessório ou figura Pokémon) que passa no filtro.
 
 ### Ver as lojas cadastradas e se estão ativas 🟢
 
@@ -825,12 +834,12 @@ mexer nele afeta diretamente o que pode ir ao canal.
 
 ### O filtro de título: como mexer sem quebrar 🔴
 
-Desde 14/08/2026 ([Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título))
-oito lojas usam **o mesmo** `filtro_titulo`: exige Pokémon no título + vocabulário de carta
-**ou** acessório (sleeve, playmat, binder, deck box, toploader) e barra Funko, lote, kit e
-avulso. A Escala Miniaturas usa a variante **sem** `\bcartas\b`. A regra completa, com o
-texto da regex e o porquê de cada parte, está na
-[Regra 0b das regras de negócio](regras-de-negocio.md#regra-0b--só-produto-de-tcg-não-qualquer-produto-pokémon).
+Desde 16/08/2026 ([Decisão 41](historico-de-decisoes.md#decisão-41--figuras-pokémon-no-filtro-e-nenhuma-loja-oficial-nova))
+nove lojas usam **o mesmo** `filtro_titulo`: exige Pokémon no título + vocabulário de carta,
+acessório (sleeve, playmat, binder) **ou** figura (boneco, nendoroid, figuarts) e barra
+Funko, pelúcia, lote, kit e avulso. A Escala Miniaturas usa a variante **sem** `\bcartas\b`.
+A regra completa, com o texto da regex e o porquê de cada parte, está na
+[Regra 0b das regras de negócio](regras-de-negocio.md#regra-0b--tcg-acessório-de-tcg-e-figura-pokémon-não-merch).
 
 Para ver o que está valendo agora:
 
@@ -847,12 +856,12 @@ const norm = (t) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 const re = new RegExp(SUA_REGEX, 'i');
 const passa = (t) => re.test(t) || re.test(norm(t));
 
-['Box Pokémon Coleção Mega Gengar Ex', 'Sleeves Pokémon Charizard', 'Boneco Funko Pop! Pokémon - Slowpoke']
+['Box Pokémon Coleção Mega Gengar Ex', 'Sleeves Pokémon Charizard', 'Boneco Pokémon Pikachu Articulado', 'Boneco Funko Pop! Pokémon - Slowpoke']
   .forEach(t => console.log(passa(t) ? 'PASSA ' + t : 'BARRA ' + t));
 ```
 
-Salve num arquivo e rode com `node arquivo.js`. Se o box ou o sleeve não passar, ou o Funko
-passar, não grave.
+Salve num arquivo e rode com `node arquivo.js`. Se o box, o sleeve ou o boneco Pokémon não
+passar, ou o Funko passar, não grave.
 
 Dois cuidados que já custaram tempo:
 
@@ -895,7 +904,7 @@ O que decidir em cada campo:
   "aceita tudo", e foi assim que um Funko Pop foi parar no canal em 13/08/2026: a loja
   oficial estava sem filtro, e nem toda loja oficial da marca vende só carta.
 - `desconto_minimo` — o corte de desconto daquela loja. **Vigente (Decisão 35):**
-  `pokemon` e `copag` em **10%**; as outras sete ativas em **15%**. Não é mais o
+  `pokemon` e `copag` em **10%**; as outras oito ativas em **15%**. Não é mais o
   experimento de 5% da Decisão 29.
 
   Subir tudo para 15% (piso único de qualidade):

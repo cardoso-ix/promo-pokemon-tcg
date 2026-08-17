@@ -26,6 +26,7 @@ valiosos: são as armadilhas reais desta montagem.
 | O link do post tem `matt_word=MLB` (formato antigo) | [P16](#p16--resolvido-o-link-de-afiliado-estava-com-os-parâmetros-invertidos) |
 | Um arquivo `.md` aparece embaralhado ou cheio de espaços | [P17](#p17--documento-ilegível-salvo-em-utf-16-pelo-powershell) |
 | Salvei a correção, mas em produção o comportamento antigo continua | [P18](#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada) |
+| Catalog Scanner / ScraperAPI devolve 500 na listagem do ML | [P19](#p19--catalog-scanner-a-listagem-do-ml-falha-no-scraperapi) |
 
 ---
 
@@ -496,11 +497,14 @@ a mexer em [regras-de-negocio.md](regras-de-negocio.md#mapa-rápido-onde-mora-ca
 sempre em zero.
 
 **Causa: provavelmente nada está errado.** O Store Scanner só vê a **vitrine** de cada loja
-oficial (a Pokémon tem ~3 produtos na homepage). Com filtro de TCG + acessórios Pokémon,
-mínimo 10%/15% e deduplicação, o volume **novo** por dia fica bem abaixo do teto de **40**
-posts. Em 14/08 o Scanner aceitou ofertas que já estavam `posted` e a fila ficou em zero —
-veja [P1, passo 4](#p1--o-bot-não-está-postando-nada). A página geral de ofertas
-(`Pokemon Scanner v2`) rendia ~9 produtos por varredura e está **desligada**.
+oficial (a Pokémon tem ~3 produtos na homepage). Com filtro de TCG + acessório + figura
+Pokémon, mínimo 10%/15% e deduplicação, o volume **novo** por dia fica bem abaixo do teto de
+**40** posts. Em 14/08 o Scanner aceitou ofertas que já estavam `posted` e a fila ficou em
+zero — veja [P1, passo 4](#p1--o-bot-não-está-postando-nada). A página geral de ofertas
+(`Pokemon Scanner v2`) rendia ~9 produtos por varredura e está **desligada**. O Catalog
+Scanner existe e **fica inativo**: a listagem completa falhou no ScraperAPI em 16/08
+([P19](#p19--catalog-scanner-a-listagem-do-ml-falha-no-scraperapi),
+[Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
 
 Vale confirmar que é isso mesmo, e não filtro apertado demais ou workflow parado:
 
@@ -742,3 +746,24 @@ agendada (não a manual) para ver o comportamento novo valendo.
 runbook traz o passo prático nas
 [seções 1](runbook.md#1-ligar-e-desligar-o-bot) e
 [8](runbook.md#8-rodar-um-workflow-manualmente-sem-ativar).
+
+---
+
+## P19 — Catalog Scanner: a listagem do ML falha no ScraperAPI
+
+**Sintoma:** execução manual do `Pokemon Catalog Scanner` (`2ckVyvFPvtqwECDI`) termina com
+HTTP 500 no node `Baixar Catalogo da Loja`. O parser não vê produtos. Corpo ~208 bytes,
+texto *“Protected domains may require premium=true OR ultra_premium=true”*.
+
+**Causa:** `lista.mercadolivre.com.br` exige renderização JavaScript. Em 13/08 a página 1
+passou só com `render=true` (10 créditos). Em 16/08 a **mesma página 1** falhou com `render`
+e com `premium=true` (~56 s, **sem** cobrar). O parser `_n.ctx.r` nunca viu HTML nessa
+sessão. Se o campo **Name** da credencial Query Auth não for `api_key`, a falha é HTTP 404
+em ~1,6 s — outro problema.
+
+**Solução:** **não publique** esse workflow. Store Scanner de 5 min segue no ar. Para
+retomar: Name = `api_key`, `TESTE_SO_POKEMON = true`, uma execução **manual** só de
+`pokemon`. HTTP 200 com `_n.ctx.r` e produtos = avançar; 208 bytes / 500 = parar.
+`ultra_premium` (75 créditos, plano pago) **só com pedido novo**.
+
+Registro: [Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo).

@@ -19,8 +19,14 @@ Revisado em 14/08/2026, **~18h43 BRT**, conferindo o estado real no n8n.
 2b. ~~**Pacote A: qualidade antes de volume.**~~ **Feito em 13/08 ~22h35** ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)):
     mínimo 10%/15%, fila por qualidade. Teto horário subiu de 4 para **6** em 14/08
     ([Decisão 38](historico-de-decisoes.md#decisão-38--teto-horário-de-6-posts)), Publisher `57c2826e`.
-2c. ~~**Filtro: cartas Pokémon e acessórios TCG.**~~ **Feito em 14/08 ~18h36** ([Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)):
-    `filtro_titulo` nas 9 lojas. Escala Miniaturas sem `\bcartas\b`.
+2c. ~~**Filtro: cartas Pokémon e acessórios TCG.**~~ **Feito em 14/08 ~18h36** ([Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título));
+    **ampliado em 16/08** ([Decisão 41](historico-de-decisoes.md#decisão-41--figuras-pokémon-no-filtro-e-nenhuma-loja-oficial-nova)):
+    figura/boneco Pokémon entra; Funko e merch continuam fora. Escala Miniaturas sem `\bcartas\b`.
+    Loja oficial nova nesta rodada: nenhuma. `dalo-vendas` já estava autorizada.
+2d. ~~**Construir o Catalog Scanner (ScraperAPI).**~~ **Criado inativo em 16/08**
+    (`2ckVyvFPvtqwECDI`). A listagem falhou com `render` e com `premium`
+    ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
+    **Não publicar.** `ultra_premium` só com pedido novo.
 3. **Conferir se os quatro nodes da trilha de revisão do `Pokemon Scanner v2` têm credencial do
    banco vinculada** (`Insert Review`, `Queue Review`, `Log Review`, `Log Review Error`). Esse
    workflow está desativado por escopo — a checagem só importa se ele voltar a ser usado.
@@ -131,6 +137,10 @@ deduplicação o volume novo por dia fica bem abaixo do teto de 40 posts. O cana
 
 **Caminhos possíveis, do mais barato ao mais caro:**
 
+0. **Catalog Scanner (já existe, inativo).** Varre a listagem `/loja/{slug}/pokemon` via
+   ScraperAPI. Em 16/08 a página 1 falhou com `render=true` e com `premium=true`. Retomar
+   só com HTTP 200 e `_n.ctx.r` numa execução manual de `pokemon`
+   ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
 1. **Mais URLs de ofertas.** A página aceita outros filtros e ordenações. Cada URL nova é uma
    requisição a mais por ciclo. Barato e sem risco novo.
 2. **Paginação.** Ler a segunda e a terceira página de ofertas da mesma categoria.

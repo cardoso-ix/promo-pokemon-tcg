@@ -10,7 +10,7 @@ mudaria a decisão.
 **Números vigentes** (ritmo, lojas, teto, desconto mínimo) estão em
 [regras-de-negocio.md](regras-de-negocio.md) e no [README](../README.md). As decisões mais
 antigas abaixo podem citar 10 min / 5 min / teto 30 / duas lojas — isso era verdade **na
-hora em que foram escritas**. A última operacional é a [Decisão 39](#decisão-39--cupom-só-no-produto-testado-e-link-com-wid).
+hora em que foram escritas**. A última operacional é a [Decisão 42](#decisão-42--catalog-scanner-criado-e-deixado-inativo).
 
 ---
 
@@ -660,7 +660,7 @@ vende produto licenciado também. **Lição: uma premissa correta pode proteger 
 
 Três exigências simultâneas: não conter vocabulário de produto licenciado, conter "Pokémon", e
 conter vocabulário de TCG. O texto completo e a razão de cada parte estão na
-[Regra 0b](regras-de-negocio.md#regra-0b--só-produto-de-tcg-não-qualquer-produto-pokémon).
+[Regra 0b](regras-de-negocio.md#regra-0b--tcg-acessório-de-tcg-e-figura-pokémon-não-merch).
 
 **Por que uma regex só, e não uma coluna de exclusão separada.** O node aplica o
 `filtro_titulo` como teste de inclusão (`reFiltro.test(titulo)`), então uma lista de exclusão
@@ -1206,6 +1206,124 @@ No mesmo dia o Eduardo pediu o `BRINQUEDOS` até domingo, só nos produtos que e
 
 **O que mudaria esta decisão:** o ML expor o anúncio da vitrine no `/p/` sem `wid`, ou
 uma API de cupom por `item_id`.
+
+---
+
+## Decisão 40 — Reofertar após 3 dias, e contar o teto em BRT
+
+**Data:** 16/08/2026, ~21h35 BRT · **Quem pediu:** Eduardo, para o projeto não parar
+quando a vitrine só tem o que já foi ao canal.
+
+**O que aconteceu.** No domingo o bot estava saudável (9 lojas, zero erro, Health Alert
+ok). Último post: 16/08 08:00, `message_id` 42 (Box Caos Ascendente). Às 21h a fila
+estava `pending = 0`. A varredura aceitou de novo 8 ofertas boas (15–33% OFF) que já
+estavam `posted` — o `ON CONFLICT` não reenfileirava. Não é pane; é a regra de um post
+por `item_id`.
+
+**A decisão.**
+
+1. Item `posted` que **continua** passando no filtro + mínimo, com afiliado e foto, volta
+   a `pending` se `posted_at` tem **mais de 3 dias**. Pacote A e tetos 40/dia + 6/hora
+   seguem. Não é o lote de sexta no mesmo fim de semana.
+2. O teto diário passa a contar o dia em **Brasília**, não em UTC (depois das 21h BRT o
+   `CURRENT_DATE` do banco já era o dia seguinte e zerava a conta).
+
+Scanner publicado `0ff36da8`. Publisher publicado `7261bee7`.
+
+**O que mudaria esta decisão:** o Eduardo pedir para nunca repetir o mesmo `item_id`,
+ou encurtar/alongar os 3 dias.
+
+---
+
+## Decisão 41 — Figuras Pokémon no filtro, e nenhuma loja oficial nova
+
+**Data:** 16/08/2026, ~21h45 BRT · **Quem decidiu:** Eduardo
+
+**O que ele pediu:** mais lojas oficiais do Mercado Livre com carta Pokémon original, e
+abrir a gama para **boneco/figura** (ainda sem pelúcia, caneca, camiseta, lote). Funko
+continua fora — foi o Slowpoke de 13/08 que criou a Regra 0b.
+
+**Filtro (dado, não workflow).** `UPDATE` em `lojas_confiaveis.filtro_titulo` nas 9 lojas.
+Mudança em relação à [Decisão 37](#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título):
+
+- Saiu da exclusão: `bonec[oa]s?`, `action figure`, `\bfigures?\b`.
+- Entrou no positivo: esses três + `\bfiguras?\b`, `est[aá]tua`, `articulad`, `miniatura`,
+  `nendoroid`, `figuarts`, `banpresto`.
+- Continua exigindo a palavra Pokémon. Continua barrando Funko, `\bpop\b`, pelúcia, merch,
+  kit, lote, avulso.
+- `sem repetir` virou `sem repetid` — a varredura da noite pegou
+  *100 Cartas Pokemon Sem Repetida* como `sem_oferta` (passava no filtro velho).
+- Escala Miniaturas: a mesma lógica, **sem** `\bcartas\b`.
+
+Regex testada em Node (original **ou** normalizado) antes de gravar. Scanner manual
+`20231`: boxes TCG continuam passando; Funko Slowpoke e Glaceon em `ilusoes-industriais`
+ficaram `fora_do_filtro`; boneco sem Pokémon (Stitch, Barbie, Ana Castela) também. Nas 9
+homepages **não havia** figura Pokémon não-Funko nesta rodada — o volume extra de boneco
+só aparece quando a vitrine trouxer um.
+
+**Lojas novas: zero.** Reabertos ~40 slugs (Sunny, Hasbro, Mattel, Lego, Grow, Panini,
+redes, Bandai/Takara, Funko, Pokémon Center, Liga Pokémon, hobbies). Ri Happy / PBKids /
+Bandai / Kabum / Toymania **não têm** `/loja/{slug}`. Nintendo existe, mas a homepage é
+jogo (Legends Z-A) — não cadastrar. Funko existe e tem Pokémon na vitrine — **não**
+cadastrar. A busca de 13/08 ([Decisão 29](#decisão-29--volume-do-canal-5-de-desconto-teto-40-e-alerta-acima-de-40))
+já tinha mostrado que loja oficial com TCG lacrado na homepage é rara; o filtro novo não
+mudou isso. `asgard` e `barao-geek-house` continuam de fora (lote).
+
+Mínimo 10%/15% e teto 40 + 6/hora **não** mudaram. Scanner v2 continua inativo. Os 7/8 do
+teste de 14/08 **não** foram reenfileirados. Console SQL voltou para SELECT.
+
+**O que mudaria esta decisão:** aparecer homepage oficial com TCG lacrado ou figura
+Pokémon (não Funko) — aí o cadastro segue o [runbook §13](runbook.md#13-escopo-quais-lojas-o-bot-pode-publicar),
+máximo 4 lojas por rodada, 15%, filtro copiado de `pokemon`. Se boneco barato encher a
+fila, `preco_minimo` (ex. R$ 39) sem mexer no %. Catálogo profundo via ScraperAPI continua
+fora — é o próximo volume, não este `UPDATE`.
+
+---
+
+## Decisão 42 — Catalog Scanner criado e deixado inativo
+
+**Data:** 16/08/2026, ~23h10 BRT · **Quem decidiu:** Eduardo (opção D)
+
+**A decisão:** o `Pokemon Catalog Scanner` (`2ckVyvFPvtqwECDI`) **existe, fica inativo** e
+**não se publica**. O bot continua só com a homepage a cada 5 min. Não ligar
+`ultra_premium`. Não cadastrar KREDAS.
+
+**O que foi construído nesta noite:**
+
+- Workflow inativo, cron 07:00 no relógio do n8n, URL
+  `lista.mercadolivre.com.br/loja/{slug}/pokemon`, parser `_n.ctx.r` →
+  `results[].polycard`, mesmo `filtro_titulo` / mínimo 10–15% / INSERT da vitrine,
+  `search_term = loja:{slug}:catalogo`.
+- Editor: <https://srv1897392.hstgr.cloud/workflow/2ckVyvFPvtqwECDI>
+- Credencial Query Auth no n8n (nome na lista: **Query Auth account**). O campo **Name**
+  da aba Connection tem que ser `api_key`, não o apelido da credencial. Sem isso a API
+  devolve 404.
+
+**O que foi tentado e falhou (não cobrou crédito):**
+
+| Execução | O quê | Resultado |
+| --- | --- | --- |
+| `20301` | `api_key` ainda com nome errado | HTTP 404 em ~1,6 s |
+| `20305` | `https://api.scraperapi.com/` | HTTP 404 |
+| `20313`, `20317`, `20321` | `render=true` + `country_code=br` (URL de busca e `/_NoIndex_True`) | HTTP 500 em ~56 s; *“Protected domains may require premium=true OR ultra_premium=true”*; mesmo `etag` |
+| `20333`, `20336` | **plano A:** `premium=true` + `render=true` | o mesmo 500, o mesmo texto, o mesmo `etag` |
+
+Em 13/08 a página 1 da listagem passou duas vezes só com `render=true` (10 créditos, ~50 s,
+48 produtos). Na noite de 16/08 a **página 1 também falha**. O parser local nunca viu HTML
+desta sessão — o ScraperAPI desiste antes.
+
+**Custos:** `render` = 10; `premium+render` = 25; `ultra_premium+render` = 75 (plano pago).
+Falhas desta noite **não** descontaram crédito. 10 lojas/dia com premium = 250/dia (~7.500/mês),
+acima do trial de 5.000.
+
+**O que não fazer na retomada:** religar o Scanner v2; misturar ScraperAPI no ciclo de 5 min;
+ligar `ultra_premium` sem pedido novo; publicar o Catalog Scanner; gastar crédito sem ler
+esta decisão.
+
+**O que mudaria esta decisão:** uma execução **manual** só de `pokemon` devolver HTTP 200
+com `_n.ctx.r` e produtos (não a página de erro de 208 bytes). Aí testa `aceito` vs
+`fora_do_filtro` e só então discute publicar. Node `Filtrar Loja de Teste` continua com
+`TESTE_SO_POKEMON = true`.
 
 ---
 

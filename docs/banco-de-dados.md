@@ -447,7 +447,7 @@ não no código do workflow: cadastrar uma loja nova é SQL, nunca programação
 | `desconto_minimo` | `NUMERIC(5,2)` | obrigatório, padrão `15` | Desconto mínimo, em porcentagem, para a oferta entrar na fila |
 | `preco_minimo` | `NUMERIC(10,2)` | obrigatório, padrão `0` | Piso de preço |
 | `preco_maximo` | `NUMERIC(10,2)` | opcional | Teto de preço. `NULL` = sem teto |
-| `filtro_titulo` | `TEXT` | opcional na estrutura, **obrigatório na prática** | **Expressão regular** que o título precisa casar, testada no título original **e** no normalizado (sem acento). `NULL` aceita tudo — e foi assim que um Funko Pop entrou no canal. A regra completa está na [Regra 0b](regras-de-negocio.md#regra-0b--só-produto-de-tcg-não-qualquer-produto-pokémon) |
+| `filtro_titulo` | `TEXT` | opcional na estrutura, **obrigatório na prática** | **Expressão regular** que o título precisa casar, testada no título original **e** no normalizado (sem acento). `NULL` aceita tudo — e foi assim que um Funko Pop entrou no canal. A regra completa está na [Regra 0b](regras-de-negocio.md#regra-0b--tcg-acessório-de-tcg-e-figura-pokémon-não-merch) |
 | `ultima_varredura` | `TIMESTAMPTZ` | opcional | Quando a loja foi varrida pela última vez. É o sinal de vida da varredura |
 | `ultimo_erro` | `TEXT` | opcional | Motivo da última falha, ou `NULL` quando deu tudo certo |
 | `produtos_ultima` | `INTEGER` | opcional | Quantos produtos a vitrine tinha na última varredura |
@@ -490,15 +490,16 @@ várias vezes não sobrescreve nada que você tenha ajustado à mão:
 
 | Slug | Nome | Ativa | Desconto mínimo | Filtro de título |
 | --- | --- | --- | --- | --- |
-| `pokemon` | Pokemon (loja oficial) | **Sim** | **10%** (Pacote A, Decisão 35) | filtro TCG + acessórios, desde 14/08 (Decisão 37; em 13/08 era só lacrado; antes era `NULL`) |
-| `copag` | COPAG | **Sim**, desde 13/08/2026 | **10%** (Pacote A) | o mesmo das 8 lojas (Decisão 37) |
+| `pokemon` | Pokemon (loja oficial) | **Sim** | **10%** (Pacote A, Decisão 35) | filtro TCG + acessório + figura, desde 16/08 (Decisão 41; 14/08 era Decisão 37; em 13/08 era só lacrado; antes era `NULL`) |
+| `copag` | COPAG | **Sim**, desde 13/08/2026 | **10%** (Pacote A) | o mesmo das 8 lojas (Decisão 41) |
 | `brinkjr` | BrinkJr | **Sim**, desde 13/08 | **15%** | o mesmo filtro de TCG |
 | `attack-toys` | Attack Toys | **Sim**, desde 13/08 | **15%** | o mesmo filtro de TCG |
 | `cade-meu-jogo` | Cadê Meu Jogo | **Sim**, desde 13/08 | **15%** | o mesmo filtro de TCG |
 | `psz3d` | Psz3D | **Sim**, desde 13/08 noite | **15%** | o mesmo filtro de TCG |
 | `ilusoes-industriais` | Ilusoes Industriais | **Sim**, desde 13/08 noite | **15%** | o mesmo filtro de TCG |
 | `parolar` | PAROLAR | **Sim**, desde 13/08 noite | **15%** | o mesmo filtro de TCG |
-| `escala-miniaturas` | Escala Miniaturas | **Sim**, desde 13/08 noite | **15%** | filtro **sem** `\bcartas\b` (a vitrine tem carta avulsa); acessório Pokémon entra |
+| `escala-miniaturas` | Escala Miniaturas | **Sim**, desde 13/08 noite | **15%** | filtro **sem** `\bcartas\b` (a vitrine tem carta avulsa); acessório e figura Pokémon entram |
+| `dalo-vendas` | Dalo Vendas | **Sim**, desde 16/08 noite | **15%** | mesmo filtro das 9; autorizada pelo Eduardo; homepage com ETB Equilíbrio Perfeito |
 
 A COPAG nasceu inativa e foi ligada no mesmo dia, depois que se constatou que ela é o vendedor
 real de vários itens dentro da loja oficial (que é *multiseller*). O `filtro_titulo` dela é
@@ -508,10 +509,10 @@ NFL e Lorcana, que não podem ir para um canal de Pokémon.
 A loja oficial rodou sem filtro nenhum até 13/08/2026, na premissa de que "tudo lá já é
 Pokémon" — o que é verdade, mas não responde à pergunta certa. A loja oficial vende **produto
 licenciado** também, e foi de lá que saiu o Funko Pop publicado no canal. Desde 14/08
-([Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título))
-oito lojas usam a mesma regex (cartas no plural + acessórios com Pokémon); a Escala Miniaturas
-fica sem `\bcartas\b`. Texto completo na
-[Regra 0b](regras-de-negocio.md#regra-0b--só-produto-de-tcg-não-qualquer-produto-pokémon).
+([Decisão 41](historico-de-decisoes.md#decisão-41--figuras-pokémon-no-filtro-e-nenhuma-loja-oficial-nova))
+nove lojas usam a mesma regex (cartas no plural + acessório + figura, com Pokémon); a Escala
+Miniaturas fica sem `\bcartas\b`. Texto completo na
+[Regra 0b](regras-de-negocio.md#regra-0b--tcg-acessório-de-tcg-e-figura-pokémon-não-merch).
 
 ---
 

@@ -23,10 +23,11 @@ Consequências:
 - O `Pokemon Scanner v2`, que lê a página geral de ofertas, ficou **desativado**. Todas as
   regras descritas abaixo continuam implementadas e corretas nele, mas não estão rodando.
 - Quem alimenta a fila hoje é o `Pokemon Store Scanner`, que varre as lojas cadastradas em
-  `lojas_confiaveis`.
-- Loja cadastrada não é o mesmo que loja em escopo. Hoje **nove** lojas estão ativas:
+  `lojas_confiaveis`. O `Pokemon Catalog Scanner` existe e **fica inativo**
+  ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
+- Loja cadastrada não é o mesmo que loja em escopo. Hoje **dez** lojas estão ativas:
   `pokemon`, `copag`, `brinkjr`, `attack-toys`, `cade-meu-jogo`, `psz3d`,
-  `ilusoes-industriais`, `parolar` e `escala-miniaturas`. Qualquer loja além dessas
+  `ilusoes-industriais`, `parolar`, `escala-miniaturas` e `dalo-vendas`. Qualquer loja além dessas
   precisa de decisão nova do Eduardo. Quem manda de verdade é a coluna `ativa` da tabela
   `lojas_confiaveis`; como ligar ou segurar uma loja está no
   [runbook, seção 13](runbook.md#13-escopo-quais-lojas-o-bot-pode-publicar).
@@ -38,12 +39,12 @@ que dê para automatizar, como mostrou a investigação do selo "Loja oficial"
 
 ---
 
-## Regra 0b — só produto de TCG, não qualquer produto Pokémon
+## Regra 0b — TCG, acessório de TCG e figura Pokémon; não merch
 
 **Decisão do Eduardo em 13/08/2026, à tarde**, depois que um **Funko Pop do Slowpoke** foi
 publicado no canal: *"apertar o filtro de título para aceitar só produto de TCG daqui pra
-frente"*. O canal se chama Promo Pokémon **TCG** — boneco, pelúcia e caneca não pertencem
-a ele, mesmo tendo "Pokémon" no nome.
+frente"*. Em 16/08 ele reabriu **boneco/figura** ([Decisão 41](historico-de-decisoes.md#decisão-41--figuras-pokémon-no-filtro-e-nenhuma-loja-oficial-nova)),
+ainda sem pelúcia, caneca, camiseta, lote nem Funko.
 
 **Onde mora:** coluna `filtro_titulo` da tabela `lojas_confiaveis`, **uma linha por loja**.
 Não é código: é dado. Mudar o filtro é um `UPDATE`, não um deploy.
@@ -61,33 +62,35 @@ de exclusão que só case na forma acentuada não barra nada**, porque o item es
 sem acento. Por isso todo termo acentuado do filtro é escrito com classe — `pel[uú]cia`,
 `cole[cç][aã]o`, `[aá]lbum` — e nunca só `pelúcia`.
 
-**O filtro em produção desde 14/08/2026** ([Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)):
-produto de carta Pokémon **e** acessório de TCG (sleeve, playmat, binder, deck box,
-toploader, porta-cartas), **sempre com a palavra Pokémon no título**. Funko, lote avulso,
-kit e marca genérica sem Pokémon continuam fora.
+**O filtro em produção desde 16/08/2026** ([Decisão 41](historico-de-decisoes.md#decisão-41--figuras-pokémon-no-filtro-e-nenhuma-loja-oficial-nova);
+base da [Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)):
+produto de carta Pokémon, acessório de TCG (sleeve, playmat, binder, deck box, toploader)
+**ou** boneco/figura Pokémon, **sempre com a palavra Pokémon no título**. Funko, pelúcia,
+lote avulso, kit e merch continuam fora.
 
-Oito lojas (todas menos a Escala) usam `\bcartas\b` no **plural**, para pegar coleção/
+Nove lojas (todas menos a Escala) usam `\bcartas\b` no **plural**, para pegar coleção/
 baralho e **não** a carta avulsa "Carta Pokémon Nymble 9/94". A Escala Miniaturas **não**
 tem `\bcartas\b`: a vitrine mistura single, e o filtro dela já era mais apertado.
 
-Filtro das 8 lojas (trecho positivo extra vs. 13/08: `cartas` plural, `baralho`, `tcg`,
-sleeves, playmat, binder, deck box, toploader, capas para cartas, tapete de jogo):
+Filtro das 9 lojas (positivo extra vs. 14/08: `boneco`/`figura`/`nendoroid`/`figuarts`;
+exclusão `sem repetid` no lugar de `sem repetir`):
 
 ```
-^(?!.*(?:funko|\bpop\b|pel[uú]cia|bonec[oa]s?|action figure|\bfigures?\b|chaveiro|caneca|camiseta|moletom|mochila|quebra[ -]?cabe[cç]as?|[aá]lbum de figurinhas|figurinhas?|fantasia|pijama|almofada|adesivos?|sticker|mouse ?pad|lumin[aá]ria|rel[oó]gio|lancheira|squeeze|garrafa|toalha|meias?|\bkits?\b|\blotes?\b|avuls[ao]s?|sem repetir|sortidas?|aleat[oó]ri|\bdados?\b|moedas?))(?=.*pok[eé]mon)(?=.*(?:booster|\bbox\b|\bdecks?\b|blister|display|expans[aã]o|cole[cç][aã]o|elite trainer|\betb\b|\blatas?\b|\btins?\b|\bpacks?\b|bundle|trading card|\btcg\b|\bcartas\b|baralho|lacrad[oa]s?|selad[oa]s?|\bsleeves?\b|playmat|fich[aá]rio|\bbinder\b|porta[ -]?cartas?|deck ?box|toploader|top loader|protetor(?:es)? de cartas?|capas? para cartas?|tapete de jogo))
+^(?!.*(?:funko|\bpop\b|pel[uú]cia|chaveiro|caneca|camiseta|moletom|mochila|quebra[ -]?cabe[cç]as?|[aá]lbum de figurinhas|figurinhas?|fantasia|pijama|almofada|adesivos?|sticker|mouse ?pad|lumin[aá]ria|rel[oó]gio|lancheira|squeeze|garrafa|toalha|meias?|\bkits?\b|\blotes?\b|avuls[ao]s?|sem repetid|sortidas?|aleat[oó]ri|\bdados?\b|moedas?))(?=.*pok[eé]mon)(?=.*(?:booster|\bbox\b|\bdecks?\b|blister|display|expans[aã]o|cole[cç][aã]o|elite trainer|\betb\b|\blatas?\b|\btins?\b|\bpacks?\b|bundle|trading card|\btcg\b|baralho|lacrad[oa]s?|selad[oa]s?|\bsleeves?\b|playmat|fich[aá]rio|\bbinder\b|porta[ -]?cartas?|deck ?box|toploader|top loader|protetor(?:es)? de cartas?|capas? para cartas?|tapete de jogo|bonec[oa]s?|action figure|\bfigures?\b|\bfiguras?\b|est[aá]tua|articulad|miniatura|nendoroid|figuarts|banpresto|\bcartas\b))
 ```
 
 São três exigências ao mesmo tempo, e o título precisa cumprir **as três**:
 
 | Parte | O que faz | Por que |
 | --- | --- | --- |
-| `(?!.*(?:funko\|...))` | **Barra** licenciado (Funko) e lote/avulso/kit | Um Funko tem "Pokémon" no nome; "Kit 100 Cartas" não é produto lacrado |
-| `(?=.*pok[eé]mon)` | **Exige** a palavra Pokémon | Sem isso entra playmat Lorcana, sleeve Dragon Shield e Truco da COPAG |
-| `(?=.*(?:cartas\|booster\|sleeve\|playmat\|...))` | **Exige** vocabulário de TCG **ou** acessório | Carta/box/deck **e** sleeve/binder/playmat, desde que Pokémon esteja no título |
+| `(?!.*(?:funko\|...))` | **Barra** Funko, merch e lote/avulso/kit | Um Funko tem "Pokémon" e agora também "boneco"; "Kit 100 Cartas" não é lacrado |
+| `(?=.*pok[eé]mon)` | **Exige** a palavra Pokémon | Sem isso entra playmat Lorcana, sleeve Dragon Shield, Truco da COPAG e Barbie |
+| `(?=.*(?:cartas\|booster\|boneco\|figura\|...))` | **Exige** vocabulário de TCG, acessório **ou** figura | Carta/box/sleeve **e** boneco/figura/nendoroid, desde que Pokémon esteja no título |
 
-**As duas primeiras exigências se cobrem.** O Funko é barrado duas vezes: por conter "funko"
-e por não ter vocabulário de TCG. Isso é de propósito — a lista de exclusão nunca vai
-prever todo produto licenciado que a Pokémon lança.
+**Funko continua coberto duas vezes:** pela exclusão (`funko`, `\bpop\b`) e, se o título
+não tiver vocabulário de TCG/figura além de "boneco", ainda cairia — mas "Boneco Funko
+Pop Pokémon" tem os dois lados, então a exclusão é o que segura. A lista de exclusão
+nunca vai prever todo merch que a Pokémon lança.
 
 **O que se perde:** produto de TCG cujo título não escreva "Pokémon" — algo como
 "Elite Trainer Box Fenda Paradoxal" sozinho. Foi uma troca consciente: nos **13 títulos que o
@@ -112,7 +115,7 @@ inválido, para não deixar passar produto fora do tema). O passo a passo do tes
 
 | Regra | Valor hoje | Workflow | Node | O que procurar |
 | --- | --- | --- | --- | --- |
-| Desconto mínimo | **10%** em `pokemon` e `copag`; **15%** nas outras 7 lojas ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)) / 15% no Scanner v2 inativo | Store Scanner (dado) e Scanner v2 (código) | tabela `lojas_confiaveis.desconto_minimo` / `Normalize and Classify` | `UPDATE lojas_confiaveis SET desconto_minimo = 10 WHERE slug IN ('pokemon','copag');` — **não** mexer em `const ML_MAX = 60` |
+| Desconto mínimo | **10%** em `pokemon` e `copag`; **15%** nas outras 8 lojas ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)) / 15% no Scanner v2 inativo | Store Scanner (dado) e Scanner v2 (código) | tabela `lojas_confiaveis.desconto_minimo` / `Normalize and Classify` | `UPDATE lojas_confiaveis SET desconto_minimo = 10 WHERE slug IN ('pokemon','copag');` — **não** mexer em `const ML_MAX = 60` |
 | Desconto máximo (anti-golpe) | 60% | Scanner | `Normalize and Classify` | linha `const ML_MAX = 60;` |
 | Limite de bloqueio por autenticidade | −40 | Scanner | `Normalize and Classify` | linha `const AUTH_BLOCK = -40;` |
 | Limite de aprovação por autenticidade | +25 | Scanner | `Normalize and Classify` | linha `const AUTH_ACCEPT = 25;` |
@@ -121,7 +124,7 @@ inválido, para não deixar passar produto fora do tema). O passo a passo do tes
 | ID da etiqueta de afiliado | `96097202` | Store Scanner e Scanner v2 | `Extrair Ofertas das Lojas` / `Normalize and Classify` | linha `const AFILIADO_TOOL_ID = ...` |
 | Categoria do Mercado Livre | `MLB6899` | Scanner | `Search MercadoLivre` | campo **URL** do node |
 | Categoria (cópia usada no banco) | `MLB6899` | Scanner | `Normalize and Classify` | linhas `const CATEGORY` e `const SEARCH_TERM` |
-| Intervalo da varredura | **5 minutos** | Store Scanner | `A Cada 5 Minutos` | campo **Minutes Interval**. Não baixar para 2 min (9 HTTP/ciclo) |
+| Intervalo da varredura | **5 minutos** | Store Scanner | `A Cada 5 Minutos` | campo **Minutes Interval**. Não baixar para 2 min (10 HTTP/ciclo) |
 | Espera aleatória antes de acessar o ML | 0 a 60 segundos | Store Scanner | `Jitter Aleatorio` | campo **Amount**: `{{ Math.floor(Math.random() * 61) }}` |
 | Intervalo da publicação | **2 minutos** | Publisher | `Every 2 Minutes` | campo **Minutes Interval** |
 | Janela de postagem | 8h às 22h BRT | Publisher | `Within 8h-22h BRT?` | os dois valores de comparação: `8` e `22` |
@@ -132,7 +135,7 @@ inválido, para não deixar passar produto fora do tema). O passo a passo do tes
 | Canal do Telegram | `@promopokemontcg` | Publisher | `Post to Telegram` | campo **Chat ID** |
 | Texto do botão de compra | 🛒 Comprar no Mercado Livre | Publisher | `Post to Telegram` | dentro de **Reply Markup → Inline Keyboard** |
 | Layout do post | limpo (sem 🃏); **SUPER OFERTA · X% OFF** se `discount_pct > 40` | Publisher | `Format PT-BR Message` | a função `build(t)` e a flag `superOferta` |
-| Filtro de título (só TCG) | regex da [Regra 0b](#regra-0b--só-produto-de-tcg-não-qualquer-produto-pokémon) | Store Scanner | — (é **dado**, não código) | coluna `filtro_titulo` de `lojas_confiaveis`, uma linha por loja |
+| Filtro de título (TCG + figura) | regex da [Regra 0b](#regra-0b--tcg-acessório-de-tcg-e-figura-pokémon-não-merch) | Store Scanner | — (é **dado**, não código) | coluna `filtro_titulo` de `lojas_confiaveis`, uma linha por loja |
 
 **Como mexer, na prática:** abra <https://srv1897392.hstgr.cloud>, abra o workflow, dê
 dois cliques no node indicado, altere o valor, feche o node, clique em **Save** e depois em
@@ -168,7 +171,7 @@ confiança do assinante. O mínimo é um filtro de ruído — só entra o que re
 pena olhar.
 
 **Pacote A vigente (13/08/2026 ~22h35, Decisão 35):** o Store Scanner usa
-`lojas_confiaveis.desconto_minimo`. **10%** em `pokemon` e `copag`; **15%** nas outras sete.
+`lojas_confiaveis.desconto_minimo`. **10%** em `pokemon` e `copag`; **15%** nas outras oito.
 O experimento de 5% em todas (Decisão 29) acabou: o clique de afiliado já foi provado.
 Para voltar tudo a 15%: `UPDATE lojas_confiaveis SET desconto_minimo = 15 WHERE ativa = TRUE;`
 — SQL também no [runbook, seção 13](runbook.md#13-escopo-quais-lojas-o-bot-pode-publicar).
@@ -372,6 +375,13 @@ limpa `posted_at` / `telegram_message_id`. O log grava `decision = 'repost'` com
 `R$ antigo -> R$ novo`. O Publisher não precisa mudar — já publica qualquer `pending`
 publicável.
 
+**Também volta à fila** se o mesmo `item_id` continua `posted`, ainda passa no filtro +
+mínimo, tem afiliado e foto, e o `posted_at` tem **mais de 3 dias**
+([Decisão 40](historico-de-decisoes.md#decisão-40--reofertar-após-3-dias-e-contar-o-teto-em-brt)).
+O log nesse caso é `repost | ainda em oferta apos 3 dias`. Isso evita o canal morrer
+quando a homepage só mostra o que já foi ao ar. Não republica o mesmo item no mesmo
+fim de semana.
+
 Isso vale para o **mesmo `item_id`**. Se a vitrine mostrar o mesmo produto em outra ficha
 (`item_id` diferente, mesmo catálogo), o parser continua tratando como duplicata.
 
@@ -406,8 +416,10 @@ seja, o último post possível sai às 21h59.
 > `Count Today Posts`, mas o número 40 **não está lá** — está no node de decisão seguinte,
 > `Under Daily Limit?`. Se você mudar no lugar errado, nada acontece.
 
-**O que faz:** conta quantos itens têm `status='posted'` com `posted_at` de hoje e só
-libera a publicação se for menos de 40.
+**O que faz:** conta quantos itens têm `status='posted'` com `posted_at` **no dia BRT**
+(`America/Sao_Paulo`) e só libera a publicação se for menos de 40. Não use
+`posted_at::date = CURRENT_DATE` — o banco está em UTC e depois das 21h BRT isso já é
+o dia seguinte ([Decisão 40](historico-de-decisoes.md#decisão-40--reofertar-após-3-dias-e-contar-o-teto-em-brt)).
 
 **O porquê:** proteção contra saturar o canal. Com o Publisher rodando a cada **2 minutos**
 dentro de uma janela de 14 horas, o máximo teórico seria de cerca de 420 posts por dia — o
@@ -417,8 +429,9 @@ teto de 40 (subido de 30 em 13/08/2026, [Decisão 29](historico-de-decisoes.md#d
 primeiras ~80 minutos. Desde a [Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)
 existe também o teto de **6 posts na última hora corrida** (`Under Hourly Limit?`).
 
-Na prática o teto diário de 40 talvez nunca seja alcançado: as nove lojas ativas, com o
-corte 10%/15%, rendem poucos itens novos por dia.
+Na prática o teto diário de 40 talvez nunca seja alcançado: as dez lojas ativas, com o
+corte 10%/15%, rendem poucos itens novos por dia. O Catalog Scanner **não** entra nessa
+conta — está inativo ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
 
 ---
 
@@ -450,7 +463,7 @@ teto diário de 40.
 **O porquê de intervalos diferentes:** o Scanner varre com frequência para as promoções
 chegarem rápido à fila — oferta boa de carta Pokémon costuma esgotar em pouco tempo.
 Publicar, ao contrário, precisa ser espaçado, para o canal ter ritmo agradável em vez de
-despejar tudo de uma vez. Com 9 lojas, 5 minutos no Scanner já são ~288 ciclos/dia × 9
+despejar tudo de uma vez. Com 10 lojas, 5 minutos no Scanner já são ~288 ciclos/dia × 10
 HTTP. **2 minutos no Scanner foi recusado** na descrição do workflow: risco de anti-bot.
 
 **A espera aleatória (`Jitter Aleatorio`).** Entre o relógio e o acesso ao Mercado Livre há um

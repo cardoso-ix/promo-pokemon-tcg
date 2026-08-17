@@ -38,14 +38,21 @@ da própria VPS.
 
 | Credencial no n8n | ID | Usada por |
 | --- | --- | --- |
-| Pokemon Promos DB (PostgreSQL) | `6jdqiaTfNIJseSqb` | Todos os nodes de banco dos 3 workflows |
+| Pokemon Promos DB (PostgreSQL) | `6jdqiaTfNIJseSqb` | Todos os nodes de banco dos workflows Pokemon |
 | Pokemon Telegram Bot (Telegram API) | `jhasZWps6SfFVWaF` | O node `Post to Telegram` do Publisher |
+| Query Auth account (`httpQueryAuth`) | `1bhdvX6LLEbuo97b` | Catalog Scanner (ScraperAPI). O campo **Name** tem que ser `api_key`. **Não publicar** esse workflow |
 
 ### Fonte de dados
 
 **Ativa hoje:** vitrine de cada loja em `https://www.mercadolivre.com.br/loja/{slug}`
 (ex.: `/loja/pokemon`). Scraping do payload `_n.ctx.s.q`. Uma requisição por loja, sem
-paginação. Cabeçalhos de navegador (Chrome, `Accept-Language: pt-BR`).
+paginação. Cabeçalhos de navegador (Chrome, `Accept-Language: pt-BR`). Dez lojas ativas.
+
+**Construída e inativa:** listagem `https://lista.mercadolivre.com.br/loja/{slug}/pokemon`
+via ScraperAPI (`Pokemon Catalog Scanner`, `2ckVyvFPvtqwECDI`). Parser `_n.ctx.r`. Em 16/08
+a rota falhou com `render=true` e com `premium=true`
+([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
+**Não publicar.**
 
 **Desativada:** `https://www.mercadolivre.com.br/ofertas?category=MLB6899` (`MLB6899` =
 Cartas Colecionáveis T.C.G). É o que o Scanner v2 lia (~9 produtos por página). A API
@@ -186,11 +193,11 @@ silêncio.
 ### O que o Code node decide, na ordem
 
 1. **Filtro de título** da loja (coluna `filtro_titulo`). É o que impede baralho de Truco da
-   COPAG **e boneco Funko da loja oficial** de virarem post de Pokémon TCG. Oito lojas usam
-   a mesma regex (cartas no plural + acessórios com Pokémon no título); a Escala Miniaturas
-   não tem `\bcartas\b`, porque a vitrine mistura single
-   ([Regra 0b](regras-de-negocio.md#regra-0b--só-produto-de-tcg-não-qualquer-produto-pokémon),
-   [Decisão 37](historico-de-decisoes.md#decisão-37--cartas-pokémon-no-plural-e-acessórios-de-tcg-com-pokémon-no-título)).
+   COPAG **e boneco Funko da loja oficial** de virarem post de Pokémon TCG. Nove lojas usam
+   a mesma regex (cartas no plural + acessório + figura, com Pokémon no título); a Escala
+   Miniaturas não tem `\bcartas\b`, porque a vitrine mistura single
+   ([Regra 0b](regras-de-negocio.md#regra-0b--tcg-acessório-de-tcg-e-figura-pokémon-não-merch),
+   [Decisão 41](historico-de-decisoes.md#decisão-41--figuras-pokémon-no-filtro-e-nenhuma-loja-oficial-nova)).
    O teste roda no título original **e** no normalizado, e uma regex inválida aborta a
    varredura daquela loja de propósito.
 2. **É oferta de verdade?** Sem preço "de/por", o produto não entra. Preço cheio não é
@@ -263,6 +270,24 @@ Zero **ofertas** não é erro: significa que a loja está com preço cheio hoje.
 
 A cada execução o scanner atualiza `ultima_varredura`, `produtos_ultima` e `ofertas_ultima` na
 linha da loja. São esses três números que dizem se a varredura está viva.
+
+---
+
+## 4c. O `Pokemon Catalog Scanner` — existe, inativo
+
+`2ckVyvFPvtqwECDI`. **Não está no ar.** Cron às 7h no relógio do n8n, mas o workflow nunca
+foi publicado (`activeVersionId` nulo). Editor:
+<https://srv1897392.hstgr.cloud/workflow/2ckVyvFPvtqwECDI>
+
+Ele tentaria varrer `lista.mercadolivre.com.br/loja/{slug}/pokemon` via ScraperAPI
+(`render=true` + `premium=true`) e parsear `_n.ctx.r` → `results[].polycard`. O filtro, o
+mínimo 10%/15% e o INSERT são os mesmos da vitrine; `search_term = loja:{slug}:catalogo`.
+Node `Filtrar Loja de Teste` ainda tem `TESTE_SO_POKEMON = true`.
+
+Em 16/08 a listagem devolveu HTTP 500 com `render` e com `premium`, sem cobrar crédito.
+O parser **nunca viu HTML** nessa sessão. **Não ligue `ultra_premium` sem pedido novo.**
+Registro: [Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo).
+Código em [`backups/2026-08-16/`](../backups/2026-08-16/).
 
 ---
 
@@ -571,7 +596,7 @@ Levantadas de novo em 14/08/2026 ~18h43 BRT, conferindo o n8n ao vivo. **Onde ho
 
 | Item | O que o plano dizia | O que está no n8n |
 | --- | --- | --- |
-| Intervalo do Store Scanner | 45 min no plano antigo; 10 min na tarde de 13/08 | **5 minutos**, node `A Cada 5 Minutos`, mais jitter 0–60s. Não usar 2 min (9 HTTP/ciclo) |
+| Intervalo do Store Scanner | 45 min no plano antigo; 10 min na tarde de 13/08 | **5 minutos**, node `A Cada 5 Minutos`, mais jitter 0–60s. Não usar 2 min (10 HTTP/ciclo) |
 | Intervalo do Publisher | 5 minutos na maior parte de 13/08 | **2 minutos**, node `Every 2 Minutes` |
 | Teto diário | 30 no plano / manhã | **40**, node `Under Daily Limit?` |
 | Teto por hora | nenhum no plano | **6** na última hora corrida, node `Under Hourly Limit?` |
