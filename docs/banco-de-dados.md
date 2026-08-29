@@ -49,6 +49,18 @@ Existe ainda a tabela `lojas_confiaveis`, que **não faz parte deste conjunto**:
 em [runbook, seção 13](runbook.md#13-escopo-quais-lojas-o-bot-pode-publicar); a estrutura da
 tabela está mais abaixo, em [`lojas_confiaveis`](#tabela-lojas_confiaveis--as-lojas-oficiais-varridas).
 
+Desde 27/08 o mesmo banco também hospeda `replica_rotas`, `replica_config` e `replica_log`, da
+esteira de réplica de grupos de WhatsApp. Em 28/08 entrou `replica_destinos` (Telegram e
+WhatsApp) e, no mesmo dia à noite, `replica_transmissoes` (rotas nomeadas). Elas não cruzam
+com nenhuma tabela acima — a réplica não usa filtro de tema, desconto nem loja. Estrutura em
+[tabelas da réplica](#as-tabelas-da-réplica--replica_rotas-replica_config-replica_log).
+
+Desde 28/08 existe também o **schema `evolution`** no mesmo banco, com as tabelas internas da
+Evolution API (sessão do WhatsApp e configuração da instância). Ele é criado pelo
+`Replica Schema Setup` e populado pelo Prisma da própria Evolution. **Não mexa nele à mão**: a
+sessão pareada do WhatsApp mora ali, e apagar significa escanear o QR de novo. Ficou em schema
+separado justamente para nunca se confundir com as tabelas do projeto, que vivem em `public`.
+
 Uma diferença que confunde: **`promos` guarda produto, `promos_log` guarda decisão.** Um
 mesmo produto pode ter várias linhas em `promos_log` (foi aceito na primeira varredura,
 `duplicado` nas seguintes, `posted` quando publicado) mas só uma linha em `promos`. E um
@@ -77,7 +89,7 @@ A tabela central. Serve ao mesmo tempo de fila de publicação e de arquivo hist
 | `status` | `TEXT` | obrigatório, padrão `pending` | O estado do produto. Valores na tabela abaixo |
 | `blocked_reason` | `TEXT` | opcional | Explicação de por que foi bloqueado ou mandado para revisão |
 | `telegram_message_id` | `BIGINT` | opcional | O número da mensagem no canal. Guardado para permitir editar ou apagar o post depois |
-| `search_term` | `TEXT` | opcional | **De onde o produto veio.** `ofertas MLB6899` é a página geral (fonte antiga, fora de escopo); `loja:pokemon` e `loja:copag` vêm do `Pokemon Store Scanner`. É a coluna que separa a procedência |
+| `search_term` | `TEXT` | opcional | **De onde o produto veio.** `ofertas MLB6899` é a página geral (Scanner v2, [Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)); `loja:pokemon` e `loja:copag` vêm do `Pokemon Store Scanner`. É a coluna que separa a procedência |
 | `idioma` | `TEXT` | opcional | Idioma da carta detectado no título: `pt`, `en`, `ja`, `ko`, `zh`, `ambiguo` ou `desconhecido` |
 | `idioma_confianca` | `NUMERIC(3,2)` | opcional | Confiança da detecção, de 0 a 1. O Publisher só exibe o idioma a partir de 0,85 |
 | `vendedor` | `TEXT` | opcional | Nome do vendedor, quando o anúncio expõe. Aparece em poucos casos (~3%) |
@@ -513,6 +525,136 @@ licenciado** também, e foi de lá que saiu o Funko Pop publicado no canal. Desd
 nove lojas usam a mesma regex (cartas no plural + acessório + figura, com Pokémon); a Escala
 Miniaturas fica sem `\bcartas\b`. Texto completo na
 [Regra 0b](regras-de-negocio.md#regra-0b--tcg-acessório-de-tcg-e-figura-pokémon-não-merch).
+
+---
+
+## As tabelas da réplica — `replica_rotas`, `replica_config`, `replica_log`, `replica_destinos`, `replica_transmissoes`
+
+Estas tabelas moram no **mesmo banco** `pokemon_promos`, mas pertencem à outra esteira: a
+réplica de grupos de WhatsApp ([Decisão 44](historico-de-decisoes.md#decisão-44--réplica-de-grupos-de-whatsapp-sem-curadoria-ao-lado-do-bot)).
+Elas **não** têm relação com `promos`: a réplica não filtra por tema, desconto ou loja, então
+nenhuma tabela do bot TCG entra na conta dela.
+
+Quem cria `replica_rotas`, `replica_config` e `replica_log` é o `Replica Schema Setup`
+(`pfolFnCYTLyLZdwU`), idempotente, rodado à mão. `replica_destinos` e `replica_transmissoes`
+nascem no primeiro GET do painel (`CREATE TABLE IF NOT EXISTS`).
+
+| Tabela | Papel | Quem escreve | Quem lê |
+| --- | --- | --- | --- |
+| `replica_rotas` | **Catálogo de grupos WhatsApp da conta.** O painel sincroniza pela Evolution; o ingest incrementa contadores. `ativa` fica alinhada às rotas nomeadas ligadas | `Replica Painel` (sync) e `Replica WhatsApp Ingest` (contador) | Painel (combo de grupos) |
+| `replica_transmissoes` | **Rotas nomeadas** (várias origens + destinos, com toggle ATIVA) | `Replica Painel` (criar/editar/excluir/toggle) | Ingest: origem liberada se aparece em alguma rota com `ativo=true` |
+| `replica_transmissao_origens` / `replica_transmissao_destinos` | Grupos de origem e destinos de cada rota nomeada | `Replica Painel` | Ingest, na hora de publicar |
+| `replica_config` | **Os ajustes da esteira** em pares chave/valor, para mudar sem editar workflow | `Replica Painel` | Ingest, uma leitura por mensagem |
+| `replica_log` | **O diário e o dedup.** Uma linha por mensagem considerada, replicada ou não | Ingest | Painel e você |
+| `replica_destinos` | **Catálogo de destinos.** Telegram (`@promopokemontcg`) e, se marcado, grupo de WhatsApp | `Replica Painel` (Conexões + salvar rota) | Painel (status do Telegram) |
+
+### `replica_rotas`
+
+| Coluna | Tipo | Observação |
+| --- | --- | --- |
+| `id` | `BIGSERIAL` | Chave primária |
+| `chat_id` | `TEXT NOT NULL UNIQUE` | JID do grupo no WhatsApp, ex.: `5551...-160...@g.us` |
+| `nome` | `TEXT` | Apelido que **você** escreve no painel, só para se orientar |
+| `plataforma` | `TEXT NOT NULL DEFAULT 'whatsapp'` | Existe para o dia em que entrar Telegram como origem |
+| `ativa` | `BOOLEAN NOT NULL DEFAULT FALSE` | Espelho: `TRUE` se o grupo é origem de alguma rota nomeada ligada |
+| `criada_em` | `TIMESTAMPTZ NOT NULL DEFAULT NOW()` | |
+| `ultima_mensagem` | `TIMESTAMPTZ` | Serve para ver grupo morto |
+| `mensagens_vistas` | `INTEGER NOT NULL DEFAULT 0` | Toda mensagem conta, mesmo a que não replica |
+| `replicadas` | `INTEGER NOT NULL DEFAULT 0` | Só as que saíram no Telegram (e, se houver, no WhatsApp de destino) |
+
+### `replica_destinos`
+
+| Coluna | Tipo | Observação |
+| --- | --- | --- |
+| `id` | `BIGSERIAL` | Chave primária |
+| `plataforma` | `TEXT NOT NULL` | `telegram` ou `whatsapp` |
+| `identificador` | `TEXT NOT NULL` | `@promopokemontcg` ou JID `...@g.us` |
+| `nome` | `TEXT` | Rótulo no painel |
+| `ativo` | `BOOLEAN NOT NULL DEFAULT TRUE` | Desligar o Telegram em Conexões marca `FALSE` |
+| `criado_em` | `TIMESTAMPTZ NOT NULL DEFAULT NOW()` | |
+
+Único em `(plataforma, identificador)`. O ingest **não** replica se o `chat_id` da origem for
+também um destino de WhatsApp da mesma rota ativa — é a trava de loop.
+
+### `replica_transmissoes`
+
+Uma linha por rota nomeada do painel (o equivalente operacional de "WhatsApp para Telegram").
+`replica_rotas` continua sendo só o catálogo de grupos; a origem que o ingest libera é o
+`chat_id` ligado a uma transmissão com `ativo = TRUE`.
+
+| Coluna | Tipo | Observação |
+| --- | --- | --- |
+| `id` | `BIGSERIAL` | Chave primária |
+| `nome` | `TEXT NOT NULL` | O rótulo do card no painel |
+| `ativo` | `BOOLEAN NOT NULL DEFAULT TRUE` | Toggle ATIVA do card |
+| `criado_em` | `TIMESTAMPTZ NOT NULL DEFAULT NOW()` | |
+
+`replica_transmissao_origens` liga `(transmissao_id, chat_id)`. `replica_transmissao_destinos`
+liga `(transmissao_id, plataforma, identificador)` com `nome` opcional. As duas apagam em
+cascata se a rota for excluída. DDL em
+`backups/2026-08-28/sql/replica-schema-setup--criar-transmissoes.sql`. O GET do painel e o
+ingest também fazem `CREATE TABLE IF NOT EXISTS`, então a primeira abertura já cria.
+
+Se ainda não houver nenhuma transmissão, o ingest cai no legado `replica_rotas.ativa` +
+`replica_destinos`. Se houver origens ativas no legado, o primeiro GET migra para uma rota
+chamada `WhatsApp para Telegram`.
+
+### `replica_config`
+
+`chave` é a chave primária; `valor` é sempre texto e a conversão fica no código. Os valores
+semeados pelo setup:
+
+| Chave | Valor semeado | O que faz |
+| --- | --- | --- |
+| `ativo` | `true` | Liga/desliga a esteira inteira sem despublicar o workflow |
+| `destino_telegram` | `@promopokemontcg` | Canal de destino |
+| `delay_segundos` | `8` | Espera antes de publicar, para não sair em rajada |
+| `teto_hora` | `40` | Freio anti-flood. **Não** é curadoria |
+| `replicar_cupom_sem_link` | `true` | Mensagem só de cupom, sem link de produto, também replica |
+| `afiliado_matt_word` | `caed1312314` | Apelido da conta de afiliado |
+| `afiliado_matt_tool` | `96097202` | ID da etiqueta de afiliado |
+| `frases_remover` | *(vazio)* | Frases extras a apagar do post, uma por linha. `@rasgabooster.tcg` e `#rasgaboot` já saem no código |
+| `pagina_gz` | HTML em base64 UTF-8 | **Não é gzip** (nome legado). O GET do painel decodifica e injeta `__DADOS__`. Completo em 29/08: 63424 bytes, MD5 `f8fccee12aa8e6e98ecf12d2a7221d2a` ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)) |
+| `save_token` | token longo | Autentica os POSTs do painel. O Chrome não reenvia Basic Auth no `fetch` ([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)). Não colar o valor aqui |
+
+O painel só aceita gravar chave que está na lista branca do node `Normalizar Config` — é o que
+evita o formulário virar porta de entrada para chave inventada. `pagina_gz` e `save_token`
+não passam por esse formulário.
+
+### `replica_log`
+
+| Coluna | Tipo | Observação |
+| --- | --- | --- |
+| `id` | `BIGSERIAL` | Chave primária |
+| `origem_chat_id`, `origem_nome`, `origem_message_id` | `TEXT` | De onde veio |
+| `hash_conteudo` | `TEXT NOT NULL UNIQUE` | **É o dedup.** Hash do texto sem links + os item IDs do ML |
+| `texto_original` / `texto_publicado` | `TEXT` | Antes e depois da troca do link |
+| `links_convertidos` | `INTEGER NOT NULL DEFAULT 0` | Quantos links do ML viraram link de afiliado |
+| `item_ids` | `TEXT` | `MLB...` separados por vírgula |
+| `tem_midia` | `BOOLEAN NOT NULL DEFAULT FALSE` | |
+| `status` | `TEXT NOT NULL DEFAULT 'pendente'` | `pendente`, `enviado`, `descartado`, `ignorado`, `erro` |
+| `motivo` | `TEXT` | Por que não saiu, quando não saiu |
+| `telegram_message_id` | `BIGINT` | Para achar o post no canal |
+| `criado_em` / `enviado_em` | `TIMESTAMPTZ` | `enviado_em` é o que o teto por hora conta |
+
+**A unicidade do `hash_conteudo` é o mecanismo de deduplicação**, no mesmo espírito da
+[Decisão 12](historico-de-decisoes.md#decisão-12--deduplicação-por-on-conflict-não-por-consulta-prévia):
+o `INSERT ... ON CONFLICT DO NOTHING` não devolve linha, e sem linha o fluxo não publica. Uma
+promoção que aparece em três grupos sai uma vez.
+
+Os valores de `status`:
+
+| Status | Significado |
+| --- | --- |
+| `pendente` | Passou pelas regras, está a caminho do Telegram |
+| `enviado` | Publicado. `enviado_em` preenchido e `replica_rotas.replicadas` incrementado |
+| `descartado` | Sem link do Mercado Livre, ou só com link de outro marketplace, ou texto vazio depois da limpeza |
+| `ignorado` | Teto por hora atingido |
+| `erro` | O Telegram recusou. `motivo` guarda a mensagem de erro |
+
+Índices próprios: `idx_replica_log_criado`, `idx_replica_log_status`, `idx_replica_log_origem`
+e `idx_replica_rotas_ativa` — os quatro criados pelo `Replica Schema Setup`, e por isso **fora**
+da contagem de 15 índices da seção seguinte, que é do schema do bot TCG.
 
 ---
 

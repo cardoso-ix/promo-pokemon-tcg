@@ -8,6 +8,23 @@ comportamento real por alguns dias.** Otimizar antes de ter dados é chutar.
 
 ---
 
+## Próxima sessão (atualizado em 29/08/2026, ~09h16 BRT)
+
+1. ~~**Subir a Evolution API e publicar os workflows da réplica.**~~ **Feito em 28/08**
+   ([Decisão 45](historico-de-decisoes.md#decisão-45--evolution-no-docker-manager-e-o-qr-code-por-página-do-n8n)).
+2. ~~**Ligar o primeiro grupo e observar.**~~ **Feito em 28/08 à noite.** Rota **TCG Promo**
+   gravada; ingest publicando. O card profissional substituiu a foto crua
+   ([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)).
+3. ~~**Fechar o HTML do painel em `pagina_gz`.**~~ **Feito em 29/08 de manhã**
+   ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+   Se o browser ainda mostrar JS cortado, Ctrl+F5.
+4. **Construir a Fase 1 do dashboard único.** Decidido em 28/08: **estender o `Replica Painel`**
+   e mirar controle total sobre a curadoria, em três fases. A Fase 1 não toca em workflow
+   publicado. O desenho está em [Dashboard](#dashboard). A réplica já rodou o bastante para
+   começar a tela unificada sem construir em cima de um pipeline ainda mudo.
+
+---
+
 ## Pendências imediatas (não são roadmap, são o que falta fechar)
 
 Revisado em 14/08/2026, **~18h43 BRT**, conferindo o estado real no n8n.
@@ -35,8 +52,8 @@ E duas de limpeza:
 
 4. **Apagar os posts de teste do canal.** Ficaram no canal as mensagens de teste de formato
    (`message_id` 7, 11 e 12, sendo a 12 com um cupom fictício).
-5. **Arquivar o `TMP Pokemon SQL Console 2`** (`Fc7OGlP4ZNiuNIgd`) quando não precisar mais
-   consultar à mão. O `PVNsBGQ92Wrhos51` já foi arquivado.
+5. ~~**Arquivar o `TMP Pokemon SQL Console 2`** (`Fc7OGlP4ZNiuNIgd`).~~ **Feito em 27/08.**
+   O `PVNsBGQ92Wrhos51` também já estava arquivado.
 
 ---
 
@@ -174,15 +191,58 @@ foi recusado de propósito — só vale o que o público vê na vitrine.
 
 ## Dashboard
 
-**O que seria:** uma visão consolidada dos números do bot — quantos produtos por decisão,
-desconto médio, taxa de bloqueio, produtos mais clicados.
+**Pedido do Eduardo em 27/08:** um painel só dele para controlar **as duas esteiras**, no
+espírito do que o Connect Afiliado faz. Isso deixou de ser o item de menor prioridade da lista.
 
-**Caminhos registrados:** Google Sheets como camada visual simples (a credencial do n8n já
-existe), ou um painel web via Webhook do n8n com HTML.
+**O que já existe:** o `Replica Painel` (`lWDnggRX8xQmYyQV`), servido pelo próprio n8n em
+`/webhook/replica/painel` com Basic Auth. Desde 28/08 ele segue o modelo origem/destino
+([Decisão 46](historico-de-decisoes.md#decisão-46--painel-origemdestino-com-todos-os-grupos-da-conta)):
+lista todos os grupos da conta pareada, escolhe origens e destinos (Telegram e WhatsApp) e
+mostra as últimas mensagens vistas. O HTML mora em
+[`backups/2026-08-28/painel/`](../backups/2026-08-28/painel/) e em produção sai de
+`replica_config.pagina_gz` ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) é o
+paraquedas se o HTML voltar para o Code node.
 
-**A avaliação honesta:** as consultas do [runbook](runbook.md#7-calibrar-os-filtros-olhando-os-dados)
-já respondem tudo que um dashboard responderia, e custam um copiar-colar. Dashboard só se
-paga se a consulta manual virar incômodo diário. É o item de menor prioridade da lista.
+**O que falta para virar o painel único.** O bot de curadoria hoje só se opera por SQL e pela
+tela do n8n. Numa mesma página caberia:
+
+| Bloco | O que mostraria / permitiria | De onde vem |
+| --- | --- | --- |
+| Visão do dia | Posts por esteira, fila `pending`, erros das últimas 24h | `promos`, `promos_erros`, `replica_log` |
+| Liga/desliga por esteira | Pausar a curadoria e a réplica de forma independente | Publisher no n8n; `replica_config.ativo` |
+| Lojas | Ligar/desligar loja, ver rendimento de cada uma | `lojas_confiaveis` ([runbook, seção 13](runbook.md#13-escopo-quais-lojas-o-bot-pode-publicar)) |
+| Fila e revisão | Aprovar ou descartar item de `promos_review` num clique | `promos_review` ([runbook, seção 4](runbook.md#4-revisar-a-fila-de-revisão-humana)) |
+| Cupons | Cadastrar cupom sem escrever SQL | `cupons` ([runbook, seção 3](runbook.md#3-cadastrar-um-cupom)) |
+| Grupos de origem e destino | O que o `Replica Painel` já faz | `replica_rotas`, `replica_destinos` |
+
+**As duas escolhas foram feitas em 28/08 pelo Eduardo:** **estender o `Replica Painel`** (não
+criar serviço novo) e chegar a **controle total** sobre a curadoria, não só leitura.
+
+Controle total esbarra em duas coisas que não são trabalho de tela, e por isso o combinado é
+fazer em três fases:
+
+**Fase 1 — o painel unificado com o que já é seguro.** Leitura das duas esteiras (visão do dia,
+fila, erros, saúde) mais as ações que são só `UPDATE` em tabela: ligar/desligar loja, editar
+filtro de título e desconto mínimo por loja, republicar e descartar item da fila, cadastrar
+cupom. **Não toca em nenhum workflow publicado.**
+
+**Fase 2 — tirar os números de dentro dos workflows.** Teto por dia, teto por hora, janela de
+horário e os mínimos de 10%/15% estão escritos nos Code nodes do Publisher e dos Scanners, não
+no banco. Para o painel poder mudá-los é preciso criar uma tabela de configuração e alterar
+**três workflows que estão no ar**, testando cada um. Lembrar de
+[P14](troubleshooting.md#p14--mexi-no-workflow-e-quebrou): a auditoria dos 17 bugs nasceu de
+editar workflow por programa sem rodar depois.
+
+**Fase 3 — aprovar/editar o texto antes de publicar.** É mudança de comportamento, não de tela:
+hoje o Publisher tira da fila e posta sozinho a cada 2 min. Com aprovação manual, o item para
+num estado de espera e o canal **fica mudo se o Eduardo não abrir o painel**. Decidir com calma,
+depois de ver as fases 1 e 2 rodando.
+
+O argumento antigo contra o dashboard — de que as consultas do
+[runbook](runbook.md#7-calibrar-os-filtros-olhando-os-dados) já respondem tudo por copiar-colar —
+continua válido para relatório, mas não para **operação**. Liberar grupo de WhatsApp e aprovar
+item de revisão são tarefas de clique, não de SQL.
 
 ---
 

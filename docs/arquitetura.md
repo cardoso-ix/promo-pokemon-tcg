@@ -2,18 +2,23 @@
 
 Este documento explica **como as peças do bot se encaixam**. Se você entender só um
 arquivo desta pasta, entenda este. Valores de relógio e teto vigentes: Store Scanner
-**5 min**, Publisher **2 min**, teto **40**/dia e **6**/hora — ver [regras-de-negocio.md](regras-de-negocio.md).
+**5 min**, Scanner v2 **10 min**, Publisher **2 min**, teto **90**/dia e **6**/hora — ver [regras-de-negocio.md](regras-de-negocio.md).
 
 ---
 
 ## 1. Visão geral em uma frase
 
 O `Pokemon Store Scanner` lê a **vitrine** das lojas oficiais cadastradas e **enche uma
-fila** no banco; o `Pokemon Publisher v2` **esvazia essa fila**, um item de cada vez,
-publicando no Telegram. Os dois nunca conversam direto — o banco é o único ponto de contato.
+fila** no banco; o `Pokemon Scanner v2` faz o mesmo a partir da página geral de ofertas
+(só título com Pokémon); o `Pokemon Publisher v2` **esvazia essa fila**, um item de cada vez,
+publicando no Telegram. Os scanners nunca conversam direto com o Publisher — o banco é o único ponto de contato.
 
-(O `Pokemon Scanner v2`, que lia `ofertas?category=MLB6899`, está **desativado**. O diagrama
-da seção 4 ainda o mostra porque o código existe e o Publisher é o mesmo.)
+**Desde 27/08 existem duas esteiras no mesmo projeto.** A de cima é a de curadoria, descrita
+neste documento. A segunda é a **réplica**: copia promoção já publicada em grupos de WhatsApp
+trocando só o link de afiliado, sem nenhum filtro editorial
+([seção 4d](#4d-a-esteira-de-réplica--whatsapp-para-telegram) e
+[Decisão 44](historico-de-decisoes.md#decisão-44--réplica-de-grupos-de-whatsapp-sem-curadoria-ao-lado-do-bot)).
+Elas compartilham o banco e o canal, e nada mais.
 
 ---
 
@@ -28,6 +33,7 @@ da seção 4 ainda o mostra porque o código existe e o Publisher é o mesmo.)
 | **PostgreSQL 16** | O banco de dados. Roda em Docker, container `pokemon-postgres` | Banco `pokemon_promos`, usuário `pokemon_bot` |
 | **Rede Docker `n8n_default`** | A rede virtual que permite o n8n conversar com o banco | Os dois containers precisam estar nela. Fonte de um problema real; veja [troubleshooting](troubleshooting.md#p5--credencial-do-banco-para-de-conectar-couldnt-connect-with-these-settings) |
 | **Bot do Telegram** | Publica no canal, como administrador | Canal `@promopokemontcg` ("Pokémon TCG Promo", id `-1004430553765`) |
+| **Evolution API** | Ponte com o WhatsApp, em Docker. Da esteira de réplica | Projeto `evolution-api` na VPS, imagem `evoapicloud/evolution-api`. Compose em [`deploy/evolution-api/`](../deploy/evolution-api/). Porta 8080 só em `127.0.0.1`; o n8n a alcança em `http://evolution-api:8080` |
 
 O container do banco está configurado assim: imagem `postgres:16-alpine`, volume
 `postgres_data` para os dados não se perderem em reinício, e a porta 5432 publicada
@@ -41,6 +47,8 @@ da própria VPS.
 | Pokemon Promos DB (PostgreSQL) | `6jdqiaTfNIJseSqb` | Todos os nodes de banco dos workflows Pokemon |
 | Pokemon Telegram Bot (Telegram API) | `jhasZWps6SfFVWaF` | O node `Post to Telegram` do Publisher |
 | Query Auth account (`httpQueryAuth`) | `1bhdvX6LLEbuo97b` | Catalog Scanner (ScraperAPI). O campo **Name** tem que ser `api_key`. **Não publicar** esse workflow |
+| Painel Replica (Basic Auth) | `rjHWJIwMLcjCEpBl` | Só o GET do `Replica Painel` e o `Abrir Conexao` do `Replica WhatsApp Conectar`. Os POSTs do painel usam token de save, não esta credencial |
+| Evolution API Key (Header Auth) | `RqVdkbWZmwbs8ZsY` | `Baixar Imagem da Evolution` (Ingest) e os dois nodes HTTP do `Replica WhatsApp Conectar`. Header `apikey`, valor igual ao `AUTHENTICATION_API_KEY` do container |
 
 ### Fonte de dados
 
@@ -142,14 +150,15 @@ flowchart TD
     B12 -.-> T2
 ```
 
-> O diagrama acima mostra o `Pokemon Scanner v2`, que hoje está **desativado** (a página geral
-> de ofertas saiu de escopo). Quem enche a fila agora é o `Pokemon Store Scanner`, descrito na
-> seção 4b. O Publisher é o mesmo para os dois: ele lê a fila e não pergunta de onde o item
+> O diagrama acima mostra o `Pokemon Scanner v2`, **ativo** desde a
+> [Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)
+> (busca geral MLB6899 + Pokémon no título). O `Pokemon Store Scanner` continua nas lojas
+> (seção 4b). O Publisher é o mesmo para os dois: ele lê a fila e não pergunta de onde o item
 > veio.
 
 ---
 
-## 4b. O `Pokemon Store Scanner` — o scanner ativo
+## 4b. O `Pokemon Store Scanner` — lojas oficiais
 
 `PNwaF3BYhj5KA8eY`, ativo, dispara a cada **5 minutos**. Ele varre as **lojas oficiais**
 cadastradas em `lojas_confiaveis` e é hoje a única fonte que abastece o canal.
@@ -288,6 +297,108 @@ Em 16/08 a listagem devolveu HTTP 500 com `render` e com `premium`, sem cobrar c
 O parser **nunca viu HTML** nessa sessão. **Não ligue `ultra_premium` sem pedido novo.**
 Registro: [Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo).
 Código em [`backups/2026-08-16/`](../backups/2026-08-16/).
+
+---
+
+## 4d. A esteira de réplica — WhatsApp para Telegram
+
+Esta é a **segunda esteira** do projeto ([Decisão 44](historico-de-decisoes.md#decisão-44--réplica-de-grupos-de-whatsapp-sem-curadoria-ao-lado-do-bot)),
+e ela é deliberadamente rasa: pega a promoção que outra pessoa já publicou num grupo de
+WhatsApp, troca o link do Mercado Livre pelo link de afiliado do Eduardo e reposta no canal.
+**Nenhum filtro do bot TCG vale aqui** — não olha tema, desconto, loja nem autenticidade.
+
+As duas esteiras dividem só duas coisas: o banco (em tabelas separadas) e o canal do Telegram.
+
+```
+WhatsApp (grupos de terceiros)
+        │
+        ▼
+Evolution API (Docker, sem porta pública)
+        │  webhook messages.upsert
+        ▼
+Replica WhatsApp Ingest ──► Postgres (replica_rotas, replica_config, replica_log, replica_destinos)
+        │                            ▲
+        │                            │ origens, destinos, ajustes
+        │                     Replica Painel (Basic Auth; lista grupos na Evolution)
+        ▼
+Telegram @promopokemontcg  +  (opcional) grupo de WhatsApp de destino
+```
+
+### As peças
+
+| Peça | Onde | Papel |
+| --- | --- | --- |
+| **Evolution API** | Docker na VPS, compose em [`deploy/evolution-api/`](../deploy/evolution-api/) | Fala WhatsApp por baixo (Baileys) e manda cada mensagem de grupo para o n8n. Instância `promo-replica` |
+| **`Replica WhatsApp Ingest`** | `4mE343XrNXgIwAIF` | O fluxo principal: normaliza, checa liberação e teto, troca links, publica, registra |
+| **`Replica Painel`** | `lWDnggRX8xQmYyQV` | Página HTML servida pelo n8n. Origens, destinos (Telegram e WhatsApp) e ajustes |
+| **`Replica WhatsApp Conectar`** | `v32gcVzRkedUACXD` | Página do QR code. Cria a instância e mostra o código para parear o celular |
+| **`Replica Schema Setup`** | `pfolFnCYTLyLZdwU` | Cria as tabelas e o schema `evolution`. Idempotente, roda à mão |
+
+**Por que existe uma página só para o QR code:** a Evolution não tem porta pública, e o QR é o
+único momento em que um humano precisa falar com ela. A alternativa seria túnel SSH a cada
+reconexão. O `Replica WhatsApp Conectar` põe esse único ponto de contato atrás do mesmo Basic
+Auth do painel, e o n8n — que já está na rede da Evolution — faz o intermédio.
+
+### O que o Ingest faz, na ordem
+
+1. **`Webhook Evolution`** recebe o `messages.upsert`. O caminho tem um segredo no fim, e não
+   um nome bonito: caminho adivinhável sem autenticação deixaria qualquer pessoa publicando no
+   canal do Eduardo.
+2. **`Normalizar Mensagem`** desembrulha os formatos do WhatsApp (mensagem efêmera, visualização
+   única, documento com legenda) e extrai texto, imagem e IDs. Descarta o que não é de grupo, o
+   que é da própria conta, o que não tem texto e o que chegou com mais de 10 min de atraso.
+3. **`Consultar Rota e Config`** cadastra o grupo se for a primeira mensagem, conta a mensagem
+   vista e devolve a configuração, os destinos ativos, se a origem também é destino (trava de
+   loop) e quantos posts saíram na última hora. Origem nova continua **desligada** até o painel
+   salvar ela na lista.
+4. **`Extrair Links`** classifica cada URL do texto: produto do ML, link curto do ML,
+   encurtador genérico, outro marketplace, convite de grupo, desconhecido.
+5. **`Seguir Redirecionamento 1` e `2`** resolvem no máximo 4 links curtos, sem seguir redirect
+   automático — o interesse é só o header `location`. Dois saltos porque o encurtador do ML
+   costuma usar dois.
+6. **`Montar Post`** é onde a única edição de conteúdo acontece: link do ML vira
+   `?matt_word=...&matt_tool=...&forceInApp=true` ([Regra do link de afiliado](regras-de-negocio.md)),
+   a linha que contém convite para grupo/canal de terceiro é apagada, e some a marca de
+   terceiro (`@rasgabooster.tcg`, `#rasgaboot`, mais `replica_config.frases_remover`).
+   Aqui também nasce o `hash_conteudo`.
+7. **`Registrar e Deduplicar`** insere em `replica_log` com `ON CONFLICT (hash_conteudo) DO
+   NOTHING`. **Sem linha de volta, não publica** — mesma lógica da
+   [Decisão 12](historico-de-decisoes.md#decisão-12--deduplicação-por-on-conflict-não-por-consulta-prévia).
+8. **`Esperar Delay`** espera os segundos configurados, para o canal não receber rajada.
+9. **Telegram:** card profissional (preto/âmbar) com a foto do anúncio no ML, ou a foto da
+   origem recortada no card, mais a legenda já limpa. **Sem `parse_mode`**. Se o card
+   falhar, o post sai como texto. Cupom sem produto e sem foto continua só texto.
+10. **WhatsApp de destino (opcional):** o mesmo card via `POST /message/sendMedia`, ou
+    `sendText` se não houver foto. O ingest pula a mensagem se o grupo de origem for
+    também destino.
+11. **`Marcar Como Enviado`** fecha o ciclo e incrementa o contador do grupo de origem.
+
+### O painel
+
+Rotas de webhook no mesmo workflow. O GET exige Basic Auth. Os POSTs **não**:
+o Chrome não reenvia Basic Auth em `fetch()`, então o save autentica com um
+**token de save** no JSON (não é a senha do painel; o HTML só existe depois do GET
+autenticado). Sem token válido o Code node recusa.
+
+| Rota | Método | Auth | O que faz |
+| --- | --- | --- | --- |
+| `/webhook/replica/painel` | GET | Basic Auth | Garante as tabelas de rotas nomeadas e devolve a página |
+| `/webhook/replica/painel/salvar` | POST | token no JSON | Cria/edita uma rota nomeada, ou reconfigura/desliga o Telegram |
+| `/webhook/replica/painel/rota` | POST | token no JSON | Liga/desliga (`ativa`) ou exclui uma rota nomeada |
+| `/webhook/replica/painel/config` | POST | token no JSON | Grava um ajuste em `replica_config`, só das chaves da lista branca |
+
+A página é montada pelo node `Montar Pagina` a partir de `replica_config.pagina_gz`
+(base64 UTF-8 do HTML; o nome `_gz` é legado — **não** é gzip). Fonte versionada:
+[`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
+Em 29/08 o valor fechou em 63424 bytes
+([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) embute o
+HTML no Code node e fica como paraquedas. **Para mexer no painel: edite o HTML, grave o
+base64 em `pagina_gz`, Ctrl+F5.**
+
+O front-end monta a tela pela DOM API em vez de `innerHTML`. Isso não é preciosismo: o texto
+que vem dos grupos é conteúdo de terceiro, e concatenar isso em HTML seria criar XSS dentro do
+próprio painel.
 
 ---
 

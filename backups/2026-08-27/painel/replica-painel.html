@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<!-- Replica Painel -> node 'Montar Pagina' (servido pelo webhook GET /webhook/replica/painel).
+     O node troca o marcador de dados (script id=dados) pelo json do painel em base64.
+     A pagina monta tudo pela DOM API de proposito: sem aspas duplas e sem innerHTML,
+     porque este arquivo vive dentro de um Code node do n8n como lista de strings. -->
+<html lang='pt-BR'>
+<head>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<title>Replica de Promocoes</title>
+<script src='https://cdn.tailwindcss.com'></script>
+</head>
+<body class='bg-slate-950 text-slate-100 min-h-screen'>
+<div class='max-w-6xl mx-auto p-6 space-y-6'>
+  <header class='flex flex-wrap items-center justify-between gap-4'>
+    <div>
+      <h1 class='text-2xl font-semibold'>Replica de Promocoes</h1>
+      <p class='text-sm text-slate-400'>Grupos de WhatsApp para o Telegram, trocando so o link de afiliado</p>
+    </div>
+    <div id='liga'></div>
+  </header>
+  <section id='resumo' class='grid grid-cols-2 md:grid-cols-4 gap-4'></section>
+  <section class='bg-slate-900 rounded-xl p-5 space-y-4'>
+    <h2 class='font-semibold'>Ajustes</h2>
+    <div id='config' class='grid md:grid-cols-2 gap-4'></div>
+  </section>
+  <section class='bg-slate-900 rounded-xl p-5 space-y-3'>
+    <h2 class='font-semibold'>Grupos de origem</h2>
+    <p class='text-xs text-slate-400'>Grupo novo aparece sozinho na lista, sempre desligado. Ligue so os que quiser replicar.</p>
+    <div id='rotas' class='space-y-2'></div>
+  </section>
+  <section class='bg-slate-900 rounded-xl p-5 space-y-3'>
+    <h2 class='font-semibold'>Ultimas mensagens vistas</h2>
+    <div id='logs' class='space-y-2 text-sm'></div>
+  </section>
+  <p class='text-xs text-slate-500'>Pagina gerada em <span id='agora'></span></p>
+</div>
+<script id='dados' type='application/json'>__DADOS__</script>
+<script>
+var D = JSON.parse(atob(document.getElementById('dados').textContent.trim()));
+var cfg = D.config || {};
+var CORES = {
+  enviado: 'bg-emerald-500/15 text-emerald-300',
+  descartado: 'bg-slate-700/50 text-slate-300',
+  ignorado: 'bg-amber-500/15 text-amber-300',
+  erro: 'bg-rose-500/15 text-rose-300',
+  pendente: 'bg-sky-500/15 text-sky-300'
+};
+
+function el(tag, classe, texto) {
+  var n = document.createElement(tag);
+  if (classe) n.className = classe;
+  if (texto !== undefined && texto !== null) n.textContent = String(texto);
+  return n;
+}
+
+var BASE = location.pathname;
+if (BASE.charAt(BASE.length - 1) === '/') { BASE = BASE.slice(0, -1); }
+
+function enviar(sufixo, corpo) {
+  return fetch(BASE + sufixo, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(corpo)
+  }).then(function (r) {
+    if (!r.ok) { alert('Nao consegui salvar. Status ' + r.status); return; }
+    location.reload();
+  });
+}
+
+function salvarConfig(chave, valor) {
+  return enviar('/config', { chave: chave, valor: String(valor) });
+}
+
+function salvarRota(chatId, campos) {
+  campos.chat_id = chatId;
+  return enviar('/rota', campos);
+}
+
+function pintarLiga() {
+  var ligada = cfg.ativo === 'true';
+  var b = el('button', 'px-4 py-2 rounded-lg font-medium ' + (ligada ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'), ligada ? 'Replica ligada' : 'Replica desligada');
+  b.addEventListener('click', function () { salvarConfig('ativo', ligada ? 'false' : 'true'); });
+  document.getElementById('liga').appendChild(b);
+}
+
+function pintarResumo() {
+  var r = D.resumo || {};
+  var cartoes = [
+    ['Enviados hoje', r.enviados_hoje || 0],
+    ['Na ultima hora', (r.enviados_hora || 0) + ' de ' + (cfg.teto_hora || '-')],
+    ['Grupos ligados', (r.rotas_ativas || 0) + ' de ' + (r.rotas_total || 0)],
+    ['Erros hoje', r.erros_hoje || 0]
+  ];
+  var alvo = document.getElementById('resumo');
+  cartoes.forEach(function (c) {
+    var caixa = el('div', 'bg-slate-900 rounded-xl p-4');
+    caixa.appendChild(el('p', 'text-xs text-slate-400', c[0]));
+    caixa.appendChild(el('p', 'text-xl font-semibold mt-1', c[1]));
+    alvo.appendChild(caixa);
+  });
+}
+
+function campo(chave, rotulo, tipo) {
+  var valor = cfg[chave] === undefined ? '' : cfg[chave];
+  var caixa = el('label', 'block space-y-1');
+  caixa.appendChild(el('span', 'text-xs text-slate-400 block', rotulo));
+  var controle;
+  if (tipo === 'sim_nao') {
+    controle = el('select', 'bg-slate-800 rounded-lg px-3 py-2 w-full');
+    [['true', 'Sim'], ['false', 'Nao']].forEach(function (o) {
+      var op = el('option', null, o[1]);
+      op.value = o[0];
+      if (valor === o[0]) op.selected = true;
+      controle.appendChild(op);
+    });
+  } else {
+    controle = el('input', 'bg-slate-800 rounded-lg px-3 py-2 w-full');
+    controle.value = valor;
+  }
+  controle.addEventListener('change', function () { salvarConfig(chave, controle.value); });
+  caixa.appendChild(controle);
+  return caixa;
+}
+
+function pintarConfig() {
+  var alvo = document.getElementById('config');
+  alvo.appendChild(campo('destino_telegram', 'Canal de destino no Telegram', 'texto'));
+  alvo.appendChild(campo('teto_hora', 'Teto de posts por hora', 'texto'));
+  alvo.appendChild(campo('delay_segundos', 'Espera antes de publicar (segundos)', 'texto'));
+  alvo.appendChild(campo('replicar_cupom_sem_link', 'Replicar cupom sem link de produto', 'sim_nao'));
+}
+
+function pintarRotas() {
+  var rotas = D.rotas || [];
+  var alvo = document.getElementById('rotas');
+  if (!rotas.length) {
+    alvo.appendChild(el('p', 'text-sm text-slate-400', 'Nenhum grupo visto ainda. Entre nos grupos com o numero conectado e espere a primeira mensagem.'));
+    return;
+  }
+  rotas.forEach(function (r) {
+    var ligado = r.ativa === true;
+    var linha = el('div', 'flex flex-wrap items-center gap-3 bg-slate-800/40 rounded-lg p-3');
+    var b = el('button', 'px-3 py-1 rounded-md text-xs font-medium ' + (ligado ? 'bg-emerald-600' : 'bg-slate-700'), ligado ? 'Replicando' : 'Desligado');
+    b.addEventListener('click', function () { salvarRota(r.chat_id, { ativa: ligado ? 'false' : 'true' }); });
+    linha.appendChild(b);
+    var nome = el('input', 'bg-slate-900 rounded-md px-2 py-1 text-sm flex-1 min-w-0');
+    nome.value = r.nome || '';
+    nome.placeholder = 'apelido do grupo';
+    nome.addEventListener('change', function () { salvarRota(r.chat_id, { nome: nome.value }); });
+    linha.appendChild(nome);
+    linha.appendChild(el('span', 'text-xs text-slate-500 font-mono', r.chat_id));
+    linha.appendChild(el('span', 'text-xs text-slate-400', 'vistas ' + r.mensagens_vistas + ' / replicadas ' + r.replicadas));
+    linha.appendChild(el('span', 'text-xs text-slate-500', r.ultima || '-'));
+    alvo.appendChild(linha);
+  });
+}
+
+function pintarLogs() {
+  var logs = D.logs || [];
+  var alvo = document.getElementById('logs');
+  if (!logs.length) {
+    alvo.appendChild(el('p', 'text-slate-400', 'Sem registro ainda.'));
+    return;
+  }
+  logs.forEach(function (l) {
+    var linha = el('div', 'flex flex-wrap items-center gap-3 border-b border-slate-800 pb-2');
+    linha.appendChild(el('span', 'text-xs text-slate-500 w-24', l.quando));
+    linha.appendChild(el('span', 'px-2 py-0.5 rounded text-xs ' + (CORES[l.status] || 'bg-slate-700/50 text-slate-300'), l.status));
+    linha.appendChild(el('span', 'text-xs text-slate-400 w-40 truncate', l.origem_nome || l.origem_chat_id));
+    linha.appendChild(el('span', 'flex-1 min-w-0 truncate text-slate-300', l.trecho));
+    linha.appendChild(el('span', 'text-xs text-slate-500', l.motivo || ''));
+    alvo.appendChild(linha);
+  });
+}
+
+pintarLiga();
+pintarResumo();
+pintarConfig();
+pintarRotas();
+pintarLogs();
+document.getElementById('agora').textContent = new Date().toLocaleString('pt-BR');
+</script>
+</body>
+</html>

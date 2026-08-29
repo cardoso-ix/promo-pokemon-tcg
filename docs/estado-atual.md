@@ -1,18 +1,31 @@
 # Estado atual — o que está rodando e o que falta decidir
 
-**Última atualização:** 16/08/2026, ~23h10 BRT
+**Última atualização:** 29/08/2026, ~09h16 BRT
+
+> **Novidade de 27/08: o projeto agora tem duas esteiras.** A de curadoria (tudo descrito
+> abaixo) segue igual e no ar. A segunda é a **réplica de grupos de WhatsApp**, que copia
+> promoção de terceiro trocando só o link de afiliado, **sem nenhum filtro**
+> ([Decisão 44](historico-de-decisoes.md#decisão-44--réplica-de-grupos-de-whatsapp-sem-curadoria-ao-lado-do-bot)).
+> Em 28/08 ela saiu do papel: Evolution API no ar, credenciais criadas, workflows
+> publicados, WhatsApp pareado. Em 29/08 a primeira rota nomeada (**TCG Promo**) já estava
+> gravada e o HTML do painel fechou em `pagina_gz`
+> ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+> Passo a passo em [runbook, seção 15](runbook.md#15-a-esteira-de-réplica-de-whatsapp).
+> Estado detalhado em [A esteira de réplica](#a-esteira-de-réplica--no-ar).
 **Situação:** **o bot está no ar de ponta a ponta e só publica com link de afiliado e com
 foto.** Dez lojas ativas (`dalo-vendas` entrou à noite, autorização do Eduardo), desconto mínimo **10%** em `pokemon`/`copag` e **15%** nas outras
 ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)), teto
-**40**/dia (contado em **BRT**) e **6**/hora. Scanner a cada **5 min**, Publisher a cada
-**2 min** (8h–22h BRT). Item já postado volta à fila se o preço cair (≥ 5% ou ≥ R$ 5)
+**90**/dia (contado em **BRT**) e **6**/hora. Store Scanner a cada **5 min**, Scanner v2
+(busca geral MLB6899) a cada **10 min**, Publisher a cada **2 min** (8h–22h BRT). Item já postado volta à fila se o preço cair (≥ 5% ou ≥ R$ 5)
 ou se continuar válido **depois de 3 dias**
 ([Decisão 40](historico-de-decisoes.md#decisão-40--reofertar-após-3-dias-e-contar-o-teto-em-brt)).
-Cupom `BRINQUEDOS` era até 16/08 23h59 BRT. Link de compra leva `wid`. Publisher `7261bee7`,
-Scanner `0ff36da8`. Filtro vigente: cartas/acessório TCG **ou** figura Pokémon
+Link de compra leva `wid`. Publisher `56b8fb7b`, Store Scanner `0ff36da8`, Scanner v2 `f0183d1c`.
+Filtro vigente nas lojas: cartas/acessório TCG **ou** figura Pokémon
 ([Decisão 41](historico-de-decisoes.md#decisão-41--figuras-pokémon-no-filtro-e-nenhuma-loja-oficial-nova)).
+Busca geral exige Pokémon no título + score de autenticidade
+([Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)).
 O `Pokemon Catalog Scanner` **existe e fica inativo** — `lista.mercadolivre.com.br` falhou
-com `render=true` e com `premium=true` nesta noite
+com `render=true` e com `premium=true` em 16/08
 ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
 
 Este documento existe para permitir retomar sem repetir nenhum teste pago e sem refazer
@@ -20,10 +33,10 @@ investigação que já foi feita.
 
 **Como retomar em 5 minutos**
 
-1. README → o bot está no ar? 10 lojas, 5 min / 2 min, teto 40 + 6/hora, mínimo 10%/15%,
-   filtro de cartas/acessório + figura (Decisão 41). Catalog Scanner **não** se publica.
+1. README → o bot está no ar? 10 lojas + busca geral, 5 min / 10 min / 2 min, teto 90 + 6/hora, mínimo 10%/15%,
+   filtro de cartas/acessório + figura (Decisão 41), Pokémon no título na busca geral (Decisão 43). Catalog Scanner **não** se publica.
 2. Este arquivo → versões publicadas, ScraperAPI, o que falta decidir.
-3. n8n: `versionId` = `activeVersionId` nos três ativos. Salvar ≠ publicar ([P18](troubleshooting.md#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada)).
+3. n8n: `versionId` = `activeVersionId` nos ativos. Salvar ≠ publicar ([P18](troubleshooting.md#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada)).
 4. Não gaste crédito de ScraperAPI sem ler a [Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo).
    O Catalog Scanner **não se publica**. `ultra_premium` só com pedido novo.
 5. Clique de afiliado **já confirmado** (5 cliques em 13/08). Falta venda/comissão.
@@ -40,7 +53,8 @@ investigação que já foi feita.
    Com isso, o [P8](troubleshooting.md#p8--a-fila-travou-o-mesmo-item-tenta-publicar-toda-vez-e-falha)
    está fechado nas duas causas conhecidas.
 3. **Volume: dez lojas, qualidade primeiro (Decisão 35, ~22h35; `dalo-vendas` em 16/08).**
-   Mínimo **10%** em `pokemon`/`copag`, **15%** nas outras oito. Teto **40**/dia e **6**/hora (era 4 na
+   Mínimo **10%** em `pokemon`/`copag`, **15%** nas outras oito. Teto vigente **90**/dia e **6**/hora
+   ([Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora); era 40, e o horário era 4 na
    noite de 13/08; [Decisão 38](historico-de-decisoes.md#decisão-38--teto-horário-de-6-posts)).
    Fila ordena Pokémon → COPAG → economia em R$ → %. O experimento de 5% (Decisão 29) acabou.
    A varredura das ~20h de 13/08 rendeu **1 pending novo** (Attack Toys, 9,75%), já publicado
@@ -60,6 +74,10 @@ investigação que já foi feita.
 7. **Pacote A no ar (Decisão 35, ~22h35).** Publisher naquela hora: `a621b8c9`. Em 14/08
    o teto horário subiu para 6 e a versão publicada passou a `57c2826e`. Banco: 10%/15%.
    Pending abaixo do novo mínimo: zero na hora da troca de 13/08.
+8. **Busca geral religada (Decisão 43, 25/08 ~22h15).** Scanner v2 ativo (`f0183d1c`),
+   Pokémon no título obrigatório, teto diário **90**. Teste `35851` ok; 0 aceito na vitrine
+   da noite. Posts a partir das 8h de 26/08 se a fila encher. Catalog Scanner continua
+   inativo.
 
 **Alerta privado no ar (19h35).** O `Pokemon Health Alert` avisa no mesmo chat do alerta
 LinkedIn se o bot quebrar. Fila vazia **não** é alerta. Ver
@@ -70,28 +88,111 @@ LinkedIn se o bot quebrar. Fila vazia **não** é alerta. Ver
 
 ## Estado dos workflows no n8n
 
-Conferido no n8n em **16/08/2026 ~23h12 BRT** (`versionId` = `activeVersionId` nos três ativos),
-comparando `versionId` com `activeVersionId` — porque salvar e publicar são coisas diferentes
+Conferido no n8n em **27/08/2026 ~23h BRT** (os quatro ativos continuam com
+`versionId` = `activeVersionId`), comparando `versionId` com `activeVersionId` — porque salvar e
+publicar são coisas diferentes
 ([P18](troubleshooting.md#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada)).
 
 | Workflow | ID | Estado | Produção em dia? |
 | --- | --- | --- | --- |
 | `Pokemon Store Scanner` | `PNwaF3BYhj5KA8eY` | **Ativo**, a cada **5 min** + jitter 0–60s | Sim, `0ff36da8` — queda de preço + reoferta após 3 dias ([Decisão 40](historico-de-decisoes.md#decisão-40--reofertar-após-3-dias-e-contar-o-teto-em-brt)). Node do relógio: `A Cada 5 Minutos` |
-| `Pokemon Publisher v2` | `FXNWeT9C7dEA0DUY` | **Ativo**, a cada **2 min** | Sim, `7261bee7` — teto **6**/hora + teto 40 no **dia BRT**. Node do relógio: `Every 2 Minutes` |
-| `Pokemon Scanner v2` | `39kdRchYI6CwsbNY` | Inativo, fora de escopo | Nunca publicado; link de afiliado já corrigido no código salvo |
-| `Pokemon Schema Setup v2` | `F8jVi6NFxeDHfAkb` | Inativo, roda sob demanda | Nunca publicado |
-| `Pokemon Catalog Scanner` | `2ckVyvFPvtqwECDI` | **Inativo**, nunca publicado | Criado 16/08. `lista.mercadolivre` falha com render e com premium ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)). **Não publicar.** |
+| `Pokemon Publisher v2` | `FXNWeT9C7dEA0DUY` | **Ativo**, a cada **2 min** | Sim, `56b8fb7b` — teto **6**/hora + teto **90** no **dia BRT**. Node do relógio: `Every 2 Minutes` |
+| `Pokemon Scanner v2` | `39kdRchYI6CwsbNY` | **Ativo**, a cada **10 min** + jitter | Sim, `f0183d1c` — busca geral MLB6899 + Pokémon no título ([Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)). Node extra: `Exigir Pokemon no Titulo` |
 | `Pokemon Health Alert` | `3irgeWFKZGZZrJ5u` | **Ativo**, 1× ao dia às 21h BRT + manual | Sim, `b5e4b758` — mesmo chat privado do alerta LinkedIn |
+| `Pokemon Schema Setup v2` | `F8jVi6NFxeDHfAkb` | Inativo, roda sob demanda | Nunca publicado |
+| `Replica WhatsApp Ingest` | `4mE343XrNXgIwAIF` | **Ativo** | Sim, `803a5650` — card profissional (foto do ML + título/preço/marca) no lugar da foto crua ([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)) |
+| `Replica Painel` | `lWDnggRX8xQmYyQV` | **Ativo** | Sim, `5a4d014a` — POST aceita `frases_remover` ([Decisão 48](historico-de-decisoes.md#decisão-48--post-da-réplica-no-modelo-foto--texto-sem-marca-de-terceiro)); GET Basic Auth; token de save no JSON ([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)). `pagina_gz` **completo** (63424 bytes, MD5 `f8fccee12aa8e6e98ecf12d2a7221d2a`, [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)). Se o browser ainda mostrar JS cortado, Ctrl+F5 |
+| `Replica Nomes Sync` | `J6zU6p48OEBO0raf` | **Ativo**, a cada **10 min** | Sim, `5c1adb11` — `fetchAllGroups` (~80s, timeout 120s) + cache em `replica_rotas` |
+| `Replica Schema Setup` | `pfolFnCYTLyLZdwU` | Inativo, **já rodou** em 27/08 | Idempotente, de mão. Criou `replica_rotas`, `replica_config`, `replica_log` |
+| `Pokemon Catalog Scanner` | `2ckVyvFPvtqwECDI` | **Arquivado** em 27/08 | Era inativo desde 16/08 ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)). Arquivar é reversível; o código está em [`backups/2026-08-16/`](../backups/2026-08-16/) |
 | `TMP Pokemon SQL Console` | `PVNsBGQ92Wrhos51` | **Arquivado** em 13/08 | Era descartável. Some da lista |
-| `TMP Pokemon SQL Console 2` | `Fc7OGlP4ZNiuNIgd` | Ativo só para consulta à mão | Cron dummy `0 0 4 29 2 *` (29/fev). Salvo e publicado podem divergir — rode em **manual** se for consultar. Pode arquivar |
+| `TMP Pokemon SQL Console 2` | `Fc7OGlP4ZNiuNIgd` | **Arquivado** em 27/08 | Tinha webhook ativo executando SQL arbitrário. Superfície de risco sem dono |
+| `TMP Reset Entrada Paciente` | `uvR7cjFb1dB3XWW7` | Inativo, de outro projeto | **Ainda na lista.** Não dá para arquivar por programa (MCP desabilitado nele); arquive pelo cartão do workflow |
 
-Scanner v2 e Schema Setup nunca publicados é inofensivo enquanto ninguém os ligar. O
-**Catalog Scanner** também nunca foi publicado — e **não se publica** até a listagem
-devolver HTML de verdade ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
+Scanner v2 **publicado e ativo** na Decisão 43. Schema Setup nunca publicado é inofensivo
+enquanto ninguém o ligar.
+
+**Limpeza de 27/08:** três workflows saíram da lista (Catalog Scanner, os dois TMP). O critério
+foi "não tem dono e não roda"; o `TMP Pokemon SQL Console 2` saiu também por segurança, porque
+um webhook publicado que executa SQL arbitrário é convite para problema. Arquivar **não** apaga:
+dá para desarquivar pelo filtro de arquivados do n8n.
 
 A pasta [`backups/2026-08-13/`](../backups/) tem os 4 workflows originais daquele dia.
 [`backups/2026-08-16/`](../backups/2026-08-16/) guarda o parser e o gerador do Catalog
-Scanner **inativo**. O n8n continua sendo a fonte; o backup é paraquedas.
+Scanner **inativo**. [`backups/2026-08-27/`](../backups/2026-08-27/) guarda os Code nodes, o SQL
+e o HTML antigo do painel, e [`backups/2026-08-28/`](../backups/2026-08-28/) o que nasceu no
+dia de pôr a réplica de pé (QR, schema `evolution`, painel origem/destino). O n8n
+continua sendo a fonte; o backup é paraquedas.
+
+---
+
+## A esteira de réplica — no ar
+
+Construída em 27/08 ([Decisão 44](historico-de-decisoes.md#decisão-44--réplica-de-grupos-de-whatsapp-sem-curadoria-ao-lado-do-bot)),
+posta de pé em 28/08. **Já publicou o primeiro post ao vivo.** O 401 no Salvar era o Chrome
+sem reenviar Basic Auth no `fetch` — corrigido em `45412383`
+([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)).
+O post saía com `@rasgabooster.tcg` e sem foto no WhatsApp; o ingest `94138475` tira a marca
+e copia a imagem ([Decisão 48](historico-de-decisoes.md#decisão-48--post-da-réplica-no-modelo-foto--texto-sem-marca-de-terceiro)).
+
+**O que já está pronto:**
+
+- As tabelas `replica_rotas`, `replica_config` e `replica_log` existem no banco `pokemon_promos`.
+  `replica_destinos` e `replica_transmissoes` (rotas nomeadas) nascem no primeiro GET do painel.
+- **Evolution API rodando** na VPS como projeto Docker `evolution-api`, sem porta pública, no
+  schema `evolution` do mesmo Postgres. Instância `promo-replica` **conectada** ao WhatsApp
+  desde 28/08 19h28 (número terminado em 5955).
+- **Credenciais `Painel Replica` e `Evolution API Key` criadas** e vinculadas nos sete nodes
+  que precisam delas.
+- **Quatro workflows publicados:** `Replica WhatsApp Ingest`, `Replica Painel`,
+  `Replica WhatsApp Conectar` e `Replica Nomes Sync`. O painel tem Visão Geral (KPIs 7d,
+  status WA/TG, gráfico de envios, tabela de rotas e atividades), Conexões
+  (QR + Telegram `@`), Rotas nomeadas (cards + modal com digitador), Configurações e
+  Atividades. O GET do painel **não** chama `fetchAllGroups`/`findChats`; os títulos
+  vêm do cache `replica_rotas.nome`. O job `Replica Nomes Sync` descobre os `@g.us`
+  via `fetchAllGroups` (~80 s, fora do GET) e grava o cache; o GET só lê o banco (~25 ms).
+  Em 28/08 o combo passou de 10 para **169** grupos. `evolution."Chat"` continua vazio
+  (`DATABASE_SAVE_DATA_CHATS=false`) — não use Chat como fonte.
+  Em 29/08 o POST publicado passou a aceitar `frases_remover` (`5a4d014a`). O HTML
+  polido (Impeccable) está em [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html)
+  e em `replica_config.pagina_gz` **completo** (63424 bytes, MD5 `f8fccee12aa8e6e98ecf12d2a7221d2a`;
+  [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+  A coluna guarda base64 UTF-8 do HTML, não gzip — o nome é legado.
+  O workflow temporário `TESTE card telegram (apagar)` (`JuTS329uRCmflTBl`) foi arquivado.
+  Primeira rota nomeada: **TCG Promo** (1 origem, 2 destinos). Combo com ~170 grupos.
+  Ingest ao vivo: webhook da Evolution lendo grupo, envios reais na noite de 28/08.
+- O `Replica WhatsApp Ingest` passou por teste de ponta a ponta com dados fixados (`pinData`)
+  simulando o webhook da Evolution, o banco, os encurtadores e o Telegram. **A troca de link e a
+  limpeza do texto saíram corretas no teste.**
+- O webhook de entrada foi movido para um caminho com segredo. O caminho antigo
+  (`/webhook/replica/wa`) **não** responde mais.
+
+**O que falta:**
+
+| # | Falta | Como fazer |
+| --- | --- | --- |
+| 1 | Entrar em mais grupos com o número pareado, se quiser mais origem | A Evolution só vê grupo do qual o número participa |
+| 2 | **Dashboard único** (curadoria + réplica na mesma página) | [roadmap, Dashboard](roadmap.md#dashboard) — Fase 1 ainda não começou |
+
+**Três armadilhas que custaram a noite de 28/08 e estão documentadas no runbook:** a imagem
+`atendai/evolution-api` não sobe nesta VPS (usar `evoapicloud/evolution-api`); a senha real do
+Postgres é `PkmnPromos2026!Br`, não a que está escrita no `.env` — o `$` do meio foi comido pelo
+Compose quando o banco nasceu; e o webhook da Evolution precisa apontar para `http://n8n:5678`,
+porque o domínio público resolve para `127.0.1.1` de dentro do container.
+
+**Ainda em aberto:** o **dashboard único**, que o Eduardo quer para controlar as duas esteiras
+num lugar só. O `Replica Painel` cobre apenas a réplica; a curadoria continua sendo operada por
+SQL e pela tela do n8n. O desenho e as duas escolhas em aberto estão em
+[roadmap, Dashboard](roadmap.md#dashboard).
+
+**O que já foi provado em produção (28–29/08):** o webhook real da Evolution chega no ingest
+(centenas de eventos, inclusive reações `sem_texto` descartadas); o card profissional sai no
+destino ([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem));
+a rota **TCG Promo** publica. **Ainda em observação:** o teto de 40 posts/hora sob volume
+alto de várias origens ao mesmo tempo.
+
+**Risco aceito e registrado:** o número de WhatsApp pode ser banido, porque ler grupo exige
+biblioteca não oficial. Use chip separado.
 
 ---
 
@@ -264,9 +365,9 @@ Eduardo — as opções estão no [README](../README.md#o-que-depende-de-uma-dec
 - **O clique de afiliado já foi atribuído** (5 cliques em 13/08, conta do Eduardo). **Venda
   e comissão ainda não.** A URL está correta.
 - **O escopo das lojas não foi ampliado de novo no Pacote A.** O que mudou foi o corte de
-  qualidade (10%/15%) e o ritmo do canal (6/hora). Cadastrar loja nova ou religar o Scanner
-  v2 continuam sendo decisões do Eduardo, listadas no
-  [README](../README.md#o-que-depende-de-uma-decisão-do-eduardo).
+  qualidade (10%/15%) e o ritmo do canal (6/hora). Cadastrar loja nova continua sendo
+  decisão do Eduardo. Religar o Scanner v2 **já foi feito** em 25/08
+  ([Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)).
 - **Nenhuma mensagem do canal foi apagada,** inclusive a do Funko.
 
 ---

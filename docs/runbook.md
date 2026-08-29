@@ -22,15 +22,18 @@ pode rodar sem medo. As marcadas com 🟡 **alteram dados**; leia antes de rodar
 12. [Lista de bloqueio de vendedores](#12-lista-de-bloqueio-de-vendedores)
 13. [Escopo: quais lojas o bot pode publicar](#13-escopo-quais-lojas-o-bot-pode-publicar)
 14. [Alerta privado de saúde do bot](#14-alerta-privado-de-saúde-do-bot)
+15. [A esteira de réplica de WhatsApp](#15-a-esteira-de-réplica-de-whatsapp)
 
 ---
 
 ## 1. Ligar e desligar o bot
 
-> **Estado em 16/08/2026, ~23h10 BRT: Store Scanner, Publisher e Health Alert estão ativos.**
-> Scanner a cada **5 min**, Publisher a cada **2 min** (8h–22h BRT, teto 40/dia e 6/hora).
-> Mínimo **10%** em `pokemon`/`copag`, **15%** nas outras. Filtro: cartas/acessório TCG +
-> figura Pokémon (Decisão 41). O **Pokemon Catalog Scanner** (`2ckVyvFPvtqwECDI`) existe e
+> **Estado em 25/08/2026, ~22h15 BRT: Store Scanner, Scanner v2, Publisher e Health Alert estão ativos.**
+> Store Scanner a cada **5 min**, Scanner v2 a cada **10 min**, Publisher a cada **2 min**
+> (8h–22h BRT, teto **90**/dia e **6**/hora).
+> Mínimo **10%** em `pokemon`/`copag`, **15%** nas outras lojas e na busca geral. Filtro nas lojas: cartas/acessório TCG +
+> figura Pokémon (Decisão 41). Busca geral exige Pokémon no título ([Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)).
+> O **Pokemon Catalog Scanner** (`2ckVyvFPvtqwECDI`) existe e
 > **fica inativo** — não publique, não ligue `ultra_premium` ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
 > O passo a passo abaixo continua valendo para quando você quiser desligar ou religar.
 
@@ -72,19 +75,19 @@ Como conferir, em ordem de confiança:
 ### Ligar
 
 1. Abra <https://srv1897392.hstgr.cloud>
-2. Abra o workflow **Pokemon Store Scanner** (`PNwaF3BYhj5KA8eY`) — é ele que alimenta a fila
-   hoje. O `Pokemon Scanner v2` (`39kdRchYI6CwsbNY`) está fora de escopo e deve continuar
-   desativado
+2. Abra o workflow **Pokemon Store Scanner** (`PNwaF3BYhj5KA8eY`) — lojas oficiais.
+   O `Pokemon Scanner v2` (`39kdRchYI6CwsbNY`) é a busca geral e **também** deve ficar ativo
+   ([Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora))
 3. No canto superior direito, clique no botão **Active** (em algumas versões do n8n aparece
    como **Publish**). Ele fica verde ou marcado
-4. Repita para o **Pokemon Publisher v2** (`FXNWeT9C7dEA0DUY`)
+4. Repita para o **Pokemon Scanner v2** e para o **Pokemon Publisher v2** (`FXNWeT9C7dEA0DUY`)
 5. O **Pokemon Health Alert** (`3irgeWFKZGZZrJ5u`) também deve ficar ativo — alerta privado,
    não publica no canal
 
 **Não ligue o Pokemon Catalog Scanner** (`2ckVyvFPvtqwECDI`). Ele existe, fica inativo e
 **não se publica** enquanto `lista.mercadolivre.com.br` devolver HTTP 500 no ScraperAPI
 ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
-O Scanner v2 (`39kdRchYI6CwsbNY`) continua fora de escopo.
+O Scanner v2 (`39kdRchYI6CwsbNY`) está **ativo** desde a Decisão 43 (busca geral + Pokémon no título).
 
 Pronto, o bot está no ar. A partir daí:
 
@@ -580,7 +583,7 @@ esteja ativo, e é a única forma de descobrir erro de digitação em Code node.
 
 | Workflow | Sinal de que deu certo |
 | --- | --- |
-| **Scanner** | O node `Normalize and Classify` mostra vários itens de saída (uns 9), cada um com `decision` preenchido. Nenhum node de erro acionado. A execução leva até um minuto a mais por causa do node `Random Jitter`, que espera de propósito — não é travamento |
+| **Scanner** | O node `Normalize and Classify` mostra itens de saída, cada um com `decision` preenchido. No Scanner v2 o node `Exigir Pokemon no Titulo` vem em seguida. Nenhum node de erro acionado. A execução leva até um minuto a mais por causa do jitter — não é travamento |
 | **Catalog Scanner** | **Não rode sem ler a Decisão 42.** Se for retomar: `TESTE_SO_POKEMON = true`, Name da credencial = `api_key`, uma execução **manual**. HTTP 200 com `_n.ctx.r` e produtos = avançar; 208 bytes / 500 = parar. **Não publique.** |
 | **Publisher** | Se houver item na fila e você estiver dentro da janela de horário, um post aparece no canal. Se a fila estiver vazia, o node `Fetch Next Pending` mostra 0 itens e o fluxo para ali — isso está correto, não é erro |
 | **Schema Setup** | Os 5 nodes de banco ficam verdes (`promos`, `promos_erros`, `promos_review`, `promos_log` e `cupons`). É seguro rodar quantas vezes quiser: usa só `CREATE TABLE IF NOT EXISTS` e `CREATE INDEX IF NOT EXISTS`, então não apaga nem altera nada |
@@ -989,3 +992,203 @@ há problema.
 Linhas de `error_step = 'afiliado'` ou `'foto'` também entram na contagem de 24h — não
 são quebra do bot, são as travas da fila fazendo o trabalho. O recado lista o
 `error_step` para você distinguir.
+
+---
+
+## 15. A esteira de réplica de WhatsApp
+
+Esta seção é da segunda esteira ([Decisão 44](historico-de-decisoes.md#decisão-44--réplica-de-grupos-de-whatsapp-sem-curadoria-ao-lado-do-bot)):
+copiar promoção de grupo de WhatsApp para o canal, trocando só o link de afiliado.
+
+> **Estado em 29/08/2026, ~09h16 BRT:** Evolution API rodando, WhatsApp **pareado** na instância
+> `promo-replica`, painel no modelo origem/destino ([Decisão 46](historico-de-decisoes.md#decisão-46--painel-origemdestino-com-todos-os-grupos-da-conta)),
+> rota **TCG Promo** gravada, ingest publicando. HTML do painel completo em `pagina_gz`
+> ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+> Se a página parecer cortada no meio do JavaScript, Ctrl+F5 (15.8).
+
+**Use um chip separado, não o número pessoal.** Ler grupo de WhatsApp exige biblioteca não
+oficial, e existe risco real de o número ser banido.
+
+### 15.1 A Evolution API na VPS
+
+Roda como projeto Docker `evolution-api` (`/docker/evolution-api/`), criado pelo Docker Manager
+da Hostinger — não por SSH. O compose está versionado em
+[`deploy/evolution-api/`](../deploy/evolution-api/) e é cópia fiel do que está na VPS.
+
+O que vale saber sobre essa configuração:
+
+- **Imagem: `evoapicloud/evolution-api`**, não `atendai/evolution-api`. A `atendai` é a que
+  aparece na maioria dos tutoriais e **não sobe nesta VPS**: o Docker aceita o comando, não
+  cria container e não deixa log. Trocar de repositório resolveu na hora.
+- **Sem porta pública.** Quem alcança essa API manda mensagem, lê conversa e desconecta o
+  aparelho. Ela escuta em `127.0.0.1:8080` e só o n8n fala com ela, pela rede `n8n_default`,
+  no endereço `http://evolution-api:8080`.
+- **Banco:** o mesmo Postgres do bot, no schema `evolution`. O schema é criado pelo workflow
+  `Replica Schema Setup`, não pela Evolution.
+- **O webhook aponta para `http://n8n:5678/...`, não para o domínio público.** De dentro do
+  container, `srv1897392.hstgr.cloud` resolve para `127.0.1.1`, e toda entrega morre com
+  `ECONNREFUSED ... :443` — o log parece dizer que o n8n caiu, e não é isso. Como os dois
+  containers estão na rede `n8n_default`, falar pelo nome do serviço resolve e ainda evita a
+  volta pela internet.
+- **Recriar o container não desconecta o WhatsApp.** A sessão fica no banco e no volume
+  `evolution_instances`; ao subir, o log diz `Auto-connecting instance "promo-replica"`. Só
+  precisa de QR novo se o volume for apagado.
+- **Senha do banco:** vai percent-encoded na URI. Veja o aviso no fim desta seção.
+
+Para mexer nela (reiniciar, ver log, atualizar), use o Docker Manager no painel da Hostinger,
+ou o MCP da Hostinger a partir daqui. Os logs saem por projeto, e é lá que aparece qualquer
+erro de conexão com o banco.
+
+> ⚠️ **A senha do Postgres não é a que está escrita no `.env` da VPS.** O arquivo
+> `/docker/pokemon-postgres/.env` diz `PkmnPromos2026!Br$ecure`, mas o Docker Compose
+> interpretou `$ecure` como variável e apagou esse pedaço quando o banco foi criado. A senha
+> que o banco aceita é **`PkmnPromos2026!Br`**. Qualquer serviço novo ligado a esse Postgres
+> vai tropeçar aqui — e o erro que aparece é um `P1000: Authentication failed`, que parece
+> problema de usuário, não de escape de shell.
+
+### 15.2 As duas credenciais no n8n
+
+Já existem. Nenhuma pode ser criada por programa; se precisar recriar, é à mão em
+<https://srv1897392.hstgr.cloud/home/credentials>:
+
+| Credencial | Tipo | Como preencher | Onde usar |
+| --- | --- | --- | --- |
+| `Painel Replica` | **Basic Auth** | Usuário e senha que você escolher | Só no GET do `Replica Painel` e no `Abrir Conexao` do `Replica WhatsApp Conectar`. Os POSTs do painel usam token de save, não esta senha |
+| `Evolution API Key` | **Header Auth** | Name: `apikey` · Value: o `EVOLUTION_API_KEY` do `.env` da Evolution | No `Baixar Imagem da Evolution` (Ingest) e nos dois nodes HTTP do `Replica WhatsApp Conectar` |
+
+Os nodes `Seguir Redirecionamento 1` e `2` **não usam credencial** — são requisições anônimas
+a encurtador. Se o n8n reclamar de credencial faltando neles, ignore.
+
+### 15.3 Conectar o WhatsApp (ler o QR code)
+
+Abra <https://srv1897392.hstgr.cloud/webhook/replica/conectar> e entre com o Basic Auth.
+
+Essa página é o workflow `Replica WhatsApp Conectar` (`v32gcVzRkedUACXD`): ele cria a instância
+se ela não existir, pede o QR à Evolution e desenha na tela. A página se recarrega a cada 25
+segundos porque o código expira em torno de 40. No celular:
+**WhatsApp → Aparelhos conectados → Conectar aparelho**.
+
+Quando parear, a mesma página passa a dizer que já está conectado — é assim que se confere o
+estado depois, sem SSH e sem `curl`. Se a sessão cair um dia, é a mesma página que reconecta.
+
+Depois de conectar, **entre nos grupos com esse número**: a Evolution só vê grupo do qual o
+número participa.
+
+### 15.4 Os workflows publicados
+
+Os quatro já estão publicados:
+
+| Workflow | ID | Papel |
+| --- | --- | --- |
+| `Replica WhatsApp Ingest` | `4mE343XrNXgIwAIF` | Recebe a mensagem e replica |
+| `Replica Painel` | `lWDnggRX8xQmYyQV` | Origens, destinos e log |
+| `Replica WhatsApp Conectar` | `v32gcVzRkedUACXD` | Página do QR code |
+| `Replica Nomes Sync` | `J6zU6p48OEBO0raf` | A cada 10 min, lista todos os `@g.us` com `fetchAllGroups` (timeout 120 s, ~80 s) e cacheia em `replica_rotas`. O GET do painel **não** chama essa API. `findChats` / `evolution."Chat"` voltam vazios (`DATABASE_SAVE_DATA_CHATS=false`). |
+
+Se mexer em algum, lembre que **salvar não é publicar**
+([P18](troubleshooting.md#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada)).
+
+### 15.5 Escolher origem e destino no painel
+
+Abra <https://srv1897392.hstgr.cloud/webhook/replica/painel> e entre com o Basic Auth.
+
+O painel tem páginas: **Visão Geral**, **Conexões**, **Rotas**, **Configurações**, **Atividades**.
+A lista de grupos vem dos chats que a Evolution já viu nesta conta — pelo **nome**, não pelo JID.
+O número precisa **já estar no grupo**. Entre no grupo com o número do QR e recarregue.
+
+1. Em **Conexões**, o WhatsApp mostra o QR se estiver desconectado (`/webhook/replica/conectar`).
+   O Telegram usa o canal já cadastrado (`@promopokemontcg`); **Reconfigurar** troca o `@`,
+   **não** é login OAuth. **Desconectar** tira o canal das rotas.
+2. Em **Rotas**, clique em **+ Nova Rota**. No modal: nome da rota, origens WhatsApp e
+   destinos Telegram/WhatsApp. Cada combo tem um campo **sempre visível**
+   (**Pesquisar grupos...** / **Pesquisar destinos...**): clique, digite parte do nome
+   (ou do JID, se o título ainda não chegou) e a lista encolhe na hora. **Enter** escolhe
+   o primeiro visível; **Escape** fecha. **Salvar Alterações** — a página deve recarregar
+   sem alerta. Se pedir senha, é a do **painel** (Basic Auth do GET), não a do Connect
+   Afiliado. O POST de save não exige mais Basic Auth do browser
+   ([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)).
+   Se um grupo ainda não tiver título, o combo mostra `Grupo` + os últimos 6 dígitos do
+   JID e o aviso pede para recarregar depois do `Replica Nomes Sync`.
+3. No card da rota: toggle **ATIVA**, **Editar**, **Excluir**.
+4. **Comece com uma origem só.** Olhe **Atividades** por algumas horas antes da segunda origem.
+
+**Não use o mesmo grupo como origem e destino.** Isso criaria um loop. O ingest recusa essa
+combinação; o painel avisa.
+
+O destino (Telegram e WhatsApp) recebe o **card profissional**, não a foto crua do grupo
+([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)).
+Sem foto de anúncio e sem foto de origem, o post segue só texto (cupom sem produto).
+
+### 15.6 Desligar tudo, rápido
+
+Três níveis, do mais brando ao mais bruto:
+
+| Quero | Faça |
+| --- | --- |
+| Parar um grupo | Tire-o da rota (Editar) ou desligue o toggle **ATIVA** do card |
+| Parar a esteira inteira, mantendo o Ingest publicado | Clique em **Réplica ligada** no topo do painel (isso grava `replica_config.ativo = false`) |
+| Parar mesmo, painel inclusive | Despublique o `Replica WhatsApp Ingest` no n8n |
+
+O bot de curadoria **não é afetado** por nada disso — são esteiras separadas.
+
+### 15.7 Conferir se está funcionando
+
+🟢 As últimas 30 mensagens vistas, com o motivo de cada uma:
+
+```sql
+SELECT to_char(criado_em AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS quando,
+       COALESCE(origem_nome, origem_chat_id) AS origem,
+       status,
+       motivo,
+       links_convertidos,
+       LEFT(texto_publicado, 80) AS trecho
+  FROM replica_log
+ ORDER BY id DESC
+ LIMIT 30;
+```
+
+🟢 Resumo por motivo nas últimas 24h — é o que mostra se algum grupo só manda link de outro
+marketplace:
+
+```sql
+SELECT status,
+       COALESCE(motivo, '(sem motivo)') AS motivo,
+       COUNT(*) AS quantas
+  FROM replica_log
+ WHERE criado_em > NOW() - INTERVAL '24 hours'
+ GROUP BY status, motivo
+ ORDER BY quantas DESC;
+```
+
+🟢 Os grupos e o quanto cada um rende:
+
+```sql
+SELECT chat_id, nome, ativa, mensagens_vistas, replicadas, ultima_mensagem
+  FROM replica_rotas
+ ORDER BY ativa DESC, ultima_mensagem DESC NULLS LAST;
+```
+
+**Como ler isso:** `mensagens_vistas` alto com `replicadas` zero e motivo
+`sem_link_do_mercado_livre` significa grupo que não serve para você — ele posta de outros
+marketplaces. `status = 'erro'` com motivo do Telegram é problema de publicação, não de origem.
+
+### 15.8 Mexer no painel (mudar a página)
+
+O HTML mora em
+[`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
+**Produção lê `replica_config.pagina_gz`**, não o Code node. A coluna guarda base64 UTF-8
+do HTML (não gzip). Em 29/08 o valor fechou em **63424** bytes, MD5
+`f8fccee12aa8e6e98ecf12d2a7221d2a`
+([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+
+Para alterar:
+
+1. Edite o HTML no arquivo acima (sem aspas duplas nem barra invertida).
+2. Grave o base64 UTF-8 em `replica_config.pagina_gz` (o node `Montar Pagina` faz
+   `Buffer.from(paginaGz, 'base64').toString('utf8')` e troca `__DADOS__`).
+3. **Ctrl+F5** no browser. Cache velho mostra JS cortado mesmo com o banco certo
+   ([P20](troubleshooting.md#p20--o-painel-da-réplica-abre-mas-nada-funciona)).
+
+O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) ainda
+existe como paraquedas: ele embute o HTML no Code node. Só use se a Decisão 51 for
+revertida. Ele recusa aspas duplas e barra invertida de propósito.

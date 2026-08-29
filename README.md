@@ -5,6 +5,18 @@ filtra o que não presta (golpe de preço, produto falsificado, desconto irrelev
 e publica o que sobra no canal do Telegram **[@promopokemontcg](https://t.me/promopokemontcg)**
 com o **link de afiliado do Eduardo**, para gerar comissão em cada venda.
 
+Desde 27/08/2026 o projeto tem **duas esteiras** que alimentam o mesmo canal:
+
+| Esteira | O que faz | Estado |
+| --- | --- | --- |
+| **Curadoria** (a original) | Garimpa oferta no Mercado Livre e filtra desconto, tema, autenticidade e loja | **No ar** |
+| **Réplica** | Copia promoção que outra pessoa já publicou em grupo de WhatsApp, trocando **só** o link de afiliado. Sem filtro nenhum | **No ar** — rota **TCG Promo**, painel completo, ingest publicando |
+
+As duas são independentes: dividem o banco (em tabelas separadas) e o canal, e nada mais.
+Desligar uma não afeta a outra. A réplica está descrita na
+[Decisão 44](docs/historico-de-decisoes.md#decisão-44--réplica-de-grupos-de-whatsapp-sem-curadoria-ao-lado-do-bot)
+e operada pela [seção 15 do runbook](docs/runbook.md#15-a-esteira-de-réplica-de-whatsapp).
+
 Esta pasta é a **fonte única de verdade** do projeto. O bot inteiro vive dentro do n8n na
 VPS; aqui está a documentação de *como ele funciona*, *onde mexer em cada coisa* e *por que
 as decisões foram tomadas assim*, mais uma cópia de segurança dos workflows em
@@ -19,21 +31,24 @@ as decisões foram tomadas assim*, mais uma cópia de segurança dos workflows e
 
 ---
 
-## ▶️ O BOT ESTÁ NO AR (conferido em 16/08/2026, ~23h12 BRT)
+## ▶️ O BOT ESTÁ NO AR (conferido em 25/08/2026, ~22h15 BRT)
 
-Religado à tarde, depois que o link de afiliado foi confirmado, corrigido nos dois scanners
-e regravado na fila. Formato em produção:
+Religado à tarde de 13/08, depois que o link de afiliado foi confirmado, corrigido nos dois scanners
+e regravado na fila. Em 25/08 a busca geral voltou para sustentar ~6 posts/hora
+([Decisão 43](docs/historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)).
+Formato em produção:
 
 `?matt_word=caed1312314&matt_tool=96097202&forceInApp=true`
 
 Histórico: [troubleshooting, P16](docs/troubleshooting.md#p16--resolvido-o-link-de-afiliado-estava-com-os-parâmetros-invertidos).
 
-**O que está ligado agora (n8n ao vivo, `versionId` = `activeVersionId` nos três ativos):**
+**O que está ligado agora (n8n ao vivo, `versionId` = `activeVersionId` nos quatro ativos):**
 
 | Workflow | Ritmo | Papel |
 | --- | --- | --- |
 | `Pokemon Store Scanner` | a cada **5 min** + jitter 0–60s | Enche a fila a partir de **10 lojas** oficiais |
-| `Pokemon Publisher v2` | a cada **2 min**, só 8h–22h BRT, teto **40**/dia e **6**/hora | Publica 1 item por disparo, ordem de qualidade |
+| `Pokemon Scanner v2` | a cada **10 min** + jitter 0–60s | Enche a fila a partir de `ofertas?category=MLB6899` (só título com Pokémon) |
+| `Pokemon Publisher v2` | a cada **2 min**, só 8h–22h BRT, teto **90**/dia e **6**/hora | Publica 1 item por disparo, ordem de qualidade |
 | `Pokemon Health Alert` | 1× ao dia às 21h BRT + manual | Alerta **privado** se o bot quebrar. Fila vazia **não** avisa |
 
 Desconto mínimo vigente ([Decisão 35](docs/historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)): **10%** em `pokemon` e `copag`; **15%** nas outras oito. Filtro de título: cartas/acessório TCG **ou** figura Pokémon, com Pokémon no nome ([Decisão 41](docs/historico-de-decisoes.md#decisão-41--figuras-pokémon-no-filtro-e-nenhuma-loja-oficial-nova)). Item já postado cuja vitrine ficar mais barata (≥ 5% ou ≥ R$ 5, no máximo 1/dia) volta para a fila ([Decisão 33](docs/historico-de-decisoes.md#decisão-33--repostar-se-o-preço-da-vitrine-cair-depois-do-post)).
@@ -84,9 +99,9 @@ certa; quem fecha a comissão é o painel registrar a venda.
 
 ---
 
-## REGRA DE ESCOPO — só loja oficial, só produto de TCG
+## REGRA DE ESCOPO — lojas oficiais + busca geral Pokémon
 
-**Decisão original do Eduardo em 13/08/2026**, e ela ainda vem antes de qualquer outra regra:
+**Decisão original do Eduardo em 13/08/2026:**
 
 > "Vamos colocar uma regra antes de tudo. Agora, desde o início, só vamos pegar promoções
 > que aparecem dentro da loja oficial da Pokémon. No futuro veremos como misturar e incluir
@@ -94,12 +109,15 @@ certa; quem fecha a comissão é o painel registrar a venda.
 
 Loja-mãe: <https://www.mercadolivre.com.br/loja/pokemon>
 
-O que isso implica na prática **hoje** (14/08/2026):
+**Em 25/08/2026 isso foi reaberto em parte** ([Decisão 43](docs/historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)):
+a página geral de ofertas (`ofertas?category=MLB6899`) voltou, **só com Pokémon no título**
+e com o score de autenticidade. Motivo: as homepages das 10 lojas não sustentam ~6 posts/hora.
 
-- A **página geral de ofertas** (`ofertas?category=MLB6899`) **saiu de escopo**. Era a fonte
-  do `Pokemon Scanner v2`, que por isso está **desativado** — preservado inteiro para uso
-  futuro, não apagado.
-- O scanner ativo é o **`Pokemon Store Scanner`**, que varre lojas oficiais cadastradas em
+O que isso implica na prática **hoje** (25/08/2026):
+
+- A **página geral de ofertas** alimenta de novo o `Pokemon Scanner v2` (**ativo**, 10 min).
+  Título sem Pokémon → descartado. Yu-Gi-Oh/Magic da mesma categoria não entram.
+- O **`Pokemon Store Scanner`** continua nas lojas oficiais cadastradas em
   `lojas_confiaveis` com `ativa = TRUE`.
 - **Dez lojas ativas:** `pokemon`, `copag`, `brinkjr`, `attack-toys`, `cade-meu-jogo`,
   `psz3d`, `ilusoes-industriais`, `parolar`, `escala-miniaturas`, `dalo-vendas`. A COPAG entrou em 13/08
@@ -113,13 +131,52 @@ O que isso implica na prática **hoje** (14/08/2026):
 - **Por que a COPAG não afrouxa o critério:** a loja oficial da Pokémon é *multiseller*, e a
   COPAG é o vendedor real de vários itens dentro dela — os cards trazem "COPAG por Pokémon".
 
-O motivo da origem: na página geral de ofertas não existe sinal confiável de autenticidade
-([P15](docs/troubleshooting.md#p15--o-selo-loja-oficial-do-mercado-livre-não-significa-loja-oficial-da-pokémon)). Dentro de loja oficial cadastrada, a premissa é originalidade.
-O Store Scanner **não** aplica o score anti-falsificação do Scanner v2.
+O motivo da origem permanece: na página geral de ofertas não existe sinal confiável de
+autenticidade
+([P15](docs/troubleshooting.md#p15--o-selo-loja-oficial-do-mercado-livre-não-significa-loja-oficial-da-pokémon)).
+Por isso o Scanner v2 aplica o score (−40 / +25) e o filtro de título; o Store Scanner, dentro
+de loja oficial cadastrada, **não** aplica esse score.
 
 ---
 
-## Estado atual (13/08/2026, ~22h40 BRT)
+## 🔁 A segunda esteira: réplica de grupos de WhatsApp
+
+**A ideia:** vários grupos de WhatsApp já fazem o trabalho de garimpar promoção. A réplica pega
+essas mensagens como estão — texto, emoji, foto, tudo — troca **apenas** o link do Mercado Livre
+pelo link de afiliado do Eduardo e reposta no canal. É volume barato, sem custo de curadoria.
+
+**O que ela NÃO faz, de propósito:** não olha desconto mínimo, não exige Pokémon, não consulta
+score de autenticidade, não checa loja confiável, não reconfere preço. Nenhum filtro do bot de
+curadoria vale aqui — isso foi decisão explícita do Eduardo. Quem filtra é o grupo de origem.
+
+**As peças:**
+
+| Peça | Onde | Papel |
+| --- | --- | --- |
+| Evolution API | Docker na VPS, compose em [`deploy/evolution-api/`](deploy/evolution-api/) | Lê o WhatsApp e entrega cada mensagem de grupo ao n8n |
+| `Replica WhatsApp Ingest` | `4mE343XrNXgIwAIF` | Troca o link, deduplica, publica no Telegram |
+| `Replica Painel` | `lWDnggRX8xQmYyQV` | Página privada: libera grupo, mexe nos ajustes, mostra o log |
+| `Replica WhatsApp Conectar` | `v32gcVzRkedUACXD` | Página privada com o QR code para parear o celular |
+| `Replica Schema Setup` | `pfolFnCYTLyLZdwU` | Criou `replica_rotas`, `replica_config`, `replica_log` e o schema `evolution`. Já rodou |
+
+**As poucas regras que existem:** o grupo precisa ser liberado por você (grupo novo entra
+**desligado**); mensagem sem link do Mercado Livre não é replicada (exceto cupom, se você
+permitir); teto de 40 posts por hora como freio anti-flood; e a mesma promoção vinda de vários
+grupos sai uma vez só. A linha com convite para grupo de terceiro é apagada.
+
+**Já no ar desde 28/08.** Evolution pareada, credenciais criadas, workflows publicados,
+primeira rota nomeada (**TCG Promo**) salva. O HTML do painel fecha em
+`replica_config.pagina_gz` ([Decisão 51](docs/historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+O que ainda falta é o **dashboard único** (curadoria + réplica na mesma página), em
+[roadmap, Dashboard](docs/roadmap.md#dashboard). Operação do dia a dia:
+[runbook, seção 15](docs/runbook.md#15-a-esteira-de-réplica-de-whatsapp).
+
+> ⚠️ **Use um chip separado, não o número pessoal.** Ler grupo de WhatsApp exige biblioteca não
+> oficial, e existe risco real de banimento do número.
+
+---
+
+## Estado atual (29/08/2026, ~09h16 BRT)
 
 **O bot está rodando de ponta a ponta.** Detalhe fino (versões, ScraperAPI, o que falta
 decidir) vive em [`docs/estado-atual.md`](docs/estado-atual.md). Aqui vai o quadro para
@@ -127,18 +184,23 @@ retomar em 30 segundos.
 
 | Peça | Estado |
 | --- | --- |
-| Banco PostgreSQL na VPS | Funcionando, 6 tabelas do bot + `lojas_confiaveis` |
+| Banco PostgreSQL na VPS | Funcionando, 6 tabelas do bot + `lojas_confiaveis` + as 3 tabelas `replica_*` |
 | Credencial do banco no n8n | Funcionando, vinculada node a node |
 | Bot e canal do Telegram | Funcionando. Posts reais no dia 13/08, todos com link de afiliado (à tarde saíram 4; à noite saíram mais, ex. Attack Toys `message_id` 23) |
 | **Pokemon Store Scanner** | **Ativo**, 10 lojas, a cada **5 min**, publicado `0ff36da8` (queda de preço + reoferta após 3 dias) |
-| **Pokemon Publisher v2** | **Ativo**, a cada **2 min**, 8h–22h BRT, teto 40/dia (BRT) + 6/hora, ordem qualidade, publicado `7261bee7` |
+| **Pokemon Publisher v2** | **Ativo**, a cada **2 min**, 8h–22h BRT, teto 90/dia (BRT) + 6/hora, ordem qualidade, publicado `56b8fb7b` |
 | **Pokemon Health Alert** | **Ativo**, 21h BRT + manual, publicado `b5e4b758` |
-| **Pokemon Catalog Scanner** | **Inativo**, nunca publicado (`2ckVyvFPvtqwECDI`). Listagem ML falhou no ScraperAPI em 16/08. **Não publicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
-| **Pokemon Scanner v2** | **Desativado de propósito**, preservado inteiro |
+| **Pokemon Catalog Scanner** | **Arquivado** em 27/08 (era inativo desde 16/08). Listagem ML falhou no ScraperAPI. **Não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
+| **Pokemon Scanner v2** | **Ativo**, a cada **10 min**, publicado `f0183d1c` — busca geral + Pokémon no título ([Decisão 43](docs/historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)) |
 | **Pokemon Schema Setup v2** | Desativado (só sob demanda) |
-| **TMP Pokemon SQL Console 2** | Ativo só para consulta à mão; cron dummy em 29/fev. Não faz parte do bot |
-| Backup dos workflows | [`backups/2026-08-13/`](backups/) (tarde de 13/08) e [`backups/2026-08-16/`](backups/2026-08-16/) (Catalog Scanner inativo). O n8n vale |
-| Filtro de autenticidade | Pronto no Scanner v2, **não roda** no Store Scanner |
+| **Replica WhatsApp Ingest** | **Ativo** — rota TCG Promo, posts reais desde 28/08 (card profissional, [Decisão 50](docs/historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)) |
+| **Replica Painel** | **Ativo** — HTML completo em `pagina_gz` (63424 bytes, [Decisão 51](docs/historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)). URL: `/webhook/replica/painel` |
+| **Replica WhatsApp Conectar** | **Publicado** em 28/08. Página do QR code |
+| **Replica Schema Setup** | Inativo. Já rodou e criou as tabelas `replica_*` e o schema `evolution` |
+| **Evolution API (WhatsApp)** | **No ar e pareada** desde 28/08, projeto Docker `evolution-api`, imagem `evoapicloud/evolution-api`, instância `promo-replica` |
+| **TMP Pokemon SQL Console 2** | **Arquivado** em 27/08. Tinha webhook publicado executando SQL arbitrário |
+| Backup dos workflows | [`backups/2026-08-13/`](backups/) (tarde de 13/08), [`backups/2026-08-16/`](backups/2026-08-16/) (Catalog Scanner inativo), [`backups/2026-08-27/`](backups/2026-08-27/) (réplica), [`backups/2026-08-28/`](backups/2026-08-28/) (QR, schema `evolution`, painel) e [`backups/2026-08-29/`](backups/2026-08-29/) (cards). O n8n vale |
+| Filtro de autenticidade | Roda no Scanner v2 (busca geral). Store Scanner **não** consulta o score |
 | Lista de bloqueio de vendedores | Tabela existe; o Store Scanner **não** a consulta |
 | Idioma da carta no post | Exibido com confiança ≥ 0,85; Publisher detecta de novo se o banco vier vazio |
 | Cupons | Mecanismo pronto. `BRINQUEDOS` **desligado** em 13/08 noite ([Decisão 36](docs/historico-de-decisoes.md#decisão-36--desligar-brinquedos-não-dá-para-saber-qual-item-aceita)): lista de produtos selecionados é busca com anti-bot, e o blister de teste não aceitava o código |
@@ -175,7 +237,7 @@ trilha de publicação.
    de vendedores e o score **não** estão protegendo a fila hoje.
 4. **Duplicata de produto tem tratamento próprio**, inclusive entre lojas, e **repost** se
    o mesmo `item_id` já postado cair de preço. Detalhes em
-   [arquitetura, seção 4b](docs/arquitetura.md#4b-o-pokemon-store-scanner--o-scanner-ativo).
+   [arquitetura, seção 4b](docs/arquitetura.md#4b-o-pokemon-store-scanner--lojas-oficiais).
 5. ~~**O filtro de título deixa passar produto que não é carta.**~~ **Resolvido.** O Funko
    passou porque a loja oficial estava com `filtro_titulo = NULL`. O post **fica no canal**.
 6. ~~**Os itens em `review` ainda têm o link de afiliado antigo.**~~ **Resolvido.** Marcados
@@ -197,7 +259,7 @@ ou o risco do canal.
 | **Cadastrar mais lojas oficiais** de TCG lacrado em `lojas_confiaveis` | Mais volume, mantendo a garantia de originalidade | Escolher loja a loja ([runbook, seção 13](docs/runbook.md#13-escopo-quais-lojas-o-bot-pode-publicar)) |
 | **Subir Pokémon/COPAG também para 15%** (hoje **10%** nessas duas, 15% nas satélites) | Canal ainda mais seletivo | Ainda menos posts |
 | **Baixar Pokémon/COPAG de volta a 5%** (sem mexer nas satélites) | Mais volume nas lojas-mãe | Volta o risco de post “qualquer 5%” |
-| **Religar o `Pokemon Scanner v2`** (busca geral do ML) | Muito mais volume | Volta o risco de falsificação ([P15](docs/troubleshooting.md#p15--o-selo-loja-oficial-do-mercado-livre-não-significa-loja-oficial-da-pokémon)) |
+| **Religar o `Pokemon Scanner v2`** (busca geral do ML) | ~~Muito mais volume~~ **Feito em 25/08** ([Decisão 43](docs/historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)) | Risco de falsificação permanece ([P15](docs/troubleshooting.md#p15--o-selo-loja-oficial-do-mercado-livre-não-significa-loja-oficial-da-pokémon)); desligar é o freio |
 | **Retomar o Catalog Scanner** (já existe, inativo) | Enxerga o catálogo, não só a vitrine | Listagem ML falha no ScraperAPI (500 com render e com premium). `ultra_premium` = 75 créditos, plano pago. **Não publicar** sem HTML 200 |
 | **Conferir o painel de afiliados** | Prova que a comissão está sendo atribuída | Só o Eduardo tem acesso |
 
@@ -216,6 +278,8 @@ ou o risco do canal.
 | [docs/historico-de-decisoes.md](docs/historico-de-decisoes.md) | O que foi tentado, o que falhou e por quê | Antes de "ter uma ideia" que já foi descartada |
 | [docs/roadmap.md](docs/roadmap.md) | O que ficou de fora e o que faria sentido depois | Para planejar a próxima rodada |
 | [backups/](backups/) | Cópia datada dos workflows do n8n, com o código dos Code nodes e as consultas SQL separados | Se algo se perder no n8n, ou para comparar o que mudou |
+| [deploy/](deploy/) | Arquivos de infraestrutura para aplicar na VPS (hoje: Evolution API) | Para subir ou reconfigurar um container |
+| [tools/](tools/) | Scripts locais de apoio, como o gerador da página do painel | Para mexer no painel da réplica |
 
 ---
 
@@ -235,16 +299,24 @@ No n8n, um **workflow** é um fluxo de trabalho: uma sequência de caixinhas (ch
 | Workflow | ID (o endereço dele) | O que faz | Estado |
 | --- | --- | --- | --- |
 | **Pokemon Store Scanner** | `PNwaF3BYhj5KA8eY` | Varre as lojas oficiais de `lojas_confiaveis` e grava as ofertas na fila | **Ativo**, a cada **5 minutos** + jitter 0–60s |
-| **Pokemon Publisher v2** | `FXNWeT9C7dEA0DUY` | Tira o próximo item da fila e publica no Telegram | **Ativo**, a cada **2 minutos**, das 8h às 22h BRT, teto 40/dia (BRT) + 6/hora, publicado `7261bee7` |
+| **Pokemon Publisher v2** | `FXNWeT9C7dEA0DUY` | Tira o próximo item da fila e publica no Telegram | **Ativo**, a cada **2 minutos**, das 8h às 22h BRT, teto 90/dia (BRT) + 6/hora, publicado `56b8fb7b` |
 | **Pokemon Health Alert** | `3irgeWFKZGZZrJ5u` | Alerta privado se parser/vitrine/publisher quebrar | **Ativo**, 21h BRT + manual |
-| **Pokemon Catalog Scanner** | `2ckVyvFPvtqwECDI` | Varre `lista.mercadolivre.com.br/loja/{slug}/pokemon` via ScraperAPI | **Inativo** — **não publicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
-| **Pokemon Scanner v2** | `39kdRchYI6CwsbNY` | Lê a página geral de ofertas do ML, classifica por desconto e autenticidade | **Desativado** — fonte fora de escopo desde 13/08/2026 |
+| **Pokemon Scanner v2** | `39kdRchYI6CwsbNY` | Lê a página geral de ofertas do ML, classifica por desconto e autenticidade, exige Pokémon no título | **Ativo**, a cada **10 min**, publicado `f0183d1c` |
 | **Pokemon Schema Setup v2** | `F8jVi6NFxeDHfAkb` | Cria as tabelas do banco | Desativado, só sob demanda |
-| **TMP Pokemon SQL Console 2** | `Fc7OGlP4ZNiuNIgd` | Consulta SQL à mão | Descartável. Cron dummy 29/fev; pode arquivar |
+| **Replica WhatsApp Ingest** | `4mE343XrNXgIwAIF` | Recebe mensagem de grupo de WhatsApp, troca o link do ML e reposta no canal | **Publicado** em 28/08 |
+| **Replica Painel** | `lWDnggRX8xQmYyQV` | A página onde você libera grupo e mexe nos ajustes da réplica | **Publicado** em 28/08 |
+| **Replica WhatsApp Conectar** | `v32gcVzRkedUACXD` | A página do QR code para parear o WhatsApp | **Publicado** em 28/08 |
+| **Replica Schema Setup** | `pfolFnCYTLyLZdwU` | Cria as tabelas da réplica e o schema `evolution` | Inativo. Já rodou |
+| **Pokemon Catalog Scanner** | `2ckVyvFPvtqwECDI` | Varre `lista.mercadolivre.com.br/loja/{slug}/pokemon` via ScraperAPI | **Arquivado** em 27/08 — **não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
 
 **Workflows com nome começando por `TMP` ou `TEMP`, ou marcados como `(temporario)`, não
-fazem parte do bot.** São descartáveis. O `TMP Pokemon SQL Console 2` está ativo só para
-consulta à mão (o agendamento é 29 de fevereiro, de propósito). Pode arquivar sem medo.
+fazem parte do bot.** São descartáveis, e os dois que existiam foram arquivados (13/08 e 27/08).
+Se aparecer um `TMP` novo na lista, ele é rascunho — pode arquivar sem medo. Sobrou um
+`TMP Reset Entrada Paciente`, de outro projeto, que precisa ser arquivado pelo cartão do
+workflow (não dá por programa).
+
+**Arquivar não apaga.** O workflow sai da lista principal e para de rodar, mas continua
+recuperável pelo filtro de arquivados do n8n.
 
 Para abrir qualquer um deles direto, cole o ID no fim da URL:
 `https://srv1897392.hstgr.cloud/workflow/FXNWeT9C7dEA0DUY`

@@ -10,7 +10,7 @@ mudaria a decisão.
 **Números vigentes** (ritmo, lojas, teto, desconto mínimo) estão em
 [regras-de-negocio.md](regras-de-negocio.md) e no [README](../README.md). As decisões mais
 antigas abaixo podem citar 10 min / 5 min / teto 30 / duas lojas — isso era verdade **na
-hora em que foram escritas**. A última operacional é a [Decisão 42](#decisão-42--catalog-scanner-criado-e-deixado-inativo).
+hora em que foram escritas**. A última operacional é a [Decisão 43](#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora).
 
 ---
 
@@ -1316,14 +1316,270 @@ desta sessão — o ScraperAPI desiste antes.
 Falhas desta noite **não** descontaram crédito. 10 lojas/dia com premium = 250/dia (~7.500/mês),
 acima do trial de 5.000.
 
-**O que não fazer na retomada:** religar o Scanner v2; misturar ScraperAPI no ciclo de 5 min;
+**O que não fazer na retomada:** misturar ScraperAPI no ciclo de 5 min;
 ligar `ultra_premium` sem pedido novo; publicar o Catalog Scanner; gastar crédito sem ler
-esta decisão.
+esta decisão. Religar o Scanner v2 **deixou de valer** na [Decisão 43](#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)
+(filtro de Pokémon no título + score de autenticidade; Catalog Scanner continua inativo).
 
 **O que mudaria esta decisão:** uma execução **manual** só de `pokemon` devolver HTTP 200
 com `_n.ctx.r` e produtos (não a página de erro de 208 bytes). Aí testa `aceito` vs
 `fora_do_filtro` e só então discute publicar. Node `Filtrar Loja de Teste` continua com
 `TESTE_SO_POKEMON = true`.
+
+---
+
+## Decisão 43 — busca geral religada para cerca de 6 posts por hora
+
+**Data:** 25/08/2026, ~22h15 BRT · **Quem decidiu:** Eduardo (pacote *busca-geral*)
+
+**A decisão:** o canal precisa de **cerca de 6 postagens por hora** na janela 8h–22h BRT.
+Para isso:
+
+1. O `Pokemon Scanner v2` (`39kdRchYI6CwsbNY`) volta a ler
+   `https://www.mercadolivre.com.br/ofertas?category=MLB6899` a cada **10 min** + jitter
+   0–60s. Publicado `f0183d1c`.
+2. Título **sem** a palavra Pokémon (com ou sem acento) → `descartado`. Node
+   `Exigir Pokemon no Titulo`, entre o classificador e o Switch — senão a categoria TCG
+   genérica solta Yu-Gi-Oh e Magic no canal.
+3. Score de autenticidade **não** foi afrouxado: `AUTH_BLOCK = -40`, `AUTH_ACCEPT = +25`.
+   Item duvidoso vai para `promos_review`, não para o canal.
+4. Teto diário do Publisher sobe de **40 para 90** (contado em BRT). Teto horário **continua 6**.
+   6/hora × 14h = 84; o 90 deixa folga. Publicado `56b8fb7b`.
+5. O `Pokemon Store Scanner` **segue** nas 10 lojas a cada 5 min. O Catalog Scanner
+   **continua inativo**. Sem `ultra_premium`. Sem baixar o Store Scanner para 2 min.
+
+**Por que a fila estava vazia:** em 25/08, até ~22h, `pending_total = 0` e **zero posts no
+dia**. O teto horário já era 6 ([Decisão 38](#decisão-38--teto-horário-de-6-posts)); o
+Publisher não tinha o que publicar. Homepages oficiais não geram 6 ofertas **novas** por
+hora. Sem fonte extra, 6/hora sustentado é impossível.
+
+**Teste manual antes de publicar:** execução `35851` (manual, ~22h10 BRT), `success` em
+~17 s. Parser `_n.ctx.r` ok (sem `erro_parser`). A vitrine noturna veio **3** cards: **0
+aceito**, 2 `titulo sem pokemon`, 1 abaixo de 15%. `Log Descartado` gravou no banco
+(credencial Postgres religada nos 13 nodes — [P7](troubleshooting.md#p7--nodes-postgres-sem-credencial)).
+Zero `aceito` nesta hora **não** é falha do pipeline; a vitrine cresce de dia. Posts só
+saem a partir das **8h de 26/08**, se houver `pending`.
+
+**Risco assumido:** [P15](troubleshooting.md#p15--o-selo-loja-oficial-do-mercado-livre-não-significa-loja-oficial-da-pokémon).
+Selo "Loja oficial" do ML ≠ loja da marca. A busca geral não tem a premissa de originalidade
+da homepage Pokémon; o score e o filtro de título são o freio. Muitos itens podem ir para
+revisão humana e **não** entram na fila pública.
+
+**O que não fazer a partir daqui:** baixar `AUTH_ACCEPT` nesta primeira noite; publicar o
+Catalog Scanner; misturar esta fonte com `lista.mercadolivre` / ScraperAPI.
+
+**O que mudaria esta decisão:** Yu-Gi-Oh ou Magic no canal (filtro de título falhou);
+fila de `promos_review` inchando e quase nenhum `aceito` (aí discute o limiar, com pedido
+novo); teto 90 estourando cedo demais e o canal virando spam (volta o diário, não o horário).
+
+---
+
+## Decisão 44 — réplica de grupos de WhatsApp, sem curadoria, ao lado do bot
+
+**Data:** 27/08/2026, ~23h BRT · **Quem decidiu:** Eduardo
+
+**A decisão:** entra no projeto uma **segunda esteira**, independente do bot de curadoria: as
+promoções que outras pessoas já publicam em grupos de WhatsApp são **copiadas como estão** para
+o canal `@promopokemontcg`, trocando **apenas** o link do Mercado Livre pelo link de afiliado do
+Eduardo. Nada do bot TCG é reaproveitado como filtro — **nem** tema Pokémon, **nem** desconto
+mínimo, **nem** score de autenticidade, **nem** loja confiável.
+
+O raciocínio do Eduardo: os grupos de origem já pagam o custo de garimpar promoção. Replicar é
+volume barato. A curadoria fina continua existindo, mas na outra esteira.
+
+**O que foi construído:**
+
+| Peça | Onde | Papel |
+| --- | --- | --- |
+| `Replica Schema Setup` | `pfolFnCYTLyLZdwU` | Cria `replica_rotas`, `replica_config`, `replica_log`. Roda na mão |
+| `Replica WhatsApp Ingest` | `4mE343XrNXgIwAIF` | Recebe da Evolution API, troca o link, publica no Telegram |
+| `Replica Painel` | `lWDnggRX8xQmYyQV` | Página privada com Basic Auth: liga/desliga, libera grupo, mostra log |
+| Evolution API | [`deploy/evolution-api/`](../deploy/evolution-api/) | Ponte com o WhatsApp. No ar desde 28/08 ([Decisão 45](#decisão-45--evolution-no-docker-manager-e-o-qr-code-por-página-do-n8n)) |
+
+**As regras que sobraram** (todas técnicas, nenhuma editorial):
+
+1. Só mensagem **de grupo**, que **não** é da própria conta, **com** texto e com menos de
+   **10 min** de atraso.
+2. O grupo precisa estar **liberado** no painel. Grupo novo se cadastra sozinho na primeira
+   mensagem, sempre **desligado** — ver `replica_rotas.ativa`.
+3. Sem link do Mercado Livre no texto, **não replica**. Exceção opcional: mensagem de cupom,
+   se `replicar_cupom_sem_link = true`.
+4. **Teto por hora** (padrão 40) como freio anti-flood do Telegram, não como curadoria.
+5. Deduplicação por hash do texto sem links + item IDs, via `UNIQUE (hash_conteudo)`. A mesma
+   promoção vinda de três grupos sai **uma** vez.
+6. Única edição no conteúdo além do link: **linha de convite** para grupo/canal de terceiro é
+   apagada. Não faz sentido divulgar concorrente.
+
+**Por que Evolution API e não a API oficial:** a Cloud API da Meta não lê mensagem de grupo do
+qual o número é participante comum. Ler grupo exige biblioteca não oficial (Baileys, que é o que
+a Evolution embrulha). **O risco é banimento do número de WhatsApp** — por isso a recomendação é
+usar um chip separado, nunca o número pessoal do Eduardo.
+
+**O que o Eduardo aceitou junto com isso:** copiar post de terceiro sem checar preço significa
+que o canal pode repetir promoção furada de quem originou. A esteira não reconfere preço (o bot
+de curadoria reconfere; esta, não).
+
+**Cuidados de segurança que já entraram:**
+
+- O webhook de entrada saiu de `/webhook/replica/wa` para um caminho com segredo. Caminho
+  adivinhável + sem autenticação = qualquer pessoa publicando no canal do Eduardo.
+- A Evolution **não** ganha porta pública: `127.0.0.1:8080`, e o QR sai por dentro do n8n
+  ([Decisão 45](#decisão-45--evolution-no-docker-manager-e-o-qr-code-por-página-do-n8n)). Quem
+  alcança a API controla a conta de WhatsApp inteira.
+- O painel exige Basic Auth, e o formulário de ajustes só aceita chave que está na lista branca
+  do node `Normalizar Config`.
+
+**O que não fazer:** ligar todos os grupos de uma vez (comece com um e olhe o log); usar o
+número pessoal; expor a Evolution na internet; publicar o `Replica Schema Setup`, que é de mão.
+
+**O que mudaria esta decisão:** número banido pelo WhatsApp (aí a esteira morre ou vira Telegram
+para Telegram); grupo de origem postando link de afiliado de terceiro que a troca não cobre;
+canal virando spam mesmo com o teto por hora.
+
+---
+
+## Decisão 45 — Evolution no Docker Manager, e o QR code por página do n8n
+
+**Data:** 28/08/2026, ~19h BRT · **Quem decidiu:** o agente, com aval do Eduardo para prosseguir
+
+Três escolhas de infraestrutura tomadas ao pôr a Evolution API de pé. Nenhuma muda regra de
+negócio; todas mudam como se opera a esteira.
+
+**1. Subir pelo Docker Manager da Hostinger, não por SSH.** O projeto `evolution-api` é criado
+e atualizado pela API da Hostinger, que grava o compose em `/docker/evolution-api/` e roda o
+`up`. Vantagem: não exige chave SSH, e o compose fica versionado no repo, igual ao que está na
+VPS. Limite conhecido: quando o `up` falha, a API responde `success` mesmo assim, e os logs do
+projeto só aparecem **depois** que existe container. Diagnosticar exigiu subir projetos de
+teste descartáveis para isolar a causa.
+
+**2. Imagem `evoapicloud/evolution-api`, não `atendai/evolution-api`.** A `atendai` é a que
+aparece em quase todo tutorial e é o repositório antigo do projeto. Nesta VPS ela **não sobe**:
+o Docker aceita, não cria container e não deixa log — nem erro de pull. A `evoapicloud`, que é
+o repositório oficial atual, subiu de primeira. Versão fixada em `v2.3.7`, não `latest`, para
+atualização de imagem não derrubar a sessão do WhatsApp sem aviso.
+
+**3. O QR code sai por uma página do n8n, não por túnel SSH.** Criado o workflow
+`Replica WhatsApp Conectar` (`v32gcVzRkedUACXD`): webhook com Basic Auth, cria a instância
+`promo-replica` se faltar, pede o QR à Evolution e desenha na tela, recarregando sozinho a cada
+25 s. O raciocínio: parear é o único momento em que um humano precisa falar com a Evolution, e
+a sessão vai cair de novo algum dia. Depender de túnel SSH toda vez transforma uma reconexão de
+dois minutos numa tarefa que só o agente sabe fazer. A página fica atrás do mesmo Basic Auth do
+painel, e a Evolution continua sem porta pública.
+
+**Duas coisas que só se descobriu rodando:** a senha do Postgres não é a que está no `.env` da
+VPS (ver [Histórico de sustos](#histórico-de-sustos-o-que-já-deu-errado-na-infraestrutura)), e o
+webhook global **não pode** usar o domínio público — de dentro do container ele resolve para
+`127.0.1.1` e nenhuma mensagem chega ao n8n. Passou a apontar para `http://n8n:5678/...`, pela
+rede Docker.
+
+**O que mudaria esta decisão:** a Hostinger tirar o Docker Manager do ar (aí vira SSH); a
+`evoapicloud` parar de publicar imagem (aí vira build próprio).
+
+---
+
+## Decisão 46 — painel origem/destino com todos os grupos da conta
+
+**Data:** 28/08/2026, ~19h50 BRT · **Quem decidiu:** Eduardo, com o mockup de origens e destinos
+
+**A decisão:** o `Replica Painel` deixa de ser uma lista de interruptores "Replicando/Desligado"
+e passa a ser o desenho do mockup: **grupos de origem** (de onde copiar) e **grupos de destino**
+(para onde enviar). A lista de grupos vem da Evolution (`GET /group/fetchAllGroups`), não só
+dos grupos que já mandaram texto. Destino padrão é o Telegram `@promopokemontcg`; dá para
+adicionar um grupo de WhatsApp da mesma conta.
+
+**Por que assim, e não a lista antiga:** esperar a primeira mensagem com texto para o grupo
+aparecer no painel era opaco. O Eduardo quer ver todos os grupos do número pareado e escolher
+com dropdown, inclusive um destino WhatsApp além do canal.
+
+**O que isso implica no ingest:** depois do Telegram, se houver destino WhatsApp, o mesmo texto
+(já com o link de afiliado) vai via `sendText`. Origem igual a destino é recusada, para não
+criar loop. Foto no WhatsApp de destino ainda não é copiada — só o texto.
+
+**O que mudaria esta decisão:** a Evolution deixar de listar grupos (aí volta o cadastro pela
+primeira mensagem); banimento do número (aí o destino WhatsApp some e fica só Telegram).
+
+---
+
+## Decisão 47 — token de save no JSON, porque o Chrome não reenvia Basic Auth no fetch
+
+**Data:** 28/08/2026, ~23h00 BRT · **Quem decidiu:** o 401 no Salvar, duas vezes, com `same-origin` já publicado
+
+**A decisão:** o GET do `Replica Painel` continua com Basic Auth. Os POSTs (`/salvar`,
+`/rota`, `/config`) **não**. A página (gerada só depois do GET autenticado) manda um
+**token de save** no JSON. Os nodes `Normalizar Lote` / `Normalizar Rota` /
+`Normalizar Config` recusam se o token não bater. O token não é a senha do painel;
+pode vir de `$env.REPLICA_PAINEL_SAVE_TOKEN` ou do fallback no Code node.
+
+**O que foi tentado antes e falhou:** `credentials: 'same-origin'` no `fetch` (painel
+`842aff7e`). O GET autenticava; o POST chegava **sem** `Authorization`; o n8n
+respondia 401 **antes** do workflow rodar. Nas executions, o POST `/salvar` simplesmente
+não aparecia. Chrome frequentemente não reenvia Basic Auth em `fetch()`/`XHR`.
+
+**O que não fazer de novo:** colocar usuário/senha do Basic Auth no JavaScript; insistir
+em `credentials: 'same-origin'` como correção única; exigir Basic Auth no POST e
+esperar que o browser mande.
+
+**Prova:** POST `/salvar` sem `Authorization` e sem token agora **entra** no workflow
+(erro `token de save invalido`, não 401). Com token válido e payload incompleto, passa
+a checagem e cai na validação de negócio. GET sem senha continua 401.
+
+**O que mudaria esta decisão:** o Chrome passar a reenviar Basic Auth em `fetch` same-origin
+(aí o POST poderia voltar a exigir Basic Auth, sem token). Ou o painel virar form POST
+nativo com redirect — o browser manda Basic Auth em navegação de formulário.
+
+---
+
+## Decisão 48 — post da réplica no modelo foto + texto, sem marca de terceiro
+
+**Data:** 28/08/2026, ~23h45 BRT · **Quem decidiu:** Eduardo, com o modelo da foto (caixa + DE/POR + cupom + link) e o pedido de tirar `@rasgabooster.tcg`
+
+**A decisão:** o ingest **não** inventa um template novo. Copia o texto do grupo, troca o link de afiliado, e agora também: (1) apaga `@rasgabooster.tcg`, `#rasgaboot` e qualquer linha que seja só um `@` ou `#`; (2) manda a **foto do produto** junto com a legenda no WhatsApp de destino (`sendMedia`), no mesmo modelo da captura. Telegram já fazia `sendPhoto` quando cabia; WhatsApp saía só em `sendText` ([Decisão 46](#decisão-46--painel-origemdestino-com-todos-os-grupos-da-conta)).
+
+**Por que adaptar o pipeline, e não um editor de modelo no painel:** o formato já vem da origem (título, ❌ DE, 👉 POR, 🏷️ cupom, link). Faltava limpar a marca e copiar a imagem. Um editor de template no site fica para depois; `replica_config.frases_remover` já aceita frases extras.
+
+**O que isso implica:** se a origem veio sem foto, o post continua só texto — a esteira não gera imagem. Se a origem tinha foto, Telegram e WhatsApp saem com a mesma foto e o mesmo texto limpo.
+
+**O que mudaria esta decisão:** o Eduardo quiser montar o texto do zero (aí sim um modelo no painel); ou a origem passar a mandar só texto e ele quiser puxar a thumbnail do anúncio do Mercado Livre.
+
+---
+
+## Decisão 49 — cupom sem produto vai para a vitrine do Eduardo, nunca para `/social/` de terceiro
+
+**Data:** 29/08/2026, ~00h10 BRT · **Quem decidiu:** Eduardo, ao clicar no cupom replicado e cair na página da pessoa da origem
+
+**A decisão:** se o link resolvido do Mercado Livre **não** é um produto (`/p/MLB…` ou `/MLB-123`), o ingest **não** reaproveita o caminho. Troca por `https://www.mercadolivre.com.br/social/caed1312314?matt_word=caed1312314&matt_tool=96097202&forceInApp=true`. `meli.la` passa a ser tratado como encurtador do ML.
+
+**O que aconteceu:** o post `41702` (cupom 30% OFF, “Resgatem por aqui: https://meli.la/2XNbgSR”) resolveu para `/social/milenaoliveirar/lists/…`. O código antigo só colava o `matt_word` do Eduardo **em cima da URL dela**. O caminho `/social/milenaoliveirar` continua sendo a vitrine dela — o parâmetro de afiliado não muda de dono a página.
+
+**Por que não manter a lista dela com o matt_word dele:** a lista (`/lists/uuid`) é da conta dela. Sem o `ref` assinado dela, e mesmo com o `ref`, o clique continua no perfil de terceiro ([Decisão 27](#decisão-27--o-formato-de-perfil-social-não-substitui-o-link-direto)).
+
+**O que mudaria esta decisão:** o Eduardo quiser **não publicar** cupom sem produto (aí o post some em vez de apontar para a vitrine dele).
+
+---
+
+## Decisão 50 — card profissional no lugar da foto crua da origem
+
+**Data:** 29/08/2026, ~00h25 BRT · **Quem decidiu:** Eduardo, fatores 5 e 6 (opção B) das melhorias da réplica
+
+**A decisão:** o destino **não** recebe a foto original do grupo (pode ter marca de terceiro). O ingest monta um card 1080×1440 preto + faixa âmbar `#ffb800` + foto do produto + título + DE/POR + cupom + `POKEMON TCG PROMO`. A foto preferida é a thumbnail oficial do anúncio (`GET /items/MLB…`). Sem item, usa a foto da origem só como recorte no card. Sem as duas, o post segue só texto (cupom sem produto). A legenda continua sendo o texto limpo, com o link de afiliado.
+
+**Por que não gerar imagem com IA:** volume da réplica (teto 40/h) e risco de inventar o produto. Card composto é determinístico e barato.
+
+**O que mudaria esta decisão:** o Eduardo quiser de volta a foto crua; ou um editor de modelo no painel.
+
+---
+
+## Decisão 51 — fechar o HTML do painel em `pagina_gz`
+
+**Data:** 29/08/2026, ~09h BRT · **Quem decidiu:** Eduardo, caminho A (completar o base64 no Postgres, sem reembutir o HTML no Code node)
+
+**A decisão:** o GET do `Replica Painel` monta a página a partir de `replica_config.pagina_gz`. A coluna guarda o HTML em **base64 UTF-8** (não gzip — o nome é legado). Em 29/08 de manhã o valor estava pela metade (31712 de 63424 bytes): o browser recebia JS cortado, sem `</body></html>`, e “nada funcionava”. Os chunks 5–8 fecharam o arquivo. Tamanho final **63424**, MD5 `f8fccee12aa8e6e98ecf12d2a7221d2a`. Fonte versionada: [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
+
+**Por que não recolocar o HTML no Code node:** o n8n e o MCP travam em payload grande; a metade que já estava no banco era idêntica ao arquivo local. Completar a coluna é o caminho mais curto e o que o node `Montar Pagina` já espera (`Buffer.from(paginaGz, 'base64').toString('utf8')` + `__DADOS__`).
+
+**O que isso implica:** depois de gravar, o GET passa a entregar HTML completo. Se o Chrome ainda mostrar a página quebrada, é cache — **Ctrl+F5**. Para mexer no visual de novo: edite o HTML, grave o base64 em `pagina_gz` e dê Ctrl+F5 ([runbook 15.8](runbook.md#158-mexer-no-painel-mudar-a-página)).
+
+**O que mudaria esta decisão:** voltar a embutir o HTML no Code node (aí o gerador `tools/gerar-painel-code-node.mjs` volta a ser o caminho principal).
 
 ---
 
@@ -1342,10 +1598,14 @@ correta e mesmo assim não conectava. Foi preciso recriar o projeto do PostgreSQ
 religar. Restart simples não resolve, porque não reavalia a configuração de rede. Detalhes em
 [troubleshooting P5](troubleshooting.md#p5--credencial-do-banco-para-de-conectar-couldnt-connect-with-these-settings).
 
-**A senha do banco foi engolida pelo Docker.** A senha continha `$`, e o Docker Compose
-interpretou o que vinha depois como nome de variável de ambiente. O container recebeu uma
-senha diferente da escrita no arquivo, e a autenticação falhava sem motivo aparente. Lição:
-evite `$` em senha de docker-compose, ou escape como `$$`.
+**A senha do banco foi engolida pelo Docker — e continua engolida.** A senha continha `$`, e o
+Docker Compose interpretou o que vinha depois como nome de variável de ambiente. O container
+recebeu uma senha diferente da escrita no arquivo, e a autenticação falhava sem motivo aparente.
+Em 28/08 isso mordeu de novo: a Evolution API não conectava, com `P1000: Authentication failed`,
+porque foi configurada com a senha **do arquivo**. O `.env` da VPS diz
+`PkmnPromos2026!Br$ecure`, mas **a senha que o banco aceita é `PkmnPromos2026!Br`** — o `$ecure`
+nunca chegou ao Postgres. Lição dupla: evite `$` em senha de docker-compose (ou escape como
+`$$`), e, quando ligar serviço novo nesse banco, confie na senha efetiva, não no arquivo.
 
 **Uma auditoria encontrou 17 bugs de uma vez**, vários deles capazes de impedir o bot de
 funcionar sozinhos: 16 nodes sem credencial vinculada, as 7 consultas SQL do Scanner sem o

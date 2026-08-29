@@ -27,6 +27,7 @@ valiosos: são as armadilhas reais desta montagem.
 | Um arquivo `.md` aparece embaralhado ou cheio de espaços | [P17](#p17--documento-ilegível-salvo-em-utf-16-pelo-powershell) |
 | Salvei a correção, mas em produção o comportamento antigo continua | [P18](#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada) |
 | Catalog Scanner / ScraperAPI devolve 500 na listagem do ML | [P19](#p19--catalog-scanner-a-listagem-do-ml-falha-no-scraperapi) |
+| Painel da réplica abre, mas botões/rotas não funcionam | [P20](#p20--o-painel-da-réplica-abre-mas-nada-funciona) |
 
 ---
 
@@ -767,3 +768,23 @@ retomar: Name = `api_key`, `TESTE_SO_POKEMON = true`, uma execução **manual** 
 `ultra_premium` (75 créditos, plano pago) **só com pedido novo**.
 
 Registro: [Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo).
+
+---
+
+## P20 — O painel da réplica abre, mas nada funciona
+
+**Sintoma:** GET `/webhook/replica/painel` devolve 200 com Basic Auth, a página pinta, e
+mesmo assim clique, rota e save não respondem. No “ver código-fonte” o HTML **acaba no
+meio de um `<script>`**, sem `</body>` nem `</html>`.
+
+**Causa:** `replica_config.pagina_gz` estava **pela metade** (31712 de 63424 bytes). O node
+`Montar Pagina` só decodifica o que está no banco. Cache do Chrome também mostra a versão
+cortada depois do conserto.
+
+**Solução:** conferir o tamanho no banco (`length(pagina_gz)` = 63424, MD5
+`f8fccee12aa8e6e98ecf12d2a7221d2a`). Se estiver curto, regravar o base64 do arquivo
+[`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
+Depois, **Ctrl+F5**. Sem Basic Auth o n8n responde “Authorization is required!” — isso é o
+GET, não o HTML.
+
+Registro: [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz).

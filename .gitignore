@@ -21,4 +21,10 @@ dist/
 Thumbs.db
 *.log
 .vscode/
+.cursor/
 *.swp
+
+# Rascunho de injeção / chunks temporários (não são backup)
+backups/**/tmp-*
+tmp-*
+.tmp-*

@@ -12,18 +12,21 @@ mudar** e **o raciocínio** por trás dela.
 
 ---
 
-## Regra 0 — só a loja oficial da Pokémon
+## Regra 0 — lojas oficiais e busca geral Pokémon
 
-**Decisão do Eduardo em 13/08/2026, e ela vem antes de todas as outras regras deste
-arquivo.** Só entram no canal promoções que aparecem dentro de
-<https://www.mercadolivre.com.br/loja/pokemon>.
+**Origem (13/08/2026):** só a loja oficial da Pokémon,
+<https://www.mercadolivre.com.br/loja/pokemon>. Isso desligou a página geral de ofertas.
+
+**Vigente desde 25/08/2026 ([Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)):**
+duas fontes alimentam a mesma fila, porque as homepages sozinhas não sustentam ~6 posts/hora.
 
 Consequências:
 
-- O `Pokemon Scanner v2`, que lê a página geral de ofertas, ficou **desativado**. Todas as
-  regras descritas abaixo continuam implementadas e corretas nele, mas não estão rodando.
-- Quem alimenta a fila hoje é o `Pokemon Store Scanner`, que varre as lojas cadastradas em
-  `lojas_confiaveis`. O `Pokemon Catalog Scanner` existe e **fica inativo**
+- O `Pokemon Store Scanner` **continua** varrendo as lojas cadastradas em `lojas_confiaveis`.
+- O `Pokemon Scanner v2` **voltou a rodar** em `ofertas?category=MLB6899` (a cada 10 min).
+  Título sem a palavra Pokémon → `descartado`. Autenticidade com os limiares −40 / +25.
+  Risco conhecido: [P15](troubleshooting.md#p15--o-selo-loja-oficial-do-mercado-livre-não-significa-loja-oficial-da-pokémon).
+- O `Pokemon Catalog Scanner` existe e **fica inativo**
   ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
 - Loja cadastrada não é o mesmo que loja em escopo. Hoje **dez** lojas estão ativas:
   `pokemon`, `copag`, `brinkjr`, `attack-toys`, `cade-meu-jogo`, `psz3d`,
@@ -36,6 +39,8 @@ O motivo é que dentro da loja oficial da marca o problema de autenticidade desa
 origem — tudo que está lá é original. Fora dela, não existe sinal confiável de autenticidade
 que dê para automatizar, como mostrou a investigação do selo "Loja oficial"
 ([P15 no troubleshooting](troubleshooting.md#p15--o-selo-loja-oficial-do-mercado-livre-não-significa-loja-oficial-da-pokémon)).
+Por isso a busca geral só publica com score ≥ +25 **e** Pokémon no título; o resto vai para
+`descartado`, `blocked` ou `promos_review`.
 
 ---
 
@@ -107,7 +112,8 @@ inválido, para não deixar passar produto fora do tema). O passo a passo do tes
 ## Mapa rápido: onde mora cada parâmetro
 
 > **Atenção à coluna "Workflow".** Onde está escrito só **"Scanner"**, leia
-> **`Pokemon Scanner v2`** — que hoje está **desativado** pela Regra 0. Quem alimenta a fila é
+> **`Pokemon Scanner v2`** — **ativo** desde a [Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)
+> (busca geral MLB6899 + Pokémon no título). Quem também alimenta a fila é
 > o `Pokemon Store Scanner`, e nele os limites **não são constantes no código**: desconto
 > mínimo, preço mínimo, preço máximo e filtro de título vêm de cada linha da tabela
 > `lojas_confiaveis` ([runbook, seção 13](runbook.md#13-escopo-quais-lojas-o-bot-pode-publicar)).
@@ -115,7 +121,7 @@ inválido, para não deixar passar produto fora do tema). O passo a passo do tes
 
 | Regra | Valor hoje | Workflow | Node | O que procurar |
 | --- | --- | --- | --- | --- |
-| Desconto mínimo | **10%** em `pokemon` e `copag`; **15%** nas outras 8 lojas ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)) / 15% no Scanner v2 inativo | Store Scanner (dado) e Scanner v2 (código) | tabela `lojas_confiaveis.desconto_minimo` / `Normalize and Classify` | `UPDATE lojas_confiaveis SET desconto_minimo = 10 WHERE slug IN ('pokemon','copag');` — **não** mexer em `const ML_MAX = 60` |
+| Desconto mínimo | **10%** em `pokemon` e `copag`; **15%** nas outras 8 lojas ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)) / **15%** no Scanner v2 | Store Scanner (dado) e Scanner v2 (código) | tabela `lojas_confiaveis.desconto_minimo` / `Normalize and Classify` | `UPDATE lojas_confiaveis SET desconto_minimo = 10 WHERE slug IN ('pokemon','copag');` — **não** mexer em `const ML_MAX = 60` |
 | Desconto máximo (anti-golpe) | 60% | Scanner | `Normalize and Classify` | linha `const ML_MAX = 60;` |
 | Limite de bloqueio por autenticidade | −40 | Scanner | `Normalize and Classify` | linha `const AUTH_BLOCK = -40;` |
 | Limite de aprovação por autenticidade | +25 | Scanner | `Normalize and Classify` | linha `const AUTH_ACCEPT = 25;` |
@@ -124,11 +130,13 @@ inválido, para não deixar passar produto fora do tema). O passo a passo do tes
 | ID da etiqueta de afiliado | `96097202` | Store Scanner e Scanner v2 | `Extrair Ofertas das Lojas` / `Normalize and Classify` | linha `const AFILIADO_TOOL_ID = ...` |
 | Categoria do Mercado Livre | `MLB6899` | Scanner | `Search MercadoLivre` | campo **URL** do node |
 | Categoria (cópia usada no banco) | `MLB6899` | Scanner | `Normalize and Classify` | linhas `const CATEGORY` e `const SEARCH_TERM` |
-| Intervalo da varredura | **5 minutos** | Store Scanner | `A Cada 5 Minutos` | campo **Minutes Interval**. Não baixar para 2 min (10 HTTP/ciclo) |
+| Intervalo da varredura (lojas) | **5 minutos** | Store Scanner | `A Cada 5 Minutos` | campo **Minutes Interval**. Não baixar para 2 min (10 HTTP/ciclo) |
+| Intervalo da varredura (busca geral) | **10 minutos** | Scanner v2 | `Every 10 Minutes` | Não baixar para competir HTTP com o Store Scanner |
+| Pokémon no título (busca geral) | regex `pokemon` no título normalizado | Scanner v2 | `Exigir Pokemon no Titulo` | sem a palavra → `descartado` (Yu-Gi-Oh/Magic da MLB6899) |
 | Espera aleatória antes de acessar o ML | 0 a 60 segundos | Store Scanner | `Jitter Aleatorio` | campo **Amount**: `{{ Math.floor(Math.random() * 61) }}` |
 | Intervalo da publicação | **2 minutos** | Publisher | `Every 2 Minutes` | campo **Minutes Interval** |
 | Janela de postagem | 8h às 22h BRT | Publisher | `Within 8h-22h BRT?` | os dois valores de comparação: `8` e `22` |
-| Teto diário de posts | **40** | Publisher | `Under Daily Limit?` | valor de comparação `40` |
+| Teto diário de posts | **90** ([Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)) | Publisher | `Under Daily Limit?` | valor de comparação `90` |
 | Posts por execução | 1 | Publisher | `Fetch Next Pending` | `LIMIT 1` na consulta |
 | Ordem da fila | `pokemon`, depois `copag`, depois economia em R$, depois % | Publisher | `Fetch Next Pending` | `ORDER BY CASE search_term …, economia DESC, discount_pct DESC` |
 | Teto por hora | **6** posts na última hora corrida | Publisher | `Under Hourly Limit?` | valor de comparação `6`; o `hour_count` vem do `Count Today Posts` |
@@ -149,7 +157,7 @@ dois cliques no node indicado, altere o valor, feche o node, clique em **Save** 
 
 ## 1. Faixa de desconto aceita: 10%/15% no Store Scanner; 15% a 60% no Scanner v2
 
-**Onde:** Store Scanner lê `lojas_confiaveis.desconto_minimo`. Scanner v2 (inativo) usa
+**Onde:** Store Scanner lê `lojas_confiaveis.desconto_minimo`. Scanner v2 (ativo, Decisão 43) usa
 `Normalize and Classify` → `const ML_MIN = 15;` e `const ML_MAX = 60;`.
 
 **O que faz (Store Scanner, vigente):**
@@ -158,7 +166,7 @@ dois cliques no node indicado, altere o valor, feche o node, clique em **Save** 
 - No mínimo da loja ou acima → entra na fila (`pending`), se passar no filtro de título.
 - O teto de 60% **não** está no Store Scanner; só no Scanner v2.
 
-**O que faz (Scanner v2, desligado):**
+**O que faz (Scanner v2, busca geral MLB6899):**
 
 - Desconto **abaixo de 15%** → produto `descartado`. Não é gravado em `promos`; só fica
   registrado em `promos_log`.
@@ -408,29 +416,30 @@ seja, o último post possível sai às 21h59.
 
 ---
 
-## 5. Teto diário: 40 posts
+## 5. Teto diário: 90 posts
 
-**Onde:** Publisher → `Under Daily Limit?` → valor de comparação `40`
+**Onde:** Publisher → `Under Daily Limit?` → valor de comparação `90`
 
 > Este é o parâmetro que engana. O node que **conta** os posts se chama
-> `Count Today Posts`, mas o número 40 **não está lá** — está no node de decisão seguinte,
+> `Count Today Posts`, mas o número 90 **não está lá** — está no node de decisão seguinte,
 > `Under Daily Limit?`. Se você mudar no lugar errado, nada acontece.
 
 **O que faz:** conta quantos itens têm `status='posted'` com `posted_at` **no dia BRT**
-(`America/Sao_Paulo`) e só libera a publicação se for menos de 40. Não use
+(`America/Sao_Paulo`) e só libera a publicação se for menos de 90. Não use
 `posted_at::date = CURRENT_DATE` — o banco está em UTC e depois das 21h BRT isso já é
 o dia seguinte ([Decisão 40](historico-de-decisoes.md#decisão-40--reofertar-após-3-dias-e-contar-o-teto-em-brt)).
 
 **O porquê:** proteção contra saturar o canal. Com o Publisher rodando a cada **2 minutos**
-dentro de uma janela de 14 horas, o máximo teórico seria de cerca de 420 posts por dia — o
-teto de 40 (subido de 30 em 13/08/2026, [Decisão 29](historico-de-decisoes.md#decisão-29--volume-do-canal-5-de-desconto-teto-40-e-alerta-acima-de-40)) é o freio de verdade. O ritmo continua 1 post por disparo.
+dentro de uma janela de 14 horas, o máximo teórico seria de cerca de 420 posts por dia.
+O teto horário de **6** espalha (~84/dia). O diário **90** (era 40; [Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora))
+é a folga para não cortar o ritmo ~14h30. O ritmo continua 1 post por disparo.
 
-**Efeito colateral conhecido, agora mitigado:** sem teto por hora, 40 posts cabiam nas
-primeiras ~80 minutos. Desde a [Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)
+**Efeito colateral conhecido, agora mitigado:** sem teto por hora, 90 posts cabiam nas
+primeiras ~3 horas. Desde a [Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)
 existe também o teto de **6 posts na última hora corrida** (`Under Hourly Limit?`).
 
-Na prática o teto diário de 40 talvez nunca seja alcançado: as dez lojas ativas, com o
-corte 10%/15%, rendem poucos itens novos por dia. O Catalog Scanner **não** entra nessa
+Na prática o teto diário só trava se a busca geral encher a fila de verdade. As dez lojas
+ativas, sozinhas, quase nunca chegavam a 40. O Catalog Scanner **não** entra nessa
 conta — está inativo ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
 
 ---
@@ -443,13 +452,13 @@ compara com `6`. Se passou, o fluxo termina em `Hourly Limit Reached`.
 **O que faz:** conta itens `posted` com `posted_at > now() - interval '1 hour'` (hora
 corrida, não relógio cheio). Só busca o próximo `pending` se forem menos de 6.
 
-**O porquê:** com Publisher a cada 2 min, 40 posts cabiam em ~80 minutos da manhã. Seis
+**O porquê:** com Publisher a cada 2 min, 90 posts cabiam em ~3 horas da manhã. Seis
 por hora espalha o canal ao longo do dia sem atrasar uma oferta boa quando a fila está
 vazia. Era 4 ([Decisão 35](historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume));
 em 14/08/2026 o Eduardo subiu para 6 no teste de fim de semana.
 
 **Cuidado:** o número **não** está no `Count Today Posts`. Está no IF seguinte, igual ao
-teto diário de 40.
+teto diário de 90.
 
 ---
 
@@ -699,6 +708,55 @@ Coreano, Chinês) quando a confiança é **maior ou igual a 0,85**. Nos casos `a
 
 O `Pokemon Store Scanner` também grava essas duas colunas nas ofertas novas. O post não
 depende disso: o Publisher detecta de novo se o banco vier vazio.
+
+---
+
+## 12. As regras da réplica de WhatsApp — e as que não existem
+
+Esta seção é da **outra esteira** ([Decisão 44](historico-de-decisoes.md#decisão-44--réplica-de-grupos-de-whatsapp-sem-curadoria-ao-lado-do-bot)).
+O ponto mais importante dela é o que ela **não** faz.
+
+**Nenhuma regra das seções 1 a 11 vale na réplica.** Sem desconto mínimo, sem faixa máxima, sem
+score de autenticidade, sem lista de lojas confiáveis, sem exigir Pokémon no título, sem janela
+de horário, sem teto diário, sem formato de post, sem detecção de idioma. A curadoria é
+terceirizada para quem administra o grupo de origem. Isso foi escolha explícita do Eduardo, não
+esquecimento.
+
+Sobraram dez regras, e todas são técnicas:
+
+| # | Regra | Onde muda |
+| --- | --- | --- |
+| 1 | Só mensagem **de grupo**, que não é da própria conta, com texto, com menos de **600 s** de atraso | `ATRASO_MAXIMO_SEGUNDOS` no node `Normalizar Mensagem` |
+| 2 | Só replica origem que você salvou no painel | Coluna `replica_rotas.ativa`; o lote do painel é a lista |
+| 3 | A esteira inteira pode ser desligada sem despublicar workflow | `replica_config.ativo` |
+| 4 | **Teto por hora**, padrão 40 | `replica_config.teto_hora` |
+| 5 | Sem link do Mercado Livre, **não replica** | Lógica fixa no node `Montar Post` |
+| 6 | Exceção: mensagem de cupom sem link de produto pode replicar | `replica_config.replicar_cupom_sem_link` |
+| 7 | Espera antes de publicar, padrão 8 s | `replica_config.delay_segundos` |
+| 8 | Origem não pode ser também destino de WhatsApp | `replica_destinos` + IF `origem_e_destino` no ingest |
+| 9 | Apaga marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`, linha só de `@`/`#`) | `Montar Post` + `replica_config.frases_remover` |
+| 10 | Destino recebe um **card** (foto do ML ou da origem + título/preço/marca), não a foto crua | ingest `803a5650` ([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)) |
+
+**A única edição de conteúdo** é a troca do link do Mercado Livre pelo link de afiliado —
+mesmíssimo formato da [seção 10](#10-link-de-afiliado), com `matt_word` e `matt_tool` lidos de
+`replica_config` em vez de fixos no código — mais o apagamento da **linha inteira** que contém
+convite para grupo ou canal de terceiro (`chat.whatsapp.com`, `t.me`, `wa.me`) e o
+apagamento da marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`). Divulgar o
+grupo ou o Instagram do concorrente junto com a promoção não faz sentido.
+
+Link de **outro marketplace** (Amazon, Shopee, Magalu e mais 17) não é convertido nem
+publicado: a mensagem inteira é descartada com motivo `so_tinha_link_de_outro_marketplace`.
+Publicar link de terceiro sem afiliação seria trabalho de graça.
+
+**O teto por hora é anti-flood, não curadoria.** O Telegram limita quanto um bot pode postar, e
+grupo de promoção em dia de Black Friday despeja dezenas de mensagens por hora. Quando o teto
+bate, a mensagem é registrada como `ignorado` e não volta depois — não existe fila de espera
+aqui, de propósito: promoção replicada 40 minutos atrasada não vale nada.
+
+**O que a réplica não confere e o bot confere:** o preço. O Publisher reconfere o preço antes de
+postar ([Decisão 33](historico-de-decisoes.md#decisão-33--repostar-se-o-preço-da-vitrine-cair-depois-do-post));
+a réplica confia no que o grupo de origem escreveu. Se a promoção já morreu, o canal repete o
+erro do grupo de origem.
 
 ---
 
