@@ -28,6 +28,7 @@ valiosos: são as armadilhas reais desta montagem.
 | Salvei a correção, mas em produção o comportamento antigo continua | [P18](#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada) |
 | Catalog Scanner / ScraperAPI devolve 500 na listagem do ML | [P19](#p19--catalog-scanner-a-listagem-do-ml-falha-no-scraperapi) |
 | Painel da réplica abre, mas botões/rotas não funcionam | [P20](#p20--o-painel-da-réplica-abre-mas-nada-funciona) |
+| Réplica sai só texto, sem foto no canal | [P21](#p21--a-réplica-copia-o-texto-mas-o-post-sai-sem-foto) |
 
 ---
 
@@ -788,3 +789,47 @@ Depois, **Ctrl+F5**. Sem Basic Auth o n8n responde “Authorization is required!
 GET, não o HTML.
 
 Registro: [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz).
+
+---
+
+## P21 — A réplica copia o texto, mas o post sai sem foto
+
+**Sintoma:** o canal [@promopokemontcg](https://t.me/promopokemontcg) continua replicando
+oferta (título, DE/POR, cupom, link de afiliado), mas o post vai **só texto** — no Telegram
+isso é `sendMessage`, não `sendPhoto`. A esteira de curadoria (Publisher) não entra aqui.
+
+**Conferido no canal em 02/09/2026:**
+
+| Post | UTC | Foto? | O que era |
+| --- | --- | --- | --- |
+| 277 | 01:35 | **sim** | produto, já com encurtador `/webhook/replica/s?id=` |
+| 278 | 01:37 | não | cupom / vitrine `/social/` — fallback de texto esperado |
+| 279 | 01:58 | **não** | produto com markdown; daqui em diante o card some |
+| 296–311 | tarde | **não** | dezenas de ofertas só texto |
+
+O encurtador **já existia no 277 com foto**. Ele sozinho não explica o corte. O desenho
+certo (Decisões 48 e 50) é card 1080×1440 + legenda limpa. Se o card quebra, o ingest cai
+no fallback de texto — é exatamente o que o canal está fazendo.
+
+**Onde olhar no n8n** (workflow `Replica WhatsApp Ingest`, `4mE343XrNXgIwAIF`):
+
+1. **P18 primeiro.** `versionId` tem que ser igual a `activeVersionId`. Salvar ≠ publicar.
+2. Execuções **agendadas** (webhook) por volta de 02/09 01:50 UTC e da tarde. O caminho
+   de foto passa por `Preparar Card` → download ML/origem → composição do card →
+   `sendPhoto` / `sendMedia`. Fallback de texto é `sendMessage` / `sendText`.
+3. Sinais típicos: node vermelho no card; `usar_foto` / `tem_imagem` / `montar_card`
+   falsos; `sendPhoto` virando `sendMessage`; legenda > 1024 caracteres; Evolution
+   sem `imageMessage` (`Normalizar Mensagem` só detecta esse tipo — documento/álbum
+   chega como `tem_imagem = false`).
+4. Backup dos Code nodes: [`backups/2026-08-28/code-nodes/replica-ingest--*.js`](../backups/2026-08-28/code-nodes/).
+   Produção foi editada depois de 29/08 (o encurtador não está nesse backup). O n8n é
+   a fonte da verdade.
+
+**O que não fazer:** desligar a esteira de curadoria; republicar o Catalog Scanner;
+disparar flood no chip do WhatsApp; colar API key no git ou no chat.
+
+**Publicar a correção (n8n 2.28.6 desta VPS):** depois de salvar, clique em **Publish**
+no ingest. Pela API, isso é `POST /api/v1/workflows/4mE343XrNXgIwAIF/activate` (no v2,
+*activate* = publicar). Sem publicar, produção não muda.
+
+Registro: [estado atual, 02/09](estado-atual.md#0209--réplica-sem-foto-e-a-api-do-n8n-recusada).
