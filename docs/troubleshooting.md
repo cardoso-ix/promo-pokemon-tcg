@@ -832,4 +832,4 @@ disparar flood no chip do WhatsApp; colar API key no git ou no chat.
 no ingest. Pela API, isso é `POST /api/v1/workflows/4mE343XrNXgIwAIF/activate` (no v2,
 *activate* = publicar). Sem publicar, produção não muda.
 
-Registro: [estado atual, 02/09](estado-atual.md#0209--réplica-sem-foto-e-api-do-n8n-recusada).
+Registro: [estado atual, 02/09](estado-atual.md#0209--réplica-sem-foto-e-a-api-do-n8n-recusada).
