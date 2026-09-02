@@ -940,7 +940,7 @@ function campoPlataformas() {
   caixa.appendChild(el('p', 'text-xs text-[color:var(--muted)]', 'So replica oferta da plataforma marcada e com afiliacao. Amazon, Shopee e Magalu ficam desligadas porque ainda nao ha comissao.'));
   var grupo = el('div', 'flex flex-wrap gap-2');
   PLATS_UI.forEach(function (p) {
-    var lab = el('label', 'flex items-center gap-2 field px-3 py-2');
+    var lab = el('label', 'flex items-center gap-2 field px-3 py-2' + (p.liga ? '' : ' opacity-40 cursor-not-allowed'));
     var ck = document.createElement('input');
     ck.type = 'checkbox';
     ck.value = p.id;
