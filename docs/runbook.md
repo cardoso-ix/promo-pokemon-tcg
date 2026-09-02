@@ -1002,8 +1002,9 @@ copiar promoção de grupo de WhatsApp para o canal, trocando só o link de afil
 
 > **Estado em 02/09/2026:** Evolution API rodando, WhatsApp **pareado** na instância
 > `promo-replica`, painel no modelo origem/destino ([Decisão 46](historico-de-decisoes.md#decisão-46--painel-origemdestino-com-todos-os-grupos-da-conta)),
-> rota **TCG Promo** gravada. Ingest `70a5d99d` publica foto do polycard e o nome do
-> produto na legenda ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)).
+> rota **TCG Promo** gravada. Ingest `70be8ff6` publica foto do polycard, o nome do
+> produto na legenda e **só Mercado Livre** ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto),
+> [Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)).
 > Painel: Config grava todos os ajustes da lista branca; HTML em `pagina_gz`
 > ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz),
 > [Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).

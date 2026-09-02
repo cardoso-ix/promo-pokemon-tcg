@@ -393,7 +393,7 @@ autenticado). Sem token válido o Code node recusa.
 A página é montada pelo node `Montar Pagina` a partir de `replica_config.pagina_gz`
 (base64 UTF-8 do HTML; o nome `_gz` é legado — **não** é gzip). Fonte versionada:
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
-Em 02/09 o valor vigente é 67532 bytes, MD5 `d22596c0999a0f339a4d063ae84555a6`
+Em 02/09 o valor vigente é 70760 bytes, MD5 `e1081ab857327dda7d97c3ad40f74936`
 ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz),
 [Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
 A tela de login (`/webhook/replica/entrar`) sai do node `Montar Pagina Login`, fonte

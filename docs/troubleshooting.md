@@ -786,7 +786,7 @@ cortada depois do conserto.
 
 **Solução:** conferir o tamanho no banco (`length(pagina_gz)` igual ao que
 `python3 tools/publicar-painel.py --dry-run` imprime). Em 02/09 o valor vigente é
-**67532**, MD5 `d22596c0999a0f339a4d063ae84555a6`. O fechamento original de 29/08 era
+**70760**, MD5 `e1081ab857327dda7d97c3ad40f74936`. O fechamento original de 29/08 era
 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a`. Se estiver curto, rode o script — ele
 regrava o base64 a partir de
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).

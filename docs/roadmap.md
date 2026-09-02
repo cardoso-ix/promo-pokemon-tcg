@@ -19,12 +19,13 @@ comportamento real por alguns dias.** Otimizar antes de ter dados é chutar.
    ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
    Visual novo: `python3 tools/publicar-painel.py` e Ctrl+F5 ([runbook 15.8](runbook.md#158-mexer-no-painel-ajustes-e-página)).
 3b. ~~**Deixar o painel editável pelo site.**~~ **Feito em 02/09**
-   ([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)):
-   aba Config grava a lista branca; login versionado.
-4. **Construir a Fase 1 do dashboard único.** Decidido em 28/08: **estender o `Replica Painel`**
-   e mirar controle total sobre a curadoria, em três fases. A Fase 1 não toca em workflow
-   publicado. O desenho está em [Dashboard](#dashboard). A réplica já rodou o bastante para
-   começar a tela unificada sem construir em cima de um pipeline ainda mudo.
+   ([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
+3c. ~~**Só replicar Mercado Livre.**~~ **Feito em 02/09**
+   ([Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)).
+4. **Construir a Fase 1 do dashboard único.** Decidido em 28/08: **estender o `Replica Painel`**.
+   A Fase 1 não toca em workflow publicado. O desenho está em [Dashboard](#dashboard).
+5. **Decidir se a curadoria volta.** Em 02/09 à noite Store Scanner / Publisher / Scanner v2 /
+   Health Alert estão inativos. Mapa: [retomar-hoje.md](retomar-hoje.md).
 
 ---
 

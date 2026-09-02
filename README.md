@@ -22,16 +22,20 @@ VPS; aqui está a documentação de *como ele funciona*, *onde mexer em cada coi
 as decisões foram tomadas assim*, mais uma cópia de segurança dos workflows em
 [`backups/`](backups/) — que não é executada, serve para restaurar se algo se perder.
 
-> **Se você é um agente de IA lendo esta pasta pela primeira vez:** leia este README
-> inteiro, depois `docs/estado-atual.md` e `docs/arquitetura.md`. Os três juntos são o mapa
-> para retomar sem repetir teste. Os outros arquivos são referência para tarefas
-> específicas. A regra de ouro do projeto é que **o n8n é a fonte da verdade** — se esta
-> documentação divergir do que está configurado no n8n, o n8n está certo e a documentação
-> está velha (e vale corrigir a documentação).
+> **Se você é um agente de IA lendo esta pasta pela primeira vez:** comece por
+> [`docs/retomar-hoje.md`](docs/retomar-hoje.md) (mapa desta noite: branch, n8n, o que
+> não refazer). Depois este README, `docs/estado-atual.md` e `docs/arquitetura.md`.
+> A regra de ouro: **o n8n é a fonte da verdade** — se a documentação divergir do n8n,
+> o n8n está certo (e vale corrigir a documentação). Git é backup + scripts + este mapa.
 
 ---
 
-## ▶️ O BOT ESTÁ NO AR (conferido em 25/08/2026, ~22h15 BRT)
+## ▶️ O BOT DE RÉPLICA ESTÁ NO AR (conferido em 02/09/2026, noite)
+
+A **réplica** (WhatsApp → Telegram com link de afiliado) está publicada e ativa.
+O bot de **curadoria** (Store Scanner / Scanner v2 / Publisher / Health Alert) está
+**desligado** neste horário — não religar sem o Eduardo pedir. Mapa completo:
+[docs/retomar-hoje.md](docs/retomar-hoje.md).
 
 Religado à tarde de 13/08, depois que o link de afiliado foi confirmado, corrigido nos dois scanners
 e regravado na fila. Em 25/08 a busca geral voltou para sustentar ~6 posts/hora
@@ -181,23 +185,23 @@ O que ainda falta é o **dashboard único** (curadoria + réplica na mesma pági
 
 ## Estado atual (02/09/2026)
 
-**O bot está rodando de ponta a ponta.** Detalhe fino (versões, ScraperAPI, o que falta
-decidir) vive em [`docs/estado-atual.md`](docs/estado-atual.md). Aqui vai o quadro para
-retomar em 30 segundos.
+**A réplica está no ar; a curadoria está desligada** (conferido no n8n em 02/09 à noite).
+Mapa para outra máquina: [`docs/retomar-hoje.md`](docs/retomar-hoje.md). Detalhe fino
+(versões, ScraperAPI, o que falta decidir) vive em [`docs/estado-atual.md`](docs/estado-atual.md).
 
 | Peça | Estado |
 | --- | --- |
-| Banco PostgreSQL na VPS | Funcionando, 6 tabelas do bot + `lojas_confiaveis` + as 3 tabelas `replica_*` |
+| Banco PostgreSQL na VPS | Funcionando, 6 tabelas do bot + `lojas_confiaveis` + as tabelas `replica_*` |
 | Credencial do banco no n8n | Funcionando, vinculada node a node |
-| Bot e canal do Telegram | Funcionando. Posts reais no dia 13/08, todos com link de afiliado (à tarde saíram 4; à noite saíram mais, ex. Attack Toys `message_id` 23) |
-| **Pokemon Store Scanner** | **Ativo**, 10 lojas, a cada **5 min**, publicado `0ff36da8` (queda de preço + reoferta após 3 dias) |
-| **Pokemon Publisher v2** | **Ativo**, a cada **2 min**, 8h–22h BRT, teto 90/dia (BRT) + 6/hora, ordem qualidade, publicado `56b8fb7b` |
-| **Pokemon Health Alert** | **Ativo**, 21h BRT + manual, publicado `b5e4b758` |
-| **Pokemon Catalog Scanner** | **Arquivado** em 27/08 (era inativo desde 16/08). Listagem ML falhou no ScraperAPI. **Não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
-| **Pokemon Scanner v2** | **Ativo**, a cada **10 min**, publicado `f0183d1c` — busca geral + Pokémon no título ([Decisão 43](docs/historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)) |
+| Bot e canal do Telegram | Canal no ar. **Hoje quem posta é a réplica.** Curadoria não está disparando |
+| **Pokemon Store Scanner** | **Inativo** em 02/09 noite (não religar sem pedido) |
+| **Pokemon Publisher v2** | **Inativo** em 02/09 noite |
+| **Pokemon Health Alert** | **Inativo** em 02/09 noite |
+| **Pokemon Catalog Scanner** | **Arquivado** em 27/08. **Não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
+| **Pokemon Scanner v2** | **Inativo** em 02/09 noite |
 | **Pokemon Schema Setup v2** | Desativado (só sob demanda) |
 | **Replica WhatsApp Ingest** | **Ativo** — rota TCG Promo; foto do polycard + nome na legenda; só Mercado Livre ([Decisão 54](docs/historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)), publicado `70be8ff6` |
-| **Replica Painel** | **Ativo** — Config grava a lista branca; HTML em `pagina_gz` via `tools/publicar-painel.py` ([Decisão 53](docs/historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)). URL: `/webhook/replica/painel` · login: `/webhook/replica/entrar` |
+| **Replica Painel** | **Ativo** `4a6a1223` — Config + plataformas; HTML via `tools/publicar-painel.py`. Login: `/webhook/replica/entrar` |
 | **Replica WhatsApp Conectar** | **Publicado** em 28/08. Página do QR code |
 | **Replica Schema Setup** | Inativo. Já rodou e criou as tabelas `replica_*` e o schema `evolution` |
 | **Evolution API (WhatsApp)** | **No ar e pareada** desde 28/08, projeto Docker `evolution-api`, imagem `evoapicloud/evolution-api`, instância `promo-replica` |
@@ -272,7 +276,8 @@ ou o risco do canal.
 
 | Arquivo | Para que serve | Quando abrir |
 | --- | --- | --- |
-| **README.md** (este) | Visão geral, estado atual, início rápido | Sempre primeiro |
+| **README.md** (este) | Visão geral, estado atual, início rápido | Sempre primeiro, depois de [retomar-hoje.md](docs/retomar-hoje.md) |
+| [docs/retomar-hoje.md](docs/retomar-hoje.md) | Mapa para continuar em outra máquina: branch, PR, n8n vivo, o que não refazer | **Abra isto hoje à noite** |
 | [docs/arquitetura.md](docs/arquitetura.md) | Como as peças se encaixam, diagrama do fluxo, caminho completo de um produto | Para entender o sistema |
 | [docs/regras-de-negocio.md](docs/regras-de-negocio.md) | Cada filtro e cada número, com **onde exatamente mudar** | Para ajustar o comportamento do bot |
 | [docs/banco-de-dados.md](docs/banco-de-dados.md) | As tabelas, coluna por coluna, e os índices | Para escrever consultas e entender os dados |
@@ -301,13 +306,13 @@ No n8n, um **workflow** é um fluxo de trabalho: uma sequência de caixinhas (ch
 
 | Workflow | ID (o endereço dele) | O que faz | Estado |
 | --- | --- | --- | --- |
-| **Pokemon Store Scanner** | `PNwaF3BYhj5KA8eY` | Varre as lojas oficiais de `lojas_confiaveis` e grava as ofertas na fila | **Ativo**, a cada **5 minutos** + jitter 0–60s |
-| **Pokemon Publisher v2** | `FXNWeT9C7dEA0DUY` | Tira o próximo item da fila e publica no Telegram | **Ativo**, a cada **2 minutos**, das 8h às 22h BRT, teto 90/dia (BRT) + 6/hora, publicado `56b8fb7b` |
-| **Pokemon Health Alert** | `3irgeWFKZGZZrJ5u` | Alerta privado se parser/vitrine/publisher quebrar | **Ativo**, 21h BRT + manual |
-| **Pokemon Scanner v2** | `39kdRchYI6CwsbNY` | Lê a página geral de ofertas do ML, classifica por desconto e autenticidade, exige Pokémon no título | **Ativo**, a cada **10 min**, publicado `f0183d1c` |
+| **Pokemon Store Scanner** | `PNwaF3BYhj5KA8eY` | Varre as lojas oficiais de `lojas_confiaveis` e grava as ofertas na fila | **Inativo** em 02/09 noite |
+| **Pokemon Publisher v2** | `FXNWeT9C7dEA0DUY` | Tira o próximo item da fila e publica no Telegram | **Inativo** em 02/09 noite |
+| **Pokemon Health Alert** | `3irgeWFKZGZZrJ5u` | Alerta privado se parser/vitrine/publisher quebrar | **Inativo** em 02/09 noite |
+| **Pokemon Scanner v2** | `39kdRchYI6CwsbNY` | Lê a página geral de ofertas do ML, classifica por desconto e autenticidade, exige Pokémon no título | **Inativo** em 02/09 noite |
 | **Pokemon Schema Setup v2** | `F8jVi6NFxeDHfAkb` | Cria as tabelas do banco | Desativado, só sob demanda |
-| **Replica WhatsApp Ingest** | `4mE343XrNXgIwAIF` | Recebe mensagem de grupo de WhatsApp, troca o link do ML e reposta no canal | **Ativo**, publicado `70a5d99d` |
-| **Replica Painel** | `lWDnggRX8xQmYyQV` | A página onde você libera grupo e mexe nos ajustes da réplica | **Ativo**. Visual: `python3 tools/publicar-painel.py` |
+| **Replica WhatsApp Ingest** | `4mE343XrNXgIwAIF` | Recebe mensagem de grupo de WhatsApp, troca o link do ML e reposta no canal | **Ativo**, publicado `70be8ff6` |
+| **Replica Painel** | `lWDnggRX8xQmYyQV` | A página onde você libera grupo e mexe nos ajustes da réplica | **Ativo** `4a6a1223`. Visual: `python3 tools/publicar-painel.py` |
 | **Replica WhatsApp Conectar** | `v32gcVzRkedUACXD` | A página do QR code para parear o WhatsApp | **Publicado** em 28/08 |
 | **Replica Schema Setup** | `pfolFnCYTLyLZdwU` | Cria as tabelas da réplica e o schema `evolution` | Inativo. Já rodou |
 | **Pokemon Catalog Scanner** | `2ckVyvFPvtqwECDI` | Varre `lista.mercadolivre.com.br/loja/{slug}/pokemon` via ScraperAPI | **Arquivado** em 27/08 — **não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
