@@ -88,6 +88,41 @@ function fotoDoPolycard(html, ids) {
   return '';
 }
 
+function tituloDoPolycard(html, ids) {
+  const s = decodificarHtml(html);
+  const lista = String(ids || '').split(',').map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean);
+  for (let i = 0; i < lista.length; i++) {
+    const id = lista[i];
+    if (!/^MLB/i.test(id)) continue;
+    const reMeta = new RegExp('"(?:product_id|user_product_id|id)"\\s*:\\s*"' + id + '"', 'i');
+    const m = reMeta.exec(s);
+    if (!m) continue;
+    const fatia = s.slice(Math.max(0, m.index - 400), m.index + 8000);
+    const tit = /"title"\s*:\s*\{\s*"text"\s*:\s*"([^"]+)"/.exec(fatia);
+    if (tit && tit[1]) return tit[1].trim();
+  }
+  return '';
+}
+
+function textoJaTemTitulo(texto) {
+  const linhas = String(texto || '').split('\n').map(function (s) { return s.replace(/[_*~`]/g, '').trim(); }).filter(Boolean);
+  if (!linhas.length) return false;
+  const first = linhas[0];
+  if (/^(❌|👉🏼|👉|➡️|🏷️|🔖|🔗|🛒|http)/i.test(first)) return false;
+  if (/^(DE:|POR:|Cupom:)/i.test(first)) return false;
+  if (/^R\$/.test(first)) return false;
+  return first.length >= 6;
+}
+
+function injetarTitulo(texto, titulo) {
+  const t = String(titulo || '').replace(/\s+/g, ' ').trim();
+  if (!t || textoJaTemTitulo(texto)) return String(texto || '');
+  const a = t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const b = String(texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (a.length >= 10 && b.indexOf(a.slice(0, 18)) !== -1) return String(texto || '');
+  return t + '\n\n' + String(texto || '').replace(/^\s+/, '');
+}
+
 function prepararCard(post) {
   const temOrigem = post.tem_imagem === true;
   const gerarImagem = post.gerar_imagem !== false;
@@ -144,6 +179,21 @@ assert.equal(
 );
 assert.equal(fotoDoPolycard(htmlPolycard, 'MLB00000000'), '');
 assert.equal(fotoDoPolycard(htmlSocial, 'MLB52893450'), '');
+assert.equal(
+  tituloDoPolycard(
+    '{"product_id":"MLB52893450","pictures":{"scale":"FILL","pictures":[{"id":"752085-MLA99977285401_112025"}]},"title":{"text":"Box Ursaluna Lua Sangrenta EX"}}',
+    'MLB52893450',
+  ),
+  'Box Ursaluna Lua Sangrenta EX',
+);
+
+const soPreco = '❌ ~DE: R$190~\n👉🏼 *POR: R$111*\n\n🏷️ Cupom: *BEBE0209*\n\nhttps://meli.la/x';
+assert.equal(textoJaTemTitulo(soPreco), false);
+assert.match(injetarTitulo(soPreco, 'Box Pokémon Mega Charizard Y'), /^Box Pokémon Mega Charizard Y\n\n❌/);
+assert.equal(
+  injetarTitulo('_Box Ursaluna Lua Sangrenta EX_\n\n❌ ~DE: R$196~\n', 'Cartas Pokémon Box Ursaluna Lua Sangrenta EX Com 40 Un Copag'),
+  '_Box Ursaluna Lua Sangrenta EX_\n\n❌ ~DE: R$196~\n',
+);
 
 const cardHtml = prepararCard({
   url_foto_html: 'https://http2.mlstatic.com/D_NQ_NP_2X_752085-MLA99977285401_112025-O.jpg',

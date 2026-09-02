@@ -39,7 +39,7 @@ mexer em Code node ou em consulta.
 
 | Data | O que estava valendo |
 | --- | --- |
-| 2026-09-02 | Foto da réplica (Decisão 52): polycard do HTML do encurtador em `Montar Post` (`url_foto_html`), `Preparar Card` e `Normalizar URL da Foto`. Teste em `tools/testar-foto-replica.mjs`. |
+| 2026-09-02 | Foto + nome da réplica (Decisão 52): polycard, `url_foto_html`, injeção de `titulo_produto` na legenda. Painel: título nos logs e `save_token` com fallback. |
 | 2026-08-29 | Amostras do card profissional (Decisão 50): foto de origem, foto do anúncio e PNG de teste em `cards/`. |
 | 2026-08-28 | Réplica no ar: HTML do painel (`painel/replica-painel.html`), Code nodes (QR, ingest, painel, nomes), SQL de schema `evolution` / rotas nomeadas / sync. `pagina_gz` fechou em 29/08 (Decisão 51). **Não** versionar `tmp-*` desta pasta — são chunks de injeção. |
 | 2026-08-27 | Primeira esteira de réplica no papel: Code nodes e SQL do ingest/painel, HTML antigo. Superado pelo snapshot de 28/08. |

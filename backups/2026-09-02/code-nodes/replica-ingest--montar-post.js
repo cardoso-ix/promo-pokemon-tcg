@@ -106,9 +106,10 @@ function fotoAvulsaDoHtml(html) {
   return m ? normalizarFotoMl(m[0]) : '';
 }
 
-function fotoDoPolycard(html, ids) {
+function dadosDoPolycard(html, ids) {
   const s = decodificarHtml(html);
   const lista = String(ids || '').split(',').map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean);
+  const vazio = { foto: '', titulo: '' };
   for (let i = 0; i < lista.length; i++) {
     const id = lista[i];
     if (!/^MLB/i.test(id)) continue;
@@ -118,19 +119,45 @@ function fotoDoPolycard(html, ids) {
     const fatia = s.slice(Math.max(0, m.index - 400), m.index + 8000);
     const pic = /"pictures"\s*:\s*\{\s*"scale"\s*:\s*"[^"]*"\s*,\s*"pictures"\s*:\s*\[\s*\{\s*"id"\s*:\s*"([^"]+)"/.exec(fatia)
       || /"pictures"\s*:\s*\[\s*\{\s*"id"\s*:\s*"([^"]+)"/.exec(fatia);
+    const tit = /"title"\s*:\s*\{\s*"text"\s*:\s*"([^"]+)"/.exec(fatia);
+    const titulo = tit && tit[1] ? String(tit[1]).replace(/\\u0027/g, "'").trim() : '';
     if (pic && pic[1]) {
-      return normalizarFotoMl('https://http2.mlstatic.com/D_NQ_NP_' + pic[1] + '-O.webp');
+      return {
+        foto: normalizarFotoMl('https://http2.mlstatic.com/D_NQ_NP_' + pic[1] + '-O.webp'),
+        titulo: titulo,
+      };
     }
+    if (titulo) return { foto: '', titulo: titulo };
   }
-  return '';
+  return vazio;
 }
-function fotoDosHtmls(htmlMap, ids) {
+function dadosDosHtmls(htmlMap, ids) {
+  const acc = { foto: '', titulo: '' };
   const urls = Object.keys(htmlMap || {});
   for (let i = 0; i < urls.length; i++) {
-    const foto = fotoDoPolycard(htmlMap[urls[i]], ids);
-    if (foto) return foto;
+    const d = dadosDoPolycard(htmlMap[urls[i]], ids);
+    if (d.foto && !acc.foto) acc.foto = d.foto;
+    if (d.titulo && !acc.titulo) acc.titulo = d.titulo;
+    if (acc.foto && acc.titulo) return acc;
   }
-  return '';
+  return acc;
+}
+function textoJaTemTitulo(texto) {
+  const linhas = String(texto || '').split('\n').map(function (s) { return s.replace(/[_*~`]/g, '').trim(); }).filter(Boolean);
+  if (!linhas.length) return false;
+  const first = linhas[0];
+  if (/^(❌|👉🏼|👉|➡️|🏷️|🔖|🔗|🛒|http)/i.test(first)) return false;
+  if (/^(DE:|POR:|Cupom:)/i.test(first)) return false;
+  if (/^R\$/.test(first)) return false;
+  return first.length >= 6;
+}
+function injetarTitulo(texto, titulo) {
+  const t = String(titulo || '').replace(/\s+/g, ' ').trim();
+  if (!t || textoJaTemTitulo(texto)) return String(texto || '');
+  const a = t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const b = String(texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (a.length >= 10 && b.indexOf(a.slice(0, 18)) !== -1) return String(texto || '');
+  return t + '\n\n' + String(texto || '').replace(/^\s+/, '');
 }
 function permalinkDoHtml(html, tituloHint) {
   const s = decodificarHtml(html);
@@ -290,6 +317,9 @@ for (let i = 0; i < links.length; i++) {
   }
 }
 texto = limparMarcasTerceiro(texto, frasesExtras(cfg));
+const extraHtml = dadosDosHtmls(htmlPorUrl, itemIds.join(','));
+if (!tituloProduto && extraHtml.titulo) tituloProduto = extraHtml.titulo;
+texto = injetarTitulo(texto, tituloProduto);
 const temConteudo = !!texto.trim() || norm.tem_imagem === true;
 let publicar = temConteudo;
 let status = publicar ? 'pendente' : 'descartado';
@@ -308,7 +338,7 @@ const destinoTelegram = destinosTelegram.length ? destinosTelegram[0].identifica
 if (publicar && !destinosTelegram.length && !destinosWhatsapp.length) { publicar = false; status = 'descartado'; motivo = 'sem_destino_configurado'; }
 const chaveMidia = { id: norm.mensagem_id, remoteJid: norm.chat_id, fromMe: norm.da_propria_conta === true };
 if (norm.participante) chaveMidia.participant = norm.participante;
-const urlFotoHtml = fotoDosHtmls(htmlPorUrl, itemIds.join(','));
+const urlFotoHtml = extraHtml.foto;
 function saida(urlVisivel, textoFinal, fonteLink) {
   return [{ json: {
     origem_chat_id: norm.chat_id, origem_nome: cfg.nome || '', origem_message_id: norm.mensagem_id,

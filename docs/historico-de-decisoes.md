@@ -1613,6 +1613,9 @@ A origem quase sempre manda `meli.la`. O segundo salto já devolve o HTML da vit
 4. Sem polycard, ainda tenta a página do produto (`og:image`). Se as duas falharem,
    cai na foto da origem. Sem as três: só texto.
 5. `og:image` de página `/social/` é **recusado** (é foto de perfil/lista, não do produto).
+6. Se a legenda da origem **não tem nome do produto** (o título vinha só na imagem, e a
+   foto oficial do ML não carrega esse texto), `Montar Post` **injeta** `titulo_produto`
+   do polycard no começo da legenda. Se a origem já manda `_Box Ursaluna…_`, não duplica.
 
 **O que foi tentado e falhou no teste `65110` (02/09 ~14h12 BRT).** A primeira versão
 desta decisão (`d90d6d88`) buscava a página `/p/` do produto, no mesmo espírito do
@@ -1622,8 +1625,14 @@ lendo **ofertas/`www` de vitrine**; a PDP `/p/` é outra superfície. A API
 plano B. O polycard do hop2 já estava no HTML da execução (`752085-MLA99977285401_112025`,
 CDN 200, JPEG ~279 KB) e o `Montar Post` publicado deixava `url_foto_html` vazio.
 
+No teste com foto (`65180`, `65186`) a origem RasgaBooster mandava **só preço + cupom +
+link**: o nome estava na imagem. A foto oficial do ML saiu certa e a legenda ficou sem
+título. Ingest `70a5d99d` injeta o nome. Painel `d4604a4b` destaca o título nos logs e
+volta a gravar o `save_token` (estava vazio; Config/Rotas falhavam com *token de save
+invalido*).
+
 Code nodes em [`backups/2026-09-02/code-nodes/`](../backups/2026-09-02/code-nodes/).
-Ingest publicado `c16c7118` (`versionId` = `activeVersionId`).
+Ingest publicado `70a5d99d`. Painel `d4604a4b` (`versionId` = `activeVersionId`).
 
 **O que mudaria esta decisão:** religar o card composto se o Eduardo quiser marca na
 imagem de novo; ou o HTML do encurtador deixar de trazer polycard — aí volta a testar

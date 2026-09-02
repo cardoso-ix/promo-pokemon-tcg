@@ -619,6 +619,33 @@ function linhaLink(texto) {
   return el('p', classe, tipo + ' · ' + trechoDoLink(url));
 }
 
+function primeiraLinha(texto) {
+  var s = String(texto || '');
+  var out = '';
+  for (var i = 0; i < s.length; i++) {
+    if (s.charCodeAt(i) === 10) break;
+    out += s.charAt(i);
+  }
+  return limparEspacos(out.split('_').join('').split('*').join('').split('~').join(''));
+}
+
+function limparEspacos(s) {
+  var t = String(s || '');
+  while (t.length && t.charCodeAt(0) <= 32) t = t.slice(1);
+  while (t.length && t.charCodeAt(t.length - 1) <= 32) t = t.slice(0, t.length - 1);
+  return t;
+}
+
+function tituloDoLog(l) {
+  var t = limparEspacos(String((l && l.titulo) || '').split('_').join('').split('*').join('').split('~').join(''));
+  if (!t) t = primeiraLinha(l && l.trecho);
+  if (!t) return '';
+  if (t.indexOf('❌') === 0 || t.indexOf('👉🏼') === 0 || t.indexOf('👉') === 0) return '';
+  if (t.indexOf('🏷️') === 0 || t.indexOf('🔗') === 0 || t.indexOf('🛒') === 0) return '';
+  if (t.indexOf('http') === 0) return '';
+  return t;
+}
+
 function pintarPeriodo() {
   var p = D.periodo || {};
   document.getElementById('visaoDia').textContent = p.fim_completo || 'Hoje';
@@ -837,7 +864,11 @@ function pintarVisaoLogs() {
     topo.appendChild(el('span', CORES[l.status] || 'st', l.status));
     topo.appendChild(el('span', 'text-[11px] text-[color:var(--muted)]', l.quando || ''));
     linha.appendChild(topo);
-    linha.appendChild(el('p', 'text-[color:var(--text)] truncate', l.trecho || l.origem_nome || l.motivo || 'evento'));
+    var nomeProd = tituloDoLog(l);
+    linha.appendChild(el('p', 'text-[color:var(--text)] truncate', nomeProd || l.trecho || l.origem_nome || l.motivo || 'evento'));
+    if (nomeProd && l.trecho && l.trecho.indexOf(nomeProd) === -1) {
+      linha.appendChild(el('p', 'text-xs text-[color:var(--muted)] truncate', l.trecho));
+    }
     var link = linhaLink(l.trecho);
     if (link) linha.appendChild(link);
     alvo.appendChild(linha);
@@ -991,7 +1022,7 @@ function pintarLogs() {
     linha.appendChild(el('span', 'text-xs text-[color:var(--muted)] w-24', l.quando));
     linha.appendChild(el('span', CORES[l.status] || 'st', l.status));
     linha.appendChild(el('span', 'text-xs text-[color:var(--muted)] w-40 truncate', l.origem_nome || l.origem_chat_id));
-    linha.appendChild(el('span', 'flex-1 min-w-0 truncate', l.trecho));
+    linha.appendChild(el('span', 'flex-1 min-w-0 truncate', tituloDoLog(l) || l.trecho));
     linha.appendChild(el('span', 'text-xs text-[color:var(--muted)]', l.motivo || ''));
     bloco.appendChild(linha);
     var link = linhaLink(l.trecho);

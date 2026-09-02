@@ -327,6 +327,15 @@ SELECT json_build_object(
              status,
              motivo,
              links_convertidos,
+             CASE
+               WHEN BTRIM(split_part(COALESCE(texto_publicado, texto_original, ''), E'\n', 1))
+                    ~ '^(❌|👉🏼|👉|🏷️|🔗|🛒|http)'
+               THEN NULL
+               ELSE NULLIF(
+                 BTRIM(regexp_replace(split_part(COALESCE(texto_publicado, texto_original, ''), E'\n', 1), '[_*~]', '', 'g')),
+                 ''
+               )
+             END AS titulo,
              LEFT(COALESCE(texto_publicado, texto_original, ''), 160) AS trecho
         FROM replica_log
        ORDER BY id DESC

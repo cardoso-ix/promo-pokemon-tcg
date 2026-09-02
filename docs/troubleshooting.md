@@ -807,7 +807,7 @@ estava no canvas sem conexão.
 da Foto` ficou com `tem_url_foto = false`. A origem não tinha foto. Saiu texto. O HTML
 do encurtador (`Seguir Redirecionamento 2`) **já tinha** o polycard do produto.
 
-**Solução:** o ingest `c16c7118` tira a foto do polycard do HTML do `meli.la` (`url_foto_html`),
+**Solução:** o ingest `70a5d99d` tira a foto do polycard do HTML do `meli.la` (`url_foto_html`),
 não da página `/p/`. Conferir numa execução **nova** (hash `chat_id|message_id` impede
 replay) **depois** do delay (~8 s):
 
@@ -820,5 +820,27 @@ replay) **depois** do delay (~8 s):
 Se `url_foto_html` vier vazio, o fluxo ainda tenta a página `/p/` e depois a foto da
 origem. `Buscar Item` devolvendo `account-verification` / `suspicious-traffic` é o
 esperado na PDP; não use o `og:image` da vitrine `/social/`.
+
+Registro: [Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto).
+
+---
+
+## P22 — A oferta sai com foto, mas sem o nome do produto
+
+**Sintoma:** Telegram e WhatsApp recebem a foto oficial do anúncio, e a legenda começa em
+`❌ DE` / `POR` / cupom, sem o nome do box. No painel, Atividades mostra o mesmo trecho.
+
+**Causa (02/09, execuções `65180` e `65186`):** o grupo de origem (RasgaBooster) coloca o
+nome **na imagem** e manda na legenda só preço + cupom + `meli.la`. A réplica passou a
+usar a foto oficial do ML (sem esse texto). `titulo_produto` já vinha preenchido do
+polycard e não ia para a legenda.
+
+No painel, Config/Rotas falhavam com `token de save invalido` (execuções `64854`–`64856`):
+`Montar Pagina` deixava `save_token` vazio quando `REPLICA_PAINEL_SAVE_TOKEN` não estava
+no ambiente do n8n.
+
+**Solução:** ingest `70a5d99d` injeta o título do polycard no começo da legenda se a
+origem não trouxe um. Painel `d4604a4b` destaca esse título nos logs e grava o
+`save_token` com o mesmo fallback dos POSTs. **Ctrl+F5** no painel.
 
 Registro: [Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto).
