@@ -13,7 +13,7 @@ comportamento real por alguns dias.** Otimizar antes de ter dados é chutar.
 1. ~~**Subir a Evolution API e publicar os workflows da réplica.**~~ **Feito em 28/08**
    ([Decisão 45](historico-de-decisoes.md#decisão-45--evolution-no-docker-manager-e-o-qr-code-por-página-do-n8n)).
 2. ~~**Ligar o primeiro grupo e observar.**~~ **Feito em 28/08 à noite.** Rota **TCG Promo**
-   gravada; ingest publicando. A foto oficial do anúncio substituiu a foto crua / o card composto
+   gravada; ingest publicando. A foto vem do polycard do HTML do encurtador, não da página `/p/`
    ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)).
 3. ~~**Fechar o HTML do painel em `pagina_gz`.**~~ **Feito em 29/08 de manhã**
    ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).

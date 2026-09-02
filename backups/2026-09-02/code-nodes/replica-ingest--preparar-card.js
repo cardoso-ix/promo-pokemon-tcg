@@ -1,7 +1,8 @@
 // Replica WhatsApp Ingest -> node "Preparar Card"
-// A foto do destino e a do anuncio no Mercado Livre, mesmo quando a origem
-// veio so com texto. Sem pagina de produto e sem foto da origem, segue so texto.
-// Nao monta card composto: a foto do anuncio vai inteira.
+// Prefere a foto do polycard ja extraida em Montar Post (url_foto_html).
+// A pagina /p/ do ML e anti-bot na VPS; nao depende dela para ter imagem.
+// Sem polycard, ainda tenta a pagina do produto. Sem as duas e sem foto da
+// origem, segue so texto. A foto do anuncio vai inteira (sem card composto).
 
 function escHtml(s) {
   return String(s == null ? '' : s)
@@ -38,8 +39,10 @@ const gerarImagem = post.gerar_imagem !== false;
 const itemId = String(post.item_ids || '').split(',')[0].trim().toUpperCase();
 const urlPagina = paginaProduto(post);
 const buyLink = String(post.url_visivel || post.url_afiliado || '').trim();
+const urlFotoHtml = String(post.url_foto_html || '').trim();
+const temFotoHtml = /^https?:\/\/http2\.mlstatic\.com\//i.test(urlFotoHtml);
 
-const fonteFoto = urlPagina ? 'ml' : (temOrigem ? 'origem' : 'nenhuma');
+const fonteFoto = temFotoHtml ? 'html' : (urlPagina ? 'ml' : (temOrigem ? 'origem' : 'nenhuma'));
 const montar = gerarImagem && fonteFoto !== 'nenhuma';
 
 return [{
@@ -59,8 +62,8 @@ return [{
     item_id: itemId,
     url_item: urlPagina,
     url_produto: urlPagina,
-    url_foto_card: '',
-    tem_url_foto: false,
+    url_foto_card: temFotoHtml ? urlFotoHtml : '',
+    tem_url_foto: temFotoHtml,
     fonte_foto: fonteFoto,
     montar_card: montar,
     tem_imagem_origem: temOrigem,

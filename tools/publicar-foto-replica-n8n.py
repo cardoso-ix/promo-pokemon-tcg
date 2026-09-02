@@ -40,9 +40,11 @@ def main():
     status, wf = api(f"/api/v1/workflows/{WF_ID}")
     print("GET", status, wf["name"], "active", wf.get("active"), "version", wf.get("versionId"), "activeVersion", wf.get("activeVersionId"))
 
+    montar = (ROOT / "backups/2026-09-02/code-nodes/replica-ingest--montar-post.js").read_text()
     preparar = (ROOT / "backups/2026-09-02/code-nodes/replica-ingest--preparar-card.js").read_text()
     normalizar = (ROOT / "backups/2026-09-02/code-nodes/replica-ingest--normalizar-url-foto.js").read_text()
 
+    node_by_name(wf, "Montar Post")["parameters"]["jsCode"] = montar
     node_by_name(wf, "Preparar Card")["parameters"]["jsCode"] = preparar
     node_by_name(wf, "Normalizar URL da Foto")["parameters"]["jsCode"] = normalizar
 
@@ -76,9 +78,9 @@ def main():
     sticky = node_by_name(wf, "Sticky Note e0c3b87e")
     sticky.setdefault("parameters", {})["content"] = (
         "## Saida\n\n"
-        "Foto oficial do anuncio no Mercado Livre (pagina do produto), mesmo se a origem veio so com texto. "
-        "Se a pagina falhar, tenta a foto da origem. Sem as duas, sai como texto. "
-        "Sem parse_mode no sentido de inventar layout: a foto do anuncio vai inteira."
+        "Foto oficial do anuncio: polycard do HTML do encurtador (meli.la), nao a pagina /p/. "
+        "A pagina /p/ e anti-bot na VPS. Se o polycard falhar, tenta a pagina e depois a foto da origem. "
+        "Sem as tres, sai como texto. A foto do anuncio vai inteira."
     )
 
     conns = wf["connections"]
@@ -110,8 +112,12 @@ def main():
     print("CHECK active", check.get("active"), "version==active", check.get("versionId") == check.get("activeVersionId"), check.get("versionId"), check.get("activeVersionId"))
 
     # verify connections and snippets
+    nmontar = node_by_name(check, "Montar Post")
+    assert "fotoDoPolycard" in nmontar["parameters"]["jsCode"]
+    assert "urlFotoHtml" in nmontar["parameters"]["jsCode"]
     nprep = node_by_name(check, "Preparar Card")
-    assert "paginaProduto" in nprep["parameters"]["jsCode"]
+    assert "url_foto_html" in nprep["parameters"]["jsCode"]
+    assert "temFotoHtml" in nprep["parameters"]["jsCode"]
     nnorm = node_by_name(check, "Normalizar URL da Foto")
     assert "fotoDoHtml" in nnorm["parameters"]["jsCode"]
     nbus = node_by_name(check, "Buscar Item no Mercado Livre")

@@ -193,7 +193,7 @@ retomar em 30 segundos.
 | **Pokemon Catalog Scanner** | **Arquivado** em 27/08 (era inativo desde 16/08). Listagem ML falhou no ScraperAPI. **Não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
 | **Pokemon Scanner v2** | **Ativo**, a cada **10 min**, publicado `f0183d1c` — busca geral + Pokémon no título ([Decisão 43](docs/historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)) |
 | **Pokemon Schema Setup v2** | Desativado (só sob demanda) |
-| **Replica WhatsApp Ingest** | **Ativo** — rota TCG Promo; foto oficial do anúncio ([Decisão 52](docs/historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)), publicado `d90d6d88` |
+| **Replica WhatsApp Ingest** | **Ativo** — rota TCG Promo; foto do polycard do encurtador ([Decisão 52](docs/historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)) |
 | **Replica Painel** | **Ativo** — HTML completo em `pagina_gz` (63424 bytes, [Decisão 51](docs/historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)). URL: `/webhook/replica/painel` |
 | **Replica WhatsApp Conectar** | **Publicado** em 28/08. Página do QR code |
 | **Replica Schema Setup** | Inativo. Já rodou e criou as tabelas `replica_*` e o schema `evolution` |

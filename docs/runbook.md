@@ -1118,7 +1118,8 @@ combinação; o painel avisa.
 O destino (Telegram e WhatsApp) recebe a **foto oficial do anúncio** no Mercado Livre,
 mesmo se o grupo de origem mandou só texto
 ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)).
-Se a página do produto falhar, tenta a foto da origem. Sem as duas, o post segue só texto.
+A foto vem do polycard do HTML do encurtador. Se isso falhar, tenta a página do produto
+e depois a foto da origem. Sem as três, o post segue só texto.
 
 ### 15.6 Desligar tudo, rápido
 

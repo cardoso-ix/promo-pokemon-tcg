@@ -65,9 +65,44 @@ function fotoDoHtml(html) {
   return m ? normalizarFotoMl(m[0]) : '';
 }
 
-function fonteFoto(post) {
+function decodificarHtml(html) {
+  return String(html || '').replace(/&amp;/g, '&').replace(/\\u002[fF]/g, '/').replace(/\\\//g, '/');
+}
+
+function fotoDoPolycard(html, ids) {
+  const s = decodificarHtml(html);
+  const lista = String(ids || '').split(',').map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean);
+  for (let i = 0; i < lista.length; i++) {
+    const id = lista[i];
+    if (!/^MLB/i.test(id)) continue;
+    const reMeta = new RegExp('"(?:product_id|user_product_id|id)"\\s*:\\s*"' + id + '"', 'i');
+    const m = reMeta.exec(s);
+    if (!m) continue;
+    const fatia = s.slice(Math.max(0, m.index - 400), m.index + 8000);
+    const pic = /"pictures"\s*:\s*\{\s*"scale"\s*:\s*"[^"]*"\s*,\s*"pictures"\s*:\s*\[\s*\{\s*"id"\s*:\s*"([^"]+)"/.exec(fatia)
+      || /"pictures"\s*:\s*\[\s*\{\s*"id"\s*:\s*"([^"]+)"/.exec(fatia);
+    if (pic && pic[1]) {
+      return normalizarFotoMl('https://http2.mlstatic.com/D_NQ_NP_' + pic[1] + '-O.webp');
+    }
+  }
+  return '';
+}
+
+function prepararCard(post) {
+  const temOrigem = post.tem_imagem === true;
+  const gerarImagem = post.gerar_imagem !== false;
   const urlPagina = paginaProduto(post);
-  return urlPagina ? 'ml' : (post.tem_imagem === true ? 'origem' : 'nenhuma');
+  const urlFotoHtml = String(post.url_foto_html || '').trim();
+  const temFotoHtml = /^https?:\/\/http2\.mlstatic\.com\//i.test(urlFotoHtml);
+  const fonteFoto = temFotoHtml ? 'html' : (urlPagina ? 'ml' : (temOrigem ? 'origem' : 'nenhuma'));
+  const montar = gerarImagem && fonteFoto !== 'nenhuma';
+  return {
+    fonte_foto: fonteFoto,
+    tem_url_foto: temFotoHtml,
+    url_foto_card: temFotoHtml ? urlFotoHtml : '',
+    montar_card: montar,
+    usar_foto: montar && String(post.texto_publicado || 'x').length <= 1024,
+  };
 }
 
 const produto = 'https://www.mercadolivre.com.br/blister-quadruplo-me05-escuridao-absoluta-pokemon-copag/p/MLB74454821';
@@ -76,10 +111,6 @@ assert.equal(paginaProduto({ url_produto: 'https://www.mercadolivre.com.br/socia
 assert.equal(paginaProduto({ url_produto: '', item_ids: 'MLB6072858336', tipo_item: 'anuncio' }), 'https://www.mercadolivre.com.br/MLB-6072858336');
 assert.equal(paginaProduto({ url_produto: '', item_ids: 'MLBU3914159030', tipo_item: 'user_product' }), 'https://www.mercadolivre.com.br/up/MLBU3914159030');
 assert.equal(paginaProduto({ url_produto: '', item_ids: '', tipo_item: '' }), '');
-
-assert.equal(fonteFoto({ url_produto: produto, tem_imagem: false }), 'ml');
-assert.equal(fonteFoto({ url_produto: '', tem_imagem: true }), 'origem');
-assert.equal(fonteFoto({ url_produto: '', tem_imagem: false }), 'nenhuma');
 
 assert.equal(
   normalizarFotoMl('https://http2.mlstatic.com/D_NQ_NP_917866-MLA114013158499_072026-I.webp'),
@@ -104,5 +135,45 @@ assert.equal(fotoDoHtml(htmlSocial), '');
 const htmlBot = `<!DOCTYPE html><html>${'z'.repeat(800)}<title>account-verification</title></html>`;
 assert.equal(fotoDoHtml(htmlBot), '');
 assert.equal(fotoDoHtml('<html>curto</html>'), '');
+
+const htmlPolycard = '{"polycards":[{"metadata":{"id":"MLB4841730415","product_id":"MLB52893450","user_product_id":"MLBU4213316654"},'
+  + '"pictures":{"scale":"FILL","pictures":[{"id":"752085-MLA99977285401_112025"}]}}]}';
+assert.equal(
+  fotoDoPolycard(htmlPolycard, 'MLB52893450'),
+  'https://http2.mlstatic.com/D_NQ_NP_2X_752085-MLA99977285401_112025-O.jpg',
+);
+assert.equal(fotoDoPolycard(htmlPolycard, 'MLB00000000'), '');
+assert.equal(fotoDoPolycard(htmlSocial, 'MLB52893450'), '');
+
+const cardHtml = prepararCard({
+  url_foto_html: 'https://http2.mlstatic.com/D_NQ_NP_2X_752085-MLA99977285401_112025-O.jpg',
+  url_produto: produto,
+  tem_imagem: false,
+  texto_publicado: 'Box Ursaluna',
+});
+assert.equal(cardHtml.fonte_foto, 'html');
+assert.equal(cardHtml.tem_url_foto, true);
+assert.equal(cardHtml.montar_card, true);
+assert.equal(cardHtml.usar_foto, true);
+assert.match(cardHtml.url_foto_card, /752085-MLA99977285401_112025/);
+
+const cardPagina = prepararCard({
+  url_foto_html: '',
+  url_produto: produto,
+  tem_imagem: false,
+  texto_publicado: 'Blister',
+});
+assert.equal(cardPagina.fonte_foto, 'ml');
+assert.equal(cardPagina.tem_url_foto, false);
+assert.equal(cardPagina.montar_card, true);
+
+const cardOrigem = prepararCard({ url_foto_html: '', url_produto: '', tem_imagem: true });
+assert.equal(cardOrigem.fonte_foto, 'origem');
+assert.equal(cardOrigem.tem_url_foto, false);
+
+const cardNada = prepararCard({ url_foto_html: '', url_produto: '', tem_imagem: false });
+assert.equal(cardNada.fonte_foto, 'nenhuma');
+assert.equal(cardNada.montar_card, false);
+assert.equal(cardNada.usar_foto, false);
 
 console.log('ok: regras da foto da replica');

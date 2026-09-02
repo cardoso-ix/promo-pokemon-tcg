@@ -365,9 +365,10 @@ Auth do painel, e o n8n — que já está na rede da Evolution — faz o interm�
    NOTHING`. **Sem linha de volta, não publica** — mesma lógica da
    [Decisão 12](historico-de-decisoes.md#decisão-12--deduplicação-por-on-conflict-não-por-consulta-prévia).
 8. **`Esperar Delay`** espera os segundos configurados, para o canal não receber rajada.
-9. **Telegram:** foto oficial do anúncio no Mercado Livre (página do produto, `og:image`),
-   mesmo quando a origem veio só com texto. Se a página falhar, tenta a foto da origem.
-   Sem as duas, o post sai como texto. A foto vai **inteira**, sem card composto
+9. **Telegram:** foto oficial do anúncio no Mercado Livre (polycard do HTML do
+   encurtador `meli.la`), mesmo quando a origem veio só com texto. Se o polycard
+   falhar, tenta a página do produto e depois a foto da origem. Sem as três, o post
+   sai como texto. A foto vai **inteira**, sem card composto
    ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)).
    Legenda é o texto limpo; `parse_mode` HTML só escapa `& < >`.
 10. **WhatsApp de destino (opcional):** a mesma foto via `POST /message/sendMedia`, ou

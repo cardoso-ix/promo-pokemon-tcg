@@ -795,22 +795,30 @@ Registro: [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-p
 ## P21 — A réplica publica sem a foto do produto
 
 **Sintoma:** o post sai no Telegram/WhatsApp só com texto, mesmo com link de produto do
-Mercado Livre. No n8n a execução termina em `Marcar Como Enviado` e **não** passa por
-`Buscar Item no Mercado Livre` / `Baixar Foto do Anuncio`.
+Mercado Livre. No n8n a execução termina em `Marcar Como Enviado` e passa por
+`Publicar Texto no Telegram` em vez de `Publicar Foto no Telegram`.
 
-**Causa (02/09/2026):** a origem quase sempre vem sem `imageMessage`. O `Preparar Card`
-só ligava foto quando `tem_imagem` era true, e o ramo `Tem Foto do ML?` estava no canvas
-sem conexão. O `og:image` da página `/social/` de terceiro **não** é a foto do produto.
+**Causa 1 (02/09 de manhã):** a origem quase sempre vem sem `imageMessage`. O
+`Preparar Card` só ligava foto quando `tem_imagem` era true, e o ramo `Tem Foto do ML?`
+estava no canvas sem conexão.
 
-**Solução:** o ingest `d90d6d88` busca a página do produto (`url_produto`) e usa o
-`og:image`. Conferir numa execução **depois** do delay (~8 s):
+**Causa 2 (02/09 à tarde, execução `65110`):** o ramo ML foi ligado e buscou a página
+`/p/` do produto. A VPS recebeu HTML de `suspicious-traffic-frontend`. `Normalizar URL
+da Foto` ficou com `tem_url_foto = false`. A origem não tinha foto. Saiu texto. O HTML
+do encurtador (`Seguir Redirecionamento 2`) **já tinha** o polycard do produto.
 
-1. `Preparar Card` → `fonte_foto = ml` e `url_item` começando com `https://www.mercadolivre.com.br/` (sem `/social/`).
-2. `Tem Foto Para Copiar?` verdadeiro → `Tem Foto do ML?` → `Buscar Item no Mercado Livre`.
-3. `Normalizar URL da Foto` → `tem_url_foto = true` e `url_foto_card` em `http2.mlstatic.com`.
-4. `Publicar Foto no Telegram` (e WhatsApp, se houver destino).
+**Solução:** o ingest tira a foto do polycard do HTML do `meli.la` (`url_foto_html`),
+não da página `/p/`. Conferir numa execução **nova** (hash `chat_id|message_id` impede
+replay) **depois** do delay (~8 s):
 
-Se `Buscar Item` devolver HTML de `account-verification` / `suspicious-traffic`, o fluxo
-cai na foto da origem ou no texto. Não use o `og:image` da vitrine `/social/`.
+1. `Montar Post` → `url_foto_html` em `http2.mlstatic.com` (não vazio).
+2. `Preparar Card` → `fonte_foto = html`, `tem_url_foto = true`.
+3. `Tem Foto Para Copiar?` verdadeiro → `Tem Foto do ML?` verdadeiro →
+   `Normalizar URL da Foto` (**sem** `Buscar Item no Mercado Livre`).
+4. `Baixar Foto do Anuncio` → `Publicar Foto no Telegram` (e WhatsApp, se houver destino).
+
+Se `url_foto_html` vier vazio, o fluxo ainda tenta a página `/p/` e depois a foto da
+origem. `Buscar Item` devolvendo `account-verification` / `suspicious-traffic` é o
+esperado na PDP; não use o `og:image` da vitrine `/social/`.
 
 Registro: [Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto).

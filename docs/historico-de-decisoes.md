@@ -1597,27 +1597,36 @@ já identificado (`item_ids = MLB…`, `url_produto` preenchido). Execução tí
 Pegadinha extra: o encurtador cai na vitrine `/social/` de terceiro. O `og:image` dessa
 página é a foto do perfil/lista, não a do produto. Não dá para reaproveitar.
 
-**A decisão.**
+**A decisão (corrigida no mesmo dia, após o teste do Eduardo).**
 
-1. Se `Montar Post` achou um produto (`url_produto` / `item_ids`), o ingest **baixa a
-   página do produto no `www.mercadolivre.com.br`** (mesmo caminho do
-   `HTTP Reconferir Pagina` do Publisher) e tira a foto de `og:image`.
-2. Sobe a thumb (`-I`/`-W` → `-O`, `D_NQ_NP_2X_`). A foto **vai inteira** — o card
+A origem quase sempre manda `meli.la`. O segundo salto já devolve o HTML da vitrine
+`/social/` (~360 KB), **sem anti-bot**, com polycards do produto. A foto sai dali:
+
+1. `Montar Post` casa `product_id` / `user_product_id` com `item_ids` e lê
+   `pictures.pictures[0].id` no polycard. Monta
+   `https://http2.mlstatic.com/D_NQ_NP_2X_{id}-O.jpg`.
+2. `Preparar Card` recebe `url_foto_html`. Se for CDN `mlstatic`, `tem_url_foto = true`
+   e **pula** `Buscar Item no Mercado Livre`.
+3. Sobe a thumb (`-I`/`-W` → `-O`, `D_NQ_NP_2X_`). A foto **vai inteira** — o card
    composto 1080×1440 da [Decisão 50](#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)
-   continua no canvas, desligado. Volume da réplica não cabe em montar layout a cada post.
-3. Se a página falhar (anti-bot, sem `og:image`), cai na foto da origem, se houver.
-4. Sem produto e sem foto da origem: só texto.
-5. `og:image` de página `/social/` é **recusado**.
+   continua no canvas, desligado.
+4. Sem polycard, ainda tenta a página do produto (`og:image`). Se as duas falharem,
+   cai na foto da origem. Sem as três: só texto.
+5. `og:image` de página `/social/` é **recusado** (é foto de perfil/lista, não do produto).
 
-A API `api.mercadolibre.com/items|products` devolve 401/403 a partir de alguns IPs; a
-página `www` já é lida pela VPS no Publisher. Por isso a fonte é HTML, não a API.
+**O que foi tentado e falhou no teste `65110` (02/09 ~14h12 BRT).** A primeira versão
+desta decisão (`d90d6d88`) buscava a página `/p/` do produto, no mesmo espírito do
+Publisher. A VPS recebeu HTML de `suspicious-traffic-frontend`. O Publisher continua
+lendo **ofertas/`www` de vitrine**; a PDP `/p/` é outra superfície. A API
+`api.mercadolibre.com/items|products` devolve 401/403 a partir de alguns IPs — não é
+plano B. O polycard do hop2 já estava no HTML da execução (`752085-MLA99977285401_112025`,
+CDN 200, JPEG ~279 KB) e o `Montar Post` publicado deixava `url_foto_html` vazio.
 
-Ingest publicado `d90d6d88` (`versionId` = `activeVersionId`). Code nodes em
-[`backups/2026-09-02/code-nodes/`](../backups/2026-09-02/code-nodes/).
+Code nodes em [`backups/2026-09-02/code-nodes/`](../backups/2026-09-02/code-nodes/).
 
 **O que mudaria esta decisão:** religar o card composto se o Eduardo quiser marca na
-imagem de novo; ou a página `/p/` passar a devolver verificação na VPS — aí testa a API
-de novo a partir do n8n, não deste ambiente.
+imagem de novo; ou o HTML do encurtador deixar de trazer polycard — aí volta a testar
+a página `/p/` **a partir do n8n na VPS**, não deste ambiente.
 
 ---
 
