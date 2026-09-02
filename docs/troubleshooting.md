@@ -807,7 +807,7 @@ estava no canvas sem conexão.
 da Foto` ficou com `tem_url_foto = false`. A origem não tinha foto. Saiu texto. O HTML
 do encurtador (`Seguir Redirecionamento 2`) **já tinha** o polycard do produto.
 
-**Solução:** o ingest tira a foto do polycard do HTML do `meli.la` (`url_foto_html`),
+**Solução:** o ingest `c16c7118` tira a foto do polycard do HTML do `meli.la` (`url_foto_html`),
 não da página `/p/`. Conferir numa execução **nova** (hash `chat_id|message_id` impede
 replay) **depois** do delay (~8 s):
 
