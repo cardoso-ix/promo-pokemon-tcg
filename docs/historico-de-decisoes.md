@@ -1694,7 +1694,7 @@ o link `amzn.to` ia cru, sem comissão.
 **O que mudaria esta decisão:** cadastrar conversor de afiliado da Amazon (ou outra)
 e então habilitar o quadrado no painel.
 
-Painel publicado `ea72903e`. Ingest `70be8ff6`. HTML 53018 bytes (`pagina_gz` 70692).
+Painel publicado `4a6a1223`. Ingest `70be8ff6`. HTML 53069 bytes (`pagina_gz` 70760).
 
 ---
 
