@@ -20,11 +20,19 @@ Não é um SaaS de afiliado (sem planos, pagamentos ou envio em massa). É o coc
 
 ## Operating Context
 
-Página HTML gerada por um Code node do n8n (`/webhook/replica/painel`), Basic Auth no GET, token de save nos POSTs. HTML não pode ter aspas duplas nem barra invertida. WhatsApp via Evolution (`promo-replica`); Telegram é o canal já cadastrado (`@promopokemontcg`), não OAuth.
+Página HTML gerada pelo n8n (`/webhook/replica/painel`), Basic Auth no GET (ou login em
+`/webhook/replica/entrar`), token de save nos POSTs. HTML não pode ter aspas duplas nem
+barra invertida. Produção lê `replica_config.pagina_gz`. Visual: editar
+`backups/2026-08-28/painel/replica-painel.html` e `python3 tools/publicar-painel.py`.
+Ajustes (teto, afiliado, JSON do post) saem da aba Configurações, sem republicar.
+WhatsApp via Evolution (`promo-replica`); Telegram é o canal já cadastrado
+(`@promopokemontcg`), não OAuth.
 
 ## Capabilities and Constraints
 
 - Abas: Visão Geral, Conexões, Rotas, Configurações, Atividades
+- Configurações grava toda a lista branca (`teto_hora`, delay, afiliado, atraso máximo, limite de legenda, `formato_post`, `plataformas`)
+- Plataformas: só Mercado Livre tem conversor de afiliado. Amazon/Shopee/Magalu aparecem desligadas; oferta só de `amzn.to` é descartada
 - Rotas nomeadas com toggle ATIVA, origens WA e destinos TG/WA
 - Combo pesquisável por nome de grupo
 - GET não pode chamar `findChats`/`fetchAllGroups`
@@ -36,7 +44,7 @@ Nome de tela: Replica Promo / Replica de Promocoes. Pokémon TCG. Usuário pediu
 
 ## Evidence on Hand
 
-Painel vivo em `backups/2026-08-28/painel/replica-painel.html`. Dados reais vêm do Postgres (`replica_*`, logs do ingest). Não fabricar métricas de marketplace (ML/Amazon/Shopee).
+Painel vivo em `backups/2026-08-28/painel/replica-painel.html` (login em `replica-login.html`). Dados reais vêm do Postgres (`replica_*`, logs do ingest). Não fabricar métricas de marketplace (ML/Amazon/Shopee).
 
 ## Product Principles
 

@@ -52,7 +52,7 @@ WITH brutos AS (
     FROM evolution."Chat" c
     JOIN evolution."Instance" i ON i.id = c."instanceId"
    WHERE i.name = 'promo-replica'
-     AND c."remoteJid" LIKE '%@g.us'
+     AND (c."remoteJid" LIKE '%@g.us' OR c."remoteJid" LIKE '%@newsletter')
   UNION ALL
   SELECT ct."remoteJid",
          NULLIF(BTRIM(ct."pushName"), ''),
@@ -60,18 +60,18 @@ WITH brutos AS (
     FROM evolution."Contact" ct
     JOIN evolution."Instance" i ON i.id = ct."instanceId"
    WHERE i.name = 'promo-replica'
-     AND ct."remoteJid" LIKE '%@g.us'
+     AND (ct."remoteJid" LIKE '%@g.us' OR ct."remoteJid" LIKE '%@newsletter')
 ), chats AS (
   SELECT DISTINCT ON (chat_id)
          chat_id,
          CASE
-           WHEN nome IS NULL OR nome = '' OR nome = chat_id OR nome LIKE '%@g.us'
+           WHEN nome IS NULL OR nome = '' OR nome = chat_id OR nome LIKE '%@%'
            THEN NULL
            ELSE LEFT(nome, 80)
          END AS nome
     FROM brutos
    ORDER BY chat_id,
-            CASE WHEN nome IS NULL OR nome = '' OR nome = chat_id OR nome LIKE '%@g.us' THEN 1 ELSE 0 END,
+            CASE WHEN nome IS NULL OR nome = '' OR nome = chat_id OR nome LIKE '%@%' THEN 1 ELSE 0 END,
             prio
 ), upsert AS (
   INSERT INTO replica_rotas (chat_id, nome, plataforma, ativa)
@@ -142,6 +142,11 @@ SELECT json_build_object(
     JOIN evolution."Instance" i ON i.id = c."instanceId"
     WHERE i.name = 'promo-replica' AND c."remoteJid" LIKE '%@g.us'
   ),
+  'canais_no_chat', (
+    SELECT COUNT(*) FROM evolution."Chat" c
+    JOIN evolution."Instance" i ON i.id = c."instanceId"
+    WHERE i.name = 'promo-replica' AND c."remoteJid" LIKE '%@newsletter'
+  ),
   'grupos_no_contact', (
     SELECT COUNT(*) FROM evolution."Contact" ct
     JOIN evolution."Instance" i ON i.id = ct."instanceId"
@@ -187,7 +192,7 @@ SELECT json_build_object(
      WHEN EXISTS (
        SELECT 1 FROM replica_rotas
         WHERE plataforma = 'whatsapp'
-          AND (nome IS NULL OR nome = '' OR nome = chat_id OR nome LIKE '%@g.us')
+          AND (nome IS NULL OR nome = '' OR nome = chat_id OR nome LIKE '%@%')
      )
      THEN 'Alguns grupos ainda estao sem titulo. O job Replica Nomes Sync busca o subject na Evolution; recarregue em alguns segundos. Enquanto isso o combo mostra um sufixo do JID e aceita busca.'
      ELSE ''
@@ -267,14 +272,18 @@ SELECT json_build_object(
     SELECT COALESCE(json_agg(g), '[]'::json) FROM (
       SELECT chat_id,
              CASE
-               WHEN nome IS NULL OR nome = '' OR nome = chat_id OR nome LIKE '%@g.us'
-               THEN 'Grupo ' || RIGHT(REPLACE(chat_id, '@g.us', ''), 6)
+               WHEN nome IS NULL OR nome = '' OR nome = chat_id OR nome LIKE '%@%'
+               THEN CASE
+                 WHEN chat_id LIKE '%@newsletter'
+                 THEN 'Canal ' || RIGHT(split_part(chat_id, '@', 1), 6)
+                 ELSE 'Grupo ' || RIGHT(split_part(chat_id, '@', 1), 6)
+               END
                ELSE nome
              END AS nome
         FROM replica_rotas
        WHERE plataforma = 'whatsapp'
        ORDER BY
-         CASE WHEN nome IS NULL OR nome = '' OR nome = chat_id OR nome LIKE '%@g.us' THEN 1 ELSE 0 END,
+         CASE WHEN nome IS NULL OR nome = '' OR nome = chat_id OR nome LIKE '%@%' THEN 1 ELSE 0 END,
          COALESCE(NULLIF(nome, chat_id), chat_id)
     ) g
   ),
@@ -287,8 +296,12 @@ SELECT json_build_object(
                SELECT COALESCE(json_agg(o), '[]'::json) FROM (
                  SELECT o.chat_id,
                         CASE
-                          WHEN r.nome IS NULL OR r.nome = '' OR r.nome = r.chat_id OR r.nome LIKE '%@g.us'
-                          THEN 'Grupo ' || RIGHT(REPLACE(o.chat_id, '@g.us', ''), 6)
+                          WHEN r.nome IS NULL OR r.nome = '' OR r.nome = r.chat_id OR r.nome LIKE '%@%'
+                          THEN CASE
+                            WHEN o.chat_id LIKE '%@newsletter'
+                            THEN 'Canal ' || RIGHT(split_part(o.chat_id, '@', 1), 6)
+                            ELSE 'Grupo ' || RIGHT(split_part(o.chat_id, '@', 1), 6)
+                          END
                           ELSE r.nome
                         END AS nome
                    FROM replica_transmissao_origens o

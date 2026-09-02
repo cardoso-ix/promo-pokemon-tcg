@@ -8,20 +8,28 @@ comportamento real por alguns dias.** Otimizar antes de ter dados é chutar.
 
 ---
 
-## Próxima sessão (atualizado em 29/08/2026, ~09h16 BRT)
+## Próxima sessão (atualizado em 02/09/2026)
 
+0. **Em outra máquina:** abra [`docs/retomar-hoje.md`](retomar-hoje.md) — git, secrets, n8n vivo, o que não refazer.
 1. ~~**Subir a Evolution API e publicar os workflows da réplica.**~~ **Feito em 28/08**
    ([Decisão 45](historico-de-decisoes.md#decisão-45--evolution-no-docker-manager-e-o-qr-code-por-página-do-n8n)).
 2. ~~**Ligar o primeiro grupo e observar.**~~ **Feito em 28/08 à noite.** Rota **TCG Promo**
-   gravada; ingest publicando. O card profissional substituiu a foto crua
-   ([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)).
+   gravada; ingest publicando. A foto vem do polycard do HTML do encurtador, não da página `/p/`
+   ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)).
 3. ~~**Fechar o HTML do painel em `pagina_gz`.**~~ **Feito em 29/08 de manhã**
    ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
-   Se o browser ainda mostrar JS cortado, Ctrl+F5.
-4. **Construir a Fase 1 do dashboard único.** Decidido em 28/08: **estender o `Replica Painel`**
-   e mirar controle total sobre a curadoria, em três fases. A Fase 1 não toca em workflow
-   publicado. O desenho está em [Dashboard](#dashboard). A réplica já rodou o bastante para
-   começar a tela unificada sem construir em cima de um pipeline ainda mudo.
+   Visual novo: `python3 tools/publicar-painel.py` e Ctrl+F5 ([runbook 15.8](runbook.md#158-mexer-no-painel-ajustes-e-página)).
+3b. ~~**Deixar o painel editável pelo site.**~~ **Feito em 02/09**
+   ([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
+3c. ~~**Só replicar Mercado Livre.**~~ **Feito em 02/09**
+   ([Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)).
+3d. ~~**Alerta privado da réplica.**~~ **Feito em 02/09 à noite**
+   ([Decisão 55](historico-de-decisoes.md#decisão-55--alerta-privado-da-réplica-no-mesmo-chat-do-linkedin)).
+   Workflow `NNBuoFo1gCl0GO00`, mesmo `@eduardo_alerta_bot`. Execute na mão uma vez.
+4. **Construir a Fase 1 do dashboard único.** Decidido em 28/08: **estender o `Replica Painel`**.
+   A Fase 1 não toca em workflow publicado. O desenho está em [Dashboard](#dashboard).
+5. **Decidir se a curadoria volta.** Em 02/09 à noite Store Scanner / Publisher / Scanner v2 /
+   Health Alert estão inativos. Mapa: [retomar-hoje.md](retomar-hoje.md).
 
 ---
 
@@ -201,6 +209,8 @@ lista todos os grupos da conta pareada, escolhe origens e destinos (Telegram e W
 mostra as últimas mensagens vistas. O HTML mora em
 [`backups/2026-08-28/painel/`](../backups/2026-08-28/painel/) e em produção sai de
 `replica_config.pagina_gz` ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+Para republicar o visual: [`tools/publicar-painel.py`](../tools/publicar-painel.py)
+([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
 O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) é o
 paraquedas se o HTML voltar para o Code node.
 
@@ -251,12 +261,13 @@ item de revisão são tarefas de clique, não de SQL.
 ~~**O que seria:** o bot avisar ativamente — numa mensagem privada no Telegram para o Eduardo —
 quando o parser quebrar ou quando `promos_erros` receber linhas novas.~~
 
-**Feito em 13/08/2026.** O workflow `Pokemon Health Alert` (`3irgeWFKZGZZrJ5u`) está **ativo**,
-roda às 21h BRT e também na mão. O destino é o **mesmo chat privado do alerta LinkedIn**
-(workflow `LinkedIn Post Diario Texto`, nodes `Notify Telegram`), não o canal público
-`@promopokemontcg`. Fila vazia **não** gera alerta. Como ligar/desligar e o que ele não
-cobre: [runbook, seção 14](runbook.md#14-alerta-privado-de-saúde-do-bot). Registro:
-[Decisão 28](historico-de-decisoes.md#decisão-28--alerta-privado-de-saúde-no-mesmo-chat-do-linkedin).
+**Feito em 13/08/2026 para a curadoria.** O workflow `Pokemon Health Alert`
+(`3irgeWFKZGZZrJ5u`) **está arquivado** em 02/09 (curadoria desligada).
+
+**Feito em 02/09 para a réplica.** `Replica Health Alert` (`NNBuoFo1gCl0GO00`),
+mesmo `@eduardo_alerta_bot` / mesmo chat privado
+([Decisão 55](historico-de-decisoes.md#decisão-55--alerta-privado-da-réplica-no-mesmo-chat-do-linkedin),
+[runbook, seção 16](runbook.md#16-alerta-privado-da-réplica)).
 
 ---
 

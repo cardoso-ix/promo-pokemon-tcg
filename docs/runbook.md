@@ -21,8 +21,9 @@ pode rodar sem medo. As marcadas com 🟡 **alteram dados**; leia antes de rodar
 11. [Rotina sugerida](#11-rotina-sugerida)
 12. [Lista de bloqueio de vendedores](#12-lista-de-bloqueio-de-vendedores)
 13. [Escopo: quais lojas o bot pode publicar](#13-escopo-quais-lojas-o-bot-pode-publicar)
-14. [Alerta privado de saúde do bot](#14-alerta-privado-de-saúde-do-bot)
+14. [Alerta privado de saúde do bot](#14-alerta-privado-de-saúde-do-bot) (curadoria; hoje arquivado)
 15. [A esteira de réplica de WhatsApp](#15-a-esteira-de-réplica-de-whatsapp)
+16. [Alerta privado da réplica](#16-alerta-privado-da-réplica)
 
 ---
 
@@ -952,8 +953,12 @@ layout — nesse caso `ultimo_erro` explica qual dos dois.
 ## 14. Alerta privado de saúde do bot
 
 O `Pokemon Health Alert` (`3irgeWFKZGZZrJ5u`) avisa o Eduardo **no mesmo chat privado do
-alerta LinkedIn** quando o bot TCG quebra ou para. **Nunca** publica no canal
+alerta LinkedIn** quando o bot TCG **de curadoria** quebra ou para. **Nunca** publica no canal
 `@promopokemontcg`.
+
+> **Em 02/09 à noite este workflow está arquivado.** A curadoria está desligada; religá-lo
+> agora dispara falso positivo (Scanner parado). O alerta que vale para o canal hoje é o
+> da réplica: [seção 16](#16-alerta-privado-da-réplica).
 
 O workflow LinkedIn **não foi alterado**. O alerta TCG só reutiliza o destino: o node
 `Notify Telegram` do `LinkedIn Post Diario Texto` (`ysHFWIV0tGWJbhjo`), que manda HTTP para
@@ -1000,10 +1005,14 @@ são quebra do bot, são as travas da fila fazendo o trabalho. O recado lista o
 Esta seção é da segunda esteira ([Decisão 44](historico-de-decisoes.md#decisão-44--réplica-de-grupos-de-whatsapp-sem-curadoria-ao-lado-do-bot)):
 copiar promoção de grupo de WhatsApp para o canal, trocando só o link de afiliado.
 
-> **Estado em 29/08/2026, ~09h16 BRT:** Evolution API rodando, WhatsApp **pareado** na instância
+> **Estado em 02/09/2026:** Evolution API rodando, WhatsApp **pareado** na instância
 > `promo-replica`, painel no modelo origem/destino ([Decisão 46](historico-de-decisoes.md#decisão-46--painel-origemdestino-com-todos-os-grupos-da-conta)),
-> rota **TCG Promo** gravada, ingest publicando. HTML do painel completo em `pagina_gz`
-> ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+> rota **TCG Promo** gravada. Ingest `70be8ff6` publica foto do polycard, o nome do
+> produto na legenda e **só Mercado Livre** ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto),
+> [Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)).
+> Painel: Config grava todos os ajustes da lista branca; HTML em `pagina_gz`
+> ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz),
+> [Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
 > Se a página parecer cortada no meio do JavaScript, Ctrl+F5 (15.8).
 
 **Use um chip separado, não o número pessoal.** Ler grupo de WhatsApp exige biblioteca não
@@ -1090,7 +1099,8 @@ Se mexer em algum, lembre que **salvar não é publicar**
 
 ### 15.5 Escolher origem e destino no painel
 
-Abra <https://srv1897392.hstgr.cloud/webhook/replica/painel> e entre com o Basic Auth.
+Abra <https://srv1897392.hstgr.cloud/webhook/replica/entrar> (login da própria página) ou
+<https://srv1897392.hstgr.cloud/webhook/replica/painel> com Basic Auth.
 
 O painel tem páginas: **Visão Geral**, **Conexões**, **Rotas**, **Configurações**, **Atividades**.
 A lista de grupos vem dos chats que a Evolution já viu nesta conta — pelo **nome**, não pelo JID.
@@ -1115,9 +1125,11 @@ O número precisa **já estar no grupo**. Entre no grupo com o número do QR e r
 **Não use o mesmo grupo como origem e destino.** Isso criaria um loop. O ingest recusa essa
 combinação; o painel avisa.
 
-O destino (Telegram e WhatsApp) recebe o **card profissional**, não a foto crua do grupo
-([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)).
-Sem foto de anúncio e sem foto de origem, o post segue só texto (cupom sem produto).
+O destino (Telegram e WhatsApp) recebe a **foto oficial do anúncio** no Mercado Livre,
+mesmo se o grupo de origem mandou só texto
+([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)).
+A foto vem do polycard do HTML do encurtador. Se isso falhar, tenta a página do produto
+e depois a foto da origem. Sem as três, o post segue só texto.
 
 ### 15.6 Desligar tudo, rápido
 
@@ -1172,23 +1184,108 @@ SELECT chat_id, nome, ativa, mensagens_vistas, replicadas, ultima_mensagem
 `sem_link_do_mercado_livre` significa grupo que não serve para você — ele posta de outros
 marketplaces. `status = 'erro'` com motivo do Telegram é problema de publicação, não de origem.
 
-### 15.8 Mexer no painel (mudar a página)
+### 15.8 Mexer no painel (ajustes e página)
+
+Há **dois jeitos** de alterar o painel, e misturar os dois é o que mais gera confusão.
+
+**A. Ajustes da réplica (pelo site, sem republicar o n8n)**
+
+Abra <https://srv1897392.hstgr.cloud/webhook/replica/entrar> (ou `/webhook/replica/painel`
+com Basic Auth) → aba **Configurações**. Cada campo grava na hora em `replica_config`
+via POST `/webhook/replica/painel/config` (token de save no JSON, não a senha do login).
+A lista branca do node `Normalizar Config` é o que o formulário expõe:
+
+| Campo na tela | Chave | Para que serve |
+| --- | --- | --- |
+| Teto de posts por hora | `teto_hora` | Freio anti-flood (hoje 40) |
+| Espera antes de publicar | `delay_segundos` | Pausa entre posts (hoje 5) |
+| Atraso máximo da mensagem | `atraso_maximo_segundos` | Mensagem mais velha que isso não replica (hoje 600) |
+| Limite da legenda no Telegram | `limite_legenda_telegram` | Corta a legenda (hoje 1024) |
+| Replicar cupom sem link | `replicar_cupom_sem_link` | Cupom só de código |
+| Canal Telegram padrão | `destino_telegram` | Fallback se a rota não tiver destino TG |
+| Word ID / Tool ID | `afiliado_matt_word` / `afiliado_matt_tool` | Parâmetros do link de comissão |
+| Frases extras a remover | `frases_remover` | Uma por linha. `@rasgabooster` já sai no ingest |
+| Formato do post (JSON) | `formato_post` | Objeto JSON. JSON inválido o n8n recusa e **nada grava** |
+| Plataformas para replicar | `plataformas` | Hoje só **Mercado Livre** tem afiliação. Amazon/Shopee/Magalu aparecem desligadas. Oferta só de `amzn.to` é descartada (`plataforma_nao_selecionada`) |
+
+O interruptor da sidebar grava `ativo`. Rotas e o Telegram de uma rota específica
+continuam na aba **Rotas** / **Conexões**, via `/salvar`. `pagina_gz` e `save_token`
+**não** aparecem no formulário de propósito ([P20](troubleshooting.md#p20--o-painel-da-réplica-abre-mas-nada-funciona)).
+
+**B. Visual da página (HTML)**
 
 O HTML mora em
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
 **Produção lê `replica_config.pagina_gz`**, não o Code node. A coluna guarda base64 UTF-8
-do HTML (não gzip). Em 29/08 o valor fechou em **63424** bytes, MD5
-`f8fccee12aa8e6e98ecf12d2a7221d2a`
+do HTML (não gzip). Em 02/09 à noite o valor vigente é **70760** bytes, MD5
+`e1081ab857327dda7d97c3ad40f74936` (HTML 53069, MD5 `a1f5e6d5778652e2fdf71820f36fe4e2`).
+O fechamento original de 29/08 era 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a`
 ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
 
-Para alterar:
+Para alterar o visual:
 
-1. Edite o HTML no arquivo acima (sem aspas duplas nem barra invertida).
-2. Grave o base64 UTF-8 em `replica_config.pagina_gz` (o node `Montar Pagina` faz
-   `Buffer.from(paginaGz, 'base64').toString('utf8')` e troca `__DADOS__`).
+1. Edite o HTML no arquivo acima. **Proibido** aspas duplas e barra invertida — o
+   validador do script recusa, e o Code node de paraquedas também.
+2. Publique: `python3 tools/publicar-painel.py` (precisa de `N8N_API_KEY`).
+   O script abre `pagina_gz` na whitelist **só durante o POST** e depois fecha
+   de novo. Não deixe essa chave permanente no formulário.
 3. **Ctrl+F5** no browser. Cache velho mostra JS cortado mesmo com o banco certo
    ([P20](troubleshooting.md#p20--o-painel-da-réplica-abre-mas-nada-funciona)).
+4. Confira no n8n: `Replica Painel` com `versionId` = `activeVersionId`.
+
+A tela de login (`/webhook/replica/entrar`) é outro arquivo:
+[`backups/2026-08-28/painel/replica-login.html`](../backups/2026-08-28/painel/replica-login.html).
+Ela mora no Code node `Montar Pagina Login`, não em `pagina_gz`. Para republicar:
+`python3 tools/publicar-painel.py --login`.
 
 O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) ainda
 existe como paraquedas: ele embute o HTML no Code node. Só use se a Decisão 51 for
-revertida. Ele recusa aspas duplas e barra invertida de propósito.
+revertida. O caminho do dia a dia é o `publicar-painel.py`. Lista dos scripts:
+[`tools/README.md`](../tools/README.md).
+
+**Cuidados ao gravar o workflow no n8n:** o PUT aceita em `settings` só
+`executionOrder` / `availableInMCP` / `timezone`. Mandar `binaryMode` devolve 400.
+
+---
+
+## 16. Alerta privado da réplica
+
+O `Replica Health Alert` (`NNBuoFo1gCl0GO00`) avisa no **mesmo chat privado** do
+alerta LinkedIn, via `@eduardo_alerta_bot` ("Alertas Linkedin/TCG Promo").
+**Nunca** publica no canal `@promopokemontcg`.
+
+É um workflow **novo**, separado do `Pokemon Health Alert` (`3irgeWFKZGZZrJ5u`).
+Aquele continua arquivado: se religar, vai achar o Scanner parado e disparar
+falso positivo enquanto a curadoria estiver desligada
+([Decisão 55](historico-de-decisoes.md#decisão-55--alerta-privado-da-réplica-no-mesmo-chat-do-linkedin)).
+
+### Ligar e desligar
+
+1. Abra <https://srv1897392.hstgr.cloud/workflow/NNBuoFo1gCl0GO00>
+2. O botão **Active** liga só este alerta. Ingest e painel continuam como estavam
+3. Depois de mexer no código, **publique** (`python3 tools/publicar-replica-health-alert.py`)
+
+Rodar na mão (**Execute workflow**) **sempre** manda uma mensagem: "tudo ok" ou o
+alerta de verdade. A agenda de **30 min** só fala quando há problema, e o mesmo
+sintoma no máximo a cada **3 h**.
+
+### O que gera um recado
+
+- WhatsApp `promo-replica` desconectado (`connectionStatus` ≠ `open`)
+- Réplica desligada no painel (`replica_config.ativo`)
+- Nenhuma rota ativa com origem, ou nenhum destino Telegram nas rotas
+- Linhas `replica_log.status = 'erro'` nas últimas 24 h
+- Mensagens presas em `pendente` há mais de 20 min
+- Entre 12h e 21h BRT: WhatsApp conectado, rota ativa, **zero** eventos em
+  `replica_log` nas últimas 3 h (webhook do ingest pode ter parado)
+
+### O que ele NÃO cobre
+
+- Grupo de origem quieto de madrugada (zero eventos à noite **não** é alerta)
+- Oferta Amazon descartada (`plataforma_nao_selecionada`) — isso é o ingest
+  trabalhando
+- n8n inteiro fora do ar
+- Comissão no painel de afiliados
+
+O token do bot de alerta continua no node HTTP, copiado do Health Alert da
+curadoria. Não cole o valor no git. Destino: o mesmo `chatId` do LinkedIn.

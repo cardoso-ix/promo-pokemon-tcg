@@ -229,8 +229,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <section id='abaConfig' class='hidden space-y-4'>
         <section class='surface p-5 space-y-4'>
           <h2 class='h-sec'>Ajustes da replica</h2>
-          <p class='text-sm text-[color:var(--muted)]'>Mudancas entram na proxima mensagem do ingest. O teto protege o Telegram, nao e curadoria.</p>
+          <p class='text-sm text-[color:var(--muted)]'>Mudancas entram na proxima mensagem do ingest. O teto protege o Telegram, nao e curadoria. Ligar/desligar a esteira fica no interruptor da sidebar.</p>
           <div id='config' class='grid md:grid-cols-2 gap-4'></div>
+        </section>
+        <section class='surface p-5 space-y-3'>
+          <h2 class='h-sec'>Como alterar esta pagina</h2>
+          <ol class='text-sm text-[color:var(--muted)] space-y-2 list-decimal pl-5'>
+            <li>Os campos desta aba gravam na hora. Nao precisa republicar o n8n.</li>
+            <li>Visual (abas, textos, layout): edite backups/2026-08-28/painel/replica-painel.html sem aspas duplas nem barra invertida.</li>
+            <li>Publique com python3 tools/publicar-painel.py e depois Ctrl+F5.</li>
+            <li>Tela de login: edite replica-login.html na mesma pasta e rode o script com --login.</li>
+          </ol>
         </section>
       </section>
 
@@ -619,6 +628,33 @@ function linhaLink(texto) {
   return el('p', classe, tipo + ' · ' + trechoDoLink(url));
 }
 
+function primeiraLinha(texto) {
+  var s = String(texto || '');
+  var out = '';
+  for (var i = 0; i < s.length; i++) {
+    if (s.charCodeAt(i) === 10) break;
+    out += s.charAt(i);
+  }
+  return limparEspacos(out.split('_').join('').split('*').join('').split('~').join(''));
+}
+
+function limparEspacos(s) {
+  var t = String(s || '');
+  while (t.length && t.charCodeAt(0) <= 32) t = t.slice(1);
+  while (t.length && t.charCodeAt(t.length - 1) <= 32) t = t.slice(0, t.length - 1);
+  return t;
+}
+
+function tituloDoLog(l) {
+  var t = limparEspacos(String((l && l.titulo) || '').split('_').join('').split('*').join('').split('~').join(''));
+  if (!t) t = primeiraLinha(l && l.trecho);
+  if (!t) return '';
+  if (t.indexOf('❌') === 0 || t.indexOf('👉🏼') === 0 || t.indexOf('👉') === 0) return '';
+  if (t.indexOf('🏷️') === 0 || t.indexOf('🔗') === 0 || t.indexOf('🛒') === 0) return '';
+  if (t.indexOf('http') === 0) return '';
+  return t;
+}
+
 function pintarPeriodo() {
   var p = D.periodo || {};
   document.getElementById('visaoDia').textContent = p.fim_completo || 'Hoje';
@@ -837,7 +873,11 @@ function pintarVisaoLogs() {
     topo.appendChild(el('span', CORES[l.status] || 'st', l.status));
     topo.appendChild(el('span', 'text-[11px] text-[color:var(--muted)]', l.quando || ''));
     linha.appendChild(topo);
-    linha.appendChild(el('p', 'text-[color:var(--text)] truncate', l.trecho || l.origem_nome || l.motivo || 'evento'));
+    var nomeProd = tituloDoLog(l);
+    linha.appendChild(el('p', 'text-[color:var(--text)] truncate', nomeProd || l.trecho || l.origem_nome || l.motivo || 'evento'));
+    if (nomeProd && l.trecho && l.trecho.indexOf(nomeProd) === -1) {
+      linha.appendChild(el('p', 'text-xs text-[color:var(--muted)] truncate', l.trecho));
+    }
     var link = linhaLink(l.trecho);
     if (link) linha.appendChild(link);
     alvo.appendChild(linha);
@@ -861,6 +901,11 @@ function campo(chave, rotulo, tipo, dica) {
     controle = el('textarea', 'field px-3 py-2 w-full');
     controle.rows = 4;
     controle.value = valor;
+  } else if (tipo === 'json') {
+    controle = el('textarea', 'field px-3 py-2 w-full font-mono text-xs');
+    controle.rows = 8;
+    try { controle.value = JSON.stringify(JSON.parse(valor), null, 2); }
+    catch (e) { controle.value = valor; }
   } else {
     controle = el('input', 'field px-3 py-2 w-full');
     controle.value = valor;
@@ -871,16 +916,83 @@ function campo(chave, rotulo, tipo, dica) {
   return caixa;
 }
 
+function listaPlatsConfig() {
+  var raw = cfg.plataformas;
+  var lista = [];
+  if (typeof raw === 'string') {
+    try { lista = JSON.parse(raw); } catch (e) { lista = String(raw).split(','); }
+  } else if (Array.isArray(raw)) lista = raw;
+  if (!Array.isArray(lista) || !lista.length) lista = ['mercadolivre'];
+  return lista.map(function (x) { return String(x).toLowerCase().trim(); }).filter(Boolean);
+}
+
+function campoPlataformas() {
+  var PLATS_UI = [
+    { id: 'mercadolivre', nome: 'Mercado Livre', liga: true },
+    { id: 'amazon', nome: 'Amazon', liga: false },
+    { id: 'shopee', nome: 'Shopee', liga: false },
+    { id: 'magalu', nome: 'Magalu', liga: false },
+    { id: 'aliexpress', nome: 'AliExpress', liga: false }
+  ];
+  var escolhidas = listaPlatsConfig();
+  var caixa = el('div', 'md:col-span-2 space-y-2');
+  caixa.appendChild(el('span', 'meta block', 'Plataformas para replicar'));
+  caixa.appendChild(el('p', 'text-xs text-[color:var(--muted)]', 'So replica oferta da plataforma marcada e com afiliacao. Amazon, Shopee e Magalu ficam desligadas porque ainda nao ha comissao.'));
+  var grupo = el('div', 'flex flex-wrap gap-2');
+  PLATS_UI.forEach(function (p) {
+    var lab = el('label', 'flex items-center gap-2 field px-3 py-2' + (p.liga ? '' : ' opacity-40 cursor-not-allowed'));
+    var ck = document.createElement('input');
+    ck.type = 'checkbox';
+    ck.value = p.id;
+    ck.checked = escolhidas.indexOf(p.id) !== -1;
+    if (!p.liga) {
+      ck.checked = false;
+      ck.disabled = true;
+    }
+    ck.addEventListener('change', function () {
+      if (p.id === 'mercadolivre' && !ck.checked) {
+        ck.checked = true;
+        alert('O Mercado Livre precisa ficar ligado: e a unica plataforma com afiliacao hoje.');
+        return;
+      }
+      var ligadas = [];
+      grupo.querySelectorAll('input').forEach(function (c) {
+        if (c.checked && !c.disabled) ligadas.push(c.value);
+      });
+      if (!ligadas.length) ligadas = ['mercadolivre'];
+      salvarConfig('plataformas', JSON.stringify(ligadas));
+    });
+    lab.appendChild(ck);
+    lab.appendChild(el('span', null, p.nome));
+    grupo.appendChild(lab);
+  });
+  caixa.appendChild(grupo);
+  caixa.appendChild(el('p', 'text-[11px] text-[color:var(--muted)]', 'Quando houver afiliacao da Amazon, esse quadrado liga. Ate la o ingest descarta amzn.to e amazon.com.'));
+  return caixa;
+}
+
 function pintarConfig() {
   var alvo = document.getElementById('config');
+  alvo.appendChild(campoPlataformas());
   alvo.appendChild(campo('teto_hora', 'Teto de posts por hora', 'texto', 'Protecao anti-flood. Nao e filtro de qualidade.'));
   alvo.appendChild(campo('delay_segundos', 'Espera antes de publicar (segundos)', 'texto', 'Pausa para nao parecer rajada.'));
+  alvo.appendChild(campo('atraso_maximo_segundos', 'Atraso maximo da mensagem (segundos)', 'texto', 'Mensagem mais velha que isso nao replica. Padrao 600.'));
+  alvo.appendChild(campo('limite_legenda_telegram', 'Limite da legenda no Telegram', 'texto', 'Telegram corta em 1024. Nao subir sem testar no app.'));
   alvo.appendChild(campo('replicar_cupom_sem_link', 'Replicar cupom sem link de produto', 'sim_nao', 'Se nao, o cupom so de codigo e ignorado.'));
+  alvo.appendChild(campo('destino_telegram', 'Canal Telegram padrao', 'texto', 'Ex.: @promopokemontcg. Uma rota nomeada pode apontar para outro destino.'));
+  alvo.appendChild(campo('afiliado_matt_word', 'Word ID do afiliado Meli', 'texto', 'So altere se a conta Word mudar. Aparece em todo link publicado.'));
+  alvo.appendChild(campo('afiliado_matt_tool', 'Tool ID do afiliado Meli', 'texto', 'So altere se a etiqueta Tool mudar.'));
   alvo.appendChild(campo(
     'frases_remover',
     'Frases extras a remover do post',
     'texto_longo',
     'Uma por linha. @rasgabooster e #rasgaboot ja saem no ingest.'
+  ));
+  alvo.appendChild(campo(
+    'formato_post',
+    'Formato do post (JSON)',
+    'json',
+    'Objeto JSON: idioma, preset, emojis, preco, cupom, link, cta. JSON invalido o n8n recusa e nada grava.'
   ));
 }
 
@@ -991,7 +1103,7 @@ function pintarLogs() {
     linha.appendChild(el('span', 'text-xs text-[color:var(--muted)] w-24', l.quando));
     linha.appendChild(el('span', CORES[l.status] || 'st', l.status));
     linha.appendChild(el('span', 'text-xs text-[color:var(--muted)] w-40 truncate', l.origem_nome || l.origem_chat_id));
-    linha.appendChild(el('span', 'flex-1 min-w-0 truncate', l.trecho));
+    linha.appendChild(el('span', 'flex-1 min-w-0 truncate', tituloDoLog(l) || l.trecho));
     linha.appendChild(el('span', 'text-xs text-[color:var(--muted)]', l.motivo || ''));
     bloco.appendChild(linha);
     var link = linhaLink(l.trecho);

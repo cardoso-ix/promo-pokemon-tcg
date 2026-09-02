@@ -23,9 +23,11 @@ duas fontes alimentam a mesma fila, porque as homepages sozinhas não sustentam 
 Consequências:
 
 - O `Pokemon Store Scanner` **continua** varrendo as lojas cadastradas em `lojas_confiaveis`.
-- O `Pokemon Scanner v2` **voltou a rodar** em `ofertas?category=MLB6899` (a cada 10 min).
+- O `Pokemon Scanner v2` **foi religado** em 25/08 em `ofertas?category=MLB6899` (a cada 10 min).
   Título sem a palavra Pokémon → `descartado`. Autenticidade com os limiares −40 / +25.
   Risco conhecido: [P15](troubleshooting.md#p15--o-selo-loja-oficial-do-mercado-livre-não-significa-loja-oficial-da-pokémon).
+  **Em 02/09 à noite está inativo**, junto com o resto da curadoria
+  ([retomar-hoje.md](retomar-hoje.md)).
 - O `Pokemon Catalog Scanner` existe e **fica inativo**
   ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
 - Loja cadastrada não é o mesmo que loja em escopo. Hoje **dez** lojas estão ativas:
@@ -722,20 +724,24 @@ de horário, sem teto diário, sem formato de post, sem detecção de idioma. A 
 terceirizada para quem administra o grupo de origem. Isso foi escolha explícita do Eduardo, não
 esquecimento.
 
-Sobraram dez regras, e todas são técnicas:
+Sobraram onze regras, e todas são técnicas:
 
 | # | Regra | Onde muda |
 | --- | --- | --- |
-| 1 | Só mensagem **de grupo**, que não é da própria conta, com texto, com menos de **600 s** de atraso | `ATRASO_MAXIMO_SEGUNDOS` no node `Normalizar Mensagem` |
+| 1 | Só mensagem **de grupo**, que não é da própria conta, com texto, com atraso máximo (hoje **600 s**) | `replica_config.atraso_maximo_segundos` — aba Configurações |
 | 2 | Só replica origem que você salvou no painel | Coluna `replica_rotas.ativa`; o lote do painel é a lista |
-| 3 | A esteira inteira pode ser desligada sem despublicar workflow | `replica_config.ativo` |
-| 4 | **Teto por hora**, padrão 40 | `replica_config.teto_hora` |
+| 3 | A esteira inteira pode ser desligada sem despublicar workflow | `replica_config.ativo` — interruptor da sidebar |
+| 4 | **Teto por hora**, hoje 40 | `replica_config.teto_hora` — aba Configurações |
 | 5 | Sem link do Mercado Livre, **não replica** | Lógica fixa no node `Montar Post` |
-| 6 | Exceção: mensagem de cupom sem link de produto pode replicar | `replica_config.replicar_cupom_sem_link` |
-| 7 | Espera antes de publicar, padrão 8 s | `replica_config.delay_segundos` |
+| 6 | Exceção: mensagem de cupom sem link de produto pode replicar | `replica_config.replicar_cupom_sem_link` — aba Configurações |
+| 7 | Espera antes de publicar, hoje 5 s | `replica_config.delay_segundos` — aba Configurações |
 | 8 | Origem não pode ser também destino de WhatsApp | `replica_destinos` + IF `origem_e_destino` no ingest |
-| 9 | Apaga marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`, linha só de `@`/`#`) | `Montar Post` + `replica_config.frases_remover` |
-| 10 | Destino recebe um **card** (foto do ML ou da origem + título/preço/marca), não a foto crua | ingest `803a5650` ([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)) |
+| 9 | Apaga marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`, linha só de `@`/`#`) | `Montar Post` + `replica_config.frases_remover` — aba Configurações |
+| 10 | Destino recebe a **foto oficial do anúncio** e o **nome do produto** na legenda (polycard do encurtador), mesmo se a origem veio só com preço na caption; se o polycard falhar, tenta a página e depois a foto da origem; sem as três, só texto | ingest `70be8ff6` ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)) |
+| 11 | Só replica marketplace **marcado e com afiliação**. Hoje: Mercado Livre. Amazon/Shopee/Magalu não saem — não há comissão | `replica_config.plataformas` — aba Configurações ([Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)) |
+
+Word/Tool do afiliado, limite da legenda (1024) e o JSON `formato_post` também saem da aba
+Configurações ([runbook 15.8](runbook.md#158-mexer-no-painel-ajustes-e-página)).
 
 **A única edição de conteúdo** é a troca do link do Mercado Livre pelo link de afiliado —
 mesmíssimo formato da [seção 10](#10-link-de-afiliado), com `matt_word` e `matt_tool` lidos de
@@ -745,7 +751,9 @@ apagamento da marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`). Divulgar o
 grupo ou o Instagram do concorrente junto com a promoção não faz sentido.
 
 Link de **outro marketplace** (Amazon, Shopee, Magalu e mais 17) não é convertido nem
-publicado: a mensagem inteira é descartada com motivo `so_tinha_link_de_outro_marketplace`.
+publicado: a mensagem inteira é descartada com motivo `plataforma_nao_selecionada`.
+Se a oferta mistura Mercado Livre e Amazon, o ingest troca só o link do ML e **apaga**
+os `amzn.to` da legenda.
 Publicar link de terceiro sem afiliação seria trabalho de graça.
 
 **O teto por hora é anti-flood, não curadoria.** O Telegram limita quanto um bot pode postar, e

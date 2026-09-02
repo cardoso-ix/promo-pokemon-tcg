@@ -1,8 +1,13 @@
 # Arquitetura
 
 Este documento explica **como as peças do bot se encaixam**. Se você entender só um
-arquivo desta pasta, entenda este. Valores de relógio e teto vigentes: Store Scanner
-**5 min**, Scanner v2 **10 min**, Publisher **2 min**, teto **90**/dia e **6**/hora — ver [regras-de-negocio.md](regras-de-negocio.md).
+arquivo desta pasta, entenda este. Valores de relógio e teto da **curadoria** (quando
+ligada): Store Scanner **5 min**, Scanner v2 **10 min**, Publisher **2 min**, teto
+**90**/dia e **6**/hora — ver [regras-de-negocio.md](regras-de-negocio.md).
+
+> **Em 02/09 à noite a curadoria está desligada.** Quem posta no canal é a réplica.
+> Mapa vivo: [retomar-hoje.md](retomar-hoje.md). O desenho abaixo continua certo —
+> só não está disparando.
 
 ---
 
@@ -332,6 +337,7 @@ Telegram @promopokemontcg  +  (opcional) grupo de WhatsApp de destino
 | **`Replica WhatsApp Ingest`** | `4mE343XrNXgIwAIF` | O fluxo principal: normaliza, checa liberação e teto, troca links, publica, registra |
 | **`Replica Painel`** | `lWDnggRX8xQmYyQV` | Página HTML servida pelo n8n. Origens, destinos (Telegram e WhatsApp) e ajustes |
 | **`Replica WhatsApp Conectar`** | `v32gcVzRkedUACXD` | Página do QR code. Cria a instância e mostra o código para parear o celular |
+| **`Replica Health Alert`** | `NNBuoFo1gCl0GO00` | Avisa no `@eduardo_alerta_bot` (mesmo chat do LinkedIn) se o WhatsApp cair ou o ingest parar |
 | **`Replica Schema Setup`** | `pfolFnCYTLyLZdwU` | Cria as tabelas e o schema `evolution`. Idempotente, roda à mão |
 
 **Por que existe uma página só para o QR code:** a Evolution não tem porta pública, e o QR é o
@@ -365,10 +371,13 @@ Auth do painel, e o n8n — que já está na rede da Evolution — faz o interm�
    NOTHING`. **Sem linha de volta, não publica** — mesma lógica da
    [Decisão 12](historico-de-decisoes.md#decisão-12--deduplicação-por-on-conflict-não-por-consulta-prévia).
 8. **`Esperar Delay`** espera os segundos configurados, para o canal não receber rajada.
-9. **Telegram:** card profissional (preto/âmbar) com a foto do anúncio no ML, ou a foto da
-   origem recortada no card, mais a legenda já limpa. **Sem `parse_mode`**. Se o card
-   falhar, o post sai como texto. Cupom sem produto e sem foto continua só texto.
-10. **WhatsApp de destino (opcional):** o mesmo card via `POST /message/sendMedia`, ou
+9. **Telegram:** foto oficial do anúncio no Mercado Livre (polycard do HTML do
+   encurtador `meli.la`), mesmo quando a origem veio só com texto. Se o polycard
+   falhar, tenta a página do produto e depois a foto da origem. Sem as três, o post
+   sai como texto. A foto vai **inteira**, sem card composto
+   ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)).
+   Legenda é o texto limpo; `parse_mode` HTML só escapa `& < >`.
+10. **WhatsApp de destino (opcional):** a mesma foto via `POST /message/sendMedia`, ou
     `sendText` se não houver foto. O ingest pula a mensagem se o grupo de origem for
     também destino.
 11. **`Marcar Como Enviado`** fecha o ciclo e incrementa o contador do grupo de origem.
@@ -390,11 +399,15 @@ autenticado). Sem token válido o Code node recusa.
 A página é montada pelo node `Montar Pagina` a partir de `replica_config.pagina_gz`
 (base64 UTF-8 do HTML; o nome `_gz` é legado — **não** é gzip). Fonte versionada:
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
-Em 29/08 o valor fechou em 63424 bytes
-([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
-O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) embute o
-HTML no Code node e fica como paraquedas. **Para mexer no painel: edite o HTML, grave o
-base64 em `pagina_gz`, Ctrl+F5.**
+Em 02/09 o valor vigente é 70760 bytes, MD5 `e1081ab857327dda7d97c3ad40f74936`
+([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz),
+[Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
+A tela de login (`/webhook/replica/entrar`) sai do node `Montar Pagina Login`, fonte
+[`replica-login.html`](../backups/2026-08-28/painel/replica-login.html).
+**Ajustes (teto, afiliado, JSON do post):** aba Configurações, grava na hora.
+**Visual:** `python3 tools/publicar-painel.py` e Ctrl+F5. O gerador
+[`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) embute o HTML
+no Code node e fica como paraquedas se a Decisão 51 for revertida.
 
 O front-end monta a tela pela DOM API em vez de `innerHTML`. Isso não é preciosismo: o texto
 que vem dos grupos é conteúdo de terceiro, e concatenar isso em HTML seria criar XSS dentro do

@@ -10,7 +10,8 @@ mudaria a decisão.
 **Números vigentes** (ritmo, lojas, teto, desconto mínimo) estão em
 [regras-de-negocio.md](regras-de-negocio.md) e no [README](../README.md). As decisões mais
 antigas abaixo podem citar 10 min / 5 min / teto 30 / duas lojas — isso era verdade **na
-hora em que foram escritas**. A última operacional é a [Decisão 43](#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora).
+hora em que foram escritas**. A última operacional da curadoria é a [Decisão 43](#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora);
+da réplica, a [Decisão 52](#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto).
 
 ---
 
@@ -1577,9 +1578,155 @@ nativo com redirect — o browser manda Basic Auth em navegação de formulário
 
 **Por que não recolocar o HTML no Code node:** o n8n e o MCP travam em payload grande; a metade que já estava no banco era idêntica ao arquivo local. Completar a coluna é o caminho mais curto e o que o node `Montar Pagina` já espera (`Buffer.from(paginaGz, 'base64').toString('utf8')` + `__DADOS__`).
 
-**O que isso implica:** depois de gravar, o GET passa a entregar HTML completo. Se o Chrome ainda mostrar a página quebrada, é cache — **Ctrl+F5**. Para mexer no visual de novo: edite o HTML, grave o base64 em `pagina_gz` e dê Ctrl+F5 ([runbook 15.8](runbook.md#158-mexer-no-painel-mudar-a-página)).
+**O que isso implica:** depois de gravar, o GET passa a entregar HTML completo. Se o Chrome ainda mostrar a página quebrada, é cache — **Ctrl+F5**. Para mexer no visual de novo: edite o HTML e rode `python3 tools/publicar-painel.py` ([runbook 15.8](runbook.md#158-mexer-no-painel-ajustes-e-página)). O tamanho vigente muda a cada publicação; confira o MD5 que o script imprime. O fechamento original de 29/08 foi 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a`.
 
 **O que mudaria esta decisão:** voltar a embutir o HTML no Code node (aí o gerador `tools/gerar-painel-code-node.mjs` volta a ser o caminho principal).
+
+---
+
+## Decisão 52 — foto oficial do anúncio, mesmo quando a origem veio só com texto
+
+**Data:** 02/09/2026 · **Quem pediu:** Eduardo (“corrigir a foto da réplica”)
+
+**O que estava acontecendo.** Os grupos de origem quase sempre mandam **texto + link**, sem
+imagem. O ingest só anexava foto se `tem_imagem` viesse da Evolution. A esteira da foto do
+ML (`Tem Foto do ML?` → página/API → `Baixar Foto do Anuncio`) existia no canvas e **não
+estava ligada**. Resultado em produção: Telegram e WhatsApp saíam só texto, com o produto
+já identificado (`item_ids = MLB…`, `url_produto` preenchido). Execução típica: `64927`.
+
+Pegadinha extra: o encurtador cai na vitrine `/social/` de terceiro. O `og:image` dessa
+página é a foto do perfil/lista, não a do produto. Não dá para reaproveitar.
+
+**A decisão (corrigida no mesmo dia, após o teste do Eduardo).**
+
+A origem quase sempre manda `meli.la`. O segundo salto já devolve o HTML da vitrine
+`/social/` (~360 KB), **sem anti-bot**, com polycards do produto. A foto sai dali:
+
+1. `Montar Post` casa `product_id` / `user_product_id` com `item_ids` e lê
+   `pictures.pictures[0].id` no polycard. Monta
+   `https://http2.mlstatic.com/D_NQ_NP_2X_{id}-O.jpg`.
+2. `Preparar Card` recebe `url_foto_html`. Se for CDN `mlstatic`, `tem_url_foto = true`
+   e **pula** `Buscar Item no Mercado Livre`.
+3. Sobe a thumb (`-I`/`-W` → `-O`, `D_NQ_NP_2X_`). A foto **vai inteira** — o card
+   composto 1080×1440 da [Decisão 50](#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)
+   continua no canvas, desligado.
+4. Sem polycard, ainda tenta a página do produto (`og:image`). Se as duas falharem,
+   cai na foto da origem. Sem as três: só texto.
+5. `og:image` de página `/social/` é **recusado** (é foto de perfil/lista, não do produto).
+6. Se a legenda da origem **não tem nome do produto** (o título vinha só na imagem, e a
+   foto oficial do ML não carrega esse texto), `Montar Post` **injeta** `titulo_produto`
+   do polycard no começo da legenda. Se a origem já manda `_Box Ursaluna…_`, não duplica.
+
+**O que foi tentado e falhou no teste `65110` (02/09 ~14h12 BRT).** A primeira versão
+desta decisão (`d90d6d88`) buscava a página `/p/` do produto, no mesmo espírito do
+Publisher. A VPS recebeu HTML de `suspicious-traffic-frontend`. O Publisher continua
+lendo **ofertas/`www` de vitrine**; a PDP `/p/` é outra superfície. A API
+`api.mercadolibre.com/items|products` devolve 401/403 a partir de alguns IPs — não é
+plano B. O polycard do hop2 já estava no HTML da execução (`752085-MLA99977285401_112025`,
+CDN 200, JPEG ~279 KB) e o `Montar Post` publicado deixava `url_foto_html` vazio.
+
+No teste com foto (`65180`, `65186`) a origem RasgaBooster mandava **só preço + cupom +
+link**: o nome estava na imagem. A foto oficial do ML saiu certa e a legenda ficou sem
+título. Ingest `70a5d99d` injeta o nome. Painel `d4604a4b` destaca o título nos logs e
+volta a gravar o `save_token` (estava vazio; Config/Rotas falhavam com *token de save
+invalido*).
+
+Code nodes em [`backups/2026-09-02/code-nodes/`](../backups/2026-09-02/code-nodes/).
+Ingest na hora: `70a5d99d`. Painel na hora: `d4604a4b`. **Produção vigente nesta noite:**
+ingest `70be8ff6`, painel `4a6a1223` (Decisões 53–54 por cima).
+
+**O que mudaria esta decisão:** religar o card composto se o Eduardo quiser marca na
+imagem de novo; ou o HTML do encurtador deixar de trazer polycard — aí volta a testar
+a página `/p/` **a partir do n8n na VPS**, não deste ambiente.
+
+---
+
+## Decisão 53 — o painel grava os ajustes da lista branca e o HTML sobe por script
+
+**Data:** 02/09/2026 · **Quem pediu:** Eduardo (“atualiza toda documentação e deixar o site com tudo funcional caso eu queira fazer alguma alteração”)
+
+**O que estava acontecendo.** A whitelist do `Normalizar Config` já aceitava
+`afiliado_matt_word` / `tool`, `atraso_maximo_segundos`, `limite_legenda_telegram` e
+`formato_post`, mas a aba Configurações só pintava teto, delay, cupom e frases. Quem
+queria mudar afiliado ou o JSON do post ia no banco. Republicar o visual exigia um
+script pontual (`publicar-painel-titulo-n8n.py`) e o HTML de login não estava no git.
+
+**A decisão.**
+
+1. O formulário da aba Configurações expõe **todas** as chaves da lista branca, menos
+   `pagina_gz` e `save_token`. Ajustes do dia a dia não passam pelo n8n.
+2. Visual do painel: editar
+   [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html)
+   e rodar [`tools/publicar-painel.py`](../tools/publicar-painel.py). O script valida
+   (sem `"` nem `\`), grava `pagina_gz` e tira a chave da whitelist em seguida.
+3. Tela de login versionada em `replica-login.html`; `python3 tools/publicar-painel.py --login`
+   regrava o node `Montar Pagina Login`.
+4. SQL vivo do GET (`canais_no_chat` + `titulo` nos logs) em
+   [`backups/2026-09-02/sql/`](../backups/2026-09-02/sql/).
+
+HTML nesta publicação: 50649 bytes (MD5 `11eb41c8749e30eb28a4a1c751d56bd8`);
+`pagina_gz` 67532 (MD5 `d22596c0999a0f339a4d063ae84555a6`). Painel `5b0b5b16`.
+**Depois da Decisão 54:** HTML 53069 / `pagina_gz` 70760, painel `4a6a1223`.
+
+**O que mudaria esta decisão:** voltar a embutir o HTML no Code node (aí
+`gerar-painel-code-node.mjs` volta a ser o caminho principal); ou expor `pagina_gz` no
+formulário — **não faça isso**, o token de save já vai no GET e o campo viraria porta
+para sobrescrever o site.
+
+---
+
+## Decisão 54 — só replicar marketplace com afiliação
+
+**Data:** 02/09/2026 · **Quem pediu:** Eduardo (campo no site para escolher plataformas; “não pode ser replicado do amazon pois não tenho afiliação”)
+
+**O que estava acontecendo.** O ingest já lia `opcoes.plataformas` da rota (padrão
+Mercado Livre), mas o painel **não mostrava** o campo. Mensagem só de Amazon ainda
+saía: `convertidos = 0`, `motivo = copia_outro_marketplace` e `publicar = true` —
+o link `amzn.to` ia cru, sem comissão.
+
+**A decisão.**
+
+1. Aba Configurações ganha **Plataformas para replicar**. Mercado Livre ligado.
+   Amazon, Shopee, Magalu e AliExpress aparecem desligados (sem conversor de afiliado).
+2. `replica_config.plataformas` manda no ingest. Sem afiliação, o n8n recusa gravar
+   a plataforma na lista branca.
+3. Oferta só de Amazon/Shopee/etc. vira `descartado` / `plataforma_nao_selecionada`.
+   Oferta mista: converte o ML e apaga o link da outra loja da legenda.
+
+**O que mudaria esta decisão:** cadastrar conversor de afiliado da Amazon (ou outra)
+e então habilitar o quadrado no painel.
+
+Painel publicado `4a6a1223`. Ingest `70be8ff6`. HTML 53069 bytes (`pagina_gz` 70760).
+
+---
+
+## Decisão 55 — alerta privado da réplica no mesmo chat do LinkedIn
+
+**Data:** 02/09/2026, noite · **Quem pediu:** Eduardo (iniciar pelo alerta da réplica no canal de alertas que ele já tem; print do `@eduardo_alerta_bot`)
+
+**A decisão:** criar o workflow `Replica Health Alert` (`NNBuoFo1gCl0GO00`), **sem**
+religar o `Pokemon Health Alert`. O destino é o mesmo da [Decisão 28](#decisão-28--alerta-privado-de-saúde-no-mesmo-chat-do-linkedin):
+HTTP `sendMessage` do `@eduardo_alerta_bot` no chat privado do Eduardo. **Não** usa
+a credencial `Pokemon Telegram Bot` (isso publicaria no canal
+`@promopokemontcg`).
+
+O alerta da curadoria permanece **arquivado**: Scanner/Publisher inativos fariam
+ele disparar toda noite à toa.
+
+**O que cobre:** WhatsApp `promo-replica` caiu; réplica desligada no painel; rota
+sem origem ou sem Telegram; `replica_log` em `erro` (24 h); `pendente` preso
+(> 20 min); webhook silencioso 3 h entre 12h–21h BRT.
+
+**Agenda:** a cada 30 min (fuso `America/Sao_Paulo`). O mesmo conjunto de
+sintomas no máximo a cada 3 h. Execução manual sempre manda recado (teste
+"tudo ok" se estiver saudável).
+
+Code/SQL em [`backups/2026-09-02/`](../backups/2026-09-02/). Publicar:
+`python3 tools/publicar-replica-health-alert.py`. Primeiro recado de destino:
+`message_id` 105 neste chat.
+
+**O que mudaria esta decisão:** o Eduardo pedir outro chat/canal; ou guardar o
+token do bot de alerta numa credencial n8n (melhor higiene, mesmo destino).
 
 ---
 

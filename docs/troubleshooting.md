@@ -28,6 +28,9 @@ valiosos: são as armadilhas reais desta montagem.
 | Salvei a correção, mas em produção o comportamento antigo continua | [P18](#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada) |
 | Catalog Scanner / ScraperAPI devolve 500 na listagem do ML | [P19](#p19--catalog-scanner-a-listagem-do-ml-falha-no-scraperapi) |
 | Painel da réplica abre, mas botões/rotas não funcionam | [P20](#p20--o-painel-da-réplica-abre-mas-nada-funciona) |
+| Réplica publica texto sem a foto do produto | [P21](#p21--a-réplica-publica-sem-a-foto-do-produto) |
+| Oferta sai com foto, mas sem o nome do produto | [P22](#p22--a-oferta-sai-com-foto-mas-sem-o-nome-do-produto) |
+| Réplica postou link da Amazon / Shopee | [P23](#p23--a-réplica-postou-amazon-sem-afiliação) |
 
 ---
 
@@ -762,7 +765,8 @@ e com `premium=true` (~56 s, **sem** cobrar). O parser `_n.ctx.r` nunca viu HTML
 sessão. Se o campo **Name** da credencial Query Auth não for `api_key`, a falha é HTTP 404
 em ~1,6 s — outro problema.
 
-**Solução:** **não publique** esse workflow. Store Scanner de 5 min segue no ar. Para
+**Solução:** **não publique** esse workflow. Quando a curadoria está ligada, o Store
+Scanner de 5 min segue no ar (em 02/09 noite ele também está inativo). Para
 retomar: Name = `api_key`, `TESTE_SO_POKEMON = true`, uma execução **manual** só de
 `pokemon`. HTTP 200 com `_n.ctx.r` e produtos = avançar; 208 bytes / 500 = parar.
 `ultra_premium` (75 créditos, plano pago) **só com pedido novo**.
@@ -781,10 +785,111 @@ meio de um `<script>`**, sem `</body>` nem `</html>`.
 `Montar Pagina` só decodifica o que está no banco. Cache do Chrome também mostra a versão
 cortada depois do conserto.
 
-**Solução:** conferir o tamanho no banco (`length(pagina_gz)` = 63424, MD5
-`f8fccee12aa8e6e98ecf12d2a7221d2a`). Se estiver curto, regravar o base64 do arquivo
+**Solução:** conferir o tamanho no banco (`length(pagina_gz)` igual ao que
+`python3 tools/publicar-painel.py --dry-run` imprime). Em 02/09 o valor vigente é
+**70760**, MD5 `e1081ab857327dda7d97c3ad40f74936`. O fechamento original de 29/08 era
+63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a`. Se estiver curto, rode o script — ele
+regrava o base64 a partir de
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
 Depois, **Ctrl+F5**. Sem Basic Auth o n8n responde “Authorization is required!” — isso é o
-GET, não o HTML.
+GET, não o HTML. Config/Rotas falhando com *token de save invalido* é `save_token` vazio
+no GET (mesmo fallback documentado no [P22](#p22--a-oferta-sai-com-foto-mas-sem-o-nome-do-produto)),
+não HTML cortado.
 
-Registro: [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz).
+Registro: [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz),
+[Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script).
+
+---
+
+## P21 — A réplica publica sem a foto do produto
+
+**Sintoma:** o post sai no Telegram/WhatsApp só com texto, mesmo com link de produto do
+Mercado Livre. No n8n a execução termina em `Marcar Como Enviado` e passa por
+`Publicar Texto no Telegram` em vez de `Publicar Foto no Telegram`.
+
+**Causa 1 (02/09 de manhã):** a origem quase sempre vem sem `imageMessage`. O
+`Preparar Card` só ligava foto quando `tem_imagem` era true, e o ramo `Tem Foto do ML?`
+estava no canvas sem conexão.
+
+**Causa 2 (02/09 à tarde, execução `65110`):** o ramo ML foi ligado e buscou a página
+`/p/` do produto. A VPS recebeu HTML de `suspicious-traffic-frontend`. `Normalizar URL
+da Foto` ficou com `tem_url_foto = false`. A origem não tinha foto. Saiu texto. O HTML
+do encurtador (`Seguir Redirecionamento 2`) **já tinha** o polycard do produto.
+
+**Solução:** o ingest publicado (`70be8ff6`; a correção entrou em `70a5d99d`) tira a foto do polycard do HTML do `meli.la` (`url_foto_html`),
+não da página `/p/`. Conferir numa execução **nova** (hash `chat_id|message_id` impede
+replay) **depois** do delay (~8 s):
+
+1. `Montar Post` → `url_foto_html` em `http2.mlstatic.com` (não vazio).
+2. `Preparar Card` → `fonte_foto = html`, `tem_url_foto = true`.
+3. `Tem Foto Para Copiar?` verdadeiro → `Tem Foto do ML?` verdadeiro →
+   `Normalizar URL da Foto` (**sem** `Buscar Item no Mercado Livre`).
+4. `Baixar Foto do Anuncio` → `Publicar Foto no Telegram` (e WhatsApp, se houver destino).
+
+Se `url_foto_html` vier vazio, o fluxo ainda tenta a página `/p/` e depois a foto da
+origem. `Buscar Item` devolvendo `account-verification` / `suspicious-traffic` é o
+esperado na PDP; não use o `og:image` da vitrine `/social/`.
+
+Registro: [Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto).
+
+---
+
+## P22 — A oferta sai com foto, mas sem o nome do produto
+
+**Sintoma:** Telegram e WhatsApp recebem a foto oficial do anúncio, e a legenda começa em
+`❌ DE` / `POR` / cupom, sem o nome do box. No painel, Atividades mostra o mesmo trecho.
+
+**Causa (02/09, execuções `65180` e `65186`):** o grupo de origem (RasgaBooster) coloca o
+nome **na imagem** e manda na legenda só preço + cupom + `meli.la`. A réplica passou a
+usar a foto oficial do ML (sem esse texto). `titulo_produto` já vinha preenchido do
+polycard e não ia para a legenda.
+
+No painel, Config/Rotas falhavam com `token de save invalido` (execuções `64854`–`64856`):
+`Montar Pagina` deixava `save_token` vazio quando `REPLICA_PAINEL_SAVE_TOKEN` não estava
+no ambiente do n8n.
+
+**Solução:** ingest publicado (`70be8ff6`) injeta o título do polycard no começo da
+legenda se a origem não trouxe um. Painel `4a6a1223` destaca esse título nos logs e
+grava o `save_token` com o mesmo fallback dos POSTs. **Ctrl+F5** no painel.
+
+Registro: [Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto).
+
+---
+
+## P23 — A réplica postou Amazon sem afiliação
+
+**Sintoma:** o canal recebe oferta com `amzn.to` / `amazon.com.br`, sem comissão. No n8n
+o `Montar Post` termina com `publicar = true` e motivo `copia_outro_marketplace` ou
+`copia_identica`.
+
+**Causa:** o ingest copiava o texto inteiro quando não havia link do Mercado Livre
+para converter. A lista de plataformas existia na rota, mas o painel não mostrava o
+campo, e `publicar` não era desligado.
+
+**Solução:** aba Configurações → **Plataformas para replicar** (só Mercado Livre
+ligado). Oferta só de Amazon vira `descartado` / `plataforma_nao_selecionada`.
+Conferir na próxima mensagem **nova** (hash impede replay).
+
+Registro: [Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação).
+
+---
+
+## P24 — O alerta da réplica não chegou no @eduardo_alerta_bot
+
+**Sintoma:** o WhatsApp caiu ou o ingest parou e o chat de alertas (o mesmo do
+LinkedIn) ficou mudo.
+
+**Causa 1:** o `Replica Health Alert` (`NNBuoFo1gCl0GO00`) está inativo, ou
+`versionId` ≠ `activeVersionId`. Salvar ≠ publicar ([P18](#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada)).
+
+**Causa 2:** o mesmo sintoma já foi avisado há menos de 3 h (cooldown). Execute
+na mão: execução manual **sempre** manda.
+
+**Causa 3:** alguém religou o `Pokemon Health Alert` da curadoria. Ele não
+substitui este. Deixe-o arquivado enquanto Scanner/Publisher estiverem parados.
+
+**Solução:** abra <https://srv1897392.hstgr.cloud/workflow/NNBuoFo1gCl0GO00>,
+confira Active, clique **Execute workflow**. Deve cair no `@eduardo_alerta_bot`,
+não em `@promopokemontcg`. Republicar: `python3 tools/publicar-replica-health-alert.py`.
+
+Registro: [Decisão 55](historico-de-decisoes.md#decisão-55--alerta-privado-da-réplica-no-mesmo-chat-do-linkedin).

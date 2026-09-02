@@ -614,12 +614,18 @@ semeados pelo setup:
 | `afiliado_matt_word` | `caed1312314` | Apelido da conta de afiliado |
 | `afiliado_matt_tool` | `96097202` | ID da etiqueta de afiliado |
 | `frases_remover` | *(vazio)* | Frases extras a apagar do post, uma por linha. `@rasgabooster.tcg` e `#rasgaboot` já saem no código |
-| `pagina_gz` | HTML em base64 UTF-8 | **Não é gzip** (nome legado). O GET do painel decodifica e injeta `__DADOS__`. Completo em 29/08: 63424 bytes, MD5 `f8fccee12aa8e6e98ecf12d2a7221d2a` ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)) |
+| `formato_post` | JSON | Idioma, preset, emojis, preço, cupom, link, CTA. A aba Config grava; JSON inválido o n8n recusa |
+| `atraso_maximo_segundos` | `600` | Mensagem mais velha que isso não replica |
+| `limite_legenda_telegram` | `1024` | Corta a legenda no Telegram |
+| `plataformas` | `["mercadolivre"]` | Marketplaces que a réplica pode postar. Só entra plataforma **com conversor de afiliado**. Amazon fica de fora até existir comissão ([Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)) |
+| `pagina_gz` | HTML em base64 UTF-8 | **Não é gzip** (nome legado). O GET do painel decodifica e injeta `__DADOS__`. Vigente em 02/09 noite: **70760** bytes, MD5 `e1081ab857327dda7d97c3ad40f74936` (HTML 53069 / `a1f5e6d5778652e2fdf71820f36fe4e2`). Fechamento original 29/08: 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a` ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)) |
 | `save_token` | token longo | Autentica os POSTs do painel. O Chrome não reenvia Basic Auth no `fetch` ([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)). Não colar o valor aqui |
 
 O painel só aceita gravar chave que está na lista branca do node `Normalizar Config` — é o que
-evita o formulário virar porta de entrada para chave inventada. `pagina_gz` e `save_token`
-não passam por esse formulário.
+evita o formulário virar porta de entrada para chave inventada. Desde 02/09 a aba
+Configurações expõe todas as chaves da lista, menos `pagina_gz` e `save_token`
+([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
+`pagina_gz` sobe só por [`tools/publicar-painel.py`](../tools/publicar-painel.py).
 
 ### `replica_log`
 
@@ -628,7 +634,7 @@ não passam por esse formulário.
 | `id` | `BIGSERIAL` | Chave primária |
 | `origem_chat_id`, `origem_nome`, `origem_message_id` | `TEXT` | De onde veio |
 | `hash_conteudo` | `TEXT NOT NULL UNIQUE` | **É o dedup.** Hash do texto sem links + os item IDs do ML |
-| `texto_original` / `texto_publicado` | `TEXT` | Antes e depois da troca do link |
+| `texto_original` / `texto_publicado` | `TEXT` | Antes e depois da troca do link. O painel destaca a 1ª linha como título da oferta se ela não for preço/cupom/URL |
 | `links_convertidos` | `INTEGER NOT NULL DEFAULT 0` | Quantos links do ML viraram link de afiliado |
 | `item_ids` | `TEXT` | `MLB...` separados por vírgula |
 | `tem_midia` | `BOOLEAN NOT NULL DEFAULT FALSE` | |
@@ -648,7 +654,7 @@ Os valores de `status`:
 | --- | --- |
 | `pendente` | Passou pelas regras, está a caminho do Telegram |
 | `enviado` | Publicado. `enviado_em` preenchido e `replica_rotas.replicadas` incrementado |
-| `descartado` | Sem link do Mercado Livre, ou só com link de outro marketplace, ou texto vazio depois da limpeza |
+| `descartado` | Sem link do Mercado Livre, só link de plataforma sem afiliação (`plataforma_nao_selecionada`), ou texto vazio depois da limpeza |
 | `ignorado` | Teto por hora atingido |
 | `erro` | O Telegram recusou. `motivo` guarda a mensagem de erro |
 
