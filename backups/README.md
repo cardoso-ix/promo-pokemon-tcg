@@ -39,7 +39,7 @@ mexer em Code node ou em consulta.
 
 | Data | O que estava valendo |
 | --- | --- |
-| 2026-09-02 | Foto + nome da réplica (Decisão 52). Painel editável (53). Só Mercado Livre (54). Scripts do dia a dia: `tools/publicar-painel.py` + `tools/publicar-ingest-n8n.py` (lista em [`tools/README.md`](../tools/README.md)). Login em `painel/replica-login.html`. SQL vivo em `sql/`. HTML vigente: 53069 / `pagina_gz` 70760. Mapa: `docs/retomar-hoje.md`. |
+| 2026-09-02 | Foto + nome da réplica (Decisão 52). Painel editável (53). Só Mercado Livre (54). Alerta da réplica (55): `Replica Health Alert` `NNBuoFo1gCl0GO00`, SQL/JS em `sql/` e `code-nodes/`. Scripts: `publicar-painel.py`, `publicar-ingest-n8n.py`, `publicar-replica-health-alert.py`. Login em `painel/replica-login.html`. HTML vigente: 53069 / `pagina_gz` 70760. Mapa: `docs/retomar-hoje.md`. |
 | 2026-08-29 | Amostras do card profissional (Decisão 50): foto de origem, foto do anúncio e PNG de teste em `cards/`. |
 | 2026-08-28 | Réplica no ar: HTML do painel (`painel/replica-painel.html` + `replica-login.html`), Code nodes (QR, ingest, painel, nomes), SQL de schema `evolution` / rotas nomeadas / sync. `pagina_gz` fechou em 29/08 (Decisão 51). **Não** versionar `tmp-*` desta pasta — são chunks de injeção. |
 | 2026-08-27 | Primeira esteira de réplica no papel: Code nodes e SQL do ingest/painel, HTML antigo. Superado pelo snapshot de 28/08. |

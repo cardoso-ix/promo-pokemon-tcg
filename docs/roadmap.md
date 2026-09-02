@@ -23,6 +23,9 @@ comportamento real por alguns dias.** Otimizar antes de ter dados é chutar.
    ([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
 3c. ~~**Só replicar Mercado Livre.**~~ **Feito em 02/09**
    ([Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)).
+3d. ~~**Alerta privado da réplica.**~~ **Feito em 02/09 à noite**
+   ([Decisão 55](historico-de-decisoes.md#decisão-55--alerta-privado-da-réplica-no-mesmo-chat-do-linkedin)).
+   Workflow `NNBuoFo1gCl0GO00`, mesmo `@eduardo_alerta_bot`. Execute na mão uma vez.
 4. **Construir a Fase 1 do dashboard único.** Decidido em 28/08: **estender o `Replica Painel`**.
    A Fase 1 não toca em workflow publicado. O desenho está em [Dashboard](#dashboard).
 5. **Decidir se a curadoria volta.** Em 02/09 à noite Store Scanner / Publisher / Scanner v2 /
@@ -258,12 +261,13 @@ item de revisão são tarefas de clique, não de SQL.
 ~~**O que seria:** o bot avisar ativamente — numa mensagem privada no Telegram para o Eduardo —
 quando o parser quebrar ou quando `promos_erros` receber linhas novas.~~
 
-**Feito em 13/08/2026.** O workflow `Pokemon Health Alert` (`3irgeWFKZGZZrJ5u`) está **ativo**,
-roda às 21h BRT e também na mão. O destino é o **mesmo chat privado do alerta LinkedIn**
-(workflow `LinkedIn Post Diario Texto`, nodes `Notify Telegram`), não o canal público
-`@promopokemontcg`. Fila vazia **não** gera alerta. Como ligar/desligar e o que ele não
-cobre: [runbook, seção 14](runbook.md#14-alerta-privado-de-saúde-do-bot). Registro:
-[Decisão 28](historico-de-decisoes.md#decisão-28--alerta-privado-de-saúde-no-mesmo-chat-do-linkedin).
+**Feito em 13/08/2026 para a curadoria.** O workflow `Pokemon Health Alert`
+(`3irgeWFKZGZZrJ5u`) **está arquivado** em 02/09 (curadoria desligada).
+
+**Feito em 02/09 para a réplica.** `Replica Health Alert` (`NNBuoFo1gCl0GO00`),
+mesmo `@eduardo_alerta_bot` / mesmo chat privado
+([Decisão 55](historico-de-decisoes.md#decisão-55--alerta-privado-da-réplica-no-mesmo-chat-do-linkedin),
+[runbook, seção 16](runbook.md#16-alerta-privado-da-réplica)).
 
 ---
 

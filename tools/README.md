@@ -19,6 +19,7 @@ PUT do n8n: em `settings` só `executionOrder` / `availableInMCP` / `timezone`.
 | `python3 tools/publicar-painel.py --login` | Regrava o node `Montar Pagina Login` a partir de `replica-login.html` |
 | `python3 tools/publicar-painel.py --dry-run` | Só imprime tamanho/MD5, não grava |
 | `python3 tools/publicar-ingest-n8n.py` | Sobe o Code node `Montar Post` (e o SQL vivo) do ingest |
+| `python3 tools/publicar-replica-health-alert.py` | Cria/atualiza o `Replica Health Alert` e ativa. Copia o Telegram do Health Alert da curadoria (token não vai ao git) |
 
 Fonte do HTML: `backups/2026-08-28/painel/`. Fonte do ingest: `backups/2026-09-02/`.
 

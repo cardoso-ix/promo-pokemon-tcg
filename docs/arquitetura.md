@@ -337,6 +337,7 @@ Telegram @promopokemontcg  +  (opcional) grupo de WhatsApp de destino
 | **`Replica WhatsApp Ingest`** | `4mE343XrNXgIwAIF` | O fluxo principal: normaliza, checa liberação e teto, troca links, publica, registra |
 | **`Replica Painel`** | `lWDnggRX8xQmYyQV` | Página HTML servida pelo n8n. Origens, destinos (Telegram e WhatsApp) e ajustes |
 | **`Replica WhatsApp Conectar`** | `v32gcVzRkedUACXD` | Página do QR code. Cria a instância e mostra o código para parear o celular |
+| **`Replica Health Alert`** | `NNBuoFo1gCl0GO00` | Avisa no `@eduardo_alerta_bot` (mesmo chat do LinkedIn) se o WhatsApp cair ou o ingest parar |
 | **`Replica Schema Setup`** | `pfolFnCYTLyLZdwU` | Cria as tabelas e o schema `evolution`. Idempotente, roda à mão |
 
 **Por que existe uma página só para o QR code:** a Evolution não tem porta pública, e o QR é o

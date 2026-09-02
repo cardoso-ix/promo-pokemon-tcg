@@ -87,12 +87,13 @@ nos que estão rodando). Salvar e publicar são coisas diferentes
 | `Pokemon Store Scanner` | `PNwaF3BYhj5KA8eY` | **Inativo** | Não está disparando. Último `versionId` visto `96ed8cbb`, sem `activeVersionId`. Era `0ff36da8` quando ativo |
 | `Pokemon Publisher v2` | `FXNWeT9C7dEA0DUY` | **Inativo** | Não está publicando. Último `versionId` `a1126308`. Era `56b8fb7b` quando ativo |
 | `Pokemon Scanner v2` | `39kdRchYI6CwsbNY` | **Inativo** | Último `versionId` `21f510be`. Era `f0183d1c` quando ativo |
-| `Pokemon Health Alert` | `3irgeWFKZGZZrJ5u` | **Inativo** | Último `versionId` `f4286dc8`. Era `b5e4b758` quando ativo |
+| `Pokemon Health Alert` | `3irgeWFKZGZZrJ5u` | **Arquivado** | Curadoria. **Não religar** enquanto Scanner/Publisher estiverem parados — falso positivo |
 | `Pokemon Schema Setup v2` | `F8jVi6NFxeDHfAkb` | Inativo, roda sob demanda | Nunca publicado |
 | `Replica WhatsApp Ingest` | `4mE343XrNXgIwAIF` | **Ativo** | Sim, `70be8ff6` — foto do polycard + nome na legenda; só replica marketplace com afiliação (ML). Amazon descarta ([Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)) |
 | `Replica Painel` | `lWDnggRX8xQmYyQV` | **Ativo** | Sim, `4a6a1223` — Config com plataformas (Amazon visualmente apagada); HTML em `pagina_gz` 70760 ([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script), [Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)). Login em `/webhook/replica/entrar`. Ctrl+F5 se JS parecer cortado |
 | `Replica Nomes Sync` | `J6zU6p48OEBO0raf` | **Ativo**, a cada **10 min** | Sim, `c36c3821` — `fetchAllGroups` (~80s, timeout 120s) + cache em `replica_rotas` |
 | `Replica WhatsApp Conectar` | `v32gcVzRkedUACXD` | **Ativo** | Sim, `5ce7ba5a` — página do QR |
+| `Replica Health Alert` | `NNBuoFo1gCl0GO00` | **Ativo** | Sim — `@eduardo_alerta_bot`, mesmo chat do LinkedIn. Agenda 30 min. **Não** é o Health Alert da curadoria ([Decisão 55](historico-de-decisoes.md#decisão-55--alerta-privado-da-réplica-no-mesmo-chat-do-linkedin)) |
 | `Replica Schema Setup` | `pfolFnCYTLyLZdwU` | Inativo, **já rodou** em 27/08 | Idempotente, de mão. Criou `replica_rotas`, `replica_config`, `replica_log` |
 | `Pokemon Catalog Scanner` | `2ckVyvFPvtqwECDI` | **Arquivado** em 27/08 | Era inativo desde 16/08 ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)). Arquivar é reversível; o código está em [`backups/2026-08-16/`](../backups/2026-08-16/) |
 | `TMP Pokemon SQL Console` | `PVNsBGQ92Wrhos51` | **Arquivado** em 13/08 | Era descartável. Some da lista |
@@ -134,8 +135,9 @@ e copia a imagem ([Decisão 48](historico-de-decisoes.md#decisão-48--post-da-r�
   desde 28/08 19h28 (número terminado em 5955).
 - **Credenciais `Painel Replica` e `Evolution API Key` criadas** e vinculadas nos sete nodes
   que precisam delas.
-- **Quatro workflows publicados:** `Replica WhatsApp Ingest`, `Replica Painel`,
-  `Replica WhatsApp Conectar` e `Replica Nomes Sync`. O painel tem Visão Geral (KPIs 7d,
+- **Cinco workflows da réplica publicados:** `Replica WhatsApp Ingest`, `Replica Painel`,
+  `Replica WhatsApp Conectar`, `Replica Nomes Sync` e `Replica Health Alert`
+  (`NNBuoFo1gCl0GO00`, mesmo `@eduardo_alerta_bot`). O painel tem Visão Geral (KPIs 7d,
   status WA/TG, gráfico de envios, tabela de rotas e atividades), Conexões
   (QR + Telegram `@`), Rotas nomeadas (cards + modal com digitador), Configurações e
   Atividades. O GET do painel **não** chama `fetchAllGroups`/`findChats`; os títulos
@@ -166,8 +168,9 @@ e copia a imagem ([Decisão 48](historico-de-decisoes.md#decisão-48--post-da-r�
 | --- | --- | --- |
 | 1 | Entrar em mais grupos com o número pareado, se quiser mais origem | A Evolution só vê grupo do qual o número participa |
 | 2 | Validar numa **mensagem nova** que Amazon cai em `plataforma_nao_selecionada` | Replay não testa ([P23](troubleshooting.md#p23--a-réplica-postou-amazon-sem-afiliação)) |
-| 3 | **Dashboard único** (curadoria + réplica na mesma página) | [roadmap, Dashboard](roadmap.md#dashboard) — Fase 1 ainda não começou |
-| 4 | Decidir se a curadoria volta a ligar | Store Scanner / Publisher estão inativos; [retomar-hoje.md](retomar-hoje.md) |
+| 3 | **Execute o alerta da réplica na mão** uma vez | n8n → `Replica Health Alert` → Execute workflow; cai no `@eduardo_alerta_bot` ([P24](troubleshooting.md#p24--o-alerta-da-réplica-não-chegou-no-eduardo_alerta_bot)) |
+| 4 | **Dashboard único** (curadoria + réplica na mesma página) | [roadmap, Dashboard](roadmap.md#dashboard) — Fase 1 ainda não começou |
+| 5 | Decidir se a curadoria volta a ligar | Store Scanner / Publisher estão inativos; [retomar-hoje.md](retomar-hoje.md) |
 
 **Três armadilhas que custaram a noite de 28/08 e estão documentadas no runbook:** a imagem
 `atendai/evolution-api` não sobe nesta VPS (usar `evoapicloud/evolution-api`); a senha real do

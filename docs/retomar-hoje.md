@@ -15,7 +15,7 @@ Conferência ao vivo neste horário: réplica **no ar**; bot de curadoria **desl
 4. Abra o n8n: https://srv1897392.hstgr.cloud — os quatro da réplica **Active**, `versionId` = `activeVersionId` (tabela da seção 3).
 5. Abra o painel: https://srv1897392.hstgr.cloud/webhook/replica/entrar — Ctrl+F5 se o JavaScript parecer cortado.
 6. Ajustes do dia (teto, delay, afiliado, JSON, plataformas): aba **Configurações**. Visual do HTML: só com `python3 tools/publicar-painel.py`.
-7. **Não** ligue Store Scanner / Publisher / Scanner v2 / Health Alert sem o Eduardo pedir.
+7. **Não** ligue Store Scanner / Publisher / Scanner v2 / o `Pokemon Health Alert` da curadoria sem o Eduardo pedir. O alerta da **réplica** (`Replica Health Alert`, `NNBuoFo1gCl0GO00`) **deve** ficar Active.
 8. **Não** mergeie o PR #2 sem pedido explícito (está em draft).
 
 Não precisa instalar Evolution, Postgres nem n8n na máquina nova. Tudo isso já roda na VPS.
@@ -64,10 +64,11 @@ No Cursor da outra máquina, abra esta pasta e continue pelo mesmo PR. Secrets d
 | `Replica Painel` | `lWDnggRX8xQmYyQV` | **Ativo** `4a6a1223` — Config editável + plataformas; HTML `pagina_gz` 70760 bytes |
 | `Replica Nomes Sync` | `J6zU6p48OEBO0raf` | **Ativo** `c36c3821` |
 | `Replica WhatsApp Conectar` | `v32gcVzRkedUACXD` | **Ativo** `5ce7ba5a` — QR |
+| `Replica Health Alert` | `NNBuoFo1gCl0GO00` | **Ativo** — mesmo chat do `@eduardo_alerta_bot`; **não** é o Health Alert da curadoria |
 | `Pokemon Store Scanner` | `PNwaF3BYhj5KA8eY` | **Inativo** — não está postando da vitrine |
 | `Pokemon Publisher v2` | `FXNWeT9C7dEA0DUY` | **Inativo** — canal de curadoria parado |
 | `Pokemon Scanner v2` | `39kdRchYI6CwsbNY` | **Inativo** |
-| `Pokemon Health Alert` | `3irgeWFKZGZZrJ5u` | **Inativo** |
+| `Pokemon Health Alert` | `3irgeWFKZGZZrJ5u` | **Arquivado** — não religar (falso positivo com a curadoria parada) |
 | `Pokemon Catalog Scanner` | `2ckVyvFPvtqwECDI` | Arquivado. **Não publicar** |
 
 **Não religue a curadoria** sem o Eduardo pedir: mistura posts filtrados com a réplica no mesmo canal. A réplica sozinha já alimenta o [@promopokemontcg](https://t.me/promopokemontcg).
@@ -130,6 +131,7 @@ Arquivos fonte:
 - Ingest `Montar Post`: `backups/2026-09-02/code-nodes/replica-ingest--montar-post.js`
 - Ingest SQL: `backups/2026-09-02/sql/replica-ingest--consultar-rota-e-config.sql`
 - Normalizar Config: `backups/2026-09-02/code-nodes/replica-painel--normalizar-config.js`
+- Alerta da réplica: `python3 tools/publicar-replica-health-alert.py` — SQL/JS em `backups/2026-09-02/`
 
 Lista dos scripts (o que usar / o que ignorar): [`tools/README.md`](../tools/README.md).
 
@@ -143,6 +145,7 @@ O gerador `tools/gerar-painel-code-node.mjs` é paraquedas se a Decisão 51 for 
 | --- | --- |
 | Validar Amazon numa mensagem **nova** | Atividades deve mostrar `plataforma_nao_selecionada` |
 | Painel: Ctrl+F5 | Cache velho mostra JS cortado ([P20](troubleshooting.md#p20--o-painel-da-réplica-abre-mas-nada-funciona)) |
+| Execute o alerta na mão | n8n → `Replica Health Alert` → Execute workflow — deve cair no `@eduardo_alerta_bot` ([P24](troubleshooting.md#p24--o-alerta-da-réplica-não-chegou-no-eduardo_alerta_bot)) |
 | Dashboard único curadoria + réplica | [roadmap](roadmap.md#dashboard) — Fase 1 ainda não começou |
 | Religar Store Scanner / Publisher | Só se o Eduardo quiser de novo posts de curadoria no canal |
 | Mergear o PR #2 | Só com pedido explícito; hoje está em draft |
@@ -157,4 +160,4 @@ O gerador `tools/gerar-painel-code-node.mjs` é paraquedas se a Decisão 51 for 
 3. [runbook.md](runbook.md) seção 15 — operação da réplica
 4. [arquitetura.md](arquitetura.md) — só se precisar do desenho das esteiras
 
-Se algo quebrar: [troubleshooting.md](troubleshooting.md) P18 (salvar ≠ publicar), P20 (painel cortado), P21 (sem foto), P22 (sem nome), P23 (Amazon).
+Se algo quebrar: [troubleshooting.md](troubleshooting.md) P18 (salvar ≠ publicar), P20 (painel cortado), P21 (sem foto), P22 (sem nome), P23 (Amazon), P24 (alerta da réplica).

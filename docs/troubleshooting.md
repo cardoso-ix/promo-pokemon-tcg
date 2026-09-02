@@ -871,3 +871,25 @@ ligado). Oferta só de Amazon vira `descartado` / `plataforma_nao_selecionada`.
 Conferir na próxima mensagem **nova** (hash impede replay).
 
 Registro: [Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação).
+
+---
+
+## P24 — O alerta da réplica não chegou no @eduardo_alerta_bot
+
+**Sintoma:** o WhatsApp caiu ou o ingest parou e o chat de alertas (o mesmo do
+LinkedIn) ficou mudo.
+
+**Causa 1:** o `Replica Health Alert` (`NNBuoFo1gCl0GO00`) está inativo, ou
+`versionId` ≠ `activeVersionId`. Salvar ≠ publicar ([P18](#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada)).
+
+**Causa 2:** o mesmo sintoma já foi avisado há menos de 3 h (cooldown). Execute
+na mão: execução manual **sempre** manda.
+
+**Causa 3:** alguém religou o `Pokemon Health Alert` da curadoria. Ele não
+substitui este. Deixe-o arquivado enquanto Scanner/Publisher estiverem parados.
+
+**Solução:** abra <https://srv1897392.hstgr.cloud/workflow/NNBuoFo1gCl0GO00>,
+confira Active, clique **Execute workflow**. Deve cair no `@eduardo_alerta_bot`,
+não em `@promopokemontcg`. Republicar: `python3 tools/publicar-replica-health-alert.py`.
+
+Registro: [Decisão 55](historico-de-decisoes.md#decisão-55--alerta-privado-da-réplica-no-mesmo-chat-do-linkedin).

@@ -46,14 +46,15 @@ Formato em produção:
 
 Histórico: [troubleshooting, P16](docs/troubleshooting.md#p16--resolvido-o-link-de-afiliado-estava-com-os-parâmetros-invertidos).
 
-**O que está ligado agora (n8n ao vivo, `versionId` = `activeVersionId` nos quatro ativos):**
+**O que a curadoria faz quando está ligada** (hoje está desligada). Quem posta agora é a réplica; o alerta vivo é o `Replica Health Alert`.
 
 | Workflow | Ritmo | Papel |
 | --- | --- | --- |
 | `Pokemon Store Scanner` | a cada **5 min** + jitter 0–60s | Enche a fila a partir de **10 lojas** oficiais |
 | `Pokemon Scanner v2` | a cada **10 min** + jitter 0–60s | Enche a fila a partir de `ofertas?category=MLB6899` (só título com Pokémon) |
 | `Pokemon Publisher v2` | a cada **2 min**, só 8h–22h BRT, teto **90**/dia e **6**/hora | Publica 1 item por disparo, ordem de qualidade |
-| `Pokemon Health Alert` | 1× ao dia às 21h BRT + manual | Alerta **privado** se o bot quebrar. Fila vazia **não** avisa |
+| `Pokemon Health Alert` | 1× ao dia às 21h BRT + manual | **Arquivado** em 02/09. Não religar com a curadoria parada |
+| `Replica Health Alert` | a cada **30 min** + manual | Alerta **privado** da réplica no `@eduardo_alerta_bot`. Fila/grupo quieto de madrugada **não** avisa |
 
 Desconto mínimo vigente ([Decisão 35](docs/historico-de-decisoes.md#decisão-35--pacote-a-qualidade-antes-de-volume)): **10%** em `pokemon` e `copag`; **15%** nas outras oito. Filtro de título: cartas/acessório TCG **ou** figura Pokémon, com Pokémon no nome ([Decisão 41](docs/historico-de-decisoes.md#decisão-41--figuras-pokémon-no-filtro-e-nenhuma-loja-oficial-nova)). Item já postado cuja vitrine ficar mais barata (≥ 5% ou ≥ R$ 5, no máximo 1/dia) volta para a fila ([Decisão 33](docs/historico-de-decisoes.md#decisão-33--repostar-se-o-preço-da-vitrine-cair-depois-do-post)).
 
@@ -198,13 +199,14 @@ Mapa para outra máquina: [`docs/retomar-hoje.md`](docs/retomar-hoje.md). Detalh
 | Bot e canal do Telegram | Canal no ar. **Hoje quem posta é a réplica.** Curadoria não está disparando |
 | **Pokemon Store Scanner** | **Inativo** em 02/09 noite (não religar sem pedido) |
 | **Pokemon Publisher v2** | **Inativo** em 02/09 noite |
-| **Pokemon Health Alert** | **Inativo** em 02/09 noite |
+| **Pokemon Health Alert** | **Arquivado** em 02/09 (curadoria). Não religar |
 | **Pokemon Catalog Scanner** | **Arquivado** em 27/08. **Não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
 | **Pokemon Scanner v2** | **Inativo** em 02/09 noite |
 | **Pokemon Schema Setup v2** | Desativado (só sob demanda) |
 | **Replica WhatsApp Ingest** | **Ativo** — rota TCG Promo; foto do polycard + nome na legenda; só Mercado Livre ([Decisão 54](docs/historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)), publicado `70be8ff6` |
 | **Replica Painel** | **Ativo** `4a6a1223` — Config + plataformas; HTML via `tools/publicar-painel.py`. Login: `/webhook/replica/entrar` |
 | **Replica WhatsApp Conectar** | **Publicado** em 28/08. Página do QR code |
+| **Replica Health Alert** | **Ativo** `NNBuoFo1gCl0GO00` — `@eduardo_alerta_bot`, mesmo chat do LinkedIn ([Decisão 55](docs/historico-de-decisoes.md#decisão-55--alerta-privado-da-réplica-no-mesmo-chat-do-linkedin)) |
 | **Replica Schema Setup** | Inativo. Já rodou e criou as tabelas `replica_*` e o schema `evolution` |
 | **Evolution API (WhatsApp)** | **No ar e pareada** desde 28/08, projeto Docker `evolution-api`, imagem `evoapicloud/evolution-api`, instância `promo-replica` |
 | **TMP Pokemon SQL Console 2** | **Arquivado** em 27/08. Tinha webhook publicado executando SQL arbitrário |
@@ -310,12 +312,13 @@ No n8n, um **workflow** é um fluxo de trabalho: uma sequência de caixinhas (ch
 | --- | --- | --- | --- |
 | **Pokemon Store Scanner** | `PNwaF3BYhj5KA8eY` | Varre as lojas oficiais de `lojas_confiaveis` e grava as ofertas na fila | **Inativo** em 02/09 noite |
 | **Pokemon Publisher v2** | `FXNWeT9C7dEA0DUY` | Tira o próximo item da fila e publica no Telegram | **Inativo** em 02/09 noite |
-| **Pokemon Health Alert** | `3irgeWFKZGZZrJ5u` | Alerta privado se parser/vitrine/publisher quebrar | **Inativo** em 02/09 noite |
+| **Pokemon Health Alert** | `3irgeWFKZGZZrJ5u` | Alerta privado da **curadoria** se parser/vitrine/publisher quebrar | **Arquivado** em 02/09 noite |
 | **Pokemon Scanner v2** | `39kdRchYI6CwsbNY` | Lê a página geral de ofertas do ML, classifica por desconto e autenticidade, exige Pokémon no título | **Inativo** em 02/09 noite |
 | **Pokemon Schema Setup v2** | `F8jVi6NFxeDHfAkb` | Cria as tabelas do banco | Desativado, só sob demanda |
 | **Replica WhatsApp Ingest** | `4mE343XrNXgIwAIF` | Recebe mensagem de grupo de WhatsApp, troca o link do ML e reposta no canal | **Ativo**, publicado `70be8ff6` |
 | **Replica Painel** | `lWDnggRX8xQmYyQV` | A página onde você libera grupo e mexe nos ajustes da réplica | **Ativo** `4a6a1223`. Visual: `python3 tools/publicar-painel.py` |
 | **Replica WhatsApp Conectar** | `v32gcVzRkedUACXD` | A página do QR code para parear o WhatsApp | **Publicado** em 28/08 |
+| **Replica Health Alert** | `NNBuoFo1gCl0GO00` | Alerta privado da réplica no `@eduardo_alerta_bot` | **Ativo** |
 | **Replica Schema Setup** | `pfolFnCYTLyLZdwU` | Cria as tabelas da réplica e o schema `evolution` | Inativo. Já rodou |
 | **Pokemon Catalog Scanner** | `2ckVyvFPvtqwECDI` | Varre `lista.mercadolivre.com.br/loja/{slug}/pokemon` via ScraperAPI | **Arquivado** em 27/08 — **não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
 

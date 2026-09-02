@@ -1700,6 +1700,36 @@ Painel publicado `4a6a1223`. Ingest `70be8ff6`. HTML 53069 bytes (`pagina_gz` 70
 
 ---
 
+## Decisão 55 — alerta privado da réplica no mesmo chat do LinkedIn
+
+**Data:** 02/09/2026, noite · **Quem pediu:** Eduardo (iniciar pelo alerta da réplica no canal de alertas que ele já tem; print do `@eduardo_alerta_bot`)
+
+**A decisão:** criar o workflow `Replica Health Alert` (`NNBuoFo1gCl0GO00`), **sem**
+religar o `Pokemon Health Alert`. O destino é o mesmo da [Decisão 28](#decisão-28--alerta-privado-de-saúde-no-mesmo-chat-do-linkedin):
+HTTP `sendMessage` do `@eduardo_alerta_bot` no chat privado do Eduardo. **Não** usa
+a credencial `Pokemon Telegram Bot` (isso publicaria no canal
+`@promopokemontcg`).
+
+O alerta da curadoria permanece **arquivado**: Scanner/Publisher inativos fariam
+ele disparar toda noite à toa.
+
+**O que cobre:** WhatsApp `promo-replica` caiu; réplica desligada no painel; rota
+sem origem ou sem Telegram; `replica_log` em `erro` (24 h); `pendente` preso
+(> 20 min); webhook silencioso 3 h entre 12h–21h BRT.
+
+**Agenda:** a cada 30 min (fuso `America/Sao_Paulo`). O mesmo conjunto de
+sintomas no máximo a cada 3 h. Execução manual sempre manda recado (teste
+"tudo ok" se estiver saudável).
+
+Code/SQL em [`backups/2026-09-02/`](../backups/2026-09-02/). Publicar:
+`python3 tools/publicar-replica-health-alert.py`. Primeiro recado de destino:
+`message_id` 105 neste chat.
+
+**O que mudaria esta decisão:** o Eduardo pedir outro chat/canal; ou guardar o
+token do bot de alerta numa credencial n8n (melhor higiene, mesmo destino).
+
+---
+
 ## Histórico de sustos: o que já deu errado na infraestrutura
 
 Não são decisões, são cicatrizes. Valem registro porque a chance de repetição não é zero.

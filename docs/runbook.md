@@ -21,8 +21,9 @@ pode rodar sem medo. As marcadas com 🟡 **alteram dados**; leia antes de rodar
 11. [Rotina sugerida](#11-rotina-sugerida)
 12. [Lista de bloqueio de vendedores](#12-lista-de-bloqueio-de-vendedores)
 13. [Escopo: quais lojas o bot pode publicar](#13-escopo-quais-lojas-o-bot-pode-publicar)
-14. [Alerta privado de saúde do bot](#14-alerta-privado-de-saúde-do-bot)
+14. [Alerta privado de saúde do bot](#14-alerta-privado-de-saúde-do-bot) (curadoria; hoje arquivado)
 15. [A esteira de réplica de WhatsApp](#15-a-esteira-de-réplica-de-whatsapp)
+16. [Alerta privado da réplica](#16-alerta-privado-da-réplica)
 
 ---
 
@@ -952,8 +953,12 @@ layout — nesse caso `ultimo_erro` explica qual dos dois.
 ## 14. Alerta privado de saúde do bot
 
 O `Pokemon Health Alert` (`3irgeWFKZGZZrJ5u`) avisa o Eduardo **no mesmo chat privado do
-alerta LinkedIn** quando o bot TCG quebra ou para. **Nunca** publica no canal
+alerta LinkedIn** quando o bot TCG **de curadoria** quebra ou para. **Nunca** publica no canal
 `@promopokemontcg`.
+
+> **Em 02/09 à noite este workflow está arquivado.** A curadoria está desligada; religá-lo
+> agora dispara falso positivo (Scanner parado). O alerta que vale para o canal hoje é o
+> da réplica: [seção 16](#16-alerta-privado-da-réplica).
 
 O workflow LinkedIn **não foi alterado**. O alerta TCG só reutiliza o destino: o node
 `Notify Telegram` do `LinkedIn Post Diario Texto` (`ysHFWIV0tGWJbhjo`), que manda HTTP para
@@ -1240,3 +1245,47 @@ revertida. O caminho do dia a dia é o `publicar-painel.py`. Lista dos scripts:
 
 **Cuidados ao gravar o workflow no n8n:** o PUT aceita em `settings` só
 `executionOrder` / `availableInMCP` / `timezone`. Mandar `binaryMode` devolve 400.
+
+---
+
+## 16. Alerta privado da réplica
+
+O `Replica Health Alert` (`NNBuoFo1gCl0GO00`) avisa no **mesmo chat privado** do
+alerta LinkedIn, via `@eduardo_alerta_bot` ("Alertas Linkedin/TCG Promo").
+**Nunca** publica no canal `@promopokemontcg`.
+
+É um workflow **novo**, separado do `Pokemon Health Alert` (`3irgeWFKZGZZrJ5u`).
+Aquele continua arquivado: se religar, vai achar o Scanner parado e disparar
+falso positivo enquanto a curadoria estiver desligada
+([Decisão 55](historico-de-decisoes.md#decisão-55--alerta-privado-da-réplica-no-mesmo-chat-do-linkedin)).
+
+### Ligar e desligar
+
+1. Abra <https://srv1897392.hstgr.cloud/workflow/NNBuoFo1gCl0GO00>
+2. O botão **Active** liga só este alerta. Ingest e painel continuam como estavam
+3. Depois de mexer no código, **publique** (`python3 tools/publicar-replica-health-alert.py`)
+
+Rodar na mão (**Execute workflow**) **sempre** manda uma mensagem: "tudo ok" ou o
+alerta de verdade. A agenda de **30 min** só fala quando há problema, e o mesmo
+sintoma no máximo a cada **3 h**.
+
+### O que gera um recado
+
+- WhatsApp `promo-replica` desconectado (`connectionStatus` ≠ `open`)
+- Réplica desligada no painel (`replica_config.ativo`)
+- Nenhuma rota ativa com origem, ou nenhum destino Telegram nas rotas
+- Linhas `replica_log.status = 'erro'` nas últimas 24 h
+- Mensagens presas em `pendente` há mais de 20 min
+- Entre 12h e 21h BRT: WhatsApp conectado, rota ativa, **zero** eventos em
+  `replica_log` nas últimas 3 h (webhook do ingest pode ter parado)
+
+### O que ele NÃO cobre
+
+- Grupo de origem quieto de madrugada (zero eventos à noite **não** é alerta)
+- Oferta Amazon descartada (`plataforma_nao_selecionada`) — isso é o ingest
+  trabalhando
+- n8n inteiro fora do ar
+- Comissão no painel de afiliados
+
+O token do bot de alerta continua no node HTTP, copiado do Health Alert da
+curadoria. Não cole o valor no git. Destino: o mesmo `chatId` do LinkedIn.
