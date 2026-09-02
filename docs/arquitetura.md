@@ -1,8 +1,13 @@
 # Arquitetura
 
 Este documento explica **como as peças do bot se encaixam**. Se você entender só um
-arquivo desta pasta, entenda este. Valores de relógio e teto vigentes: Store Scanner
-**5 min**, Scanner v2 **10 min**, Publisher **2 min**, teto **90**/dia e **6**/hora — ver [regras-de-negocio.md](regras-de-negocio.md).
+arquivo desta pasta, entenda este. Valores de relógio e teto da **curadoria** (quando
+ligada): Store Scanner **5 min**, Scanner v2 **10 min**, Publisher **2 min**, teto
+**90**/dia e **6**/hora — ver [regras-de-negocio.md](regras-de-negocio.md).
+
+> **Em 02/09 à noite a curadoria está desligada.** Quem posta no canal é a réplica.
+> Mapa vivo: [retomar-hoje.md](retomar-hoje.md). O desenho abaixo continua certo —
+> só não está disparando.
 
 ---
 

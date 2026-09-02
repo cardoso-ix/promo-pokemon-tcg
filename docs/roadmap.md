@@ -10,6 +10,7 @@ comportamento real por alguns dias.** Otimizar antes de ter dados é chutar.
 
 ## Próxima sessão (atualizado em 02/09/2026)
 
+0. **Em outra máquina:** abra [`docs/retomar-hoje.md`](retomar-hoje.md) — git, secrets, n8n vivo, o que não refazer.
 1. ~~**Subir a Evolution API e publicar os workflows da réplica.**~~ **Feito em 28/08**
    ([Decisão 45](historico-de-decisoes.md#decisão-45--evolution-no-docker-manager-e-o-qr-code-por-página-do-n8n)).
 2. ~~**Ligar o primeiro grupo e observar.**~~ **Feito em 28/08 à noite.** Rota **TCG Promo**

@@ -23,9 +23,11 @@ duas fontes alimentam a mesma fila, porque as homepages sozinhas não sustentam 
 Consequências:
 
 - O `Pokemon Store Scanner` **continua** varrendo as lojas cadastradas em `lojas_confiaveis`.
-- O `Pokemon Scanner v2` **voltou a rodar** em `ofertas?category=MLB6899` (a cada 10 min).
+- O `Pokemon Scanner v2` **foi religado** em 25/08 em `ofertas?category=MLB6899` (a cada 10 min).
   Título sem a palavra Pokémon → `descartado`. Autenticidade com os limiares −40 / +25.
   Risco conhecido: [P15](troubleshooting.md#p15--o-selo-loja-oficial-do-mercado-livre-não-significa-loja-oficial-da-pokémon).
+  **Em 02/09 à noite está inativo**, junto com o resto da curadoria
+  ([retomar-hoje.md](retomar-hoje.md)).
 - O `Pokemon Catalog Scanner` existe e **fica inativo**
   ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)).
 - Loja cadastrada não é o mesmo que loja em escopo. Hoje **dez** lojas estão ativas:
@@ -722,7 +724,7 @@ de horário, sem teto diário, sem formato de post, sem detecção de idioma. A 
 terceirizada para quem administra o grupo de origem. Isso foi escolha explícita do Eduardo, não
 esquecimento.
 
-Sobraram dez regras, e todas são técnicas:
+Sobraram onze regras, e todas são técnicas:
 
 | # | Regra | Onde muda |
 | --- | --- | --- |
@@ -735,7 +737,7 @@ Sobraram dez regras, e todas são técnicas:
 | 7 | Espera antes de publicar, hoje 5 s | `replica_config.delay_segundos` — aba Configurações |
 | 8 | Origem não pode ser também destino de WhatsApp | `replica_destinos` + IF `origem_e_destino` no ingest |
 | 9 | Apaga marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`, linha só de `@`/`#`) | `Montar Post` + `replica_config.frases_remover` — aba Configurações |
-| 10 | Destino recebe a **foto oficial do anúncio** e o **nome do produto** na legenda (polycard do encurtador), mesmo se a origem veio só com preço na caption; se o polycard falhar, tenta a página e depois a foto da origem; sem as três, só texto | ingest `70a5d99d` ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)) |
+| 10 | Destino recebe a **foto oficial do anúncio** e o **nome do produto** na legenda (polycard do encurtador), mesmo se a origem veio só com preço na caption; se o polycard falhar, tenta a página e depois a foto da origem; sem as três, só texto | ingest `70be8ff6` ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)) |
 | 11 | Só replica marketplace **marcado e com afiliação**. Hoje: Mercado Livre. Amazon/Shopee/Magalu não saem — não há comissão | `replica_config.plataformas` — aba Configurações ([Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)) |
 
 Word/Tool do afiliado, limite da legenda (1024) e o JSON `formato_post` também saem da aba

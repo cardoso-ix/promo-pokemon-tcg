@@ -31,7 +31,8 @@ WhatsApp via Evolution (`promo-replica`); Telegram é o canal já cadastrado
 ## Capabilities and Constraints
 
 - Abas: Visão Geral, Conexões, Rotas, Configurações, Atividades
-- Configurações grava toda a lista branca (`teto_hora`, delay, afiliado, atraso máximo, limite de legenda, `formato_post`)
+- Configurações grava toda a lista branca (`teto_hora`, delay, afiliado, atraso máximo, limite de legenda, `formato_post`, `plataformas`)
+- Plataformas: só Mercado Livre tem conversor de afiliado. Amazon/Shopee/Magalu aparecem desligadas; oferta só de `amzn.to` é descartada
 - Rotas nomeadas com toggle ATIVA, origens WA e destinos TG/WA
 - Combo pesquisável por nome de grupo
 - GET não pode chamar `findChats`/`fetchAllGroups`

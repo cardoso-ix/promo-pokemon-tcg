@@ -765,7 +765,8 @@ e com `premium=true` (~56 s, **sem** cobrar). O parser `_n.ctx.r` nunca viu HTML
 sessão. Se o campo **Name** da credencial Query Auth não for `api_key`, a falha é HTTP 404
 em ~1,6 s — outro problema.
 
-**Solução:** **não publique** esse workflow. Store Scanner de 5 min segue no ar. Para
+**Solução:** **não publique** esse workflow. Quando a curadoria está ligada, o Store
+Scanner de 5 min segue no ar (em 02/09 noite ele também está inativo). Para
 retomar: Name = `api_key`, `TESTE_SO_POKEMON = true`, uma execução **manual** só de
 `pokemon`. HTTP 200 com `_n.ctx.r` e produtos = avançar; 208 bytes / 500 = parar.
 `ultra_premium` (75 créditos, plano pago) **só com pedido novo**.
@@ -791,8 +792,9 @@ cortada depois do conserto.
 regrava o base64 a partir de
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
 Depois, **Ctrl+F5**. Sem Basic Auth o n8n responde “Authorization is required!” — isso é o
-GET, não o HTML. Config/Rotas falhando com *token de save invalido* é o [P22](#p22--a-oferta-sai-com-foto-mas-sem-o-nome-do-produto)
-(token vazio no GET), não HTML cortado.
+GET, não o HTML. Config/Rotas falhando com *token de save invalido* é `save_token` vazio
+no GET (mesmo fallback documentado no [P22](#p22--a-oferta-sai-com-foto-mas-sem-o-nome-do-produto)),
+não HTML cortado.
 
 Registro: [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz),
 [Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script).
@@ -814,7 +816,7 @@ estava no canvas sem conexão.
 da Foto` ficou com `tem_url_foto = false`. A origem não tinha foto. Saiu texto. O HTML
 do encurtador (`Seguir Redirecionamento 2`) **já tinha** o polycard do produto.
 
-**Solução:** o ingest `70a5d99d` tira a foto do polycard do HTML do `meli.la` (`url_foto_html`),
+**Solução:** o ingest publicado (`70be8ff6`; a correção entrou em `70a5d99d`) tira a foto do polycard do HTML do `meli.la` (`url_foto_html`),
 não da página `/p/`. Conferir numa execução **nova** (hash `chat_id|message_id` impede
 replay) **depois** do delay (~8 s):
 
@@ -846,9 +848,9 @@ No painel, Config/Rotas falhavam com `token de save invalido` (execuções `6485
 `Montar Pagina` deixava `save_token` vazio quando `REPLICA_PAINEL_SAVE_TOKEN` não estava
 no ambiente do n8n.
 
-**Solução:** ingest `70a5d99d` injeta o título do polycard no começo da legenda se a
-origem não trouxe um. Painel `d4604a4b` destaca esse título nos logs e grava o
-`save_token` com o mesmo fallback dos POSTs. **Ctrl+F5** no painel.
+**Solução:** ingest publicado (`70be8ff6`) injeta o título do polycard no começo da
+legenda se a origem não trouxe um. Painel `4a6a1223` destaca esse título nos logs e
+grava o `save_token` com o mesmo fallback dos POSTs. **Ctrl+F5** no painel.
 
 Registro: [Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto).
 

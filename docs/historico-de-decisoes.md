@@ -1632,7 +1632,8 @@ volta a gravar o `save_token` (estava vazio; Config/Rotas falhavam com *token de
 invalido*).
 
 Code nodes em [`backups/2026-09-02/code-nodes/`](../backups/2026-09-02/code-nodes/).
-Ingest publicado `70a5d99d`. Painel `d4604a4b` (`versionId` = `activeVersionId`).
+Ingest na hora: `70a5d99d`. Painel na hora: `d4604a4b`. **Produção vigente nesta noite:**
+ingest `70be8ff6`, painel `4a6a1223` (Decisões 53–54 por cima).
 
 **O que mudaria esta decisão:** religar o card composto se o Eduardo quiser marca na
 imagem de novo; ou o HTML do encurtador deixar de trazer polycard — aí volta a testar
@@ -1663,8 +1664,9 @@ script pontual (`publicar-painel-titulo-n8n.py`) e o HTML de login não estava n
 4. SQL vivo do GET (`canais_no_chat` + `titulo` nos logs) em
    [`backups/2026-09-02/sql/`](../backups/2026-09-02/sql/).
 
-HTML vigente nesta publicação: 50649 bytes (MD5 `11eb41c8749e30eb28a4a1c751d56bd8`);
-`pagina_gz` 67532 (MD5 `d22596c0999a0f339a4d063ae84555a6`). Painel publicado `5b0b5b16`.
+HTML nesta publicação: 50649 bytes (MD5 `11eb41c8749e30eb28a4a1c751d56bd8`);
+`pagina_gz` 67532 (MD5 `d22596c0999a0f339a4d063ae84555a6`). Painel `5b0b5b16`.
+**Depois da Decisão 54:** HTML 53069 / `pagina_gz` 70760, painel `4a6a1223`.
 
 **O que mudaria esta decisão:** voltar a embutir o HTML no Code node (aí
 `gerar-painel-code-node.mjs` volta a ser o caminho principal); ou expor `pagina_gz` no

@@ -618,7 +618,7 @@ semeados pelo setup:
 | `atraso_maximo_segundos` | `600` | Mensagem mais velha que isso não replica |
 | `limite_legenda_telegram` | `1024` | Corta a legenda no Telegram |
 | `plataformas` | `["mercadolivre"]` | Marketplaces que a réplica pode postar. Só entra plataforma **com conversor de afiliado**. Amazon fica de fora até existir comissão ([Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)) |
-| `pagina_gz` | HTML em base64 UTF-8 | **Não é gzip** (nome legado). O GET do painel decodifica e injeta `__DADOS__`. Vigente em 02/09: 70692 bytes, MD5 `e5eb09d6e08e890991bff149a3e51739`. Fechamento original 29/08: 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a` ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)) |
+| `pagina_gz` | HTML em base64 UTF-8 | **Não é gzip** (nome legado). O GET do painel decodifica e injeta `__DADOS__`. Vigente em 02/09 noite: **70760** bytes, MD5 `e1081ab857327dda7d97c3ad40f74936` (HTML 53069 / `a1f5e6d5778652e2fdf71820f36fe4e2`). Fechamento original 29/08: 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a` ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)) |
 | `save_token` | token longo | Autentica os POSTs do painel. O Chrome não reenvia Basic Auth no `fetch` ([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)). Não colar o valor aqui |
 
 O painel só aceita gravar chave que está na lista branca do node `Normalizar Config` — é o que

@@ -7,10 +7,10 @@ com o **link de afiliado do Eduardo**, para gerar comissão em cada venda.
 
 Desde 27/08/2026 o projeto tem **duas esteiras** que alimentam o mesmo canal:
 
-| Esteira | O que faz | Estado |
+| Esteira | O que faz | Estado (02/09 noite) |
 | --- | --- | --- |
-| **Curadoria** (a original) | Garimpa oferta no Mercado Livre e filtra desconto, tema, autenticidade e loja | **No ar** |
-| **Réplica** | Copia promoção que outra pessoa já publicou em grupo de WhatsApp, trocando **só** o link de afiliado. Sem filtro nenhum | **No ar** — rota **TCG Promo**, painel completo, ingest publicando |
+| **Curadoria** (a original) | Garimpa oferta no Mercado Livre e filtra desconto, tema, autenticidade e loja | **Desligada** — não religar sem o Eduardo pedir |
+| **Réplica** | Copia promoção que outra pessoa já publicou em grupo de WhatsApp, trocando **só** o link de afiliado. Sem filtro nenhum | **No ar** — rota **TCG Promo**, painel completo, ingest `70be8ff6` |
 
 As duas são independentes: dividem o banco (em tabelas separadas) e o canal, e nada mais.
 Desligar uma não afeta a outra. A réplica está descrita na
@@ -59,7 +59,9 @@ Desconto mínimo vigente ([Decisão 35](docs/historico-de-decisoes.md#decisão-3
 
 **Não use 2 minutos no Scanner.** São 10 requisições HTTP por ciclo. O aviso está na descrição do próprio workflow no n8n e na [Decisão 34](docs/historico-de-decisoes.md#decisão-34--ritmo-em-produção-scanner-5-min-publisher-2-min).
 
-### 🤔 Por que o canal pode estar quieto
+### 🤔 Por que o canal pode estar quieto (quando a **curadoria** está ligada)
+
+Em 02/09 à noite a curadoria está **desligada**; quem posta é a réplica. O bloco abaixo vale **se** Store Scanner / Publisher voltarem a Active.
 
 Há **três** razões comuns, e nenhuma é pane:
 
@@ -206,7 +208,7 @@ Mapa para outra máquina: [`docs/retomar-hoje.md`](docs/retomar-hoje.md). Detalh
 | **Replica Schema Setup** | Inativo. Já rodou e criou as tabelas `replica_*` e o schema `evolution` |
 | **Evolution API (WhatsApp)** | **No ar e pareada** desde 28/08, projeto Docker `evolution-api`, imagem `evoapicloud/evolution-api`, instância `promo-replica` |
 | **TMP Pokemon SQL Console 2** | **Arquivado** em 27/08. Tinha webhook publicado executando SQL arbitrário |
-| Backup dos workflows | [`backups/2026-08-13/`](backups/) (tarde de 13/08), [`backups/2026-08-16/`](backups/2026-08-16/) (Catalog Scanner inativo), [`backups/2026-08-27/`](backups/2026-08-27/) (réplica), [`backups/2026-08-28/`](backups/2026-08-28/) (QR, schema `evolution`, painel) e [`backups/2026-08-29/`](backups/2026-08-29/) (cards). O n8n vale |
+| Backup dos workflows | [`backups/2026-08-13/`](backups/) … [`backups/2026-08-28/`](backups/2026-08-28/) e [`backups/2026-09-02/`](backups/2026-09-02/) (ingest + painel desta noite). O n8n vale |
 | Filtro de autenticidade | Roda no Scanner v2 (busca geral). Store Scanner **não** consulta o score |
 | Lista de bloqueio de vendedores | Tabela existe; o Store Scanner **não** a consulta |
 | Idioma da carta no post | Exibido com confiança ≥ 0,85; Publisher detecta de novo se o banco vier vazio |
@@ -287,7 +289,7 @@ ou o risco do canal.
 | [docs/roadmap.md](docs/roadmap.md) | O que ficou de fora e o que faria sentido depois | Para planejar a próxima rodada |
 | [backups/](backups/) | Cópia datada dos workflows do n8n, com o código dos Code nodes e as consultas SQL separados | Se algo se perder no n8n, ou para comparar o que mudou |
 | [deploy/](deploy/) | Arquivos de infraestrutura para aplicar na VPS (hoje: Evolution API) | Para subir ou reconfigurar um container |
-| [tools/](tools/) | Scripts locais de apoio. O do dia a dia do painel é `publicar-painel.py` | Para mexer no visual da réplica |
+| [tools/](tools/) | Scripts locais. Dia a dia: `publicar-painel.py` e `publicar-ingest-n8n.py`. Lista em [`tools/README.md`](tools/README.md) | Para mexer no visual da réplica ou republicar o ingest |
 
 ---
 

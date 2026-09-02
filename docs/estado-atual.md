@@ -30,15 +30,18 @@ investigação que já foi feita.
 
 ---
 
-## Resumo em quatro linhas
+## Resumo da curadoria (histórico 13–25/08; **desligada** em 02/09 noite)
+
+O bloco abaixo descreve o que a esteira de curadoria **já fez** quando estava ligada.
+Quem posta **hoje** é a réplica — [retomar-hoje.md](retomar-hoje.md).
 
 1. **Link de afiliado: resolvido.** Corrigido nos dois scanners e regravado nos 4 itens que
    estavam na fila. Os 4 posts do dia saíram com comissão.
-2. **Bot no ar, com duas travas.** Scanner e Publisher ativos. Nenhum post sai sem link de
+2. **Travas no Publisher.** Nenhum post de curadoria sai sem link de
    afiliado ([Decisão 24](historico-de-decisoes.md#decisão-24--nunca-publicar-sem-link-de-afiliado))
    nem sem foto ([Decisão 26](historico-de-decisoes.md#decisão-26--item-sem-foto-também-para-de-travar-a-fila)).
    Com isso, o [P8](troubleshooting.md#p8--a-fila-travou-o-mesmo-item-tenta-publicar-toda-vez-e-falha)
-   está fechado nas duas causas conhecidas.
+   está fechado nas duas causas conhecidas. Em 02/09 o Publisher está **inativo**.
 3. **Volume: dez lojas, qualidade primeiro (Decisão 35, ~22h35; `dalo-vendas` em 16/08).**
    Mínimo **10%** em `pokemon`/`copag`, **15%** nas outras oito. Teto vigente **90**/dia e **6**/hora
    ([Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora); era 40, e o horário era 4 na
@@ -61,14 +64,14 @@ investigação que já foi feita.
 7. **Pacote A no ar (Decisão 35, ~22h35).** Publisher naquela hora: `a621b8c9`. Em 14/08
    o teto horário subiu para 6 e a versão publicada passou a `57c2826e`. Banco: 10%/15%.
    Pending abaixo do novo mínimo: zero na hora da troca de 13/08.
-8. **Busca geral religada (Decisão 43, 25/08 ~22h15).** Scanner v2 ativo (`f0183d1c`),
-   Pokémon no título obrigatório, teto diário **90**. Teste `35851` ok; 0 aceito na vitrine
-   da noite. Posts a partir das 8h de 26/08 se a fila encher. Catalog Scanner continua
-   inativo.
+8. **Busca geral religada (Decisão 43, 25/08 ~22h15).** Scanner v2 publicado `f0183d1c`
+   naquela noite. Pokémon no título obrigatório, teto diário **90**. Teste `35851` ok.
+   **Em 02/09 à noite o Scanner v2 está inativo** (`versionId` `21f510be`, sem
+   `activeVersionId`). Catalog Scanner continua inativo.
 
-**Alerta privado no ar (19h35).** O `Pokemon Health Alert` avisa no mesmo chat do alerta
-LinkedIn se o bot quebrar. Fila vazia **não** é alerta. Ver
-[runbook, seção 14](runbook.md#14-alerta-privado-de-saúde-do-bot) e
+**Alerta privado (19h35 de 13/08).** O `Pokemon Health Alert` avisa no mesmo chat do alerta
+LinkedIn se a curadoria quebrar. Fila vazia **não** é alerta. **Em 02/09 à noite está
+inativo.** Ver [runbook, seção 14](runbook.md#14-alerta-privado-de-saúde-do-bot) e
 [Decisão 28](historico-de-decisoes.md#decisão-28--alerta-privado-de-saúde-no-mesmo-chat-do-linkedin).
 
 ---

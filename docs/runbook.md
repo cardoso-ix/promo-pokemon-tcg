@@ -1212,8 +1212,8 @@ continuam na aba **Rotas** / **Conexões**, via `/salvar`. `pagina_gz` e `save_t
 O HTML mora em
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
 **Produção lê `replica_config.pagina_gz`**, não o Code node. A coluna guarda base64 UTF-8
-do HTML (não gzip). Em 02/09 à noite o valor vigente é **70692** bytes, MD5
-`e5eb09d6e08e890991bff149a3e51739` (HTML 53018, MD5 `920896650126ad6633ed6c5d2e5ff547`).
+do HTML (não gzip). Em 02/09 à noite o valor vigente é **70760** bytes, MD5
+`e1081ab857327dda7d97c3ad40f74936` (HTML 53069, MD5 `a1f5e6d5778652e2fdf71820f36fe4e2`).
 O fechamento original de 29/08 era 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a`
 ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
 
@@ -1235,7 +1235,8 @@ Ela mora no Code node `Montar Pagina Login`, não em `pagina_gz`. Para republica
 
 O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) ainda
 existe como paraquedas: ele embute o HTML no Code node. Só use se a Decisão 51 for
-revertida. O caminho do dia a dia é o `publicar-painel.py`.
+revertida. O caminho do dia a dia é o `publicar-painel.py`. Lista dos scripts:
+[`tools/README.md`](../tools/README.md).
 
 **Cuidados ao gravar o workflow no n8n:** o PUT aceita em `settings` só
 `executionOrder` / `availableInMCP` / `timezone`. Mandar `binaryMode` devolve 400.
