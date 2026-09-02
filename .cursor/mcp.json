@@ -2,6 +2,17 @@
   "mcpServers": {
     "mercadolibre-mcp-server": {
       "url": "https://mcp.mercadolibre.com/mcp"
+    },
+    "n8n": {
+      "command": "npx",
+      "args": ["-y", "n8n-mcp"],
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "https://srv1897392.hstgr.cloud",
+        "N8N_API_KEY": "${env:N8N_API_KEY}"
+      }
     }
   }
 }
