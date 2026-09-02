@@ -32,7 +32,8 @@ Não precisa instalar Evolution, Postgres nem n8n na máquina nova. Tudo isso j�
 | Pull request | https://github.com/cardoso-ix/promo-pokemon-tcg/pull/2 |
 | n8n | https://srv1897392.hstgr.cloud |
 | Painel da réplica | https://srv1897392.hstgr.cloud/webhook/replica/entrar |
-| Canal | https://t.me/promopokemontcg |
+| Canal Telegram | https://t.me/promopokemontcg |
+| Landing de captação (vendas / grupo WhatsApp) | https://cardoso-ix.github.io/pokemon-tcg-promo/ — repo **separado** `cardoso-ix/pokemon-tcg-promo`. **Não** é o painel da réplica nem o perfil `/social/` do Mercado Livre |
 
 Não cole senha, `N8N_API_KEY` nem token de save neste arquivo.
 

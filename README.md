@@ -301,6 +301,7 @@ ou o risco do canal.
 
 - **Painel do n8n:** <https://srv1897392.hstgr.cloud> — é onde o bot vive. Tudo se faz por aqui.
 - **Canal do Telegram:** [@promopokemontcg](https://t.me/promopokemontcg) — onde os posts saem.
+- **Landing de captação:** <https://cardoso-ix.github.io/pokemon-tcg-promo/> — página pública do grupo/ofertas (repo `cardoso-ix/pokemon-tcg-promo`, não esta pasta).
 - **VPS:** Hostinger, servidor `srv1897392.hstgr.cloud`. Roda o n8n e o banco de dados.
 
 ### Os workflows
