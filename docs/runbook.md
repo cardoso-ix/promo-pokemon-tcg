@@ -1172,6 +1172,12 @@ SELECT chat_id, nome, ativa, mensagens_vistas, replicadas, ultima_mensagem
 `sem_link_do_mercado_livre` significa grupo que não serve para você — ele posta de outros
 marketplaces. `status = 'erro'` com motivo do Telegram é problema de publicação, não de origem.
 
+**O post saiu, mas sem foto?** Isso **não** aparece como erro no SQL acima — o ingest
+marca enviado e cai no fallback de texto. Confira o canal (foto vs só texto) e as
+execuções do ingest: [P21](troubleshooting.md#p21--a-réplica-copia-o-texto-mas-o-post-sai-sem-foto).
+No n8n 2.28.6 desta VPS, **Publish** no workflow (API: `POST /api/v1/workflows/{id}/activate`)
+é o que coloca a correção no ar.
+
 ### 15.8 Mexer no painel (mudar a página)
 
 O HTML mora em

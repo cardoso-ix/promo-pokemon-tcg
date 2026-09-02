@@ -176,9 +176,12 @@ O que ainda falta é o **dashboard único** (curadoria + réplica na mesma pági
 
 ---
 
-## Estado atual (29/08/2026, ~09h16 BRT)
+## Estado atual (02/09/2026)
 
-**O bot está rodando de ponta a ponta.** Detalhe fino (versões, ScraperAPI, o que falta
+**Réplica: texto no ar, foto parada desde o post 279** (02/09 ~01:58 UTC). Curadoria segue.
+Detalhe em [`docs/estado-atual.md`](docs/estado-atual.md) e [P21](docs/troubleshooting.md#p21--a-réplica-copia-o-texto-mas-o-post-sai-sem-foto).
+
+**O bot de curadoria está rodando de ponta a ponta.** Detalhe fino (versões, ScraperAPI, o que falta
 decidir) vive em [`docs/estado-atual.md`](docs/estado-atual.md). Aqui vai o quadro para
 retomar em 30 segundos.
 
@@ -193,7 +196,7 @@ retomar em 30 segundos.
 | **Pokemon Catalog Scanner** | **Arquivado** em 27/08 (era inativo desde 16/08). Listagem ML falhou no ScraperAPI. **Não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
 | **Pokemon Scanner v2** | **Ativo**, a cada **10 min**, publicado `f0183d1c` — busca geral + Pokémon no título ([Decisão 43](docs/historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)) |
 | **Pokemon Schema Setup v2** | Desativado (só sob demanda) |
-| **Replica WhatsApp Ingest** | **Ativo** — rota TCG Promo, posts reais desde 28/08 (card profissional, [Decisão 50](docs/historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)) |
+| **Replica WhatsApp Ingest** | **Ativo**, mas **sem foto desde 02/09 01:58 UTC** (fallback de texto). Encurtador `/webhook/replica/s?id=` já estava no 277 *com* foto. [P21](docs/troubleshooting.md#p21--a-réplica-copia-o-texto-mas-o-post-sai-sem-foto) |
 | **Replica Painel** | **Ativo** — HTML completo em `pagina_gz` (63424 bytes, [Decisão 51](docs/historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)). URL: `/webhook/replica/painel` |
 | **Replica WhatsApp Conectar** | **Publicado** em 28/08. Página do QR code |
 | **Replica Schema Setup** | Inativo. Já rodou e criou as tabelas `replica_*` e o schema `evolution` |

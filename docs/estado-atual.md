@@ -1,6 +1,15 @@
 # Estado atual — o que está rodando e o que falta decidir
 
-**Última atualização:** 29/08/2026, ~09h16 BRT
+**Última atualização:** 02/09/2026, ~13h20 BRT
+
+> **02/09 — a réplica está no ar, mas a foto parou.** Texto (e o encurtador
+> `/webhook/replica/s?id=`) continuam saindo; o card profissional não. Corte no canal:
+> post **277** (02/09 01:35 UTC) ainda com foto; a partir do **279** (01:58 UTC) os
+> produtos vão só texto. Detalhe e o que olhar no n8n:
+> [P21](troubleshooting.md#p21--a-réplica-copia-o-texto-mas-o-post-sai-sem-foto).
+> A API pública do n8n (2.28.6) **recusou** a chave nesta sessão (HTTP 401) — o ingest
+> publicado **não foi aberto nem alterado**. Não desligue a curadoria. Não republicar
+> o Catalog Scanner.
 
 > **Novidade de 27/08: o projeto agora tem duas esteiras.** A de curadoria (tudo descrito
 > abaixo) segue igual e no ar. A segunda é a **réplica de grupos de WhatsApp**, que copia
@@ -100,7 +109,7 @@ publicar são coisas diferentes
 | `Pokemon Scanner v2` | `39kdRchYI6CwsbNY` | **Ativo**, a cada **10 min** + jitter | Sim, `f0183d1c` — busca geral MLB6899 + Pokémon no título ([Decisão 43](historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)). Node extra: `Exigir Pokemon no Titulo` |
 | `Pokemon Health Alert` | `3irgeWFKZGZZrJ5u` | **Ativo**, 1× ao dia às 21h BRT + manual | Sim, `b5e4b758` — mesmo chat privado do alerta LinkedIn |
 | `Pokemon Schema Setup v2` | `F8jVi6NFxeDHfAkb` | Inativo, roda sob demanda | Nunca publicado |
-| `Replica WhatsApp Ingest` | `4mE343XrNXgIwAIF` | **Ativo** | Sim, `803a5650` — card profissional (foto do ML + título/preço/marca) no lugar da foto crua ([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)) |
+| `Replica WhatsApp Ingest` | `4mE343XrNXgIwAIF` | **Ativo** (webhook publicando) | **Foto quebrada desde 02/09 01:58 UTC.** Docs ainda citam `803a5650` (29/08); produção foi editada depois (encurtador `/webhook/replica/s?id=` **não** está no repo). `versionId` vs `activeVersionId` **não conferidos nesta sessão** — a API do n8n devolveu 401. [P21](troubleshooting.md#p21--a-réplica-copia-o-texto-mas-o-post-sai-sem-foto) |
 | `Replica Painel` | `lWDnggRX8xQmYyQV` | **Ativo** | Sim, `5a4d014a` — POST aceita `frases_remover` ([Decisão 48](historico-de-decisoes.md#decisão-48--post-da-réplica-no-modelo-foto--texto-sem-marca-de-terceiro)); GET Basic Auth; token de save no JSON ([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)). `pagina_gz` **completo** (63424 bytes, MD5 `f8fccee12aa8e6e98ecf12d2a7221d2a`, [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)). Se o browser ainda mostrar JS cortado, Ctrl+F5 |
 | `Replica Nomes Sync` | `J6zU6p48OEBO0raf` | **Ativo**, a cada **10 min** | Sim, `5c1adb11` — `fetchAllGroups` (~80s, timeout 120s) + cache em `replica_rotas` |
 | `Replica Schema Setup` | `pfolFnCYTLyLZdwU` | Inativo, **já rodou** em 27/08 | Idempotente, de mão. Criou `replica_rotas`, `replica_config`, `replica_log` |
@@ -193,6 +202,47 @@ alto de várias origens ao mesmo tempo.
 
 **Risco aceito e registrado:** o número de WhatsApp pode ser banido, porque ler grupo exige
 biblioteca não oficial. Use chip separado.
+
+---
+
+## 02/09 — réplica sem foto, e a API do n8n recusada
+
+A esteira **não parou**. O webhook publica. O que mudou é o **formato**: de card com foto
+para texto puro. Conferido no canal público, post a post:
+
+- **277** (02/09 01:35 UTC) — produto **com foto**. O link já era o encurtador
+  `https://srv1897392.hstgr.cloud/webhook/replica/s?id=…` (isso **não** está no backup
+  de 29/08; o n8n foi editado depois).
+- **278** (01:37 UTC) — cupom apontando para `/social/` do Eduardo, sem foto. Fallback
+  de texto **esperado** (Decisão 50: sem foto de ML e sem foto de origem).
+- **279** (01:58 UTC) — produto com markdown (`_título_`, ❌ DE, 👉🏼 POR) **sem foto**.
+  Daí em diante, inclusive 296–311 da tarde, o padrão se repetiu.
+
+Intervalo de ~23 min entre o último card bom e o primeiro produto só-texto. Isso cheira
+a **versão publicada** naquela janela, ou a um node do card que passou a falhar em todo
+produto — não a um texto longo demais (seria intermitente). Sem a API, as execuções não
+foram abertas. Hipótese de trabalho: o ramo `Preparar Card` / composição / `sendPhoto`
+quebra e o ingest cai no fallback `sendMessage`.
+
+**Tentativa de API nesta sessão:** n8n **2.28.6** em `https://srv1897392.hstgr.cloud`.
+Os endpoints `/api/v1/workflows` e `/api/v1/executions` existem (sem o header certo a
+API pede `X-N8N-API-KEY`; **com** o header a resposta é `{"message":"unauthorized"}`).
+`/rest/workflows` também 401. MCP de instância (`/mcp-server/http`) 401. O ingest **não
+foi baixado, editado nem publicado**. Publicar nesta versão é
+`POST /api/v1/workflows/{id}/activate` (no v2, *activate* = **Publish**).
+
+**O que o Eduardo precisa fazer:**
+
+1. **Rotacionar a API key** em Settings → n8n API (ela vazou no chat). Apague a antiga.
+2. Criar uma chave **nova**, copiar na hora (o n8n não mostra de novo), **não** colar no
+   git. No n8n 2.28.6 a chave válida é um JWT com `aud: public-api` **e** `jti`.
+3. Mandar a chave nova por um canal que não fique no histórico do chat (Secrets do Cloud
+   Agent / MCP), ou um follow-up curto só com a chave.
+4. Enquanto isso, no editor: abra as execuções do ingest em 02/09 ~01:50 UTC e na tarde
+   e veja se o card fica vermelho. **Publish** depois de qualquer correção ([P18](troubleshooting.md#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada)).
+
+Não desligue Scanner/Publisher. Não republicar o Catalog Scanner. Não dispare teste em
+massa no WhatsApp.
 
 ---
 
