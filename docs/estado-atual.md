@@ -101,7 +101,7 @@ publicar são coisas diferentes
 | `Pokemon Health Alert` | `3irgeWFKZGZZrJ5u` | **Ativo**, 1× ao dia às 21h BRT + manual | Sim, `b5e4b758` — mesmo chat privado do alerta LinkedIn |
 | `Pokemon Schema Setup v2` | `F8jVi6NFxeDHfAkb` | Inativo, roda sob demanda | Nunca publicado |
 | `Replica WhatsApp Ingest` | `4mE343XrNXgIwAIF` | **Ativo** | Sim, `70a5d99d` — foto do polycard + nome do produto na legenda ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)) |
-| `Replica Painel` | `lWDnggRX8xQmYyQV` | **Ativo** | Sim, `d4604a4b` — título da oferta nos logs; `save_token` com fallback (Config/Rotas voltam a gravar). HTML em `pagina_gz`. GET Basic Auth; token de save no JSON ([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)). Se o browser ainda mostrar JS cortado, Ctrl+F5 |
+| `Replica Painel` | `lWDnggRX8xQmYyQV` | **Ativo** | Sim, `5b0b5b16` — Config grava a lista branca; login versionado; HTML em `pagina_gz` 67532 ([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)). GET Basic Auth; token de save no JSON ([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)). Login em `/webhook/replica/entrar`. Se o browser ainda mostrar JS cortado, Ctrl+F5 |
 | `Replica Nomes Sync` | `J6zU6p48OEBO0raf` | **Ativo**, a cada **10 min** | Sim, `5c1adb11` — `fetchAllGroups` (~80s, timeout 120s) + cache em `replica_rotas` |
 | `Replica Schema Setup` | `pfolFnCYTLyLZdwU` | Inativo, **já rodou** em 27/08 | Idempotente, de mão. Criou `replica_rotas`, `replica_config`, `replica_log` |
 | `Pokemon Catalog Scanner` | `2ckVyvFPvtqwECDI` | **Arquivado** em 27/08 | Era inativo desde 16/08 ([Decisão 42](historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)). Arquivar é reversível; o código está em [`backups/2026-08-16/`](../backups/2026-08-16/) |
@@ -155,8 +155,11 @@ e copia a imagem ([Decisão 48](historico-de-decisoes.md#decisão-48--post-da-r�
   (`DATABASE_SAVE_DATA_CHATS=false`) — não use Chat como fonte.
   Em 29/08 o POST publicado passou a aceitar `frases_remover` (`5a4d014a`). O HTML
   polido (Impeccable) está em [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html)
-  e em `replica_config.pagina_gz` **completo** (63424 bytes, MD5 `f8fccee12aa8e6e98ecf12d2a7221d2a`;
-  [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+  e em `replica_config.pagina_gz` **completo** (02/09: 67532 bytes, MD5
+  `d22596c0999a0f339a4d063ae84555a6`; HTML 50649, MD5 `11eb41c8749e30eb28a4a1c751d56bd8`).
+  A aba Configurações grava teto, delay, afiliado, atraso máximo, limite de legenda
+  e `formato_post`. Login versionado em `replica-login.html`. Publicar:
+  `python3 tools/publicar-painel.py` ([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
   A coluna guarda base64 UTF-8 do HTML, não gzip — o nome é legado.
   O workflow temporário `TESTE card telegram (apagar)` (`JuTS329uRCmflTBl`) foi arquivado.
   Primeira rota nomeada: **TCG Promo** (1 origem, 2 destinos). Combo com ~170 grupos.

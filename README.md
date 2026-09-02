@@ -167,6 +167,9 @@ grupos sai uma vez só. A linha com convite para grupo de terceiro é apagada.
 **Já no ar desde 28/08.** Evolution pareada, credenciais criadas, workflows publicados,
 primeira rota nomeada (**TCG Promo**) salva. O HTML do painel fecha em
 `replica_config.pagina_gz` ([Decisão 51](docs/historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+Ajustes do dia a dia (teto, afiliado, JSON do post) saem da aba Configurações; o visual
+sobe com `python3 tools/publicar-painel.py`
+([Decisão 53](docs/historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
 O que ainda falta é o **dashboard único** (curadoria + réplica na mesma página), em
 [roadmap, Dashboard](docs/roadmap.md#dashboard). Operação do dia a dia:
 [runbook, seção 15](docs/runbook.md#15-a-esteira-de-réplica-de-whatsapp).
@@ -194,7 +197,7 @@ retomar em 30 segundos.
 | **Pokemon Scanner v2** | **Ativo**, a cada **10 min**, publicado `f0183d1c` — busca geral + Pokémon no título ([Decisão 43](docs/historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)) |
 | **Pokemon Schema Setup v2** | Desativado (só sob demanda) |
 | **Replica WhatsApp Ingest** | **Ativo** — rota TCG Promo; foto do polycard + nome do produto na legenda ([Decisão 52](docs/historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)), publicado `70a5d99d` |
-| **Replica Painel** | **Ativo** — título da oferta nos logs, `save_token` com fallback ([Decisão 51](docs/historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)). URL: `/webhook/replica/painel` |
+| **Replica Painel** | **Ativo** — Config grava a lista branca; HTML em `pagina_gz` via `tools/publicar-painel.py` ([Decisão 53](docs/historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)). URL: `/webhook/replica/painel` · login: `/webhook/replica/entrar` |
 | **Replica WhatsApp Conectar** | **Publicado** em 28/08. Página do QR code |
 | **Replica Schema Setup** | Inativo. Já rodou e criou as tabelas `replica_*` e o schema `evolution` |
 | **Evolution API (WhatsApp)** | **No ar e pareada** desde 28/08, projeto Docker `evolution-api`, imagem `evoapicloud/evolution-api`, instância `promo-replica` |
@@ -279,7 +282,7 @@ ou o risco do canal.
 | [docs/roadmap.md](docs/roadmap.md) | O que ficou de fora e o que faria sentido depois | Para planejar a próxima rodada |
 | [backups/](backups/) | Cópia datada dos workflows do n8n, com o código dos Code nodes e as consultas SQL separados | Se algo se perder no n8n, ou para comparar o que mudou |
 | [deploy/](deploy/) | Arquivos de infraestrutura para aplicar na VPS (hoje: Evolution API) | Para subir ou reconfigurar um container |
-| [tools/](tools/) | Scripts locais de apoio, como o gerador da página do painel | Para mexer no painel da réplica |
+| [tools/](tools/) | Scripts locais de apoio. O do dia a dia do painel é `publicar-painel.py` | Para mexer no visual da réplica |
 
 ---
 
@@ -303,8 +306,8 @@ No n8n, um **workflow** é um fluxo de trabalho: uma sequência de caixinhas (ch
 | **Pokemon Health Alert** | `3irgeWFKZGZZrJ5u` | Alerta privado se parser/vitrine/publisher quebrar | **Ativo**, 21h BRT + manual |
 | **Pokemon Scanner v2** | `39kdRchYI6CwsbNY` | Lê a página geral de ofertas do ML, classifica por desconto e autenticidade, exige Pokémon no título | **Ativo**, a cada **10 min**, publicado `f0183d1c` |
 | **Pokemon Schema Setup v2** | `F8jVi6NFxeDHfAkb` | Cria as tabelas do banco | Desativado, só sob demanda |
-| **Replica WhatsApp Ingest** | `4mE343XrNXgIwAIF` | Recebe mensagem de grupo de WhatsApp, troca o link do ML e reposta no canal | **Publicado** em 28/08 |
-| **Replica Painel** | `lWDnggRX8xQmYyQV` | A página onde você libera grupo e mexe nos ajustes da réplica | **Publicado** em 28/08 |
+| **Replica WhatsApp Ingest** | `4mE343XrNXgIwAIF` | Recebe mensagem de grupo de WhatsApp, troca o link do ML e reposta no canal | **Ativo**, publicado `70a5d99d` |
+| **Replica Painel** | `lWDnggRX8xQmYyQV` | A página onde você libera grupo e mexe nos ajustes da réplica | **Ativo**. Visual: `python3 tools/publicar-painel.py` |
 | **Replica WhatsApp Conectar** | `v32gcVzRkedUACXD` | A página do QR code para parear o WhatsApp | **Publicado** em 28/08 |
 | **Replica Schema Setup** | `pfolFnCYTLyLZdwU` | Cria as tabelas da réplica e o schema `evolution` | Inativo. Já rodou |
 | **Pokemon Catalog Scanner** | `2ckVyvFPvtqwECDI` | Varre `lista.mercadolivre.com.br/loja/{slug}/pokemon` via ScraperAPI | **Arquivado** em 27/08 — **não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |

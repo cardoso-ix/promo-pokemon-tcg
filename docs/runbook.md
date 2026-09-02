@@ -1000,10 +1000,13 @@ são quebra do bot, são as travas da fila fazendo o trabalho. O recado lista o
 Esta seção é da segunda esteira ([Decisão 44](historico-de-decisoes.md#decisão-44--réplica-de-grupos-de-whatsapp-sem-curadoria-ao-lado-do-bot)):
 copiar promoção de grupo de WhatsApp para o canal, trocando só o link de afiliado.
 
-> **Estado em 29/08/2026, ~09h16 BRT:** Evolution API rodando, WhatsApp **pareado** na instância
+> **Estado em 02/09/2026:** Evolution API rodando, WhatsApp **pareado** na instância
 > `promo-replica`, painel no modelo origem/destino ([Decisão 46](historico-de-decisoes.md#decisão-46--painel-origemdestino-com-todos-os-grupos-da-conta)),
-> rota **TCG Promo** gravada, ingest publicando. HTML do painel completo em `pagina_gz`
-> ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+> rota **TCG Promo** gravada. Ingest `70a5d99d` publica foto do polycard e o nome do
+> produto na legenda ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)).
+> Painel: Config grava todos os ajustes da lista branca; HTML em `pagina_gz`
+> ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz),
+> [Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
 > Se a página parecer cortada no meio do JavaScript, Ctrl+F5 (15.8).
 
 **Use um chip separado, não o número pessoal.** Ler grupo de WhatsApp exige biblioteca não
@@ -1090,7 +1093,8 @@ Se mexer em algum, lembre que **salvar não é publicar**
 
 ### 15.5 Escolher origem e destino no painel
 
-Abra <https://srv1897392.hstgr.cloud/webhook/replica/painel> e entre com o Basic Auth.
+Abra <https://srv1897392.hstgr.cloud/webhook/replica/entrar> (login da própria página) ou
+<https://srv1897392.hstgr.cloud/webhook/replica/painel> com Basic Auth.
 
 O painel tem páginas: **Visão Geral**, **Conexões**, **Rotas**, **Configurações**, **Atividades**.
 A lista de grupos vem dos chats que a Evolution já viu nesta conta — pelo **nome**, não pelo JID.
@@ -1174,23 +1178,62 @@ SELECT chat_id, nome, ativa, mensagens_vistas, replicadas, ultima_mensagem
 `sem_link_do_mercado_livre` significa grupo que não serve para você — ele posta de outros
 marketplaces. `status = 'erro'` com motivo do Telegram é problema de publicação, não de origem.
 
-### 15.8 Mexer no painel (mudar a página)
+### 15.8 Mexer no painel (ajustes e página)
+
+Há **dois jeitos** de alterar o painel, e misturar os dois é o que mais gera confusão.
+
+**A. Ajustes da réplica (pelo site, sem republicar o n8n)**
+
+Abra <https://srv1897392.hstgr.cloud/webhook/replica/entrar> (ou `/webhook/replica/painel`
+com Basic Auth) → aba **Configurações**. Cada campo grava na hora em `replica_config`
+via POST `/webhook/replica/painel/config` (token de save no JSON, não a senha do login).
+A lista branca do node `Normalizar Config` é o que o formulário expõe:
+
+| Campo na tela | Chave | Para que serve |
+| --- | --- | --- |
+| Teto de posts por hora | `teto_hora` | Freio anti-flood (hoje 40) |
+| Espera antes de publicar | `delay_segundos` | Pausa entre posts (hoje 5) |
+| Atraso máximo da mensagem | `atraso_maximo_segundos` | Mensagem mais velha que isso não replica (hoje 600) |
+| Limite da legenda no Telegram | `limite_legenda_telegram` | Corta a legenda (hoje 1024) |
+| Replicar cupom sem link | `replicar_cupom_sem_link` | Cupom só de código |
+| Canal Telegram padrão | `destino_telegram` | Fallback se a rota não tiver destino TG |
+| Word ID / Tool ID | `afiliado_matt_word` / `afiliado_matt_tool` | Parâmetros do link de comissão |
+| Frases extras a remover | `frases_remover` | Uma por linha. `@rasgabooster` já sai no ingest |
+| Formato do post (JSON) | `formato_post` | Objeto JSON. JSON inválido o n8n recusa e **nada grava** |
+
+O interruptor da sidebar grava `ativo`. Rotas e o Telegram de uma rota específica
+continuam na aba **Rotas** / **Conexões**, via `/salvar`. `pagina_gz` e `save_token`
+**não** aparecem no formulário de propósito ([P20](troubleshooting.md#p20--o-painel-da-réplica-abre-mas-nada-funciona)).
+
+**B. Visual da página (HTML)**
 
 O HTML mora em
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
 **Produção lê `replica_config.pagina_gz`**, não o Code node. A coluna guarda base64 UTF-8
-do HTML (não gzip). Em 29/08 o valor fechou em **63424** bytes, MD5
-`f8fccee12aa8e6e98ecf12d2a7221d2a`
+do HTML (não gzip). Em 02/09 à noite o valor vigente é **67532** bytes, MD5
+`d22596c0999a0f339a4d063ae84555a6` (HTML 50649, MD5 `11eb41c8749e30eb28a4a1c751d56bd8`).
+O fechamento original de 29/08 era 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a`
 ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
 
-Para alterar:
+Para alterar o visual:
 
-1. Edite o HTML no arquivo acima (sem aspas duplas nem barra invertida).
-2. Grave o base64 UTF-8 em `replica_config.pagina_gz` (o node `Montar Pagina` faz
-   `Buffer.from(paginaGz, 'base64').toString('utf8')` e troca `__DADOS__`).
+1. Edite o HTML no arquivo acima. **Proibido** aspas duplas e barra invertida — o
+   validador do script recusa, e o Code node de paraquedas também.
+2. Publique: `python3 tools/publicar-painel.py` (precisa de `N8N_API_KEY`).
+   O script abre `pagina_gz` na whitelist **só durante o POST** e depois fecha
+   de novo. Não deixe essa chave permanente no formulário.
 3. **Ctrl+F5** no browser. Cache velho mostra JS cortado mesmo com o banco certo
    ([P20](troubleshooting.md#p20--o-painel-da-réplica-abre-mas-nada-funciona)).
+4. Confira no n8n: `Replica Painel` com `versionId` = `activeVersionId`.
+
+A tela de login (`/webhook/replica/entrar`) é outro arquivo:
+[`backups/2026-08-28/painel/replica-login.html`](../backups/2026-08-28/painel/replica-login.html).
+Ela mora no Code node `Montar Pagina Login`, não em `pagina_gz`. Para republicar:
+`python3 tools/publicar-painel.py --login`.
 
 O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) ainda
 existe como paraquedas: ele embute o HTML no Code node. Só use se a Decisão 51 for
-revertida. Ele recusa aspas duplas e barra invertida de propósito.
+revertida. O caminho do dia a dia é o `publicar-painel.py`.
+
+**Cuidados ao gravar o workflow no n8n:** o PUT aceita em `settings` só
+`executionOrder` / `availableInMCP` / `timezone`. Mandar `binaryMode` devolve 400.

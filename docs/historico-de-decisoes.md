@@ -1578,7 +1578,7 @@ nativo com redirect — o browser manda Basic Auth em navegação de formulário
 
 **Por que não recolocar o HTML no Code node:** o n8n e o MCP travam em payload grande; a metade que já estava no banco era idêntica ao arquivo local. Completar a coluna é o caminho mais curto e o que o node `Montar Pagina` já espera (`Buffer.from(paginaGz, 'base64').toString('utf8')` + `__DADOS__`).
 
-**O que isso implica:** depois de gravar, o GET passa a entregar HTML completo. Se o Chrome ainda mostrar a página quebrada, é cache — **Ctrl+F5**. Para mexer no visual de novo: edite o HTML, grave o base64 em `pagina_gz` e dê Ctrl+F5 ([runbook 15.8](runbook.md#158-mexer-no-painel-mudar-a-página)).
+**O que isso implica:** depois de gravar, o GET passa a entregar HTML completo. Se o Chrome ainda mostrar a página quebrada, é cache — **Ctrl+F5**. Para mexer no visual de novo: edite o HTML e rode `python3 tools/publicar-painel.py` ([runbook 15.8](runbook.md#158-mexer-no-painel-ajustes-e-página)). O tamanho vigente muda a cada publicação; confira o MD5 que o script imprime. O fechamento original de 29/08 foi 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a`.
 
 **O que mudaria esta decisão:** voltar a embutir o HTML no Code node (aí o gerador `tools/gerar-painel-code-node.mjs` volta a ser o caminho principal).
 
@@ -1637,6 +1637,39 @@ Ingest publicado `70a5d99d`. Painel `d4604a4b` (`versionId` = `activeVersionId`)
 **O que mudaria esta decisão:** religar o card composto se o Eduardo quiser marca na
 imagem de novo; ou o HTML do encurtador deixar de trazer polycard — aí volta a testar
 a página `/p/` **a partir do n8n na VPS**, não deste ambiente.
+
+---
+
+## Decisão 53 — o painel grava os ajustes da lista branca e o HTML sobe por script
+
+**Data:** 02/09/2026 · **Quem pediu:** Eduardo (“atualiza toda documentação e deixar o site com tudo funcional caso eu queira fazer alguma alteração”)
+
+**O que estava acontecendo.** A whitelist do `Normalizar Config` já aceitava
+`afiliado_matt_word` / `tool`, `atraso_maximo_segundos`, `limite_legenda_telegram` e
+`formato_post`, mas a aba Configurações só pintava teto, delay, cupom e frases. Quem
+queria mudar afiliado ou o JSON do post ia no banco. Republicar o visual exigia um
+script pontual (`publicar-painel-titulo-n8n.py`) e o HTML de login não estava no git.
+
+**A decisão.**
+
+1. O formulário da aba Configurações expõe **todas** as chaves da lista branca, menos
+   `pagina_gz` e `save_token`. Ajustes do dia a dia não passam pelo n8n.
+2. Visual do painel: editar
+   [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html)
+   e rodar [`tools/publicar-painel.py`](../tools/publicar-painel.py). O script valida
+   (sem `"` nem `\`), grava `pagina_gz` e tira a chave da whitelist em seguida.
+3. Tela de login versionada em `replica-login.html`; `python3 tools/publicar-painel.py --login`
+   regrava o node `Montar Pagina Login`.
+4. SQL vivo do GET (`canais_no_chat` + `titulo` nos logs) em
+   [`backups/2026-09-02/sql/`](../backups/2026-09-02/sql/).
+
+HTML vigente nesta publicação: 50649 bytes (MD5 `11eb41c8749e30eb28a4a1c751d56bd8`);
+`pagina_gz` 67532 (MD5 `d22596c0999a0f339a4d063ae84555a6`). Painel publicado `5b0b5b16`.
+
+**O que mudaria esta decisão:** voltar a embutir o HTML no Code node (aí
+`gerar-painel-code-node.mjs` volta a ser o caminho principal); ou expor `pagina_gz` no
+formulário — **não faça isso**, o token de save já vai no GET e o campo viraria porta
+para sobrescrever o site.
 
 ---
 

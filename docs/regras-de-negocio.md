@@ -726,16 +726,19 @@ Sobraram dez regras, e todas são técnicas:
 
 | # | Regra | Onde muda |
 | --- | --- | --- |
-| 1 | Só mensagem **de grupo**, que não é da própria conta, com texto, com menos de **600 s** de atraso | `ATRASO_MAXIMO_SEGUNDOS` no node `Normalizar Mensagem` |
+| 1 | Só mensagem **de grupo**, que não é da própria conta, com texto, com atraso máximo (hoje **600 s**) | `replica_config.atraso_maximo_segundos` — aba Configurações |
 | 2 | Só replica origem que você salvou no painel | Coluna `replica_rotas.ativa`; o lote do painel é a lista |
-| 3 | A esteira inteira pode ser desligada sem despublicar workflow | `replica_config.ativo` |
-| 4 | **Teto por hora**, padrão 40 | `replica_config.teto_hora` |
+| 3 | A esteira inteira pode ser desligada sem despublicar workflow | `replica_config.ativo` — interruptor da sidebar |
+| 4 | **Teto por hora**, hoje 40 | `replica_config.teto_hora` — aba Configurações |
 | 5 | Sem link do Mercado Livre, **não replica** | Lógica fixa no node `Montar Post` |
-| 6 | Exceção: mensagem de cupom sem link de produto pode replicar | `replica_config.replicar_cupom_sem_link` |
-| 7 | Espera antes de publicar, padrão 8 s | `replica_config.delay_segundos` |
+| 6 | Exceção: mensagem de cupom sem link de produto pode replicar | `replica_config.replicar_cupom_sem_link` — aba Configurações |
+| 7 | Espera antes de publicar, hoje 5 s | `replica_config.delay_segundos` — aba Configurações |
 | 8 | Origem não pode ser também destino de WhatsApp | `replica_destinos` + IF `origem_e_destino` no ingest |
-| 9 | Apaga marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`, linha só de `@`/`#`) | `Montar Post` + `replica_config.frases_remover` |
+| 9 | Apaga marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`, linha só de `@`/`#`) | `Montar Post` + `replica_config.frases_remover` — aba Configurações |
 | 10 | Destino recebe a **foto oficial do anúncio** e o **nome do produto** na legenda (polycard do encurtador), mesmo se a origem veio só com preço na caption; se o polycard falhar, tenta a página e depois a foto da origem; sem as três, só texto | ingest `70a5d99d` ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)) |
+
+Word/Tool do afiliado, limite da legenda (1024) e o JSON `formato_post` também saem da aba
+Configurações ([runbook 15.8](runbook.md#158-mexer-no-painel-ajustes-e-página)).
 
 **A única edição de conteúdo** é a troca do link do Mercado Livre pelo link de afiliado —
 mesmíssimo formato da [seção 10](#10-link-de-afiliado), com `matt_word` e `matt_tool` lidos de

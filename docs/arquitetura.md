@@ -393,11 +393,15 @@ autenticado). Sem token válido o Code node recusa.
 A página é montada pelo node `Montar Pagina` a partir de `replica_config.pagina_gz`
 (base64 UTF-8 do HTML; o nome `_gz` é legado — **não** é gzip). Fonte versionada:
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
-Em 29/08 o valor fechou em 63424 bytes
-([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
-O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) embute o
-HTML no Code node e fica como paraquedas. **Para mexer no painel: edite o HTML, grave o
-base64 em `pagina_gz`, Ctrl+F5.**
+Em 02/09 o valor vigente é 67532 bytes, MD5 `d22596c0999a0f339a4d063ae84555a6`
+([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz),
+[Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
+A tela de login (`/webhook/replica/entrar`) sai do node `Montar Pagina Login`, fonte
+[`replica-login.html`](../backups/2026-08-28/painel/replica-login.html).
+**Ajustes (teto, afiliado, JSON do post):** aba Configurações, grava na hora.
+**Visual:** `python3 tools/publicar-painel.py` e Ctrl+F5. O gerador
+[`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) embute o HTML
+no Code node e fica como paraquedas se a Decisão 51 for revertida.
 
 O front-end monta a tela pela DOM API em vez de `innerHTML`. Isso não é preciosismo: o texto
 que vem dos grupos é conteúdo de terceiro, e concatenar isso em HTML seria criar XSS dentro do

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Injeta o HTML do painel com titulo da oferta e conserta o save_token vazio."""
+"""[LEGADO] Injeta o HTML do painel com titulo da oferta e conserta o save_token.
+
+Use tools/publicar-painel.py para republicar o HTML. Este arquivo ficou so
+como registro da correcao pontual de 02/09 (titulo nos logs + token de save).
+"""
 from __future__ import annotations
 
 import base64

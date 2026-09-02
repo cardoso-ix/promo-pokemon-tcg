@@ -1,0 +1,3 @@
+ALTER TABLE replica_transmissoes ADD COLUMN IF NOT EXISTS opcoes JSONB NOT NULL DEFAULT '{}'::jsonb;
+UPDATE replica_transmissoes SET opcoes = '{"plataformas":["mercadolivre"],"gerar_imagem":true,"gerar_imagem_preview":false}'::jsonb WHERE COALESCE(opcoes, '{}'::jsonb) = '{}'::jsonb;
+SELECT COALESCE(json_agg(json_build_object('id', id, 'opcoes', COALESCE(opcoes, '{}'::jsonb)) ORDER BY id), '[]'::json) AS rotas_opcoes FROM replica_transmissoes;

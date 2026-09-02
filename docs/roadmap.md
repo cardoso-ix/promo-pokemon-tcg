@@ -8,7 +8,7 @@ comportamento real por alguns dias.** Otimizar antes de ter dados é chutar.
 
 ---
 
-## Próxima sessão (atualizado em 29/08/2026, ~09h16 BRT)
+## Próxima sessão (atualizado em 02/09/2026)
 
 1. ~~**Subir a Evolution API e publicar os workflows da réplica.**~~ **Feito em 28/08**
    ([Decisão 45](historico-de-decisoes.md#decisão-45--evolution-no-docker-manager-e-o-qr-code-por-página-do-n8n)).
@@ -17,7 +17,10 @@ comportamento real por alguns dias.** Otimizar antes de ter dados é chutar.
    ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)).
 3. ~~**Fechar o HTML do painel em `pagina_gz`.**~~ **Feito em 29/08 de manhã**
    ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
-   Se o browser ainda mostrar JS cortado, Ctrl+F5.
+   Visual novo: `python3 tools/publicar-painel.py` e Ctrl+F5 ([runbook 15.8](runbook.md#158-mexer-no-painel-ajustes-e-página)).
+3b. ~~**Deixar o painel editável pelo site.**~~ **Feito em 02/09**
+   ([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)):
+   aba Config grava a lista branca; login versionado.
 4. **Construir a Fase 1 do dashboard único.** Decidido em 28/08: **estender o `Replica Painel`**
    e mirar controle total sobre a curadoria, em três fases. A Fase 1 não toca em workflow
    publicado. O desenho está em [Dashboard](#dashboard). A réplica já rodou o bastante para
@@ -201,6 +204,8 @@ lista todos os grupos da conta pareada, escolhe origens e destinos (Telegram e W
 mostra as últimas mensagens vistas. O HTML mora em
 [`backups/2026-08-28/painel/`](../backups/2026-08-28/painel/) e em produção sai de
 `replica_config.pagina_gz` ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
+Para republicar o visual: [`tools/publicar-painel.py`](../tools/publicar-painel.py)
+([Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)).
 O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) é o
 paraquedas se o HTML voltar para o Code node.
 

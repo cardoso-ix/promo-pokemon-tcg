@@ -29,6 +29,7 @@ valiosos: são as armadilhas reais desta montagem.
 | Catalog Scanner / ScraperAPI devolve 500 na listagem do ML | [P19](#p19--catalog-scanner-a-listagem-do-ml-falha-no-scraperapi) |
 | Painel da réplica abre, mas botões/rotas não funcionam | [P20](#p20--o-painel-da-réplica-abre-mas-nada-funciona) |
 | Réplica publica texto sem a foto do produto | [P21](#p21--a-réplica-publica-sem-a-foto-do-produto) |
+| Oferta sai com foto, mas sem o nome do produto | [P22](#p22--a-oferta-sai-com-foto-mas-sem-o-nome-do-produto) |
 
 ---
 
@@ -782,13 +783,18 @@ meio de um `<script>`**, sem `</body>` nem `</html>`.
 `Montar Pagina` só decodifica o que está no banco. Cache do Chrome também mostra a versão
 cortada depois do conserto.
 
-**Solução:** conferir o tamanho no banco (`length(pagina_gz)` = 63424, MD5
-`f8fccee12aa8e6e98ecf12d2a7221d2a`). Se estiver curto, regravar o base64 do arquivo
+**Solução:** conferir o tamanho no banco (`length(pagina_gz)` igual ao que
+`python3 tools/publicar-painel.py --dry-run` imprime). Em 02/09 o valor vigente é
+**67532**, MD5 `d22596c0999a0f339a4d063ae84555a6`. O fechamento original de 29/08 era
+63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a`. Se estiver curto, rode o script — ele
+regrava o base64 a partir de
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
 Depois, **Ctrl+F5**. Sem Basic Auth o n8n responde “Authorization is required!” — isso é o
-GET, não o HTML.
+GET, não o HTML. Config/Rotas falhando com *token de save invalido* é o [P22](#p22--a-oferta-sai-com-foto-mas-sem-o-nome-do-produto)
+(token vazio no GET), não HTML cortado.
 
-Registro: [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz).
+Registro: [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz),
+[Decisão 53](historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script).
 
 ---
 

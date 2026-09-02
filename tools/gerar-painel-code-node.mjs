@@ -1,6 +1,9 @@
 // Gera o jsCode do node "Montar Pagina" (workflow Replica Painel) a partir do HTML versionado.
 //
-// Uso:
+// LEGADO / paraquedas. O caminho do dia a dia e:
+//   python3 tools/publicar-painel.py
+//
+// Uso (so se a Decisao 51 for revertida e o HTML voltar para o Code node):
 //   node tools/gerar-painel-code-node.mjs
 //
 // Entrada:  backups/<data>/painel/replica-painel.html

@@ -229,8 +229,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <section id='abaConfig' class='hidden space-y-4'>
         <section class='surface p-5 space-y-4'>
           <h2 class='h-sec'>Ajustes da replica</h2>
-          <p class='text-sm text-[color:var(--muted)]'>Mudancas entram na proxima mensagem do ingest. O teto protege o Telegram, nao e curadoria.</p>
+          <p class='text-sm text-[color:var(--muted)]'>Mudancas entram na proxima mensagem do ingest. O teto protege o Telegram, nao e curadoria. Ligar/desligar a esteira fica no interruptor da sidebar.</p>
           <div id='config' class='grid md:grid-cols-2 gap-4'></div>
+        </section>
+        <section class='surface p-5 space-y-3'>
+          <h2 class='h-sec'>Como alterar esta pagina</h2>
+          <ol class='text-sm text-[color:var(--muted)] space-y-2 list-decimal pl-5'>
+            <li>Os campos desta aba gravam na hora. Nao precisa republicar o n8n.</li>
+            <li>Visual (abas, textos, layout): edite backups/2026-08-28/painel/replica-painel.html sem aspas duplas nem barra invertida.</li>
+            <li>Publique com python3 tools/publicar-painel.py e depois Ctrl+F5.</li>
+            <li>Tela de login: edite replica-login.html na mesma pasta e rode o script com --login.</li>
+          </ol>
         </section>
       </section>
 
@@ -892,6 +901,11 @@ function campo(chave, rotulo, tipo, dica) {
     controle = el('textarea', 'field px-3 py-2 w-full');
     controle.rows = 4;
     controle.value = valor;
+  } else if (tipo === 'json') {
+    controle = el('textarea', 'field px-3 py-2 w-full font-mono text-xs');
+    controle.rows = 8;
+    try { controle.value = JSON.stringify(JSON.parse(valor), null, 2); }
+    catch (e) { controle.value = valor; }
   } else {
     controle = el('input', 'field px-3 py-2 w-full');
     controle.value = valor;
@@ -906,12 +920,23 @@ function pintarConfig() {
   var alvo = document.getElementById('config');
   alvo.appendChild(campo('teto_hora', 'Teto de posts por hora', 'texto', 'Protecao anti-flood. Nao e filtro de qualidade.'));
   alvo.appendChild(campo('delay_segundos', 'Espera antes de publicar (segundos)', 'texto', 'Pausa para nao parecer rajada.'));
+  alvo.appendChild(campo('atraso_maximo_segundos', 'Atraso maximo da mensagem (segundos)', 'texto', 'Mensagem mais velha que isso nao replica. Padrao 600.'));
+  alvo.appendChild(campo('limite_legenda_telegram', 'Limite da legenda no Telegram', 'texto', 'Telegram corta em 1024. Nao subir sem testar no app.'));
   alvo.appendChild(campo('replicar_cupom_sem_link', 'Replicar cupom sem link de produto', 'sim_nao', 'Se nao, o cupom so de codigo e ignorado.'));
+  alvo.appendChild(campo('destino_telegram', 'Canal Telegram padrao', 'texto', 'Ex.: @promopokemontcg. Uma rota nomeada pode apontar para outro destino.'));
+  alvo.appendChild(campo('afiliado_matt_word', 'Word ID do afiliado Meli', 'texto', 'So altere se a conta Word mudar. Aparece em todo link publicado.'));
+  alvo.appendChild(campo('afiliado_matt_tool', 'Tool ID do afiliado Meli', 'texto', 'So altere se a etiqueta Tool mudar.'));
   alvo.appendChild(campo(
     'frases_remover',
     'Frases extras a remover do post',
     'texto_longo',
     'Uma por linha. @rasgabooster e #rasgaboot ja saem no ingest.'
+  ));
+  alvo.appendChild(campo(
+    'formato_post',
+    'Formato do post (JSON)',
+    'json',
+    'Objeto JSON: idioma, preset, emojis, preco, cupom, link, cta. JSON invalido o n8n recusa e nada grava.'
   ));
 }
 
