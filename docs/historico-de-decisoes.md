@@ -1623,6 +1623,7 @@ plano B. O polycard do hop2 já estava no HTML da execução (`752085-MLA9997728
 CDN 200, JPEG ~279 KB) e o `Montar Post` publicado deixava `url_foto_html` vazio.
 
 Code nodes em [`backups/2026-09-02/code-nodes/`](../backups/2026-09-02/code-nodes/).
+Ingest publicado `c16c7118` (`versionId` = `activeVersionId`).
 
 **O que mudaria esta decisão:** religar o card composto se o Eduardo quiser marca na
 imagem de novo; ou o HTML do encurtador deixar de trazer polycard — aí volta a testar
