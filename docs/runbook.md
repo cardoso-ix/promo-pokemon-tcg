@@ -1200,6 +1200,7 @@ A lista branca do node `Normalizar Config` é o que o formulário expõe:
 | Word ID / Tool ID | `afiliado_matt_word` / `afiliado_matt_tool` | Parâmetros do link de comissão |
 | Frases extras a remover | `frases_remover` | Uma por linha. `@rasgabooster` já sai no ingest |
 | Formato do post (JSON) | `formato_post` | Objeto JSON. JSON inválido o n8n recusa e **nada grava** |
+| Plataformas para replicar | `plataformas` | Hoje só **Mercado Livre** tem afiliação. Amazon/Shopee/Magalu aparecem desligadas. Oferta só de `amzn.to` é descartada (`plataforma_nao_selecionada`) |
 
 O interruptor da sidebar grava `ativo`. Rotas e o Telegram de uma rota específica
 continuam na aba **Rotas** / **Conexões**, via `/salvar`. `pagina_gz` e `save_token`
@@ -1210,8 +1211,8 @@ continuam na aba **Rotas** / **Conexões**, via `/salvar`. `pagina_gz` e `save_t
 O HTML mora em
 [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
 **Produção lê `replica_config.pagina_gz`**, não o Code node. A coluna guarda base64 UTF-8
-do HTML (não gzip). Em 02/09 à noite o valor vigente é **67532** bytes, MD5
-`d22596c0999a0f339a4d063ae84555a6` (HTML 50649, MD5 `11eb41c8749e30eb28a4a1c751d56bd8`).
+do HTML (não gzip). Em 02/09 à noite o valor vigente é **70692** bytes, MD5
+`e5eb09d6e08e890991bff149a3e51739` (HTML 53018, MD5 `920896650126ad6633ed6c5d2e5ff547`).
 O fechamento original de 29/08 era 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a`
 ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)).
 

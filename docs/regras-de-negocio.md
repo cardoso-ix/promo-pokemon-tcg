@@ -736,6 +736,7 @@ Sobraram dez regras, e todas são técnicas:
 | 8 | Origem não pode ser também destino de WhatsApp | `replica_destinos` + IF `origem_e_destino` no ingest |
 | 9 | Apaga marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`, linha só de `@`/`#`) | `Montar Post` + `replica_config.frases_remover` — aba Configurações |
 | 10 | Destino recebe a **foto oficial do anúncio** e o **nome do produto** na legenda (polycard do encurtador), mesmo se a origem veio só com preço na caption; se o polycard falhar, tenta a página e depois a foto da origem; sem as três, só texto | ingest `70a5d99d` ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)) |
+| 11 | Só replica marketplace **marcado e com afiliação**. Hoje: Mercado Livre. Amazon/Shopee/Magalu não saem — não há comissão | `replica_config.plataformas` — aba Configurações ([Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)) |
 
 Word/Tool do afiliado, limite da legenda (1024) e o JSON `formato_post` também saem da aba
 Configurações ([runbook 15.8](runbook.md#158-mexer-no-painel-ajustes-e-página)).
@@ -748,7 +749,9 @@ apagamento da marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`). Divulgar o
 grupo ou o Instagram do concorrente junto com a promoção não faz sentido.
 
 Link de **outro marketplace** (Amazon, Shopee, Magalu e mais 17) não é convertido nem
-publicado: a mensagem inteira é descartada com motivo `so_tinha_link_de_outro_marketplace`.
+publicado: a mensagem inteira é descartada com motivo `plataforma_nao_selecionada`.
+Se a oferta mistura Mercado Livre e Amazon, o ingest troca só o link do ML e **apaga**
+os `amzn.to` da legenda.
 Publicar link de terceiro sem afiliação seria trabalho de graça.
 
 **O teto por hora é anti-flood, não curadoria.** O Telegram limita quanto um bot pode postar, e

@@ -916,8 +916,64 @@ function campo(chave, rotulo, tipo, dica) {
   return caixa;
 }
 
+function listaPlatsConfig() {
+  var raw = cfg.plataformas;
+  var lista = [];
+  if (typeof raw === 'string') {
+    try { lista = JSON.parse(raw); } catch (e) { lista = String(raw).split(','); }
+  } else if (Array.isArray(raw)) lista = raw;
+  if (!Array.isArray(lista) || !lista.length) lista = ['mercadolivre'];
+  return lista.map(function (x) { return String(x).toLowerCase().trim(); }).filter(Boolean);
+}
+
+function campoPlataformas() {
+  var PLATS_UI = [
+    { id: 'mercadolivre', nome: 'Mercado Livre', liga: true },
+    { id: 'amazon', nome: 'Amazon', liga: false },
+    { id: 'shopee', nome: 'Shopee', liga: false },
+    { id: 'magalu', nome: 'Magalu', liga: false },
+    { id: 'aliexpress', nome: 'AliExpress', liga: false }
+  ];
+  var escolhidas = listaPlatsConfig();
+  var caixa = el('div', 'md:col-span-2 space-y-2');
+  caixa.appendChild(el('span', 'meta block', 'Plataformas para replicar'));
+  caixa.appendChild(el('p', 'text-xs text-[color:var(--muted)]', 'So replica oferta da plataforma marcada e com afiliacao. Amazon, Shopee e Magalu ficam desligadas porque ainda nao ha comissao.'));
+  var grupo = el('div', 'flex flex-wrap gap-2');
+  PLATS_UI.forEach(function (p) {
+    var lab = el('label', 'flex items-center gap-2 field px-3 py-2');
+    var ck = document.createElement('input');
+    ck.type = 'checkbox';
+    ck.value = p.id;
+    ck.checked = escolhidas.indexOf(p.id) !== -1;
+    if (!p.liga) {
+      ck.checked = false;
+      ck.disabled = true;
+    }
+    ck.addEventListener('change', function () {
+      if (p.id === 'mercadolivre' && !ck.checked) {
+        ck.checked = true;
+        alert('O Mercado Livre precisa ficar ligado: e a unica plataforma com afiliacao hoje.');
+        return;
+      }
+      var ligadas = [];
+      grupo.querySelectorAll('input').forEach(function (c) {
+        if (c.checked && !c.disabled) ligadas.push(c.value);
+      });
+      if (!ligadas.length) ligadas = ['mercadolivre'];
+      salvarConfig('plataformas', JSON.stringify(ligadas));
+    });
+    lab.appendChild(ck);
+    lab.appendChild(el('span', null, p.nome));
+    grupo.appendChild(lab);
+  });
+  caixa.appendChild(grupo);
+  caixa.appendChild(el('p', 'text-[11px] text-[color:var(--muted)]', 'Quando houver afiliacao da Amazon, esse quadrado liga. Ate la o ingest descarta amzn.to e amazon.com.'));
+  return caixa;
+}
+
 function pintarConfig() {
   var alvo = document.getElementById('config');
+  alvo.appendChild(campoPlataformas());
   alvo.appendChild(campo('teto_hora', 'Teto de posts por hora', 'texto', 'Protecao anti-flood. Nao e filtro de qualidade.'));
   alvo.appendChild(campo('delay_segundos', 'Espera antes de publicar (segundos)', 'texto', 'Pausa para nao parecer rajada.'));
   alvo.appendChild(campo('atraso_maximo_segundos', 'Atraso maximo da mensagem (segundos)', 'texto', 'Mensagem mais velha que isso nao replica. Padrao 600.'));

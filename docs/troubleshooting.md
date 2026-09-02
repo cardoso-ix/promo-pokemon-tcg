@@ -30,6 +30,7 @@ valiosos: são as armadilhas reais desta montagem.
 | Painel da réplica abre, mas botões/rotas não funcionam | [P20](#p20--o-painel-da-réplica-abre-mas-nada-funciona) |
 | Réplica publica texto sem a foto do produto | [P21](#p21--a-réplica-publica-sem-a-foto-do-produto) |
 | Oferta sai com foto, mas sem o nome do produto | [P22](#p22--a-oferta-sai-com-foto-mas-sem-o-nome-do-produto) |
+| Réplica postou link da Amazon / Shopee | [P23](#p23--a-réplica-postou-amazon-sem-afiliação) |
 
 ---
 
@@ -850,3 +851,21 @@ origem não trouxe um. Painel `d4604a4b` destaca esse título nos logs e grava o
 `save_token` com o mesmo fallback dos POSTs. **Ctrl+F5** no painel.
 
 Registro: [Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto).
+
+---
+
+## P23 — A réplica postou Amazon sem afiliação
+
+**Sintoma:** o canal recebe oferta com `amzn.to` / `amazon.com.br`, sem comissão. No n8n
+o `Montar Post` termina com `publicar = true` e motivo `copia_outro_marketplace` ou
+`copia_identica`.
+
+**Causa:** o ingest copiava o texto inteiro quando não havia link do Mercado Livre
+para converter. A lista de plataformas existia na rota, mas o painel não mostrava o
+campo, e `publicar` não era desligado.
+
+**Solução:** aba Configurações → **Plataformas para replicar** (só Mercado Livre
+ligado). Oferta só de Amazon vira `descartado` / `plataforma_nao_selecionada`.
+Conferir na próxima mensagem **nova** (hash impede replay).
+
+Registro: [Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação).

@@ -29,6 +29,7 @@ const PERMITIDAS = {
   frases_remover: 'texto_longo',
   formato_post: 'json_longo',
   atraso_maximo_segundos: 'inteiro',
+  plataformas: 'lista_plats',
   limite_legenda_telegram: 'inteiro'
 };
 
@@ -50,6 +51,22 @@ if (tipo === 'booleano') {
   valor = String(numero);
 } else if (tipo === 'texto_longo') {
   valor = valor.slice(0, 800);
+} else if (tipo === 'lista_plats') {
+  const PLATS_OK = { mercadolivre: true, amazon: true, shopee: true, magalu: true, aliexpress: true };
+  const CONVERSORES = { mercadolivre: true };
+  let lista = [];
+  try { lista = JSON.parse(valor); } catch (e) { lista = String(valor).split(/[\n,;]+/); }
+  if (!Array.isArray(lista)) lista = [];
+  const saida = [];
+  const vistos = {};
+  for (let i = 0; i < lista.length; i++) {
+    const pid = String(lista[i] || '').trim().toLowerCase();
+    if (!PLATS_OK[pid] || vistos[pid] || !CONVERSORES[pid]) continue;
+    vistos[pid] = true;
+    saida.push(pid);
+  }
+  if (!saida.length) saida.push('mercadolivre');
+  valor = JSON.stringify(saida);
 } else if (tipo === 'json_longo') {
   valor = valor.slice(0, 4000);
   try {

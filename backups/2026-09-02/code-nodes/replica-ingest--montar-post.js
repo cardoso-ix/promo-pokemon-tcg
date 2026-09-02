@@ -4,11 +4,13 @@
 const DOMINIOS_ML = ['mercadolivre.com.br', 'mercadolibre.com', 'mercadolivre.com'];
 const ENCURTADORES_ML = ['meli.la', 'mlb.to'];
 const OUTROS_MARKETPLACES = [
-  'amazon.com', 'amzn.to', 'shopee.com', 'shope.ee', 'aliexpress.com',
+  'amazon.com', 'amazon.com.br', 'amzn.to', 'a.co',
+  'shopee.com', 'shope.ee', 'aliexpress.com', 's.click.aliexpress.com',
   'magazineluiza.com', 'magalu.com', 'americanas.com', 'casasbahia.com', 'pontofrio.com',
   'kabum.com', 'terabyteshop.com', 'pichau.com', 'netshoes.com', 'centauro.com',
   'submarino.com', 'carrefour.com', 'temu.com', 'shein.com', 'nike.com.br',
 ];
+const CONVERSORES = { mercadolivre: true };
 
 function limiteLegendaTelegram(cfg) {
   const n = parseInt(cfg && cfg.limite_legenda_telegram, 10);
@@ -202,13 +204,30 @@ function rotaOpcoes(cfg) {
   return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
 }
 function platsLigadas(cfg) {
-  const op = rotaOpcoes(cfg);
-  let lista = op.plataformas || cfg.plataformas;
-  if (typeof lista === 'string') { try { lista = JSON.parse(lista); } catch (e) { lista = null; } }
+  let lista = cfg && cfg.plataformas;
+  if (typeof lista === 'string') {
+    try { lista = JSON.parse(lista); } catch (e) { lista = String(lista).split(/[\n,;]+/); }
+  }
+  if (!Array.isArray(lista) || !lista.length) {
+    const op = rotaOpcoes(cfg);
+    lista = op.plataformas;
+  }
+  if (typeof lista === 'string') {
+    try { lista = JSON.parse(lista); } catch (e2) { lista = null; }
+  }
   if (!Array.isArray(lista) || !lista.length) lista = ['mercadolivre'];
   const s = {};
   for (let i = 0; i < lista.length; i++) s[String(lista[i]).toLowerCase()] = true;
   return s;
+}
+function platDoHost(host) {
+  if (terminaCom(host, DOMINIOS_ML) || terminaCom(host, ENCURTADORES_ML)) return 'mercadolivre';
+  if (terminaCom(host, ['amazon.com', 'amazon.com.br', 'amzn.to', 'a.co'])) return 'amazon';
+  if (terminaCom(host, ['shopee.com', 'shope.ee'])) return 'shopee';
+  if (terminaCom(host, ['magazineluiza.com', 'magalu.com'])) return 'magalu';
+  if (terminaCom(host, ['aliexpress.com', 's.click.aliexpress.com'])) return 'aliexpress';
+  if (terminaCom(host, OUTROS_MARKETPLACES)) return 'outro';
+  return '';
 }
 function boolCampo(v, padrao) {
   if (v === true || v === 'true' || v === 1 || v === '1') return true;
@@ -278,7 +297,7 @@ const gerarImagem = boolCampo(opRota.gerar_imagem, true);
 const gerarPreview = boolCampo(opRota.gerar_imagem_preview, false);
 let texto = String(norm.texto || '');
 let convertidos = 0;
-let temOutroMarketplace = false;
+let temMarketplaceBloqueado = false;
 const itemIds = [];
 let tipoItem = '';
 let tituloProduto = '';
@@ -292,7 +311,9 @@ for (let i = 0; i < links.length; i++) {
   const final = destinoFinal[link.url] || link.url;
   const hostFinal = hostDe(final);
   const veioDoMeli = terminaCom(hostFinal, DOMINIOS_ML) || terminaCom(hostDe(link.url), ENCURTADORES_ML);
-  if (veioDoMeli && apelido && plats.mercadolivre) {
+  const plat = platDoHost(hostFinal) || platDoHost(hostDe(link.url));
+  const podeConverter = !!(plat && plats[plat] && CONVERSORES[plat]);
+  if (veioDoMeli && apelido && podeConverter) {
     const extra = permalinkDoHtml(htmlPorUrl[link.url] || '', norm.texto);
     const idNaUrl = ehVitrineSocial(final) ? '' : (itemIdDe(final) || itemIdDe(link.url));
     const id = idNaUrl || extra.id;
@@ -312,11 +333,13 @@ for (let i = 0; i < links.length; i++) {
       texto = trocarTudo(texto, link.url, montarLinkSocialProprio(apelido, etiqueta));
       convertidos += 1;
     }
-  } else if (terminaCom(hostFinal, OUTROS_MARKETPLACES)) {
-    temOutroMarketplace = true;
+  } else if (plat && plat !== '') {
+    temMarketplaceBloqueado = true;
+    texto = trocarTudo(texto, link.url, '');
   }
 }
 texto = limparMarcasTerceiro(texto, frasesExtras(cfg));
+texto = String(texto || '').replace(/[ \t]{2,}/g, ' ').replace(/\n[ \t]+/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 const extraHtml = dadosDosHtmls(htmlPorUrl, itemIds.join(','));
 if (!tituloProduto && extraHtml.titulo) tituloProduto = extraHtml.titulo;
 texto = injetarTitulo(texto, tituloProduto);
@@ -326,7 +349,11 @@ let status = publicar ? 'pendente' : 'descartado';
 let motivo = '';
 if (!temConteudo) motivo = 'sem_texto_nem_foto';
 else if (convertidos > 0) motivo = 'copia_com_afiliado';
-else if (temOutroMarketplace) motivo = 'copia_outro_marketplace';
+else if (temMarketplaceBloqueado) {
+  publicar = false;
+  status = 'descartado';
+  motivo = 'plataforma_nao_selecionada';
+}
 else motivo = 'copia_identica';
 const material = String(norm.chat_id || '') + '|' + String(norm.mensagem_id || '');
 let destinos = [];
@@ -338,7 +365,8 @@ const destinoTelegram = destinosTelegram.length ? destinosTelegram[0].identifica
 if (publicar && !destinosTelegram.length && !destinosWhatsapp.length) { publicar = false; status = 'descartado'; motivo = 'sem_destino_configurado'; }
 const chaveMidia = { id: norm.mensagem_id, remoteJid: norm.chat_id, fromMe: norm.da_propria_conta === true };
 if (norm.participante) chaveMidia.participant = norm.participante;
-const urlFotoHtml = extraHtml.foto;
+const urlFotoHtml = convertidos > 0 ? extraHtml.foto : '';
+const podeMidia = convertidos > 0 || !temMarketplaceBloqueado;
 function saida(urlVisivel, textoFinal, fonteLink) {
   return [{ json: {
     origem_chat_id: norm.chat_id, origem_nome: cfg.nome || '', origem_message_id: norm.mensagem_id,
@@ -347,8 +375,8 @@ function saida(urlVisivel, textoFinal, fonteLink) {
     url_produto: urlProdutoLimpa, url_afiliado: urlAfiliadoLonga || urlAfiliadoCompacta, url_visivel: urlVisivel,
     fonte_link: fonteLink, short_id: '', url_destino_curto: '', tem_imagem: norm.tem_imagem === true, url_foto_html: urlFotoHtml,
     gerar_imagem: gerarImagem, gerar_imagem_preview: gerarPreview,
-    baixar_foto: gerarImagem && (norm.tem_imagem === true || !!urlFotoHtml),
-    usar_foto: gerarImagem && (norm.tem_imagem === true || !!urlFotoHtml) && textoFinal.length <= LIMITE_LEGENDA_TELEGRAM,
+    baixar_foto: gerarImagem && podeMidia && (norm.tem_imagem === true || !!urlFotoHtml),
+    usar_foto: gerarImagem && podeMidia && (norm.tem_imagem === true || !!urlFotoHtml) && textoFinal.length <= LIMITE_LEGENDA_TELEGRAM,
     destino: destinoTelegram, destinos_telegram: destinosTelegram, destinos_whatsapp: destinosWhatsapp,
     tem_destino_telegram: destinosTelegram.length > 0, tem_destino_whatsapp: destinosWhatsapp.length > 0,
     delay_segundos: Number(cfg.delay_segundos || 8),

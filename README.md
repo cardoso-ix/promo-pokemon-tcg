@@ -196,7 +196,7 @@ retomar em 30 segundos.
 | **Pokemon Catalog Scanner** | **Arquivado** em 27/08 (era inativo desde 16/08). Listagem ML falhou no ScraperAPI. **Não republicar** ([Decisão 42](docs/historico-de-decisoes.md#decisão-42--catalog-scanner-criado-e-deixado-inativo)) |
 | **Pokemon Scanner v2** | **Ativo**, a cada **10 min**, publicado `f0183d1c` — busca geral + Pokémon no título ([Decisão 43](docs/historico-de-decisoes.md#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora)) |
 | **Pokemon Schema Setup v2** | Desativado (só sob demanda) |
-| **Replica WhatsApp Ingest** | **Ativo** — rota TCG Promo; foto do polycard + nome do produto na legenda ([Decisão 52](docs/historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)), publicado `70a5d99d` |
+| **Replica WhatsApp Ingest** | **Ativo** — rota TCG Promo; foto do polycard + nome na legenda; só Mercado Livre ([Decisão 54](docs/historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)), publicado `70be8ff6` |
 | **Replica Painel** | **Ativo** — Config grava a lista branca; HTML em `pagina_gz` via `tools/publicar-painel.py` ([Decisão 53](docs/historico-de-decisoes.md#decisão-53--o-painel-grava-os-ajustes-da-lista-branca-e-o-html-sobe-por-script)). URL: `/webhook/replica/painel` · login: `/webhook/replica/entrar` |
 | **Replica WhatsApp Conectar** | **Publicado** em 28/08. Página do QR code |
 | **Replica Schema Setup** | Inativo. Já rodou e criou as tabelas `replica_*` e o schema `evolution` |

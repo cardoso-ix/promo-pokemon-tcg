@@ -617,7 +617,8 @@ semeados pelo setup:
 | `formato_post` | JSON | Idioma, preset, emojis, preço, cupom, link, CTA. A aba Config grava; JSON inválido o n8n recusa |
 | `atraso_maximo_segundos` | `600` | Mensagem mais velha que isso não replica |
 | `limite_legenda_telegram` | `1024` | Corta a legenda no Telegram |
-| `pagina_gz` | HTML em base64 UTF-8 | **Não é gzip** (nome legado). O GET do painel decodifica e injeta `__DADOS__`. Vigente em 02/09: 67532 bytes, MD5 `d22596c0999a0f339a4d063ae84555a6`. Fechamento original 29/08: 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a` ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)) |
+| `plataformas` | `["mercadolivre"]` | Marketplaces que a réplica pode postar. Só entra plataforma **com conversor de afiliado**. Amazon fica de fora até existir comissão ([Decisão 54](historico-de-decisoes.md#decisão-54--só-replicar-marketplace-com-afiliação)) |
+| `pagina_gz` | HTML em base64 UTF-8 | **Não é gzip** (nome legado). O GET do painel decodifica e injeta `__DADOS__`. Vigente em 02/09: 70692 bytes, MD5 `e5eb09d6e08e890991bff149a3e51739`. Fechamento original 29/08: 63424 / `f8fccee12aa8e6e98ecf12d2a7221d2a` ([Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz)) |
 | `save_token` | token longo | Autentica os POSTs do painel. O Chrome não reenvia Basic Auth no `fetch` ([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)). Não colar o valor aqui |
 
 O painel só aceita gravar chave que está na lista branca do node `Normalizar Config` — é o que
@@ -653,7 +654,7 @@ Os valores de `status`:
 | --- | --- |
 | `pendente` | Passou pelas regras, está a caminho do Telegram |
 | `enviado` | Publicado. `enviado_em` preenchido e `replica_rotas.replicadas` incrementado |
-| `descartado` | Sem link do Mercado Livre, ou só com link de outro marketplace, ou texto vazio depois da limpeza |
+| `descartado` | Sem link do Mercado Livre, só link de plataforma sem afiliação (`plataforma_nao_selecionada`), ou texto vazio depois da limpeza |
 | `ignorado` | Teto por hora atingido |
 | `erro` | O Telegram recusou. `motivo` guarda a mensagem de erro |
 

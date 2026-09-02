@@ -1673,6 +1673,31 @@ para sobrescrever o site.
 
 ---
 
+## Decisão 54 — só replicar marketplace com afiliação
+
+**Data:** 02/09/2026 · **Quem pediu:** Eduardo (campo no site para escolher plataformas; “não pode ser replicado do amazon pois não tenho afiliação”)
+
+**O que estava acontecendo.** O ingest já lia `opcoes.plataformas` da rota (padrão
+Mercado Livre), mas o painel **não mostrava** o campo. Mensagem só de Amazon ainda
+saía: `convertidos = 0`, `motivo = copia_outro_marketplace` e `publicar = true` —
+o link `amzn.to` ia cru, sem comissão.
+
+**A decisão.**
+
+1. Aba Configurações ganha **Plataformas para replicar**. Mercado Livre ligado.
+   Amazon, Shopee, Magalu e AliExpress aparecem desligados (sem conversor de afiliado).
+2. `replica_config.plataformas` manda no ingest. Sem afiliação, o n8n recusa gravar
+   a plataforma na lista branca.
+3. Oferta só de Amazon/Shopee/etc. vira `descartado` / `plataforma_nao_selecionada`.
+   Oferta mista: converte o ML e apaga o link da outra loja da legenda.
+
+**O que mudaria esta decisão:** cadastrar conversor de afiliado da Amazon (ou outra)
+e então habilitar o quadrado no painel.
+
+Painel publicado `ea72903e`. Ingest `70be8ff6`. HTML 53018 bytes (`pagina_gz` 70692).
+
+---
+
 ## Histórico de sustos: o que já deu errado na infraestrutura
 
 Não são decisões, são cicatrizes. Valem registro porque a chance de repetição não é zero.
