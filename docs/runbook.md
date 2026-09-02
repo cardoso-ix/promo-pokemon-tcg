@@ -1115,9 +1115,10 @@ O número precisa **já estar no grupo**. Entre no grupo com o número do QR e r
 **Não use o mesmo grupo como origem e destino.** Isso criaria um loop. O ingest recusa essa
 combinação; o painel avisa.
 
-O destino (Telegram e WhatsApp) recebe o **card profissional**, não a foto crua do grupo
-([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)).
-Sem foto de anúncio e sem foto de origem, o post segue só texto (cupom sem produto).
+O destino (Telegram e WhatsApp) recebe a **foto oficial do anúncio** no Mercado Livre,
+mesmo se o grupo de origem mandou só texto
+([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)).
+Se a página do produto falhar, tenta a foto da origem. Sem as duas, o post segue só texto.
 
 ### 15.6 Desligar tudo, rápido
 

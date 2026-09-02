@@ -10,7 +10,8 @@ mudaria a decisão.
 **Números vigentes** (ritmo, lojas, teto, desconto mínimo) estão em
 [regras-de-negocio.md](regras-de-negocio.md) e no [README](../README.md). As decisões mais
 antigas abaixo podem citar 10 min / 5 min / teto 30 / duas lojas — isso era verdade **na
-hora em que foram escritas**. A última operacional é a [Decisão 43](#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora).
+hora em que foram escritas**. A última operacional da curadoria é a [Decisão 43](#decisão-43--busca-geral-religada-para-cerca-de-6-posts-por-hora);
+da réplica, a [Decisão 52](#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto).
 
 ---
 
@@ -1580,6 +1581,43 @@ nativo com redirect — o browser manda Basic Auth em navegação de formulário
 **O que isso implica:** depois de gravar, o GET passa a entregar HTML completo. Se o Chrome ainda mostrar a página quebrada, é cache — **Ctrl+F5**. Para mexer no visual de novo: edite o HTML, grave o base64 em `pagina_gz` e dê Ctrl+F5 ([runbook 15.8](runbook.md#158-mexer-no-painel-mudar-a-página)).
 
 **O que mudaria esta decisão:** voltar a embutir o HTML no Code node (aí o gerador `tools/gerar-painel-code-node.mjs` volta a ser o caminho principal).
+
+---
+
+## Decisão 52 — foto oficial do anúncio, mesmo quando a origem veio só com texto
+
+**Data:** 02/09/2026 · **Quem pediu:** Eduardo (“corrigir a foto da réplica”)
+
+**O que estava acontecendo.** Os grupos de origem quase sempre mandam **texto + link**, sem
+imagem. O ingest só anexava foto se `tem_imagem` viesse da Evolution. A esteira da foto do
+ML (`Tem Foto do ML?` → página/API → `Baixar Foto do Anuncio`) existia no canvas e **não
+estava ligada**. Resultado em produção: Telegram e WhatsApp saíam só texto, com o produto
+já identificado (`item_ids = MLB…`, `url_produto` preenchido). Execução típica: `64927`.
+
+Pegadinha extra: o encurtador cai na vitrine `/social/` de terceiro. O `og:image` dessa
+página é a foto do perfil/lista, não a do produto. Não dá para reaproveitar.
+
+**A decisão.**
+
+1. Se `Montar Post` achou um produto (`url_produto` / `item_ids`), o ingest **baixa a
+   página do produto no `www.mercadolivre.com.br`** (mesmo caminho do
+   `HTTP Reconferir Pagina` do Publisher) e tira a foto de `og:image`.
+2. Sobe a thumb (`-I`/`-W` → `-O`, `D_NQ_NP_2X_`). A foto **vai inteira** — o card
+   composto 1080×1440 da [Decisão 50](#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)
+   continua no canvas, desligado. Volume da réplica não cabe em montar layout a cada post.
+3. Se a página falhar (anti-bot, sem `og:image`), cai na foto da origem, se houver.
+4. Sem produto e sem foto da origem: só texto.
+5. `og:image` de página `/social/` é **recusado**.
+
+A API `api.mercadolibre.com/items|products` devolve 401/403 a partir de alguns IPs; a
+página `www` já é lida pela VPS no Publisher. Por isso a fonte é HTML, não a API.
+
+Ingest publicado `d90d6d88` (`versionId` = `activeVersionId`). Code nodes em
+[`backups/2026-09-02/code-nodes/`](../backups/2026-09-02/code-nodes/).
+
+**O que mudaria esta decisão:** religar o card composto se o Eduardo quiser marca na
+imagem de novo; ou a página `/p/` passar a devolver verificação na VPS — aí testa a API
+de novo a partir do n8n, não deste ambiente.
 
 ---
 

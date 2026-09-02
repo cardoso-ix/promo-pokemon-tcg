@@ -735,7 +735,7 @@ Sobraram dez regras, e todas são técnicas:
 | 7 | Espera antes de publicar, padrão 8 s | `replica_config.delay_segundos` |
 | 8 | Origem não pode ser também destino de WhatsApp | `replica_destinos` + IF `origem_e_destino` no ingest |
 | 9 | Apaga marca de terceiro (`@rasgabooster.tcg`, `#rasgaboot`, linha só de `@`/`#`) | `Montar Post` + `replica_config.frases_remover` |
-| 10 | Destino recebe um **card** (foto do ML ou da origem + título/preço/marca), não a foto crua | ingest `803a5650` ([Decisão 50](historico-de-decisoes.md#decisão-50--card-profissional-no-lugar-da-foto-crua-da-origem)) |
+| 10 | Destino recebe a **foto oficial do anúncio** (página do produto no ML), mesmo se a origem veio só com texto; se a página falhar, a foto da origem; sem as duas, só texto | ingest `d90d6d88` ([Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto)) |
 
 **A única edição de conteúdo** é a troca do link do Mercado Livre pelo link de afiliado —
 mesmíssimo formato da [seção 10](#10-link-de-afiliado), com `matt_word` e `matt_tool` lidos de

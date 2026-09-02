@@ -28,6 +28,7 @@ valiosos: são as armadilhas reais desta montagem.
 | Salvei a correção, mas em produção o comportamento antigo continua | [P18](#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada) |
 | Catalog Scanner / ScraperAPI devolve 500 na listagem do ML | [P19](#p19--catalog-scanner-a-listagem-do-ml-falha-no-scraperapi) |
 | Painel da réplica abre, mas botões/rotas não funcionam | [P20](#p20--o-painel-da-réplica-abre-mas-nada-funciona) |
+| Réplica publica texto sem a foto do produto | [P21](#p21--a-réplica-publica-sem-a-foto-do-produto) |
 
 ---
 
@@ -788,3 +789,28 @@ Depois, **Ctrl+F5**. Sem Basic Auth o n8n responde “Authorization is required!
 GET, não o HTML.
 
 Registro: [Decisão 51](historico-de-decisoes.md#decisão-51--fechar-o-html-do-painel-em-pagina_gz).
+
+---
+
+## P21 — A réplica publica sem a foto do produto
+
+**Sintoma:** o post sai no Telegram/WhatsApp só com texto, mesmo com link de produto do
+Mercado Livre. No n8n a execução termina em `Marcar Como Enviado` e **não** passa por
+`Buscar Item no Mercado Livre` / `Baixar Foto do Anuncio`.
+
+**Causa (02/09/2026):** a origem quase sempre vem sem `imageMessage`. O `Preparar Card`
+só ligava foto quando `tem_imagem` era true, e o ramo `Tem Foto do ML?` estava no canvas
+sem conexão. O `og:image` da página `/social/` de terceiro **não** é a foto do produto.
+
+**Solução:** o ingest `d90d6d88` busca a página do produto (`url_produto`) e usa o
+`og:image`. Conferir numa execução **depois** do delay (~8 s):
+
+1. `Preparar Card` → `fonte_foto = ml` e `url_item` começando com `https://www.mercadolivre.com.br/` (sem `/social/`).
+2. `Tem Foto Para Copiar?` verdadeiro → `Tem Foto do ML?` → `Buscar Item no Mercado Livre`.
+3. `Normalizar URL da Foto` → `tem_url_foto = true` e `url_foto_card` em `http2.mlstatic.com`.
+4. `Publicar Foto no Telegram` (e WhatsApp, se houver destino).
+
+Se `Buscar Item` devolver HTML de `account-verification` / `suspicious-traffic`, o fluxo
+cai na foto da origem ou no texto. Não use o `og:image` da vitrine `/social/`.
+
+Registro: [Decisão 52](historico-de-decisoes.md#decisão-52--foto-oficial-do-anúncio-mesmo-quando-a-origem-veio-só-com-texto).
