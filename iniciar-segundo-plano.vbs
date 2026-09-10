@@ -1,6 +1,6 @@
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
-currentDir = fso.GetParentFolderName(WScript.ScriptFullName)
-appDir = currentDir & "\app"
+scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
+appDir = scriptDir & "\app"
 WshShell.CurrentDirectory = appDir
-WshShell.Run "cmd /c node dist/index.js", 0, False
+WshShell.Run "node dist/index.js", 0, False
