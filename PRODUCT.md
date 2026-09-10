@@ -8,11 +8,11 @@ web
 
 ## Users
 
-[Inferido] Eduardo opera sozinho, de noite, no desktop. Precisa ver se a réplica está ligada, se WhatsApp/Telegram estão conectados, e criar rotas (origem → destino) sem adivinhar JID de grupo.
+[Inferido] Eduardo opera sozinho, de noite. Precisa ver se a réplica está ligada, se WhatsApp/Telegram estão conectados, e criar rotas (origem → destino) sem adivinhar JID de grupo. Desde 30/08 o painel também fecha em mobile/tablet (CRT, responsivo).
 
 ## Product Purpose
 
-Painel privado da esteira de réplica: copia oferta de grupo WhatsApp e republica com o link de afiliado, sem curadoria. Sucesso = conectar, escolher grupos pelo nome, gravar rota e acompanhar envios/erros.
+Painel privado da réplica (única esteira do projeto desde 31/08): copia oferta de grupo WhatsApp e republica com o link de afiliado, sem curadoria. Sucesso = conectar, escolher grupos pelo nome, gravar rota e acompanhar envios/erros.
 
 ## Positioning
 
@@ -43,7 +43,7 @@ Painel vivo em `backups/2026-08-28/painel/replica-painel.html`. Dados reais vêm
 1. A tarefa some o chrome: conectar, rotas, números da semana.
 2. Nome humano do grupo, nunca JID.
 3. Página rápida; sync pesado fica fora do GET.
-4. Não inventar capacidade do outro produto (planos, massa, gerar imagem).
+4. Não inventar capacidade (planos, massa, gerar imagem, curadoria automática).
 5. Escuro porque o uso é noturno, na frente de um monitor.
 
 ## Accessibility & Inclusion

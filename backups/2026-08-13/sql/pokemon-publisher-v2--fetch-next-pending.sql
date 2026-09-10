@@ -1,4 +1,0 @@
--- Pokemon Publisher v2 > node "Fetch Next Pending"
--- Backup de 13/08/2026.
-
-SELECT p.*, c.codigo AS cupom_codigo, c.descricao AS cupom_descricao, c.valor_minimo_cents AS cupom_valor_minimo_cents, to_char(c.valido_ate AT TIME ZONE 'America/Sao_Paulo', 'DD/MM/YYYY') AS cupom_valido_ate_br FROM promos p LEFT JOIN LATERAL (SELECT cu.* FROM cupons cu WHERE cu.ativo = TRUE AND (cu.valido_de IS NULL OR cu.valido_de <= now()) AND (cu.valido_ate IS NULL OR cu.valido_ate >= now()) AND (cu.categoria_id IS NULL OR cu.categoria_id = p.category_id) ORDER BY cu.prioridade DESC, cu.valido_ate ASC NULLS LAST LIMIT 1) c ON TRUE WHERE p.status = 'pending' AND p.utm_link IS NOT NULL AND p.utm_link LIKE '%matt_word=caed1312314%' AND p.utm_link LIKE '%matt_tool=96097202%' AND p.thumbnail IS NOT NULL AND p.thumbnail LIKE 'http%' ORDER BY p.discount_pct DESC LIMIT 1;

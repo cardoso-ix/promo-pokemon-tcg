@@ -1,1 +1,0 @@
-=INSERT INTO promos_erros (item_id, error_step, error_msg) VALUES ('{{ $("Format PT-BR Message").item.json.item_id }}', 'post', 'telegram send failed');

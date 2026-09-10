@@ -15,6 +15,12 @@ secrets/
 node_modules/
 dist/
 .cache/
+app/node_modules/
+app/dist/
+
+# Dados locais e credenciais do WhatsApp
+data/
+data/**
 
 # SO e editor
 .DS_Store
