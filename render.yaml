@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: promo-replica-bot
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: starter
+    region: ohio
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATA_DIR
+        value: /app/data
+    disk:
+      name: replica-data
+      mountPath: /app/data
+      sizeGB: 1

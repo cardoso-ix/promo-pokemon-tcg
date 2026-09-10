@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  promo-replica:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: promo-replica-bot
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DATA_DIR=/app/data
+      - NODE_ENV=production
+    volumes:
+      - ./data:/app/data
