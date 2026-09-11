@@ -252,5 +252,25 @@ export async function createServer() {
     }
   });
 
+  // API REST: Disparar Teste Real para o WhatsApp
+  app.post<{ Body: { chatId: string; text: string; imageBase64?: string } }>('/api/test-send', async (req, reply) => {
+    const { chatId, text, imageBase64 } = req.body || {};
+    if (!chatId) return reply.status(400).send({ ok: false, error: 'Selecione um grupo de destino para o teste.' });
+    if (!text || !text.trim()) return reply.status(400).send({ ok: false, error: 'Texto da mensagem não pode ser vazio.' });
+
+    try {
+      let imageBuffer: Buffer | null = null;
+      if (imageBase64 && imageBase64.includes('base64,')) {
+        const rawBase64 = imageBase64.split('base64,')[1];
+        imageBuffer = Buffer.from(rawBase64, 'base64');
+      }
+
+      await whatsAppManager.sendDirectMessage(chatId, text, imageBuffer);
+      return { ok: true, message: 'Mensagem de teste enviada com sucesso no grupo!' };
+    } catch (err: any) {
+      return reply.status(500).send({ ok: false, error: err?.message || 'Falha ao disparar para o WhatsApp.' });
+    }
+  });
+
   return app;
 }

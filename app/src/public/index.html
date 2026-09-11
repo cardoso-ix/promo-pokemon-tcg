@@ -176,9 +176,20 @@
       <div class="section-toolbar">
         <div>
           <h2>Laboratório de Teste de Promoções</h2>
-          <p class="section-desc">Cole um texto promocional ou link do Mercado Livre para simular o encurtamento, a limpeza e a foto sem postar no WhatsApp.</p>
+          <p class="section-desc">Simule o encurtamento, limpeza e fotos com modelos prontos ou teste disparando para um grupo real.</p>
         </div>
-        <button id="btn-lab-exemplo" class="btn btn-secondary">⚡ Carregar Exemplo Pokémon TCG</button>
+      </div>
+
+      <!-- Barra de Modelos Prontos (Presets) -->
+      <div class="lab-presets-bar">
+        <span class="presets-label">⚡ Modelos Prontos:</span>
+        <div class="presets-scroll">
+          <button class="btn-preset" data-preset="ml-direto">📦 Deck Direto ML</button>
+          <button class="btn-preset" data-preset="spam-concorrente">🧹 Concorrente c/ Spam</button>
+          <button class="btn-preset" data-preset="multi-links">🔗 Múltiplos Links</button>
+          <button class="btn-preset" data-preset="cupom">🎟️ Cupom de Desconto</button>
+          <button class="btn-preset" data-preset="amazon">🛒 Outro Marketplace (Amazon)</button>
+        </div>
       </div>
 
       <div class="lab-layout">
@@ -186,16 +197,17 @@
         <div class="card lab-card">
           <div class="card-header-flex">
             <h3>Mensagem Bruta de Entrada</h3>
-            <span class="badge badge-neutral">Simulação</span>
+            <span id="lab-char-counter" class="char-counter">0 caracteres</span>
           </div>
-          <p class="card-desc">Cole a mensagem exatamente como seria postada no grupo de origem:</p>
+          <p class="card-desc">Cole uma mensagem ou clique em um dos modelos acima:</p>
           
-          <textarea id="lab-input-text" class="textarea-field lab-textarea" rows="9" placeholder="Cole aqui o texto da promoção contendo links do Mercado Livre, preços e hashtags..."></textarea>
+          <textarea id="lab-input-text" class="textarea-field lab-textarea" rows="10" placeholder="Cole aqui o texto da promoção contendo links do Mercado Livre, preços e hashtags..."></textarea>
           
           <div class="lab-actions">
             <button id="btn-run-simulation" class="btn btn-primary btn-foil">
-              <span>⚡ Simular Tratamento Completo</span>
+              <span>⚡ Simular Tratamento</span>
             </button>
+            <button id="btn-clear-lab" class="btn btn-ghost">Limpar</button>
             <span id="lab-feedback" class="action-feedback"></span>
           </div>
         </div>
@@ -206,33 +218,85 @@
             <h3>Resultado Processado</h3>
             <div id="lab-mode-badge" class="badge badge-meli" style="display: none;">meli.la Oficial</div>
           </div>
-          <p class="card-desc">Veja como o post será entregue no seu grupo de destino:</p>
+
+          <!-- View mode switcher -->
+          <div class="view-switch-bar">
+            <button class="view-switch-btn active" data-view="whatsapp">📱 Simulação WhatsApp</button>
+            <button class="view-switch-btn" data-view="diff">🔍 Comparador Antes/Depois</button>
+          </div>
 
           <div id="lab-result-placeholder" class="lab-placeholder">
             <div class="empty-icon">🧪</div>
-            <p>Clique no botão de simulação para ver a conversão de links, limpeza de marcas e foto capturada.</p>
+            <p>Selecione um dos modelos prontos ou cole um texto e clique em <strong>Simular Tratamento</strong>.</p>
           </div>
 
           <div id="lab-result-content" style="display: none;">
             <div class="lab-meta-row">
-              <span id="lab-links-badge" class="meta-tag">🔗 0 Links Convertidos</span>
-              <span id="lab-has-ml-badge" class="meta-tag">📦 Mercado Livre Detectado</span>
+              <span id="lab-links-badge" class="meta-tag">🔗 0 Links</span>
+              <span id="lab-has-ml-badge" class="meta-tag">📦 Mercado Livre</span>
+              <span id="lab-caption-health" class="meta-tag meta-tag-ok">✅ Legenda OK</span>
             </div>
 
-            <!-- Preview da Foto Coletada -->
-            <div id="lab-image-container" class="lab-image-preview" style="display: none;">
-              <span class="preview-label">Foto Oficial Capturada (2X Alta Resolução):</span>
-              <img id="lab-preview-img" src="" alt="Produto">
+            <!-- View 1: Visualização WhatsApp Mockup -->
+            <div id="lab-view-whatsapp" class="lab-view-panel active">
+              <div class="wa-chat-window">
+                <div class="wa-chat-header">
+                  <span class="wa-avatar">💬</span>
+                  <div class="wa-chat-info">
+                    <span class="wa-chat-title">Grupo de Destino · Prévia</span>
+                    <span class="wa-chat-subtitle">online</span>
+                  </div>
+                </div>
+                
+                <div class="wa-chat-body">
+                  <div class="wa-bubble">
+                    <div id="lab-wa-img-container" class="wa-bubble-img-wrap" style="display: none;">
+                      <img id="lab-wa-img" src="" alt="Imagem do Produto">
+                    </div>
+                    <div id="lab-wa-text" class="wa-bubble-text"></div>
+                    <div class="wa-bubble-footer">
+                      <span id="lab-wa-time">12:00</span>
+                      <span class="wa-double-check">✓✓</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- Texto Formatado Final -->
-            <div class="lab-text-preview-box">
-              <span class="preview-label">Texto da Legenda / Post:</span>
-              <pre id="lab-output-text" class="lab-output-pre"></pre>
+            <!-- View 2: Comparador Antes/Depois -->
+            <div id="lab-view-diff" class="lab-view-panel">
+              <div class="diff-container">
+                <div class="diff-block">
+                  <span class="diff-header diff-header-orig">Texto Original:</span>
+                  <pre id="lab-diff-orig" class="diff-pre"></pre>
+                </div>
+                <div class="diff-block">
+                  <span class="diff-header diff-header-proc">Texto Processado (Com seu link):</span>
+                  <pre id="lab-diff-proc" class="diff-pre"></pre>
+                </div>
+              </div>
             </div>
 
-            <div style="margin-top: 14px;">
+            <!-- Ações de Saída -->
+            <div class="lab-output-actions">
               <button id="btn-copy-lab-text" class="btn btn-secondary">📋 Copiar Texto Tratado</button>
+            </div>
+
+            <!-- Disparo de Teste Real Opcional -->
+            <div class="real-send-card">
+              <div class="real-send-header">
+                <span class="real-send-icon">🚀</span>
+                <strong>Disparar Teste Real no WhatsApp</strong>
+              </div>
+              <p class="real-send-desc">Envie essa mensagem imediatamente para um grupo de testes para validar no seu aplicativo:</p>
+              
+              <div class="real-send-row">
+                <select id="lab-target-chat" class="input-field input-select">
+                  <option value="">Selecione um grupo de teste...</option>
+                </select>
+                <button id="btn-lab-send-real" class="btn btn-primary">Enviar Agora</button>
+              </div>
+              <span id="lab-real-send-status" class="action-feedback"></span>
             </div>
           </div>
         </div>

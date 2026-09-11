@@ -101,19 +101,33 @@
   const destinosSelector = document.getElementById('destinos-selector');
 
   // Laboratório de Testes
-  const btnLabExemplo = document.getElementById('btn-lab-exemplo');
   const labInputText = document.getElementById('lab-input-text');
+  const labCharCounter = document.getElementById('lab-char-counter');
   const btnRunSimulation = document.getElementById('btn-run-simulation');
+  const btnClearLab = document.getElementById('btn-clear-lab');
   const labFeedback = document.getElementById('lab-feedback');
   const labResultPlaceholder = document.getElementById('lab-result-placeholder');
   const labResultContent = document.getElementById('lab-result-content');
   const labModeBadge = document.getElementById('lab-mode-badge');
   const labLinksBadge = document.getElementById('lab-links-badge');
   const labHasMlBadge = document.getElementById('lab-has-ml-badge');
-  const labImageContainer = document.getElementById('lab-image-container');
-  const labPreviewImg = document.getElementById('lab-preview-img');
-  const labOutputText = document.getElementById('lab-output-text');
+  const labCaptionHealth = document.getElementById('lab-caption-health');
+
+  // WhatsApp Mockup & Diff
+  const labWaImgContainer = document.getElementById('lab-wa-img-container');
+  const labWaImg = document.getElementById('lab-wa-img');
+  const labWaText = document.getElementById('lab-wa-text');
+  const labWaTime = document.getElementById('lab-wa-time');
+  const labDiffOrig = document.getElementById('lab-diff-orig');
+  const labDiffProc = document.getElementById('lab-diff-proc');
   const btnCopyLabText = document.getElementById('btn-copy-lab-text');
+
+  // Disparo Real no WhatsApp
+  const labTargetChat = document.getElementById('lab-target-chat');
+  const btnLabSendReal = document.getElementById('btn-lab-send-real');
+  const labRealSendStatus = document.getElementById('lab-real-send-status');
+
+  let lastSimulatedData = null;
 
   // Toast Container
   const toastContainer = document.getElementById('toast-container');
@@ -599,19 +613,80 @@
     });
   }
 
-  // Laboratório de Testes (Simulador de Pipeline)
-  if (btnLabExemplo) {
-    btnLabExemplo.addEventListener('click', () => {
-      labInputText.value =
-        '🔥 ULTRA OFERTA POKÉMON TCG! 🔥\n' +
-        'Deck Pokémon Espada e Escudo Rillaboom Copag Original Lacrado!\n' +
-        'De R$ 89,90 por apenas R$ 49,90 no Mercado Livre!\n\n' +
-        'Aproveite a oferta oficial no link abaixo:\n' +
-        'https://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917\n\n' +
-        'Entre no canal concorrente _@rasgabooster.tcg_ #rasgaboot\n' +
-        'Corra antes que acabe o estoque!';
-      showToast('Exemplo carregado no laboratório! 🧪');
+  // Laboratório de Testes: Presets
+  const LAB_PRESETS = {
+    'ml-direto': `🔥 OFERTA IMPERDÍVEL POKÉMON TCG! 🔥\nDeck Pokémon Espada e Escudo Rillaboom Copag Original Lacrado!\nDe R$ 89,90 por apenas R$ 49,90 com envio FULL no Mercado Livre!\n\nGaranta o seu deck no link oficial:\nhttps://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917\n\nEstoque super limitado!`,
+    'spam-concorrente': `⚡ SUPER PROMOÇÃO DE BOOSTER PACK! ⚡\nBox Pokémon TCG Coleção Especial de Batalha com cartas holográficas raras!\nPreço promocional imperdível: R$ 139,90 parcelado sem juros!\n\nLink da oferta oficial:\nhttps://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917\n\n_Siga nosso canal concorrente @rasgabooster.tcg_\n#rasgaboot #pokemontcg #cartas\nEntre no grupo VIP!`,
+    'multi-links': `💥 COMBO DUPLO POKÉMON COPAG! 💥\nGaranta os dois decks mais fortes do formato com super desconto!\n\nDeck 1 - Rillaboom (R$ 49,90):\nhttps://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917\n\nDeck 2 - Cinderace (R$ 54,90):\nhttps://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-cinderace-copag/p/MLB27197918\n\nAproveite o frete único no carrinho!`,
+    'cupom': `🎟️ SUPER CUPOM MERCADO LIVRE ATIVO! 🎟️\nR$ 50 OFF em compras acima de R$ 250 em colecionáveis Pokémon!\n\nCódigo do Cupom: POKESTOCK50\nVálido até 23:59 de hoje ou até esgotar!\n\nAtive o cupom e aproveite no link:\nhttps://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917`,
+    'amazon': `📦 OFERTA POKÉMON TCG NA AMAZON BRASIL! 📦\nLata Pokémon Coleção Destinos Brilhantes Copag Original!\nPor apenas R$ 119,00 para membros Prime com entrega grátis!\n\nAcesse na Amazon:\nhttps://www.amazon.com.br/dp/B08WPNQ9PZ\n\nPreço exclusivo para assinantes!`
+  };
+
+  function updateLabCharCounter() {
+    if (!labCharCounter || !labInputText) return;
+    const len = (labInputText.value || '').length;
+    labCharCounter.textContent = `${len} caracteres`;
+  }
+
+  if (labInputText) {
+    labInputText.addEventListener('input', updateLabCharCounter);
+  }
+
+  document.querySelectorAll('.btn-preset').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.preset;
+      if (LAB_PRESETS[key]) {
+        labInputText.value = LAB_PRESETS[key];
+        updateLabCharCounter();
+        showToast(`Modelo carregado: ${btn.textContent} ⚡`);
+        if (btnRunSimulation) btnRunSimulation.click();
+      }
     });
+  });
+
+  if (btnClearLab) {
+    btnClearLab.addEventListener('click', () => {
+      labInputText.value = '';
+      updateLabCharCounter();
+      labResultContent.style.display = 'none';
+      labResultPlaceholder.style.display = 'flex';
+      labFeedback.textContent = '';
+      lastSimulatedData = null;
+    });
+  }
+
+  // Switcher de Visualização (WhatsApp vs Diff)
+  document.querySelectorAll('.view-switch-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.view-switch-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.lab-view-panel').forEach((p) => p.classList.remove('active'));
+      btn.classList.add('active');
+      const target = document.getElementById(`lab-view-${btn.dataset.view}`);
+      if (target) target.classList.add('active');
+    });
+  });
+
+  function populateLabTargetChats() {
+    if (!labTargetChat) return;
+    const current = labTargetChat.value;
+    labTargetChat.innerHTML = '<option value="">Selecione um grupo de teste...</option>';
+    allChats.forEach((c) => {
+      const opt = document.createElement('option');
+      opt.value = c.chat_id;
+      opt.textContent = c.nome;
+      if (c.chat_id === current) opt.selected = true;
+      labTargetChat.appendChild(opt);
+    });
+  }
+
+  function formatTextForWhatsAppPreview(text) {
+    if (!text) return '';
+    let escaped = escapeHtml(text);
+    // Transforma links em tags <a> estilizadas
+    escaped = escaped.replace(/(https?:\/\/[^\s]+)/gi, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    // Transforma negrito (*texto*)
+    escaped = escaped.replace(/\*([^\*]+)\*/g, '<strong>$1</strong>');
+    return escaped;
   }
 
   if (btnRunSimulation) {
@@ -647,21 +722,41 @@
           labModeBadge.textContent = data.shortenerMode || 'meli.la Oficial';
 
           // Tags de métricas
-          labLinksBadge.textContent = `🔗 ${data.linksConvertidos || 0} Link(s) Convertido(s)`;
-          labHasMlBadge.textContent = data.contemMercadoLivre ? '📦 Mercado Livre Detectado' : 'ℹ️ Sem Link Mercado Livre';
+          labLinksBadge.textContent = `🔗 ${data.linksConvertidos || 0} Link(s)`;
+          labHasMlBadge.textContent = data.contemMercadoLivre ? '📦 Mercado Livre' : 'ℹ️ Sem ML';
 
-          // Foto do Produto
-          if (data.imagePreviewUrl) {
-            labImageContainer.style.display = 'block';
-            labPreviewImg.src = data.imagePreviewUrl;
+          const textLen = (data.novoTexto || '').length;
+          if (textLen <= 1024) {
+            labCaptionHealth.className = 'meta-tag meta-tag-ok';
+            labCaptionHealth.textContent = `✅ Legenda OK (${textLen}/1024)`;
           } else {
-            labImageContainer.style.display = 'none';
+            labCaptionHealth.className = 'meta-tag meta-tag-warn';
+            labCaptionHealth.textContent = `⚠️ Legenda Longa (${textLen}/1024)`;
           }
 
-          // Texto Final
-          labOutputText.textContent = data.novoTexto || '(Texto vazio)';
+          // WhatsApp Mockup View
+          if (data.imagePreviewUrl) {
+            labWaImgContainer.style.display = 'block';
+            labWaImg.src = data.imagePreviewUrl;
+          } else {
+            labWaImgContainer.style.display = 'none';
+          }
 
-          showToast('Simulação finalizada com sucesso! 🧪');
+          labWaText.innerHTML = formatTextForWhatsAppPreview(data.novoTexto);
+          labWaTime.textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+          // Diff View
+          labDiffOrig.textContent = data.originalText || '';
+          labDiffProc.textContent = data.novoTexto || '';
+
+          // Salvar para envio real opcional
+          lastSimulatedData = {
+            text: data.novoTexto,
+            imageBase64: data.imagePreviewUrl
+          };
+
+          populateLabTargetChats();
+          showToast('Simulação calculada com sucesso! 🧪');
         } else {
           labFeedback.textContent = `❌ ${data.error || 'Erro ao simular'}`;
           labFeedback.style.color = 'var(--accent-danger)';
@@ -677,11 +772,59 @@
 
   if (btnCopyLabText) {
     btnCopyLabText.addEventListener('click', () => {
-      const text = labOutputText.textContent;
+      const text = (lastSimulatedData && lastSimulatedData.text) || labDiffProc.textContent;
       if (text) {
         navigator.clipboard.writeText(text).then(() => {
           showToast('Texto do laboratório copiado! ✓');
         });
+      }
+    });
+  }
+
+  // Disparo de Teste Real no WhatsApp
+  if (btnLabSendReal) {
+    btnLabSendReal.addEventListener('click', async () => {
+      if (!lastSimulatedData || !lastSimulatedData.text) {
+        alert('Simule uma mensagem antes de disparar o teste.');
+        return;
+      }
+
+      const targetChat = labTargetChat.value;
+      if (!targetChat) {
+        labRealSendStatus.textContent = '❌ Selecione o grupo de teste.';
+        labRealSendStatus.style.color = 'var(--accent-danger)';
+        return;
+      }
+
+      btnLabSendReal.disabled = true;
+      btnLabSendReal.textContent = '⏳ Enviando...';
+      labRealSendStatus.textContent = '';
+
+      try {
+        const res = await fetch('/api/test-send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chatId: targetChat,
+            text: lastSimulatedData.text,
+            imageBase64: lastSimulatedData.imageBase64
+          })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          labRealSendStatus.textContent = `✅ ${data.message}`;
+          labRealSendStatus.style.color = 'var(--accent-green)';
+          showToast('Mensagem de teste enviada no WhatsApp! 🚀');
+        } else {
+          labRealSendStatus.textContent = `❌ ${data.error || 'Falha ao enviar'}`;
+          labRealSendStatus.style.color = 'var(--accent-danger)';
+        }
+      } catch (err) {
+        labRealSendStatus.textContent = '❌ Erro de conexão com o servidor.';
+        labRealSendStatus.style.color = 'var(--accent-danger)';
+      } finally {
+        btnLabSendReal.disabled = false;
+        btnLabSendReal.textContent = 'Enviar Agora';
       }
     });
   }

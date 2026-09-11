@@ -200,6 +200,27 @@ export class WhatsAppManager {
     this.notifyStateChange();
   }
 
+  public async sendDirectMessage(
+    toChatId: string,
+    text: string,
+    imageBuffer?: Buffer | null
+  ): Promise<boolean> {
+    if (!this.sock || this.state.status !== 'connected') {
+      throw new Error('WhatsApp não está conectado no momento.');
+    }
+    if (imageBuffer && imageBuffer.length > 0) {
+      await this.sock.sendMessage(toChatId, {
+        image: imageBuffer,
+        caption: text
+      });
+    } else {
+      await this.sock.sendMessage(toChatId, {
+        text
+      });
+    }
+    return true;
+  }
+
   public unwrapMessage(msg: any): any {
     if (!msg) return msg;
     if (msg.ephemeralMessage?.message) return this.unwrapMessage(msg.ephemeralMessage.message);
