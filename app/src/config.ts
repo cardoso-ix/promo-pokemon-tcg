@@ -25,7 +25,7 @@ export const DB_PATH = path.join(DATA_DIR, 'replica.db');
 
 export const CONFIG = {
   port: parseInt(process.env.PORT || '3000', 10),
-  host: process.env.HOST || '0.0.0.0',
+  host: (process.env.HOST && process.env.HOST !== '::' && process.env.HOST !== '[::]') ? process.env.HOST : '0.0.0.0',
   defaultMattWord: process.env.MATT_WORD || 'caed1312314',
   defaultMattTool: process.env.MATT_TOOL || '96097202',
   defaultDelaySeconds: 5,
