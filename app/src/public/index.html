@@ -372,6 +372,19 @@
             <input type="number" id="cfg-max-delay" class="input-field" min="60" max="3600" value="600">
             <span class="field-hint">Mensagens mais velhas que isso são ignoradas (ex: após reconexão).</span>
           </div>
+
+          <div class="form-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-line);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <label for="cfg-somente-meli" style="font-weight: 700; color: var(--accent-gold);">Postar Apenas Mercado Livre</label>
+                <p class="field-hint" style="margin-top: 2px;">Ignora ofertas de Amazon, Shopee e outros marketplaces sem link do Mercado Livre.</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="cfg-somente-meli" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <div class="card card-full">

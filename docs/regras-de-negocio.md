@@ -36,8 +36,11 @@ Toda mensagem que chega aos grupos de WhatsApp em que o chip participa é avalia
   {url_produto}?matt_word={affiliate_matt_word}&matt_tool={affiliate_matt_tool}&forceInApp=true
   ```
 
-### 2.3. Outros Marketplaces
-- Links de outras lojas (Amazon, Shopee, Magalu, etc.) não são removidos nem descartados; são preservados na íntegra.
+### 2.3. Exclusividade Mercado Livre (Regra Operacional)
+- A esteira foi configurada para operar **exclusivamente com o programa de afiliados do Mercado Livre**.
+- Postagens de outros marketplaces (como Amazon, Shopee, Magalu) ou mensagens de conversas sem links do Mercado Livre são **automaticamente ignoradas** pelo filtro (`status: 'ignorado'`, `motivo: 'sem_link_mercadolivre'`).
+- Isso garante que 100% das ofertas enviadas aos seus grupos de destino gerem comissões oficiais no seu painel de afiliado.
+- Esta opção pode ser ajustada a qualquer momento na aba Configurações (*"Postar Apenas Mercado Livre"*).
 
 ---
 

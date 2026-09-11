@@ -72,7 +72,8 @@ export function initDatabase() {
     affiliate_matt_tool: CONFIG.defaultMattTool,
     meli_cookie: '',
     meli_tag: CONFIG.defaultMattWord,
-    frases_remover: '@rasgabooster.tcg\n#rasgaboot\n@rasgabooster'
+    frases_remover: '@rasgabooster.tcg\n#rasgaboot\n@rasgabooster',
+    somente_mercadolivre: 'true'
   };
 
   const insertConfig = db.prepare(`

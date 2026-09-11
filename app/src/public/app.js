@@ -82,6 +82,7 @@
   const cfgMaxDelay = document.getElementById('cfg-max-delay');
   const cfgMeliCookie = document.getElementById('cfg-meli-cookie');
   const cfgMeliTag = document.getElementById('cfg-meli-tag');
+  const cfgSomenteMeli = document.getElementById('cfg-somente-meli');
   const btnTestarCookie = document.getElementById('btn-testar-cookie');
   const cookieTestFeedback = document.getElementById('cookie-test-feedback');
   const cfgFrases = document.getElementById('cfg-frases');
@@ -262,6 +263,7 @@
       cfgMaxDelay.value = data.configs.atraso_maximo_segundos || '600';
       if (cfgMeliCookie) cfgMeliCookie.value = data.configs.meli_cookie || '';
       if (cfgMeliTag) cfgMeliTag.value = data.configs.meli_tag || '';
+      if (cfgSomenteMeli) cfgSomenteMeli.checked = data.configs.somente_mercadolivre !== 'false';
       cfgFrases.value = data.configs.frases_remover || '';
 
       updateMasterSwitch(data.configs.ativo === 'true');
@@ -885,6 +887,11 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chave: 'frases_remover', valor: cfgFrases.value })
+      });
+      await fetch('/api/configs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chave: 'somente_mercadolivre', valor: cfgSomenteMeli && cfgSomenteMeli.checked ? 'true' : 'false' })
       });
 
       updateMeliBadge(cfgMeliCookie ? cfgMeliCookie.value.trim() : '');

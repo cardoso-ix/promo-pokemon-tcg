@@ -399,6 +399,27 @@ export class WhatsAppManager {
         meliTag
       );
 
+    // REGRA DE NEGÓCIO: Apenas postar publicações do Mercado Livre
+    // Mensagens sem link ML ou de outros marketplaces (Amazon, Shopee, etc.) são ignoradas
+    const somenteMercadoLivre = getConfig('somente_mercadolivre', 'true') === 'true';
+    if (somenteMercadoLivre && (!contemMercadoLivre || linksConvertidos === 0)) {
+      console.log(`[Filtro Mercado Livre] Mensagem ignorada: não contém links válidos do Mercado Livre.`);
+      const log = insertLog({
+        origem_chat_id: remoteJid,
+        origem_nome: origemNome,
+        destino_chat_id: '',
+        hash_conteudo: hashConteudo,
+        texto_original: rawText,
+        texto_publicado: novoTexto,
+        tem_foto: Boolean(messageHasImage),
+        links_convertidos: linksConvertidos,
+        status: 'ignorado',
+        motivo: 'sem_link_mercadolivre'
+      });
+      this.notifyMessage(log);
+      return;
+    }
+
     // 5. Obtenção da imagem do produto:
     // A) Se veio foto anexada no WhatsApp, baixa o buffer pelo Baileys
     if (messageHasImage && imageMessageObj && this.sock) {
