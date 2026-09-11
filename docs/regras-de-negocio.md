@@ -1,78 +1,61 @@
-# Regras de negócio — réplica
+# Regras de Negócio — Promo Réplica
 
-Só valem as regras desta página. Não existe filtro de desconto, tema, loja, autenticidade,
-janela de horário nem teto diário. Quem filtra é o grupo de origem.
-
----
-
-## Mapa: onde mora cada parâmetro
-
-| O que | Onde muda |
-| --- | --- |
-| Ligar/desligar a esteira | Painel, toggle **Réplica ligada** → `replica_config.ativo` |
-| Teto por hora (padrão 40) | Painel → Configurações → `replica_config.teto_hora` |
-| Delay antes de publicar (padrão 8 s) | `replica_config.delay_segundos` |
-| Apelido e etiqueta de afiliado | `replica_config.afiliado_matt_word` / `afiliado_matt_tool` |
-| Atraso máximo da mensagem | `replica_config.atraso_maximo_segundos` (padrão 600 s) — post mais velho que isso não sai |
-| Canal Telegram | Conexões do painel → `replica_config.destino_telegram` |
-
-O painel só grava chave da lista branca do node `Normalizar Config`.
+Documento que define o comportamento exato da esteira de replicação autônoma.
 
 ---
 
-## Contrato (como o Connect Afiliado)
+## 1. Fluxo de Decisão e Triagem
 
-Cópia **idêntica** do que o grupo origem postou. A **única** alteração é o link de
-afiliado do Mercado Livre (`matt_word` / `matt_tool`). Texto, emoji, foto, cupom,
-aviso e “kkk” saem iguais. Sem `formato_post`, sem card canvas.
+Toda mensagem que chega aos grupos de WhatsApp em que o chip participa é avaliada pelas seguintes regras, na ordem:
 
-| # | Regra | Onde |
+| # | Regra | Ação / Comportamento |
 | --- | --- | --- |
-| 1 | Só mensagem de **grupo** (`@g.us`), evento `messages_upsert` | `Normalizar Mensagem` |
-| 2 | `fromMe` na **origem** copia; se o chat for **destino** WhatsApp, bloqueia loop | `origem_e_destino` |
-| 3 | Sem texto e sem foto (sticker, reação) → `sem_texto` | `Normalizar Mensagem` |
-| 4 | Atraso maior que `atraso_maximo_segundos` (padrão 600 s) não sai | `Debug Rota` / `no_prazo` |
-| 5 | Só origem salva e rota **ATIVA**; esteira desliga em `replica_config.ativo` | painel |
-| 6 | **Teto por hora**, padrão 40 — freio anti-flood | `replica_config.teto_hora` |
-| 7 | Sem link ML: **copia igual** (texto, cupom, aviso, foto) | `Montar Post` |
-| 8 | Com link ML: troca **só** o link; resto igual | `Montar Post` |
-| 9 | Outro marketplace (Amazon, Shopee…): copia o post, não descarta | `Montar Post` |
-| 10 | Foto da **origem**, inteira — não o card 1080×1144 | [Decisão 54](historico-de-decisoes.md#decisão-54--foto-inteira-2x-no-destino-card-desviado) |
-| 11 | Dedup por `chat_id` + `message_id` (a mesma mensagem duas vezes some; reenvio novo sai) | `hash_conteudo` |
-
-Quando o teto bate, a mensagem vira `ignorado` e **não volta depois**.
-
-A réplica **não reconfere preço**. Se a origem mentiu, o canal repete.
+| **1** | **Apenas Grupos** | Mensagens privadas (DMs) são descartadas imediatamente. Apenas JIDs `@g.us` são processados. |
+| **2** | **Proteção Anti-Loop** | Se a mensagem for postada pelo próprio chip em um grupo configurado como **Destino**, ela é ignorada para evitar loops infinitos. |
+| **3** | **Validação de Rota** | O grupo de origem precisa pertencer a pelo menos uma **Rota Ativa** no banco SQLite. |
+| **4** | **Esteira Ligada** | O parâmetro global `ativo` deve estar configurado como `true`. Caso contrário, a mensagem é ignorada. |
+| **5** | **Janela de Atraso Máximo** | Mensagens com timestamp de envio superior a `atraso_maximo_segundos` (padrão: 600s / 10 minutos) são descartadas como defasadas. |
+| **6** | **Teto Anti-Flood por Hora** | Se o número de postagens enviadas na última hora atingir `teto_hora` (padrão: 40), novos posts são ignorados para proteger os grupos contra saturação e bloqueios do WhatsApp. |
+| **7** | **Desduplicação de Conteúdo** | Um hash único (SHA-256) é gerado combinando o texto e a mídia da mensagem. Se o hash já existir na tabela `logs`, a mensagem é ignorada sem duplicação. |
 
 ---
 
-## Link de afiliado
+## 2. Tratamento e Conversão de Links de Afiliado
 
-Formato:
+### 2.1. Encurtamento Oficial `meli.la` (Prioridade 1)
+- Sempre que houver um cookie de sessão válido configurado no painel (`meli_cookie`), o sistema envia a URL original para a API oficial de afiliados do Mercado Livre.
+- A API retorna um link encurtado oficial no formato:
+  ```text
+  https://meli.la/xxxxxx
+  ```
+- Este link garante a maior taxa de conversão, reconhecimento oficial no aplicativo mobile do Mercado Livre e atribuição segura de comissão.
 
-```
-{permalink sem parâmetros}?matt_word=caed1312314&matt_tool=96097202&forceInApp=true
-```
+### 2.2. Fallback Parametrizado Direto (Prioridade 2)
+- Caso o cookie esteja ausente, expirado ou a API do Mercado Livre esteja temporariamente indisponível, o sistema aplica automaticamente os parâmetros de afiliado:
+  ```text
+  {url_produto}?matt_word={affiliate_matt_word}&matt_tool={affiliate_matt_tool}&forceInApp=true
+  ```
 
-| Parâmetro | Valor | O que é |
-| --- | --- | --- |
-| `matt_word` | `caed1312314` | Apelido da conta de afiliado |
-| `matt_tool` | `96097202` | ID da etiqueta no painel de afiliados |
-| `forceInApp` | `true` | Abre no app do ML |
-
-Na réplica esses dois IDs vêm de `replica_config`, não de constante no Code node.
-
-**Cupom sem produto** não reaproveita `/social/` de terceiro: aponta para a vitrine do
-Eduardo (`/social/caed1312314?matt_word=…&matt_tool=…`). [Decisão 49](historico-de-decisoes.md#decisão-49--cupom-sem-produto-vai-para-a-vitrine-do-eduardo-nunca-para-social-de-terceiro).
-
-Vitrine `meli.la` `/social/`: o MLB **não** vem na URL. Produto e foto saem do HTML
-(`og:title`, `og:image`, `/up/MLBU`). **Não** pegar o primeiro `/p/MLB`.
-[Decisão 52](historico-de-decisoes.md#decisão-52--produto-da-vitrine-social-sai-do-html-não-do-primeiro-pmlb).
+### 2.3. Outros Marketplaces
+- Links de outras lojas (Amazon, Shopee, Magalu, etc.) não são removidos nem descartados; são preservados na íntegra.
 
 ---
 
-## Preço no WhatsApp
+## 3. Limpeza de Texto e Preservação de Formatação
 
-No caption do `sendMedia`, o preço vai `R$ 150,00` com ZWSP depois do `$`, para o
-celular não virar cashtag verde. Telegram não precisa disso.
-[Decisão 56](historico-de-decisoes.md#decisão-56--preço-do-whatsapp-sem-cashtag).
+O algoritmo de higienização de texto (`cleanSpamLines`) atua com precisão cirúrgica:
+
+1. **Preservação de Parágrafos**: Quebras de linha normais entre o título do produto, preço e detalhes (`\n\n`) são preservadas, mantendo o aspecto humano e agradável do post original.
+2. **Remoção de Concorrentes**: Linhas ou menções configuradas em `frases_remover` (como `@rasgabooster.tcg`, `#rasgaboot`, links de convite de grupos de terceiros) são eliminadas.
+3. **Preço sem Cashtags**: Garante que menções monetárias como `R$ 150,00` não sejam transformadas em cashtags verdes indesejadas pelo aplicativo do WhatsApp.
+
+---
+
+## 4. Manipulação de Mídia e Imagens
+
+1. **Fotos Nativas do WhatsApp**:
+   - Mensagens com imagem anexada têm seus buffers de áudio/foto extraídos diretamente pelo Baileys.
+   - Suporte nativo a desempacotamento de mensagens temporárias (*ephemeral*), fotos de visualização única (*viewOnce*) e mensagens postadas pelo próprio aparelho conectado (`deviceSentMessage`).
+2. **Fallback de Scraper em Alta Definição (2X)**:
+   - Se a postagem original for apenas texto, mas contiver um link de produto do Mercado Livre, o sistema faz uma requisição leve para coletar a imagem oficial do produto (`og:image`) em alta resolução (`2X`).
+   - A imagem é baixada em memória e enviada junto com o texto como legenda (*caption*), garantindo que o grupo de destino sempre receba uma postagem visualmente atraente.

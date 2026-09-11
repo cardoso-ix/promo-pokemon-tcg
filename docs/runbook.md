@@ -1,161 +1,74 @@
-# Runbook — réplica
+# Runbook — Manual de Operação e Manutenção
 
-O manual do dia a dia. Consultas 🟢 só leem. Consultas 🟡 alteram dados.
-
-**Índice**
-
-1. [Ligar e desligar](#1-ligar-e-desligar)
-2. [Como rodar uma consulta SQL](#2-como-rodar-uma-consulta-sql)
-3. [Evolution, QR e credenciais](#3-evolution-qr-e-credenciais)
-4. [Painel: rotas e destinos](#4-painel-rotas-e-destinos)
-5. [Conferir se está funcionando](#5-conferir-se-está-funcionando)
-6. [Mexer no HTML do painel](#6-mexer-no-html-do-painel)
-7. [Salvar não é publicar](#7-salvar-não-é-publicar)
-8. [Rodar um workflow na mão](#8-rodar-um-workflow-na-mão)
+Guia prático para operação diária, manutenção e gerenciamento da Promo Réplica.
 
 ---
 
-## 1. Ligar e desligar
+## 1. Operação em Nuvem (Railway — 24/7)
 
-Três níveis, do mais brando ao mais bruto:
+### 1.1. Acessando o Painel
+- **URL Pública**: `https://promo-replica-bot-production-7d52.up.railway.app` (ou o domínio personalizado configurado nas configurações de Networking do Railway).
+- Pode ser acessado diretamente do computador, tablet ou celular.
 
-| Quero | Faça |
+### 1.2. Atualização de Código
+- O Railway está conectado diretamente à branch `main` do GitHub.
+- Toda alteração enviada com `git push origin main` dispara uma nova compilação e deploy automático em menos de 2 minutos.
+- O volume persistente em `/app/data` garante que o WhatsApp **não desconecte** durante os redeploys.
+
+### 1.3. Reiniciar o Serviço
+- Se necessário forçar um reinício, acesse o painel do Railway ➔ clique no serviço `promo-replica-bot` ➔ clique nos três pontinhos no canto superior direito ➔ **Restart**.
+
+---
+
+## 2. Operação Local (Windows)
+
+Caso queira rodar uma instância de testes ou operar localmente:
+
+| Ação | Como Fazer |
 | --- | --- |
-| Parar um grupo | Tire-o da rota (Editar) ou desligue **ATIVA** no card |
-| Parar a esteira, painel no ar | Toggle **Réplica ligada** no topo → `replica_config.ativo = false` |
-| Parar de verdade | Despublique o `Replica WhatsApp Ingest` no n8n |
-
-Não existe mais bot de curadoria para “não afetar”. O canal só recebe o que a réplica mandar.
-
----
-
-## 2. Como rodar uma consulta SQL
-
-Você não precisa de cliente Postgres. No n8n:
-
-1. Crie um workflow descartável (nome começando com `TMP`).
-2. Um node **Postgres** → credencial **Pokemon Promos DB**.
-3. Cole o SQL, execute, leia o resultado, **arquive** o TMP.
-
-Cuidado: o node executa o que você colar, inclusive `DELETE`. Use só o SQL deste runbook
-até entender o comando.
+| **Iniciar com Logs Visíveis** | Duplo clique em `iniciar.bat`. Abre uma janela preta do prompt exibindo todas as mensagens e logs. |
+| **Iniciar Silencioso (Background)** | Duplo clique em `iniciar-segundo-plano.vbs`. Roda o servidor sem nenhuma janela aberta. |
+| **Parar a Aplicação** | Duplo clique em `parar.bat`. Localiza o processo na porta 3000 e o encerra com segurança. |
+| **Acessar o Painel Local** | Abra `http://localhost:3000` no seu navegador. |
 
 ---
 
-## 3. Evolution, QR e credenciais
+## 3. Gestão da Conexão do WhatsApp
 
-A Evolution roda como projeto Docker `evolution-api` (`/docker/evolution-api/`).
-Compose em [`deploy/evolution-api/`](../deploy/evolution-api/).
+### 3.1. Primeira Conexão (Pareamento)
+1. Abra o painel no navegador.
+2. O cartão **Status WhatsApp** exibirá o **QR Code**.
+3. No celular com o chip de envio, abra o WhatsApp ➔ vá em **Aparelhos Conectados** ➔ toque em **Conectar um aparelho**.
+4. Aponte a câmera para o QR Code no painel. Em instantes o status mudará para **Conectado** (verde).
 
-- Imagem: **`evoapicloud/evolution-api`**, não `atendai` (essa não sobe nesta VPS).
-- Sem porta pública: `127.0.0.1:8080`. O n8n fala `http://evolution-api:8080`.
-- Webhook aponta para `http://n8n:5678/...`, **não** para o domínio público (de dentro do container o domínio resolve para `127.0.1.1`).
-- Recriar o container **não** desconecta o WhatsApp (sessão no banco + volume `evolution_instances`). QR novo só se apagar o volume.
-- Senha do Postgres: o `.env` mente. O banco aceita **`PkmnPromos2026!Br`**.
-
-### Credenciais no n8n
-
-| Credencial | Tipo | Onde |
-| --- | --- | --- |
-| `Painel Replica` | Basic Auth | GET do painel e do QR |
-| `Evolution API Key` | Header Auth, Name `apikey` | HTTP da Evolution. **Não** use `getMedia` para foto do produto (400); a foto vem de `og:image` |
-
-### Conectar o WhatsApp
-
-1. Abra <https://srv1897392.hstgr.cloud/webhook/replica/conectar> (Basic Auth).
-2. A página pede o QR e recarrega a cada 25 s.
-3. No celular: **WhatsApp → Aparelhos conectados → Conectar aparelho**.
-4. Depois, **entre nos grupos com esse número**. A Evolution só vê grupo do qual o chip participa.
+### 3.2. Trocar de Número ou Resetar Conexão
+- No celular: acesse Aparelhos Conectados, toque na sessão do bot e escolha **Desconectar**.
+- Ou no servidor: exclua o conteúdo da pasta `data/auth_baileys/` e recarregue o painel para gerar um novo QR Code.
 
 ---
 
-## 4. Painel: rotas e destinos
+## 4. Gestão de Rotas de Replicação
 
-URL: <https://srv1897392.hstgr.cloud/webhook/replica/entrar> — tela CRT. Mesmo usuário e senha de sempre. A URL antiga `/webhook/replica/painel` ainda existe (popup do browser); use `/entrar`.
-
-Abas: **Visão Geral**, **Conexões**, **Rotas**, **Configurações**, **Atividades**.
-Grupos aparecem pelo **nome**, não pelo JID.
-
-1. **Conexões** — QR se o WA cair. Telegram é o `@promopokemontcg` cadastrado (não é OAuth). **Reconfigurar** troca o `@`. **Desconectar** tira o canal das rotas.
-2. **Rotas** — **+ Nova Rota**: nome, origens WA, destinos TG/WA. Combo com **Pesquisar grupos…**. Enter escolhe o primeiro; Escape fecha. **Salvar Alterações**. Se pedir senha, é a do painel, não a do Connect Afiliado. O POST usa token de save ([Decisão 47](historico-de-decisoes.md#decisão-47--token-de-save-no-json-porque-o-chrome-não-reenvia-basic-auth-no-fetch)).
-3. Card da rota: **ATIVA**, **Editar**, **Excluir**.
-4. Comece com **uma origem**. Olhe Atividades antes da segunda.
-
-**Não use o mesmo grupo como origem e destino.**
-
-O destino recebe a **foto inteira** 2X, não o card.
-[Decisão 54](historico-de-decisoes.md#decisão-54--foto-inteira-2x-no-destino-card-desviado).
-Vitrine `/social/`: produto no HTML, nunca o primeiro `/p/MLB`
-([Decisão 52](historico-de-decisoes.md#decisão-52--produto-da-vitrine-social-sai-do-html-não-do-primeiro-pmlb)).
+1. No painel, acesse a aba **Rotas**.
+2. Clique em **+ Nova Rota**:
+   - **Nome**: Dê um nome descritivo (ex: "Ofertas TCG ➔ Grupo VIP").
+   - **Grupos de Origem**: Marque os grupos de onde o bot deve capturar mensagens.
+   - **Grupos de Destino**: Marque os grupos para onde as ofertas tratadas devem ser enviadas.
+3. Clique em **Salvar Rota**.
+4. Utilize a chave de ativação individual de cada rota para pausar ou retomar o envio a qualquer momento.
 
 ---
 
-## 5. Conferir se está funcionando
+## 5. Atualização do Cookie do Mercado Livre
 
-🟢 Últimas 30 mensagens:
+O encurtador oficial `meli.la` utiliza um cookie de sessão de afiliado para autenticar requisições na API do Mercado Livre. Caso o cookie expire:
 
-```sql
-SELECT to_char(criado_em AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS quando,
-       COALESCE(origem_nome, origem_chat_id) AS origem,
-       status,
-       motivo,
-       links_convertidos,
-       LEFT(texto_publicado, 80) AS trecho
-  FROM replica_log
- ORDER BY id DESC
- LIMIT 30;
-```
-
-🟢 Resumo das últimas 24h:
-
-```sql
-SELECT status,
-       COALESCE(motivo, '(sem motivo)') AS motivo,
-       COUNT(*) AS quantas
-  FROM replica_log
- WHERE criado_em > NOW() - INTERVAL '24 hours'
- GROUP BY status, motivo
- ORDER BY quantas DESC;
-```
-
-🟢 Grupos e rendimento:
-
-```sql
-SELECT chat_id, nome, ativa, mensagens_vistas, replicadas, ultima_mensagem
-  FROM replica_rotas
- ORDER BY ativa DESC, ultima_mensagem DESC NULLS LAST;
-```
-
-Como ler: `mensagens_vistas` alto + `replicadas` zero — olhe `motivo` (`copia_identica` deve sair; `sem_texto` / `origem_e_destino` / teto ainda cortam).
-= grupo que não serve. `status = 'erro'` = problema de publicação, não de origem.
-
----
-
-## 6. Mexer no HTML do painel
-
-Fonte: [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
-Produção lê `replica_config.pagina_gz` (base64 UTF-8, não gzip). Completo: **71364** bytes,
-MD5 `adf87ccf658e4b089798562cb99255f6`.
-
-1. Edite o HTML **sem** aspas duplas nem barra invertida.
-2. Grave o base64 com **um escritor só**.
-3. **Ctrl+F5**. Cache velho mostra JS cortado ([P20](troubleshooting.md#p20--o-painel-da-réplica-abre-mas-nada-funciona)).
-
-O gerador [`tools/gerar-painel-code-node.mjs`](../tools/gerar-painel-code-node.mjs) é
-paraquedas (embeber HTML no Code node). Só use se reverter a Decisão 51.
-
----
-
-## 7. Salvar não é publicar
-
-A versão do editor (`versionId`) e a do ar (`activeVersionId`) são coisas diferentes.
-Depois de mexer no Ingest ou no painel: **Publish**, depois confira uma execução
-**agendada** (não a manual). [P18](troubleshooting.md#p18--salvar-não-é-publicar-a-produção-roda-a-versão-publicada).
-
----
-
-## 8. Rodar um workflow na mão
-
-No n8n, abra o workflow e clique em **Execute workflow**. Serve para testar o Ingest com
-`pinData` ou para ver o Nomes Sync sem esperar 10 min. Execução manual usa a versão
-**salva**; o relógio usa a **publicada**.
+1. No seu navegador, faça login no [Mercado Livre](https://www.mercadolivre.com.br).
+2. Pressione `F12` para abrir o DevTools ➔ vá na aba **Application** (ou Armazenamento) ➔ **Cookies** ➔ selecione `mercadolivre.com.br`.
+3. Copie o valor do cookie principal de sessão (ou copie todo o cabeçalho `cookie` de uma requisição de rede).
+4. No Cockpit da Réplica, vá na aba **Configurações**.
+5. Cole no campo **Cookie de Sessão do Mercado Livre** e clique no botão **Testar Cookie**.
+6. O painel exibirá imediatamente o resultado:
+   - ✅ *"Cookie válido! API respondeu com sucesso."*
+   - ❌ *"Falha na validação do cookie."*
+7. Clique em **Salvar Configurações**.

@@ -1,93 +1,83 @@
-# Arquitetura — réplica de WhatsApp
+# Arquitetura — Promo Réplica Autônoma
 
-Uma frase: a Evolution lê o grupo; o Ingest troca o link de afiliado e publica no
-Telegram e no WhatsApp de destino; o painel é o cockpit.
+## 1. Visão Geral
 
----
+A **Promo Réplica** é uma aplicação completa e autônoma desenvolvida em **Node.js 22 LTS e TypeScript**. Ela opera sem dependência de plataformas externas de automação (como n8n), sem intermediários de API de terceiros (como Evolution API) e sem bancos de dados pesados externos.
 
-## 1. As peças
-
-| Peça | O que é | Detalhe |
-| --- | --- | --- |
-| **VPS Hostinger** | Servidor | `srv1897392.hstgr.cloud` |
-| **n8n** | Automação, Docker | <https://srv1897392.hstgr.cloud> |
-| **PostgreSQL 16** | Banco `pokemon_promos`, usuário `pokemon_bot` | Container `pokemon-postgres`. Porta 5432 só em `127.0.0.1` |
-| **Rede `n8n_default`** | n8n, Postgres e Evolution se falam aqui | Se o n8n for redeployado, o Postgres precisa religar na rede nova ([P5](troubleshooting.md#p5--credencial-do-banco-para-de-conectar-couldnt-connect-with-these-settings)) |
-| **Bot do Telegram** | Publica no canal | `@promopokemontcg`, id `-1004430553765` |
-| **Evolution API** | Ponte WhatsApp (Baileys) | Projeto Docker `evolution-api`, imagem `evoapicloud/evolution-api`. Compose em [`deploy/evolution-api/`](../deploy/evolution-api/). Porta 8080 só em `127.0.0.1`; o n8n alcança `http://evolution-api:8080` |
-
-### Credenciais (nomes e IDs, nunca valores)
-
-| Credencial | ID | Usada por |
-| --- | --- | --- |
-| Pokemon Promos DB | `6jdqiaTfNIJseSqb` | Nodes de banco da réplica |
-| Pokemon Telegram Bot | `jhasZWps6SfFVWaF` | `sendPhoto` / texto no canal |
-| Painel Replica (Basic Auth) | `rjHWJIwMLcjCEpBl` | GET do painel e da página do QR |
-| Evolution API Key (Header Auth) | `RqVdkbWZmwbs8ZsY` | HTTP da Evolution. Header `apikey` |
+O sistema integra a biblioteca oficial de protocolo do WhatsApp (`@whiskeysockets/baileys`), um servidor web ultraleve com WebSockets (`Fastify`), um banco de dados relacional embarcado de alta velocidade (`better-sqlite3`), e um motor de processamento de texto e links de afiliados com suporte à API do Mercado Livre.
 
 ---
 
-## 2. Diagrama
+## 2. Diagrama de Fluxo de Dados
 
-```
-WhatsApp (grupos de origem)
-        │
-        ▼
-Evolution API (Docker, sem porta pública)
-        │  webhook messages.upsert
-        ▼
-Replica WhatsApp Ingest ──► Postgres (replica_rotas, replica_config, replica_log, …)
-        │                            ▲
-        │                            │ origens, destinos, ajustes
-        │                     Replica Painel (Basic Auth)
-        ▼
-Telegram @promopokemontcg  +  (opcional) grupo WhatsApp de destino
+```text
+  [ WhatsApp - Grupos de Origem ]
+                │
+                ▼ (Baileys WebSocket / messages.upsert)
+  ┌─────────────────────────────────────────────────────────────┐
+  │                   Núcleo da Aplicação                       │
+  │                                                             │
+  │  1. Desembrulhar Mídia / Texto (Normalização)               │
+  │     ├── Ephemeral, ViewOnce, deviceSentMessage              │
+  │     └── Extração de legenda e buffer de imagem              │
+  │                                                             │
+  │  2. Consulta de Rotas & Filtro Anti-Loop (SQLite)           │
+  │     └── Valida se a origem está cadastrada e ativa          │
+  │                                                             │
+  │  3. Motor de Afiliados & Tratamento de Texto                │
+  │     ├── Preservação de quebras de linha e blocos de texto   │
+  │     ├── Remoção de assinaturas concorrentes (@rasgabooster) │
+  │     └── Encurtador oficial meli.la (ou fallback matt_word)  │
+  │                                                             │
+  │  4. Enriquecimento de Mídia (Scraper ML)                    │
+  │     └── Se não houver foto, baixa imagem oficial 2X do ML   │
+  │                                                             │
+  │  5. Persistência & Transmissão                              │
+  │     ├── Gravação no diário SQLite (replica.db)              │
+  │     └── Transmissão em tempo real via WebSocket             │
+  └─────────────────────────────────────────────────────────────┘
+          │                                      │
+          ▼ (Baileys sendMessage)                ▼ (WebSocket /ws)
+  [ Grupos de Destino WhatsApp ]         [ Cockpit Web Dashboard ]
 ```
 
-O `Replica Nomes Sync` roda a cada 10 min e grava títulos em `replica_rotas`. O GET do
-painel **não** chama `fetchAllGroups` — só lê o cache.
+---
+
+## 3. Módulos do Sistema
+
+### 3.1. Gerenciador WhatsApp (`app/src/whatsapp/client.ts`)
+- **Biblioteca**: `@whiskeysockets/baileys`.
+- **Autenticação**: `useMultiFileAuthState` apontando para o diretório de dados persistente (`data/auth_baileys/`).
+- **Gerenciamento de Ciclo de Vida**: Reconexão automática com backoff exponencial; geração e transmissão de QR Code para o painel web; sincronização em background dos nomes e metadados dos grupos participantes.
+- **Normalização de Mídias**: Descompacta camadas de encapsulamento do WhatsApp (`ephemeralMessage`, `viewOnceMessageV2`, `deviceSentMessage`) garantindo que nenhuma postagem com imagem seja ignorada.
+
+### 3.2. Motor de Afiliados e Texto (`app/src/core/affiliate.ts`)
+- **Encurtamento Oficial `meli.la`**: Conecta diretamente ao endpoint de afiliados do Mercado Livre (`/affiliate-program/api/v1/links`) utilizando o cookie de sessão do usuário. Retorna links curtos oficiais.
+- **Fallback Parametrizado**: Se o cookie expirar ou falhar, insere instantaneamente os parâmetros de afiliado cadastrados (`matt_word`, `matt_tool` e `forceInApp=true`).
+- **Preservação de Formatação**: Mantém a estrutura humana da mensagem original (títulos, descrições, preços e quebras de linha duplas `\n\n`), removendo apenas menções a canais concorrentes, links de convite e hashtags invasivas.
+- **Scraper de Imagem Oficial**: Para postagens apenas de texto que possuam link do Mercado Livre, busca a tag `og:image` do anúncio e converte a resolução para `2X` de alta definição.
+
+### 3.3. Banco de Dados Embarcado (`app/src/db/database.ts`)
+- **Engine**: SQLite 3 via `better-sqlite3`.
+- **Características**: Modos WAL (Write-Ahead Logging) para concorrência de leitura/escrita ultrarrápida, transações seguras e zero latência de rede.
+- **Localização**: `/app/data/replica.db` (na nuvem) ou `data/replica.db` (local).
+
+### 3.4. Servidor Web & WebSocket (`app/src/web/server.ts`)
+- **Engine**: Fastify 5 com plugin `@fastify/websocket`.
+- **Frontend**: Servido estaticamente a partir de `app/src/public/`.
+- **Rotas REST**: Healthcheck (`/health`), configurações, rotas, logs e teste de cookie do Mercado Livre.
+- **Canal WebSocket (`/ws`)**: Comunicação bidirecional contínua para atualização do status do WhatsApp, QR Code, métricas de envio e feed de atividades em tempo real.
 
 ---
 
-## 3. O que o Ingest faz, na ordem
+## 4. Persistência e Nuvem (Railway / Render)
 
-1. **Webhook Evolution** — caminho com segredo. Caminho adivinhável = qualquer um publica no canal.
-2. **Normalizar Mensagem** — só grupo, não é a própria conta, tem texto, atraso < 10 min.
-3. **Consultar Rota e Config** — origem liberada? teto da hora? destinos? loop origem=destino?
-4. **Extrair Links** + **Seguir Redirecionamento** — no máximo 4 encurtadores, dois saltos.
-5. **Montar Post** — link do ML vira `?matt_word=…&matt_tool=…&forceInApp=true`; apaga convite de terceiro e marca (`@rasgabooster.tcg`, `#rasgaboot`, `frases_remover`). Vitrine `meli.la` `/social/`: produto sai do HTML (`og:title`, `og:image`), **não** do primeiro `/p/MLB`.
-6. **Registrar e Deduplicar** — `INSERT ON CONFLICT (hash_conteudo) DO NOTHING`. Sem linha, não publica.
-7. **Delay** — segundos de `replica_config`.
-8. **Telegram** — foto inteira 2X + legenda limpa, sem `parse_mode`. Card 1080×1144 fica **desviado**.
-9. **WhatsApp de destino** — a mesma foto via `sendMedia`, ou texto se não houver foto.
-10. **Marcar Como Enviado**.
+Na nuvem, o contêiner Docker monta um **Volume Persistente** no caminho:
+```text
+/app/data
+```
+Esse volume isola e protege:
+1. `data/replica.db`: Todas as suas rotas, configurações e histórico.
+2. `data/auth_baileys/`: Todas as chaves criptográficas e credenciais da sessão do WhatsApp.
 
----
-
-## 4. O painel
-
-| Rota | Método | Auth | O que faz |
-| --- | --- | --- | --- |
-| `/webhook/replica/painel` | GET | Basic Auth | Devolve a página |
-| `/webhook/replica/painel/salvar` | POST | token no JSON | Cria/edita rota, ou reconfigura Telegram |
-| `/webhook/replica/painel/rota` | POST | token no JSON | Liga/desliga ou exclui rota |
-| `/webhook/replica/painel/config` | POST | token no JSON | Ajuste em `replica_config` (lista branca) |
-
-A página sai de `replica_config.pagina_gz` (base64 UTF-8 do HTML; o nome `_gz` é legado).
-Fonte: [`backups/2026-08-28/painel/replica-painel.html`](../backups/2026-08-28/painel/replica-painel.html).
-**Um escritor só** na coluna. HTML sem `"` nem `\`. Front monta a tela pela DOM API
-(texto de terceiro não vai para `innerHTML`).
-
----
-
-## 5. Onde o estado vive
-
-Nada importante mora no workflow. Se o n8n reiniciar, a réplica continua.
-
-| Pergunta | Quem responde |
-| --- | --- |
-| Este grupo está liberado? | `replica_transmissoes` + origens, ou legado `replica_rotas.ativa` |
-| A esteira está ligada? | `replica_config.ativo` |
-| Esta promoção já saiu? | `replica_log.hash_conteudo` |
-| Quantos posts na última hora? | `replica_log.enviado_em` |
-| Por que não saiu? | `replica_log.status` + `motivo` |
+Mesmo quando um novo código é implantado ou o container é reiniciado, **a sessão do WhatsApp permanece conectada** e as configurações são 100% preservadas.

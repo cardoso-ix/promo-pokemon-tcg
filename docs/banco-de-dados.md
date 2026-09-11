@@ -1,124 +1,133 @@
-# Banco de dados — réplica
+# Banco de Dados — SQLite Embarcado
 
-O banco guarda rotas, ajustes e o diário da réplica. O Ingest e o painel só se falam
-por aqui.
-
----
-
-## Onde ele está
-
-| Item | Valor |
-| --- | --- |
-| Servidor | VPS `srv1897392.hstgr.cloud` |
-| Container | `pokemon-postgres` (`postgres:16-alpine`) |
-| Rede | `n8n_default` (a mesma do n8n) |
-| Banco | `pokemon_promos` |
-| Usuário | `pokemon_bot` |
-| Porta | 5432 só em `127.0.0.1` |
-| Volume | `postgres_data` |
-| Credencial n8n | Pokemon Promos DB, `6jdqiaTfNIJseSqb` |
-
-A senha fica **só** na credencial e no container. **A senha efetiva não é a do `.env`:**
-o `$` do meio foi comido pelo Compose. O banco aceita `PkmnPromos2026!Br`.
-Detalhe em [runbook](runbook.md) e [P5](troubleshooting.md#p5--credencial-do-banco-para-de-conectar-couldnt-connect-with-these-settings).
-
-Como consultar: [runbook, seção 2](runbook.md#2-como-rodar-uma-consulta-sql).
+O sistema utiliza o **SQLite 3** por meio do driver de alta performance `better-sqlite3`. Ele opera em modo WAL (*Write-Ahead Logging*), garantindo máxima velocidade de leitura e escrita com consistência transacional e sem a necessidade de gerenciar servidores de banco de dados externos.
 
 ---
 
-## Schema `evolution`
+## 1. Localização e Persistência
 
-Mesmo Postgres, schema separado, criado pelo `Replica Schema Setup` e populado pela
-Evolution. **Não mexa à mão:** a sessão do WhatsApp mora ali. Apagar = escanear o QR de novo.
-
----
-
-## Tabelas `promos_*` (arquivo morto)
-
-`promos`, `promos_log`, `promos_erros`, `promos_review`, `cupons`, `lojas_confiaveis` e
-afins **ainda existem**. A curadoria que as escrevia foi arquivada em 31/08. Não apague
-sem pedido explícito — é irreversível e a réplica **não** as usa.
-
----
-
-## Tabelas da réplica
-
-Quem cria `replica_rotas`, `replica_config` e `replica_log` é o `Replica Schema Setup`
-(`pfolFnCYTLyLZdwU`). `replica_destinos` e `replica_transmissoes` nascem no primeiro
-GET do painel.
-
-| Tabela | Papel | Quem escreve | Quem lê |
-| --- | --- | --- | --- |
-| `replica_rotas` | Catálogo de grupos WA + contadores | Painel (sync) e Ingest (contador) | Painel (combo) |
-| `replica_transmissoes` | Rotas nomeadas (toggle ATIVA) | Painel | Ingest |
-| `replica_transmissao_origens` / `_destinos` | Origens e destinos de cada rota | Painel | Ingest |
-| `replica_config` | Ajustes chave/valor | Painel | Ingest |
-| `replica_log` | Diário + dedup | Ingest | Painel e você |
-| `replica_destinos` | Catálogo Telegram/WhatsApp | Painel | Painel |
-
-### `replica_rotas`
-
-| Coluna | Tipo | Observação |
+| Ambiente | Caminho do Arquivo | Detalhe de Persistência |
 | --- | --- | --- |
-| `id` | `BIGSERIAL` | PK |
-| `chat_id` | `TEXT NOT NULL UNIQUE` | JID `…@g.us` |
-| `nome` | `TEXT` | Título cacheado (Nomes Sync) ou apelido |
-| `plataforma` | `TEXT NOT NULL DEFAULT 'whatsapp'` | |
-| `ativa` | `BOOLEAN NOT NULL DEFAULT FALSE` | `TRUE` se é origem de alguma rota ligada |
-| `criada_em` | `TIMESTAMPTZ` | |
-| `ultima_mensagem` | `TIMESTAMPTZ` | |
-| `mensagens_vistas` | `INTEGER` | Toda mensagem, mesmo a que não replica |
-| `replicadas` | `INTEGER` | As que saíram no destino |
+| **Nuvem (Railway / Render)** | `/app/data/replica.db` | Montado no Volume Persistente `/app/data` (salvo permanentemente) |
+| **Local (Windows / Linux)** | `data/replica.db` | Salvo na pasta local do projeto (ignorado pelo Git) |
 
-### `replica_destinos`
+---
 
-| Coluna | Tipo | Observação |
+## 2. Esquema das Tabelas
+
+### 2.1. `configs`
+Armazena configurações globais de operação no modelo Chave-Valor.
+
+| Coluna | Tipo | Descrição |
 | --- | --- | --- |
-| `plataforma` | `TEXT` | `telegram` ou `whatsapp` |
-| `identificador` | `TEXT` | `@promopokemontcg` ou JID |
-| `nome` | `TEXT` | Rótulo |
-| `ativo` | `BOOLEAN` | Desligar o Telegram em Conexões marca `FALSE` |
+| `chave` | `TEXT PRIMARY KEY` | Nome do parâmetro |
+| `valor` | `TEXT NOT NULL` | Valor da configuração |
 
-Único em `(plataforma, identificador)`. Origem = destino WhatsApp é recusado (loop).
+**Chaves semeadas por padrão:**
+- `ativo`: `'true'` ou `'false'` (liga/desliga geral da esteira).
+- `delay_segundos`: Tempo de espera antes de postar no destino (padrão: `8`).
+- `teto_hora`: Limite máximo de posts replicados por hora (padrão: `40`).
+- `atraso_maximo_segundos`: Descarta mensagens com atraso superior a este valor (padrão: `600`).
+- `affiliate_matt_word`: Parâmetro de apelido do afiliado ML (ex: `caed1312314`).
+- `affiliate_matt_tool`: ID da etiqueta de afiliados ML (ex: `96097202`).
+- `meli_cookie`: Cookie de sessão de afiliado para encurtar links com `https://meli.la/`.
+- `meli_tag`: Tag de afiliado associada ao encurtamento.
+- `frases_remover`: Lista de termos/assinaturas de concorrentes a remover (uma por linha).
 
-### `replica_transmissoes`
+---
 
-Uma linha por rota nomeada. `replica_transmissao_origens` liga `(transmissao_id, chat_id)`.
-`replica_transmissao_destinos` liga `(transmissao_id, plataforma, identificador)`.
-Apagam em cascata. DDL em `backups/2026-08-28/sql/replica-schema-setup--criar-transmissoes.sql`.
+### 2.2. `rotas`
+Cadastro das rotas de replicação criadas pelo operador.
 
-Se ainda não houver transmissão, o ingest cai no legado `replica_rotas.ativa` +
-`replica_destinos`.
-
-### `replica_config`
-
-| Chave | Semeado | O que faz |
+| Coluna | Tipo | Descrição |
 | --- | --- | --- |
-| `ativo` | `true` | Liga/desliga a esteira |
-| `destino_telegram` | `@promopokemontcg` | Canal |
-| `delay_segundos` | `8` | Espera antes de publicar |
-| `teto_hora` | `40` | Anti-flood |
-| `replicar_cupom_sem_link` | `true` | Cupom sem produto também replica |
-| `afiliado_matt_word` | `caed1312314` | Apelido |
-| `afiliado_matt_tool` | `96097202` | Etiqueta |
-| `frases_remover` | *(vazio)* | Extras; `@rasgabooster.tcg` já sai no código |
-| `pagina_gz` | HTML em base64 UTF-8 | **Não é gzip.** Completo: 71364 bytes, MD5 `adf87ccf658e4b089798562cb99255f6`. **Um escritor só** |
-| `save_token` | token longo | Autentica POSTs do painel. Não colar o valor aqui |
+| `id` | `INTEGER PRIMARY KEY AUTOINCREMENT` | Identificador único da rota |
+| `nome` | `TEXT NOT NULL` | Rótulo amigável (ex: "Promoções Principais") |
+| `ativa` | `INTEGER NOT NULL DEFAULT 1` | `1` se a rota estiver ativa, `0` se pausada |
+| `criada_em` | `DATETIME` | Data e hora de criação |
 
-### `replica_log`
+---
 
-| Coluna | Observação |
-| --- | --- |
-| `hash_conteudo` | **UNIQUE — é o dedup.** Texto sem links + item IDs |
-| `texto_original` / `texto_publicado` | Antes e depois |
-| `links_convertidos` | Quantos links do ML viraram afiliado |
-| `status` | `pendente`, `enviado`, `descartado`, `ignorado`, `erro` |
-| `motivo` | Por que não saiu |
-| `telegram_message_id` | Post no canal |
-| `enviado_em` | O que o teto por hora conta |
+### 2.3. `rota_origens`
+Associação de grupos de WhatsApp de **origem** vinculados a uma rota.
 
-`INSERT … ON CONFLICT (hash_conteudo) DO NOTHING`: sem linha de volta, não publica.
-A mesma promoção em três grupos sai uma vez.
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `rota_id` | `INTEGER NOT NULL` | Chave estrangeira para `rotas(id)` |
+| `chat_id` | `TEXT NOT NULL` | JID do WhatsApp (ex: `120363048912345678@g.us`) |
 
-Índices: `idx_replica_log_criado`, `idx_replica_log_status`, `idx_replica_log_origem`,
-`idx_replica_rotas_ativa`.
+---
+
+### 2.4. `rota_destinos`
+Associação de grupos de WhatsApp de **destino** vinculados a uma rota.
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `rota_id` | `INTEGER NOT NULL` | Chave estrangeira para `rotas(id)` |
+| `chat_id` | `TEXT NOT NULL` | JID do WhatsApp de destino |
+
+---
+
+### 2.5. `logs`
+Diário de bordo de todas as mensagens capturadas, status de envio e desduplicação.
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `id` | `INTEGER PRIMARY KEY AUTOINCREMENT` | ID do registro |
+| `origem_chat_id` | `TEXT` | JID do grupo de onde a mensagem veio |
+| `origem_nome` | `TEXT` | Nome amigável do grupo de origem |
+| `destino_chat_id` | `TEXT` | JID do grupo para onde a mensagem foi enviada |
+| `hash_conteudo` | `TEXT UNIQUE` | Hash SHA-256 do conteúdo para evitar duplicações |
+| `texto_original` | `TEXT` | Texto original recebido do WhatsApp |
+| `texto_publicado` | `TEXT` | Texto processado com links convertidos |
+| `tem_foto` | `INTEGER DEFAULT 0` | `1` se continha foto, `0` se apenas texto |
+| `links_convertidos`| `INTEGER DEFAULT 0` | Quantidade de links ML convertidos |
+| `status` | `TEXT NOT NULL` | `enviado`, `ignorado`, `erro` |
+| `motivo` | `TEXT` | Motivo de descarte ou mensagem de erro |
+| `criado_em` | `DATETIME` | Horário de registro |
+
+---
+
+### 2.6. `chats_cache`
+Cache dos grupos de WhatsApp em que a conta conectada participa.
+
+| Coluna | Tipo | Descrição |
+| --- | --- | --- |
+| `chat_id` | `TEXT PRIMARY KEY` | JID do chat no WhatsApp |
+| `nome` | `TEXT NOT NULL` | Nome legível do grupo ou contato |
+| `is_group` | `INTEGER DEFAULT 1` | `1` para grupos, `0` para chats individuais |
+| `atualizado_em` | `DATETIME` | Última sincronização pelo Baileys |
+
+---
+
+## 3. Consultas Úteis para Monitoramento
+
+Para consultar o banco localmente:
+```bash
+# Abrir o sqlite via terminal
+sqlite3 data/replica.db
+```
+
+### Ver últimas 10 postagens replicadas com sucesso:
+```sql
+SELECT id, criado_em, origem_nome, links_convertidos, tem_foto, status 
+FROM logs 
+WHERE status = 'enviado' 
+ORDER BY id DESC LIMIT 10;
+```
+
+### Ver total de mensagens enviadas hoje:
+```sql
+SELECT count(*) as total_hoje 
+FROM logs 
+WHERE status = 'enviado' 
+  AND date(criado_em) = date('now');
+```
+
+### Ver todas as rotas ativas com suas origens e destinos:
+```sql
+SELECT r.id, r.nome, r.ativa, o.chat_id AS origem, d.chat_id AS destino
+FROM rotas r
+LEFT JOIN rota_origens o ON r.id = o.rota_id
+LEFT JOIN rota_destinos d ON r.id = d.rota_id;
+```

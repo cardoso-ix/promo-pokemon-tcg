@@ -1,28 +1,23 @@
-# Roadmap
+# Roadmap — Promo Réplica
 
-Nada aqui está em andamento. A curadoria saiu do projeto em 31/08
-([Decisão 57](historico-de-decisoes.md#decisão-57--curadoria-aposentada-fica-só-a-réplica)).
-Itens que dependiam dela (dashboard único com fila/lojas/cupons, Catalog Scanner, Shopee
-como segunda fonte do bot) **caíram**.
+Possíveis evoluções futuras planejadas para a esteira autônoma de réplica.
 
 ---
 
-## O que ainda faria sentido (só réplica)
+## 🚀 Melhorias Futuras em Avaliação
 
-1. **Entrar em mais grupos** no chip pareado, se quiser mais origem. A Evolution só vê
-   grupo do qual o número participa.
-2. **Resposta automática no WhatsApp Business** se um dia o anúncio do Instagram mandar
-   gente para o número — o Ads não entra no grupo sozinho.
-3. **Limpeza periódica** de `replica_log` antigo, se a tabela crescer demais.
-
-Não é mais importante do que deixar a rota **TCG Promo** rodando e olhar o log.
+1. **Expansão para Outros Programas de Afiliados**:
+   - Adicionar gerador de links curtos de afiliados para **Amazon** e **Shopee**, replicando o mesmo padrão de alta conversão do Mercado Livre.
+2. **Notificações no Cockpit Web**:
+   - Alerta sonoro sutil ou notificações push no navegador quando uma nova postagem for replicada com sucesso.
+3. **Limpeza Automática de Logs Antigos**:
+   - Rotina periódica em background (ex: semanal) para purgar registros de logs com mais de 30 dias no SQLite, mantendo o banco sempre ultraleve.
+4. **Canais de Transmissão do WhatsApp**:
+   - Expandir as opções de destino para incluir canais de transmissão oficiais (*WhatsApp Channels*).
 
 ---
 
-## De propósito de fora
+## 🚫 Fora de Escopo
 
-- **Religar Scanner/Publisher.** Arquivados. Pedido explícito para não existirem.
-- **Instagram automático pelo n8n.** Não há node, app Meta nem revisão. Criativo pago
-  sobe na mão pelo Gerenciador de Anúncios.
-- **Card 1080×1144 no destino.** Existe no workflow e fica desviado
-  ([Decisão 54](historico-de-decisoes.md#decisão-54--foto-inteira-2x-no-destino-card-desviado)).
+- **Disparos em massa não solicitados (Spam / Cold messaging)**: O foco da aplicação é exclusivamente a replicação em grupos e comunidades fechadas autorizadas.
+- **Curadorias complexas com inteligência artificial**: O modelo de réplica fiel com substituição pontual de links se provou infinitamente mais rápido, seguro e fiel à demanda dos clientes.

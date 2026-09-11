@@ -1,51 +1,47 @@
-# Product
+# Visão de Produto — Promo Réplica Pokémon TCG
 
-<!-- impeccable:product-schema 1 -->
+## Plataforma
 
-## Platform
+Web (Fastify + WebSockets + HTML5/CSS3/JS Vanilla responsivo para desktop, tablet e smartphone).
 
-web
+## Usuários e Perfil
 
-## Users
+Operador de promoções de Pokémon TCG que necessita de uma esteira de replicação 100% autônoma, confiável e permanente (24/7 na nuvem), acessível de qualquer dispositivo (computador ou celular), sem precisar manter sua máquina local ligada.
 
-[Inferido] Eduardo opera sozinho, de noite. Precisa ver se a réplica está ligada, se WhatsApp/Telegram estão conectados, e criar rotas (origem → destino) sem adivinhar JID de grupo. Desde 30/08 o painel também fecha em mobile/tablet (CRT, responsivo).
+## Propósito do Produto
 
-## Product Purpose
+Monitorar grupos de WhatsApp de ofertas de Pokémon TCG, interceptar postagens de promoções, substituir automaticamente links de terceiros por links oficiais de afiliado do Mercado Livre com encurtamento `meli.la`, replicar mídias originais com alta resolução e republicar instantaneamente nos grupos de destino designados.
 
-Painel privado da réplica (única esteira do projeto desde 31/08): copia oferta de grupo WhatsApp e republica com o link de afiliado, sem curadoria. Sucesso = conectar, escolher grupos pelo nome, gravar rota e acompanhar envios/erros.
+## Posicionamento
 
-## Positioning
+Não é um SaaS público multitenant nem uma ferramenta de disparo em massa (spam). É um cockpit privado, ágil e autônomo construído sob medida para replicação profissional de ofertas de colecionáveis Pokémon TCG no ecossistema WhatsApp e Mercado Livre Afiliados.
 
-Não é um SaaS de afiliado (sem planos, pagamentos ou envio em massa). É o cockpit da Evolution + n8n + Postgres do próprio servidor.
+## Arquitetura & Stack Tecnológica
 
-## Operating Context
+- **Backend**: Node.js 22 LTS + TypeScript (compilado nativamente).
+- **Conector WhatsApp**: `@whiskeysockets/baileys` nativo (sem intermediários externos como Evolution API ou n8n).
+- **Servidor Web & API**: Fastify 5 com `@fastify/websocket` para streaming de eventos em tempo real.
+- **Banco de Dados**: SQLite embarcado (`better-sqlite3`) armazenado em `/app/data/replica.db`.
+- **Hospedagem & Nuvem**: Railway / Render com montagem de volume persistente em `/app/data` para preservar credenciais do WhatsApp e configurações.
+- **Frontend**: Dashboard Dark Theme de alta performance sem frameworks pesados, com feedback instantâneo via WebSocket.
 
-Página HTML gerada por um Code node do n8n (`/webhook/replica/painel`), Basic Auth no GET, token de save nos POSTs. HTML não pode ter aspas duplas nem barra invertida. WhatsApp via Evolution (`promo-replica`); Telegram é o canal já cadastrado (`@promopokemontcg`), não OAuth.
+## Capacidades Principais
 
-## Capabilities and Constraints
+1. **Gestão Visual de Rotas**:
+   - Criação e edição de rotas relacionando múltiplos grupos de origem a múltiplos grupos de destino.
+   - Sincronização e exibição dos grupos pelo **nome legível**, nunca por IDs brutos (`@g.us`).
+   - Chave liga/desliga geral da esteira e chaves individuais por rota.
 
-- Abas: Visão Geral, Conexões, Rotas, Configurações, Atividades
-- Rotas nomeadas com toggle ATIVA, origens WA e destinos TG/WA
-- Combo pesquisável por nome de grupo
-- GET não pode chamar `findChats`/`fetchAllGroups`
-- [Inferido] Encoding UTF-8 obrigatório (nomes com acento e emoji)
+2. **Conversão de Afiliados Mercado Livre**:
+   - Encurtador oficial `meli.la` autenticado por cookie de sessão.
+   - Fallback resiliente para link com parâmetros diretos (`matt_word` e `matt_tool`).
+   - Remoção de assinaturas concorrentes preservando formatação e quebras de linha.
 
-## Brand Commitments
+3. **Replicação Fiel de Mídia**:
+   - Decodificação de mídias regulares, temporárias (*ephemeral*), de visualização única (*viewOnce*) e enviadas de aparelhos conectados (`deviceSentMessage`).
+   - Fallback para scraping de imagem oficial do produto em resolução 2X quando a postagem original contiver apenas texto com link.
 
-Nome de tela: Replica Promo / Replica de Promocoes. Pokémon TCG. Usuário pediu visual o mais estético e moderno possível, usando Impeccable. Referência de fluxo: dashboard tipo Connect Afiliado (layout/informação), sem copiar marca nem produto.
-
-## Evidence on Hand
-
-Painel vivo em `backups/2026-08-28/painel/replica-painel.html`. Dados reais vêm do Postgres (`replica_*`, logs do ingest). Não fabricar métricas de marketplace (ML/Amazon/Shopee).
-
-## Product Principles
-
-1. A tarefa some o chrome: conectar, rotas, números da semana.
-2. Nome humano do grupo, nunca JID.
-3. Página rápida; sync pesado fica fora do GET.
-4. Não inventar capacidade (planos, massa, gerar imagem, curadoria automática).
-5. Escuro porque o uso é noturno, na frente de um monitor.
-
-## Accessibility & Inclusion
-
-[Inferido] Um operador, teclado no combo (Enter/Escape), contraste de texto sobre fundo escuro.
+4. **Operação e Monitoramento**:
+   - Cockpit com métricas de postagens na última hora e total diário.
+   - Feed de atividades em tempo real via WebSocket.
+   - Teste instantâneo de conexão com a API de Afiliados do Mercado Livre diretamente no painel.
