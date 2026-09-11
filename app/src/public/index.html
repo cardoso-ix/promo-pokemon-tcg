@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Replica Promo · Cockpit Autônomo</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Teko:wght@500;600;700&display=swap" rel="stylesheet">
@@ -19,7 +21,9 @@
     <!-- Header -->
     <header class="top-bar">
       <div class="brand">
-        <div class="brand-badge">RP</div>
+        <div class="brand-badge">
+          <img src="favicon.svg" alt="RP" width="28" height="28" style="vertical-align: middle;">
+        </div>
         <div class="brand-text">
           <h1>REPLICA PROMO</h1>
           <span class="brand-sub">POKÉMON TCG · AUTÔNOMO</span>
@@ -27,11 +31,23 @@
       </div>
 
       <div class="header-actions">
+        <!-- Mercado Livre Status Badge -->
+        <div id="meli-status-badge" class="badge badge-meli" title="Status do Encurtador Mercado Livre">
+          <span class="indicator-dot"></span>
+          <span id="meli-status-text">meli.la Ativo</span>
+        </div>
+
         <!-- WhatsApp Status Badge -->
         <div id="wa-status-badge" class="badge badge-disconnected">
           <span class="indicator-dot"></span>
           <span id="wa-status-text">Desconectado</span>
         </div>
+
+        <!-- Sound Alert Toggle -->
+        <button id="btn-sound-toggle" class="btn-sound" title="Alternar som de novas postagens">
+          <span id="sound-icon">🔔</span>
+          <span id="sound-label">Som: ON</span>
+        </button>
 
         <!-- Master Switch -->
         <div class="master-control">
@@ -91,6 +107,9 @@
       <button class="tab-btn" data-tab="rotas">
         <span class="tab-icon">🔀</span> Rotas de Grupos (<span id="rotas-count">0</span>)
       </button>
+      <button class="tab-btn" data-tab="lab">
+        <span class="tab-icon">🧪</span> Laboratório de Testes
+      </button>
       <button class="tab-btn" data-tab="conectar">
         <span class="tab-icon">📱</span> Conectar WhatsApp
       </button>
@@ -101,9 +120,28 @@
 
     <!-- TAB 1: Live Feed -->
     <main id="tab-feed" class="tab-content active">
-      <div class="section-toolbar">
-        <h2>Últimas Atividades</h2>
-        <span class="live-pill"><span class="pulse-dot"></span> TEMPO REAL</span>
+      <div class="section-toolbar feed-toolbar-wrap">
+        <div>
+          <h2>Últimas Atividades</h2>
+          <p class="section-desc">Acompanhe as ofertas capturadas e replicadas em tempo real.</p>
+        </div>
+        
+        <div class="feed-controls">
+          <!-- Search box -->
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="feed-search" placeholder="Buscar por produto, texto ou grupo...">
+          </div>
+
+          <!-- Filter chips -->
+          <div class="filter-group">
+            <button class="filter-chip active" data-filter="all">Todos</button>
+            <button class="filter-chip" data-filter="enviado">Enviados</button>
+            <button class="filter-chip" data-filter="ignorado">Ignorados / Filtro</button>
+          </div>
+
+          <span class="live-pill"><span class="pulse-dot"></span> TEMPO REAL</span>
+        </div>
       </div>
 
       <div id="feed-list" class="feed-container">
@@ -122,7 +160,10 @@
           <h2>Rotas de Transmissão</h2>
           <p class="section-desc">Defina de quais grupos o robô copia e para quais grupos ele republica com seu link.</p>
         </div>
-        <button id="btn-nova-rota" class="btn btn-primary">+ Nova Rota</button>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button id="btn-sync-chats" class="btn btn-secondary" title="Forçar busca de grupos novos que o WhatsApp acabou de entrar">🔄 Atualizar Grupos</button>
+          <button id="btn-nova-rota" class="btn btn-primary">+ Nova Rota</button>
+        </div>
       </div>
 
       <div id="rotas-list" class="rotas-grid">
@@ -130,7 +171,75 @@
       </div>
     </main>
 
-    <!-- TAB 3: Conectar WhatsApp -->
+    <!-- TAB 3: Laboratório de Testes (Simulador de Pipeline) -->
+    <main id="tab-lab" class="tab-content">
+      <div class="section-toolbar">
+        <div>
+          <h2>Laboratório de Teste de Promoções</h2>
+          <p class="section-desc">Cole um texto promocional ou link do Mercado Livre para simular o encurtamento, a limpeza e a foto sem postar no WhatsApp.</p>
+        </div>
+        <button id="btn-lab-exemplo" class="btn btn-secondary">⚡ Carregar Exemplo Pokémon TCG</button>
+      </div>
+
+      <div class="lab-layout">
+        <!-- Entrada -->
+        <div class="card lab-card">
+          <div class="card-header-flex">
+            <h3>Mensagem Bruta de Entrada</h3>
+            <span class="badge badge-neutral">Simulação</span>
+          </div>
+          <p class="card-desc">Cole a mensagem exatamente como seria postada no grupo de origem:</p>
+          
+          <textarea id="lab-input-text" class="textarea-field lab-textarea" rows="9" placeholder="Cole aqui o texto da promoção contendo links do Mercado Livre, preços e hashtags..."></textarea>
+          
+          <div class="lab-actions">
+            <button id="btn-run-simulation" class="btn btn-primary btn-foil">
+              <span>⚡ Simular Tratamento Completo</span>
+            </button>
+            <span id="lab-feedback" class="action-feedback"></span>
+          </div>
+        </div>
+
+        <!-- Saída / Resultado -->
+        <div class="card lab-card">
+          <div class="card-header-flex">
+            <h3>Resultado Processado</h3>
+            <div id="lab-mode-badge" class="badge badge-meli" style="display: none;">meli.la Oficial</div>
+          </div>
+          <p class="card-desc">Veja como o post será entregue no seu grupo de destino:</p>
+
+          <div id="lab-result-placeholder" class="lab-placeholder">
+            <div class="empty-icon">🧪</div>
+            <p>Clique no botão de simulação para ver a conversão de links, limpeza de marcas e foto capturada.</p>
+          </div>
+
+          <div id="lab-result-content" style="display: none;">
+            <div class="lab-meta-row">
+              <span id="lab-links-badge" class="meta-tag">🔗 0 Links Convertidos</span>
+              <span id="lab-has-ml-badge" class="meta-tag">📦 Mercado Livre Detectado</span>
+            </div>
+
+            <!-- Preview da Foto Coletada -->
+            <div id="lab-image-container" class="lab-image-preview" style="display: none;">
+              <span class="preview-label">Foto Oficial Capturada (2X Alta Resolução):</span>
+              <img id="lab-preview-img" src="" alt="Produto">
+            </div>
+
+            <!-- Texto Formatado Final -->
+            <div class="lab-text-preview-box">
+              <span class="preview-label">Texto da Legenda / Post:</span>
+              <pre id="lab-output-text" class="lab-output-pre"></pre>
+            </div>
+
+            <div style="margin-top: 14px;">
+              <button id="btn-copy-lab-text" class="btn btn-secondary">📋 Copiar Texto Tratado</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 4: Conectar WhatsApp -->
     <main id="tab-conectar" class="tab-content">
       <div class="conectar-container">
         <div class="card card-center">
@@ -160,7 +269,7 @@
       </div>
     </main>
 
-    <!-- TAB 4: Configurações -->
+    <!-- TAB 5: Configurações -->
     <main id="tab-config" class="tab-content">
       <div class="config-grid">
         <div class="card">
@@ -276,6 +385,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
 
   <script src="app.js"></script>
 </body>

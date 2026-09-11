@@ -17,7 +17,11 @@ import {
   getPostsLastHour
 } from '../db/database.js';
 import { whatsAppManager, WhatsAppState } from '../whatsapp/client.js';
-import { shortenToMeli } from '../core/affiliate.js';
+import {
+  shortenToMeli,
+  processMessageText,
+  downloadProductImage
+} from '../core/affiliate.js';
 
 import fs from 'node:fs';
 
@@ -157,10 +161,10 @@ export async function createServer() {
   });
 
   app.post('/api/chats/sync', async () => {
-    await whatsAppManager.syncGroups();
+    await whatsAppManager.syncGroups(true);
     const chats = getCachedChats();
     broadcast('chats_updated', chats);
-    return { ok: true, total: chats.length };
+    return { ok: true, total: chats.length, chats };
   });
 
   // API REST: Logs recentes
@@ -195,6 +199,56 @@ export async function createServer() {
       }
     } catch (err: any) {
       return reply.status(500).send({ ok: false, error: err?.message || 'Erro inesperado ao conectar ao Mercado Livre.' });
+    }
+  });
+
+  // API REST: Laboratório de Testes (Simulador de Pipeline)
+  app.post<{ Body: { text: string } }>('/api/test-pipeline', async (req, reply) => {
+    const { text } = req.body || {};
+    if (!text || !text.trim()) {
+      return reply.status(400).send({ ok: false, error: 'Digite ou cole uma mensagem para testar a esteira.' });
+    }
+
+    try {
+      const mattWord = getConfig('affiliate_matt_word', CONFIG.defaultMattWord);
+      const mattTool = getConfig('affiliate_matt_tool', CONFIG.defaultMattTool);
+      const frasesRemover = getConfig('frases_remover', '@rasgabooster.tcg\n#rasgaboot\n@rasgabooster');
+      const meliCookie = getConfig('meli_cookie', '');
+      const meliTag = getConfig('meli_tag', mattWord);
+
+      const result = await processMessageText(
+        text,
+        'simulacao@test',
+        mattWord,
+        mattTool,
+        frasesRemover,
+        meliCookie,
+        meliTag
+      );
+
+      let imagePreviewUrl: string | null = null;
+      if (result.productImageUrl) {
+        imagePreviewUrl = result.productImageUrl;
+      } else if (result.resolvedProductUrl) {
+        const imgBuf = await downloadProductImage(result.resolvedProductUrl);
+        if (imgBuf) {
+          imagePreviewUrl = `data:image/jpeg;base64,${imgBuf.toString('base64')}`;
+        }
+      }
+
+      const isMeliActive = Boolean(meliCookie && meliCookie.trim().length > 10);
+
+      return {
+        ok: true,
+        originalText: text,
+        novoTexto: result.novoTexto,
+        linksConvertidos: result.linksConvertidos,
+        contemMercadoLivre: result.contemMercadoLivre,
+        imagePreviewUrl,
+        shortenerMode: isMeliActive ? 'meli.la (Encurtador Oficial)' : 'Parâmetros Diretos (Fallback matt_word)'
+      };
+    } catch (err: any) {
+      return reply.status(500).send({ ok: false, error: err?.message || 'Erro ao processar simulação.' });
     }
   });
 

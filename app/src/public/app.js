@@ -1,12 +1,58 @@
-// Client-side Dashboard Application
+// Client-side Dashboard Application — Cockpit Autônomo
 (function () {
   let ws = null;
   let allChats = [];
   let allRotas = [];
+  let feedLogs = [];
+  let currentFilter = 'all';
+  let searchQuery = '';
 
-  // Elementos DOM
+  // Áudio Chime (Web Audio API)
+  let soundEnabled = localStorage.getItem('replica_sound_enabled') !== 'false';
+
+  function playChime() {
+    if (!soundEnabled) return;
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'triangle';
+
+      osc1.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc1.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+
+      osc2.frequency.setValueAtTime(440, ctx.currentTime);
+      osc2.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.15);
+
+      gain.gain.setValueAtTime(0.07, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start();
+      osc2.start();
+      osc1.stop(ctx.currentTime + 0.36);
+      osc2.stop(ctx.currentTime + 0.36);
+    } catch (e) {
+      console.warn('Áudio não inicializado:', e);
+    }
+  }
+
+  // Elementos DOM Principais
   const waStatusBadge = document.getElementById('wa-status-badge');
   const waStatusText = document.getElementById('wa-status-text');
+  const meliStatusBadge = document.getElementById('meli-status-badge');
+  const meliStatusText = document.getElementById('meli-status-text');
+  const btnSoundToggle = document.getElementById('btn-sound-toggle');
+  const soundIcon = document.getElementById('sound-icon');
+  const soundLabel = document.getElementById('sound-label');
   const masterToggle = document.getElementById('master-toggle');
 
   const kpiStatus = document.getElementById('kpi-status');
@@ -18,7 +64,10 @@
 
   const rotasCount = document.getElementById('rotas-count');
   const feedList = document.getElementById('feed-list');
+  const feedSearch = document.getElementById('feed-search');
+  const filterChips = document.querySelectorAll('.filter-chip');
   const rotasGrid = document.getElementById('rotas-list');
+  const btnSyncChats = document.getElementById('btn-sync-chats');
 
   const qrBox = document.getElementById('qr-box');
   const waConnectedBox = document.getElementById('wa-connected-box');
@@ -50,6 +99,60 @@
   const rotaNome = document.getElementById('rota-nome');
   const origensSelector = document.getElementById('origens-selector');
   const destinosSelector = document.getElementById('destinos-selector');
+
+  // Laboratório de Testes
+  const btnLabExemplo = document.getElementById('btn-lab-exemplo');
+  const labInputText = document.getElementById('lab-input-text');
+  const btnRunSimulation = document.getElementById('btn-run-simulation');
+  const labFeedback = document.getElementById('lab-feedback');
+  const labResultPlaceholder = document.getElementById('lab-result-placeholder');
+  const labResultContent = document.getElementById('lab-result-content');
+  const labModeBadge = document.getElementById('lab-mode-badge');
+  const labLinksBadge = document.getElementById('lab-links-badge');
+  const labHasMlBadge = document.getElementById('lab-has-ml-badge');
+  const labImageContainer = document.getElementById('lab-image-container');
+  const labPreviewImg = document.getElementById('lab-preview-img');
+  const labOutputText = document.getElementById('lab-output-text');
+  const btnCopyLabText = document.getElementById('btn-copy-lab-text');
+
+  // Toast Container
+  const toastContainer = document.getElementById('toast-container');
+
+  // Inicializar estado do Som
+  function updateSoundUI() {
+    if (soundEnabled) {
+      btnSoundToggle.classList.remove('muted');
+      soundIcon.textContent = '🔔';
+      soundLabel.textContent = 'Som: ON';
+    } else {
+      btnSoundToggle.classList.add('muted');
+      soundIcon.textContent = '🔕';
+      soundLabel.textContent = 'Som: OFF';
+    }
+  }
+  updateSoundUI();
+
+  btnSoundToggle.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem('replica_sound_enabled', String(soundEnabled));
+    updateSoundUI();
+    if (soundEnabled) playChime();
+    showToast(soundEnabled ? 'Notificações sonoras ativadas 🔔' : 'Notificações sonoras em silêncio 🔕');
+  });
+
+  // Toasts
+  function showToast(message, duration = 3000) {
+    if (!toastContainer) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast-message';
+    toast.innerHTML = `<span>✨</span><span>${escapeHtml(message)}</span>`;
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.animation = 'fadeOutToast 0.3s ease forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
 
   // Tabs
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -84,7 +187,7 @@
     };
 
     ws.onclose = () => {
-      console.log('WebSocket desconectado. Tentando reconectar em 3s...');
+      console.log('WebSocket desconectado. Reconectando em 3s...');
       setTimeout(connectWebSocket, 3000);
     };
   }
@@ -98,7 +201,7 @@
         updateWhatsAppUI(data);
         break;
       case 'new_log':
-        appendFeedItem(data, true);
+        handleNewLog(data);
         break;
       case 'rotas_updated':
         allRotas = data;
@@ -113,8 +216,22 @@
       case 'config_updated':
         if (data.chave === 'ativo') {
           updateMasterSwitch(data.valor === 'true');
+        } else if (data.chave === 'meli_cookie') {
+          updateMeliBadge(data.valor);
         }
         break;
+    }
+  }
+
+  function updateMeliBadge(cookieValue) {
+    if (!meliStatusBadge) return;
+    const hasCookie = Boolean(cookieValue && cookieValue.trim().length > 10);
+    if (hasCookie) {
+      meliStatusBadge.className = 'badge badge-meli';
+      meliStatusText.textContent = 'meli.la Ativo';
+    } else {
+      meliStatusBadge.className = 'badge badge-neutral';
+      meliStatusText.textContent = 'Fallback Ativo';
     }
   }
 
@@ -134,6 +251,7 @@
       cfgFrases.value = data.configs.frases_remover || '';
 
       updateMasterSwitch(data.configs.ativo === 'true');
+      updateMeliBadge(data.configs.meli_cookie);
     }
 
     // 3. Rotas & Chats
@@ -142,10 +260,8 @@
     renderRotas(allRotas);
 
     // 4. Logs no Feed
-    if (data.logs && data.logs.length > 0) {
-      feedList.innerHTML = '';
-      data.logs.forEach((log) => appendFeedItem(log, false));
-    }
+    feedLogs = data.logs || [];
+    renderFeed();
 
     // 5. Stats
     if (data.stats) {
@@ -219,23 +335,72 @@
     }
   }
 
-  function appendFeedItem(log, isNew = false) {
-    const emptyState = feedList.querySelector('.empty-state');
-    if (emptyState) emptyState.remove();
+  // Feed de Atividades com Filtro e Pesquisa
+  function handleNewLog(log) {
+    feedLogs.unshift(log);
+    if (feedLogs.length > 80) feedLogs.pop();
+    renderFeed(log.id || 'new');
 
+    if (log.status === 'enviado') {
+      playChime();
+      showToast('Nova oferta replicada com sucesso! 📦⚡');
+    }
+  }
+
+  function renderFeed(highlightId = null) {
+    let filtered = feedLogs;
+
+    // Filtro por status
+    if (currentFilter === 'enviado') {
+      filtered = filtered.filter((l) => l.status === 'enviado');
+    } else if (currentFilter === 'ignorado') {
+      filtered = filtered.filter((l) => l.status !== 'enviado');
+    }
+
+    // Busca por texto
+    if (searchQuery.trim().length > 0) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((l) => {
+        const text = (l.texto_publicado || l.texto_original || '').toLowerCase();
+        const origem = (l.origem_nome || l.origem_chat_id || '').toLowerCase();
+        return text.includes(q) || origem.includes(q);
+      });
+    }
+
+    if (filtered.length === 0) {
+      feedList.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📡</div>
+          <h3>Nenhuma mensagem encontrada</h3>
+          <p>${searchQuery ? 'Nenhum resultado para a busca aplicada.' : 'Aguardando ofertas nos grupos de origem monitorados...'}</p>
+        </div>
+      `;
+      return;
+    }
+
+    feedList.innerHTML = '';
+    filtered.forEach((log) => {
+      const item = createFeedElement(log, highlightId && (log.id === highlightId || highlightId === 'new'));
+      feedList.appendChild(item);
+    });
+  }
+
+  function createFeedElement(log, isHighlight) {
     const item = document.createElement('div');
-    item.className = 'feed-item';
+    item.className = 'feed-item' + (isHighlight ? ' new-arrival' : '');
 
     const statusBadge =
       log.status === 'enviado'
         ? '<span class="badge badge-connected">Enviado</span>'
         : log.status === 'ignorado'
-        ? '<span class="badge badge-qr">Ignorado</span>'
-        : '<span class="badge badge-disconnected">Erro</span>';
+        ? `<span class="badge badge-qr" title="${escapeHtml(log.motivo || '')}">Ignorado</span>`
+        : `<span class="badge badge-disconnected" title="${escapeHtml(log.motivo || '')}">Erro</span>`;
 
     const timeFormatted = log.criado_em
       ? new Date(log.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       : new Date().toLocaleTimeString('pt-BR');
+
+    const rawContent = log.texto_publicado || log.texto_original || '(Sem texto)';
 
     item.innerHTML = `
       <div class="feed-header">
@@ -245,20 +410,47 @@
           ${statusBadge}
         </div>
       </div>
-      <div class="feed-body">${escapeHtml(log.texto_publicado || log.texto_original || '(Sem texto)')}</div>
+      <div class="feed-body">${escapeHtml(rawContent)}</div>
       <div class="feed-footer">
-        <span>Destino: ${escapeHtml(log.destino_chat_id || 'Nenhum')}</span>
-        <span>${log.tem_foto ? '📷 Com Foto' : '📝 Somente Texto'} · ${log.links_convertidos || 0} links ML</span>
+        <span>Destino: ${escapeHtml(log.destino_chat_id || 'Nenhum')} · ${log.tem_foto ? '📷 Com Foto' : '📝 Somente Texto'} · ${log.links_convertidos || 0} links ML</span>
+        <button class="btn-copy-card" data-content="${encodeURIComponent(rawContent)}" title="Copiar texto tratado para a área de transferência">
+          📋 Copiar Post
+        </button>
       </div>
     `;
 
-    if (isNew) {
-      feedList.prepend(item);
-    } else {
-      feedList.appendChild(item);
+    const copyBtn = item.querySelector('.btn-copy-card');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const content = decodeURIComponent(copyBtn.dataset.content);
+        navigator.clipboard.writeText(content).then(() => {
+          showToast('Texto copiado com sucesso! ✓');
+        });
+      });
     }
+
+    return item;
   }
 
+  // Filtros e busca no Feed
+  if (feedSearch) {
+    feedSearch.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      renderFeed();
+    });
+  }
+
+  filterChips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      filterChips.forEach((c) => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter;
+      renderFeed();
+    });
+  });
+
+  // Renderização de Rotas
   function renderRotas(rotas) {
     rotasCount.textContent = rotas.length;
 
@@ -315,6 +507,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ativa: e.target.checked })
         });
+        showToast('Status da rota atualizado!');
       });
     });
 
@@ -331,6 +524,7 @@
       btn.addEventListener('click', async () => {
         if (confirm('Tem certeza que deseja excluir esta rota?')) {
           await fetch(`/api/rotas/${btn.dataset.id}`, { method: 'DELETE' });
+          showToast('Rota removida com sucesso!');
         }
       });
     });
@@ -381,7 +575,118 @@
     });
   }
 
-  // Ações de Botões e Eventos
+  // Sincronizar Grupos Instantaneamente
+  if (btnSyncChats) {
+    btnSyncChats.addEventListener('click', async () => {
+      btnSyncChats.disabled = true;
+      btnSyncChats.textContent = '⏳ Buscando...';
+      try {
+        const res = await fetch('/api/chats/sync', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          allChats = data.chats || allChats;
+          showToast(`Grupos sincronizados! (${data.total || allChats.length} grupos ativos)`);
+          renderRotas(allRotas);
+        } else {
+          showToast('Falha ao sincronizar grupos.');
+        }
+      } catch (err) {
+        showToast('Erro de rede ao sincronizar grupos.');
+      } finally {
+        btnSyncChats.disabled = false;
+        btnSyncChats.textContent = '🔄 Atualizar Grupos';
+      }
+    });
+  }
+
+  // Laboratório de Testes (Simulador de Pipeline)
+  if (btnLabExemplo) {
+    btnLabExemplo.addEventListener('click', () => {
+      labInputText.value =
+        '🔥 ULTRA OFERTA POKÉMON TCG! 🔥\n' +
+        'Deck Pokémon Espada e Escudo Rillaboom Copag Original Lacrado!\n' +
+        'De R$ 89,90 por apenas R$ 49,90 no Mercado Livre!\n\n' +
+        'Aproveite a oferta oficial no link abaixo:\n' +
+        'https://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917\n\n' +
+        'Entre no canal concorrente _@rasgabooster.tcg_ #rasgaboot\n' +
+        'Corra antes que acabe o estoque!';
+      showToast('Exemplo carregado no laboratório! 🧪');
+    });
+  }
+
+  if (btnRunSimulation) {
+    btnRunSimulation.addEventListener('click', async () => {
+      const text = labInputText.value.trim();
+      if (!text) {
+        labFeedback.textContent = '❌ Cole ou digite um texto para simular.';
+        labFeedback.style.color = 'var(--accent-danger)';
+        return;
+      }
+
+      btnRunSimulation.disabled = true;
+      labFeedback.textContent = '⏳ Processando simulação...';
+      labFeedback.style.color = 'var(--text-muted)';
+
+      try {
+        const res = await fetch('/api/test-pipeline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          labFeedback.textContent = '✅ Simulação concluída com sucesso!';
+          labFeedback.style.color = 'var(--accent-green)';
+
+          labResultPlaceholder.style.display = 'none';
+          labResultContent.style.display = 'block';
+
+          // Modo do encurtador
+          labModeBadge.style.display = 'inline-block';
+          labModeBadge.textContent = data.shortenerMode || 'meli.la Oficial';
+
+          // Tags de métricas
+          labLinksBadge.textContent = `🔗 ${data.linksConvertidos || 0} Link(s) Convertido(s)`;
+          labHasMlBadge.textContent = data.contemMercadoLivre ? '📦 Mercado Livre Detectado' : 'ℹ️ Sem Link Mercado Livre';
+
+          // Foto do Produto
+          if (data.imagePreviewUrl) {
+            labImageContainer.style.display = 'block';
+            labPreviewImg.src = data.imagePreviewUrl;
+          } else {
+            labImageContainer.style.display = 'none';
+          }
+
+          // Texto Final
+          labOutputText.textContent = data.novoTexto || '(Texto vazio)';
+
+          showToast('Simulação finalizada com sucesso! 🧪');
+        } else {
+          labFeedback.textContent = `❌ ${data.error || 'Erro ao simular'}`;
+          labFeedback.style.color = 'var(--accent-danger)';
+        }
+      } catch (err) {
+        labFeedback.textContent = '❌ Falha ao conectar ao servidor.';
+        labFeedback.style.color = 'var(--accent-danger)';
+      } finally {
+        btnRunSimulation.disabled = false;
+      }
+    });
+  }
+
+  if (btnCopyLabText) {
+    btnCopyLabText.addEventListener('click', () => {
+      const text = labOutputText.textContent;
+      if (text) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('Texto do laboratório copiado! ✓');
+        });
+      }
+    });
+  }
+
+  // Ações de Configurações
   masterToggle.addEventListener('change', async () => {
     const ativo = masterToggle.checked;
     await fetch('/api/configs', {
@@ -389,6 +694,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chave: 'ativo', valor: ativo ? 'true' : 'false' })
     });
+    showToast(ativo ? 'Esteira de réplica ligada!' : 'Esteira pausada.');
   });
 
   btnSalvarConfig.addEventListener('click', async () => {
@@ -438,8 +744,10 @@
         body: JSON.stringify({ chave: 'frases_remover', valor: cfgFrases.value })
       });
 
+      updateMeliBadge(cfgMeliCookie ? cfgMeliCookie.value.trim() : '');
       configStatusMsg.textContent = 'Salvo com sucesso!';
       configStatusMsg.style.color = 'var(--accent-green)';
+      showToast('Configurações salvas com sucesso! ✓');
       setTimeout(() => (configStatusMsg.textContent = ''), 3000);
     } catch (e) {
       configStatusMsg.textContent = 'Erro ao salvar.';
@@ -475,6 +783,8 @@
         if (res.ok && data.ok) {
           cookieTestFeedback.textContent = `✅ ${data.message}`;
           cookieTestFeedback.style.color = 'var(--accent-green)';
+          updateMeliBadge(cookie);
+          showToast('Cookie do Mercado Livre validado com sucesso! ⚡');
         } else {
           cookieTestFeedback.textContent = `❌ ${data.error || 'Cookie inválido ou rejeitado'}`;
           cookieTestFeedback.style.color = 'var(--accent-danger)';
@@ -519,11 +829,13 @@
     });
 
     modalRota.style.display = 'none';
+    showToast('Rota salva com sucesso! 🔀');
   });
 
   btnWaLogout.addEventListener('click', async () => {
     if (confirm('Deseja desconectar o WhatsApp? Um novo QR Code será gerado para escanear.')) {
       await fetch('/api/whatsapp/logout', { method: 'POST' });
+      showToast('Sessão do WhatsApp desconectada.');
     }
   });
 
