@@ -262,13 +262,41 @@
             <p>Contatos captados automaticamente de grupos ou importados manualmente.</p>
           </div>
           <div class="header-btns">
+            <button class="btn btn-secondary" id="btn-export-excel" title="Baixar planilha de contatos em formato Excel (.CSV)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Exportar Excel
+            </button>
             <button class="btn btn-secondary" id="btn-open-import">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
               Importar Lista
             </button>
             <button class="btn btn-danger btn-outline" id="btn-clear-contatos">
-              Limpar Lista
+              Limpar Tudo
             </button>
+          </div>
+        </div>
+
+        <!-- Pastas e Lotes de Leads -->
+        <div class="pastas-section">
+          <div class="pastas-header">
+            <div class="pastas-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Pastas e Lotes de Leads</span>
+            </div>
+            <span class="pastas-counter-info" id="pastas-counter-info">Carregando pastas...</span>
+          </div>
+
+          <div class="pastas-grid" id="pastas-container">
+            <div class="pasta-card active" data-pasta="todos">
+              <div class="pasta-top">
+                <span class="pasta-icon">📁</span>
+                <span class="pasta-badge">TODOS</span>
+              </div>
+              <strong class="pasta-name">Todas as Pastas</strong>
+              <span class="pasta-count" id="pasta-total-all">Carregando...</span>
+            </div>
           </div>
         </div>
 
@@ -668,23 +696,31 @@
   <div class="modal-overlay" id="modal-import" style="display: none;">
     <div class="modal-dialog">
       <div class="modal-header">
-        <h3>Importar Contatos Manualmente</h3>
+        <div>
+          <h3>Importar Contatos & Criar Pasta</h3>
+          <p class="modal-subtitle">Suba uma planilha ou cole números para criar uma nova pasta de leads.</p>
+        </div>
         <button class="btn-close" id="btn-close-import-modal">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="import-grupo-nome">Nome ou Tag da Lista:</label>
-          <input type="text" id="import-grupo-nome" placeholder="Ex: Leads Importados Instagram" class="input-field">
+          <label for="import-grupo-nome">Nome da Pasta de Leads:</label>
+          <input type="text" id="import-grupo-nome" placeholder="Ex: Clientes VIP Feira Fev 2026" class="input-field">
         </div>
         <div class="form-group">
-          <label for="import-textarea">Cole a lista (um número por linha):</label>
-          <textarea id="import-textarea" rows="8" class="input-field textarea-field" placeholder="5511999999999&#10;5521988888888, Carlos&#10;+55 31 97777-7777"></textarea>
-          <small>Aceita formatos com ou sem pontuação, com ou sem nome.</small>
+          <label for="import-file">Upload de Planilha (.CSV ou .TXT):</label>
+          <input type="file" id="import-file" accept=".csv,.txt" class="input-field" style="padding: 7px;">
+          <small>Se preferir subir um arquivo, o sistema lê automaticamente os números.</small>
+        </div>
+        <div class="form-group">
+          <label for="import-textarea">Ou cole a lista manualmente (um por linha):</label>
+          <textarea id="import-textarea" rows="6" class="input-field textarea-field" placeholder="5511999999999&#10;5521988888888, Carlos&#10;+55 31 97777-7777, Mariana"></textarea>
+          <small>Formato: <code>5511999999999</code> ou <code>5511999999999, Nome</code>.</small>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btn-cancel-import">Cancelar</button>
-        <button class="btn btn-primary" id="btn-confirm-import">Importar Números</button>
+        <button class="btn btn-primary" id="btn-confirm-import">Importar e Criar Pasta</button>
       </div>
     </div>
   </div>

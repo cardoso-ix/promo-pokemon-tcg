@@ -186,10 +186,43 @@ export function upsertContato(contato: Contato): boolean {
   }
 }
 
-export function getContatos(limit = 500, offset = 0, busca = ''): { contatos: Contato[]; total: number } {
+export interface PastaLeads {
+  nome: string;
+  total: number;
+  origem_tipo: string;
+  criado_em: string;
+}
+
+export function getPastasLeads(): PastaLeads[] {
+  const query = `
+    SELECT 
+      COALESCE(NULLIF(TRIM(grupo_nome), ''), 'Geral') as nome,
+      COUNT(*) as total,
+      COALESCE(origem_tipo, 'extracao') as origem_tipo,
+      MAX(criado_em) as criado_em
+    FROM contatos
+    WHERE ativo = 1
+    GROUP BY COALESCE(NULLIF(TRIM(grupo_nome), ''), 'Geral')
+    ORDER BY MAX(criado_em) DESC, total DESC
+  `;
+  return db.prepare(query).all() as PastaLeads[];
+}
+
+export function getContatos(limit = 500, offset = 0, busca = '', pasta = ''): { contatos: Contato[]; total: number } {
   let query = 'SELECT * FROM contatos WHERE ativo = 1';
   let countQuery = 'SELECT COUNT(*) as total FROM contatos WHERE ativo = 1';
   const params: any[] = [];
+
+  if (pasta && pasta !== 'todos') {
+    if (pasta === 'Geral') {
+      query += " AND (grupo_nome IS NULL OR TRIM(grupo_nome) = '' OR grupo_nome = 'Geral')";
+      countQuery += " AND (grupo_nome IS NULL OR TRIM(grupo_nome) = '' OR grupo_nome = 'Geral')";
+    } else {
+      query += ' AND grupo_nome = ?';
+      countQuery += ' AND grupo_nome = ?';
+      params.push(pasta);
+    }
+  }
 
   if (busca) {
     query += ' AND (nome LIKE ? OR numero LIKE ? OR grupo_nome LIKE ?)';
@@ -204,8 +237,36 @@ export function getContatos(limit = 500, offset = 0, busca = ''): { contatos: Co
   return { contatos, total: countRow ? countRow.total : 0 };
 }
 
+export function getAllContatosParaExportar(pasta = ''): Contato[] {
+  let query = 'SELECT * FROM contatos WHERE ativo = 1';
+  const params: any[] = [];
+
+  if (pasta && pasta !== 'todos') {
+    if (pasta === 'Geral') {
+      query += " AND (grupo_nome IS NULL OR TRIM(grupo_nome) = '' OR grupo_nome = 'Geral')";
+    } else {
+      query += ' AND grupo_nome = ?';
+      params.push(pasta);
+    }
+  }
+
+  query += ' ORDER BY id ASC';
+  return db.prepare(query).all(...params) as Contato[];
+}
+
 export function deleteContato(id: number): void {
   db.prepare('DELETE FROM contatos WHERE id = ?').run(id);
+}
+
+export function deletePastaLeads(pastaNome: string): number {
+  if (!pastaNome) return 0;
+  let info: any;
+  if (pastaNome === 'Geral') {
+    info = db.prepare("DELETE FROM contatos WHERE grupo_nome IS NULL OR TRIM(grupo_nome) = '' OR grupo_nome = 'Geral'").run();
+  } else {
+    info = db.prepare('DELETE FROM contatos WHERE grupo_nome = ?').run(pastaNome);
+  }
+  return info.changes;
 }
 
 export function clearContatos(): void {

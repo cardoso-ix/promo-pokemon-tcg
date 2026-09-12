@@ -8,6 +8,9 @@ import {
   setConfig,
   getAllConfigs,
   getContatos,
+  getPastasLeads,
+  getAllContatosParaExportar,
+  deletePastaLeads,
   upsertContato,
   clearContatos,
   getAllGrupos,
@@ -197,18 +200,60 @@ export async function createServer() {
     return { ok: true, ...result };
   });
 
-  // Contatos / Leads
+  // Contatos / Leads & Pastas
+  app.get('/api/contatos/pastas', async () => {
+    return { pastas: getPastasLeads() };
+  });
+
   app.get('/api/contatos', async (req: any) => {
     const limit = parseInt(req.query.limit || '100', 10);
     const offset = parseInt(req.query.offset || '0', 10);
     const busca = req.query.busca || '';
-    return getContatos(limit, offset, busca);
+    const pasta = req.query.pasta || '';
+    return getContatos(limit, offset, busca, pasta);
+  });
+
+  app.get('/api/contatos/export', async (req: any, reply) => {
+    const pasta = req.query.pasta || '';
+    const contatos = getAllContatosParaExportar(pasta);
+
+    // Cabeçalho CSV formatado para Excel (delimitador ponto e vírgula, com UTF-8 BOM)
+    let csv = '\uFEFFNúmero;Nome;Pasta / Grupo;Tipo de Origem;Data de Cadastro;Status\r\n';
+    for (const c of contatos) {
+      const escapeCsv = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
+      const num = c.numero.startsWith('+') ? c.numero : `+${c.numero}`;
+      csv += [
+        escapeCsv(num),
+        escapeCsv(c.nome || ''),
+        escapeCsv(c.grupo_nome || 'Geral'),
+        escapeCsv(c.origem_tipo || 'extracao'),
+        escapeCsv(c.criado_em || ''),
+        escapeCsv(c.ativo ? 'Ativo' : 'Inativo')
+      ].join(';') + '\r\n';
+    }
+
+    const sanitizedName = pasta ? pasta.replace(/[^a-zA-Z0-9_-]/g, '_') : 'todos';
+    const filename = `leads_pokemon_${sanitizedName}_${new Date().toISOString().split('T')[0]}.csv`;
+
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
+    reply.header('Content-Disposition', `attachment; filename="${filename}"`);
+    return reply.send(csv);
+  });
+
+  app.delete('/api/contatos/pasta', async (req: any) => {
+    const { pastaNome } = req.body || {};
+    if (!pastaNome) throw new Error('pastaNome é obrigatório.');
+    const deleted = deletePastaLeads(pastaNome);
+    logSistema('warn', 'contatos', `Pasta "${pastaNome}" e seus ${deleted} contatos foram excluídos.`);
+    broadcastEvent('metricas', getMetricasDashboard());
+    return { ok: true, totalDeleted: deleted };
   });
 
   app.post('/api/contatos/import', async (req: any) => {
-    const { rawText, grupoNome } = req.body || {};
+    const { rawText, pastaNome, grupoNome } = req.body || {};
     if (!rawText) throw new Error('Texto de importação vazio.');
 
+    const pastaFinal = (pastaNome || grupoNome || 'Importação Manual').trim();
     const lines = rawText.split('\n');
     let imported = 0;
 
@@ -232,16 +277,16 @@ export async function createServer() {
           numero: num,
           nome,
           origem_grupo: 'manual',
-          grupo_nome: grupoNome || 'Importação Manual',
+          grupo_nome: pastaFinal,
           origem_tipo: 'manual'
         });
         if (salvo) imported++;
       }
     }
 
-    logSistema('info', 'contatos', `Importados ${imported} novos contatos manualmente.`);
+    logSistema('info', 'contatos', `Importados ${imported} novos contatos na pasta "${pastaFinal}".`);
     broadcastEvent('metricas', getMetricasDashboard());
-    return { ok: true, totalImported: imported };
+    return { ok: true, totalImported: imported, pasta: pastaFinal };
   });
 
   app.delete('/api/contatos', async () => {
@@ -257,7 +302,7 @@ export async function createServer() {
   });
 
   app.post('/api/campanhas', async (req: any) => {
-    const { nome, mensagemTemplate, targetType, targetGroupJid, mediaPath } = req.body || {};
+    const { nome, mensagemTemplate, targetType, targetGroupJid, targetPastaNome, mediaPath } = req.body || {};
     if (!nome || !mensagemTemplate) {
       throw new Error('Nome e Template de Mensagem são obrigatórios.');
     }
@@ -266,6 +311,12 @@ export async function createServer() {
     let contatosAlvo: any[] = [];
     if (targetType === 'grupo' && targetGroupJid) {
       contatosAlvo = db.prepare('SELECT * FROM contatos WHERE ativo = 1 AND origem_grupo = ?').all(targetGroupJid) as any[];
+    } else if (targetType === 'pasta' && targetPastaNome) {
+      if (targetPastaNome === 'Geral') {
+        contatosAlvo = db.prepare("SELECT * FROM contatos WHERE ativo = 1 AND (grupo_nome IS NULL OR TRIM(grupo_nome) = '' OR grupo_nome = 'Geral')").all() as any[];
+      } else {
+        contatosAlvo = db.prepare('SELECT * FROM contatos WHERE ativo = 1 AND grupo_nome = ?').all(targetPastaNome) as any[];
+      }
     } else {
       contatosAlvo = db.prepare('SELECT * FROM contatos WHERE ativo = 1').all() as any[];
     }

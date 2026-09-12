@@ -5,6 +5,8 @@ const state = {
   metricas: { totalContatos: 0, totalGrupos: 0, enviosHoje: 0, falhasHoje: 0, respostasIaHoje: 0 },
   grupos: [],
   contatos: [],
+  pastas: [],
+  currentPasta: 'todos',
   campanhas: [],
   configs: {}
 };
@@ -152,7 +154,10 @@ function switchTab(tabId) {
   document.getElementById('page-desc').innerText = meta.desc;
 
   if (tabId === 'grupos') loadGrupos();
-  if (tabId === 'contatos') loadContatos();
+  if (tabId === 'contatos') {
+    loadPastasLeads();
+    loadContatos();
+  }
   if (tabId === 'campanhas') loadCampanhas();
   if (tabId === 'deepseek' || tabId === 'configuracoes') loadConfigs();
   if (tabId === 'logs') loadLogs();
@@ -346,6 +351,7 @@ window.extractParticipants = async function(jid) {
     if (data.ok) {
       showToast(`Sucesso! ${data.total} novos membros extraídos do grupo "${data.grupoNome}".`, 'success');
       loadStatus();
+      loadPastasLeads();
       loadContatos();
     } else {
       showToast(data.message || 'Falha na extração.', 'error');
@@ -355,23 +361,143 @@ window.extractParticipants = async function(jid) {
   }
 };
 
+// Funções de Gerenciamento de Pastas & Lotes de Leads
+window.exportarPasta = function(pastaNome) {
+  const pastaParam = (pastaNome && pastaNome !== 'todos') ? `?pasta=${encodeURIComponent(pastaNome)}` : '';
+  window.open(`/api/contatos/export${pastaParam}`, '_blank');
+};
+
+window.iniciarCampanhaComPasta = async function(pastaNome) {
+  switchTab('campanhas');
+  await openNovaCampanhaModal(`pasta:${pastaNome}`);
+};
+
+window.excluirPasta = async function(pastaNome) {
+  if (confirm(`Atenção: Deseja realmente excluir a pasta "${pastaNome}" e todos os seus contatos?\nEsta ação não poderá ser desfeita.`)) {
+    try {
+      const res = await fetch('/api/contatos/pasta', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pastaNome })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Pasta "${pastaNome}" e ${data.totalDeleted} contatos foram excluídos.`, 'success');
+        if (state.currentPasta === pastaNome) {
+          state.currentPasta = 'todos';
+        }
+        await loadPastasLeads();
+        await loadContatos();
+        await loadStatus();
+      } else {
+        showToast(data.message || 'Erro ao excluir pasta.', 'error');
+      }
+    } catch (err) {
+      showToast(`Erro: ${err.message}`, 'error');
+    }
+  }
+};
+
+async function loadPastasLeads() {
+  const container = document.getElementById('pastas-container');
+  const counterInfo = document.getElementById('pastas-counter-info');
+  const totalAllBadge = document.getElementById('pasta-total-all');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/api/contatos/pastas');
+    const data = await res.json();
+    const pastas = data.pastas || [];
+    state.pastas = pastas;
+
+    const totalLeadsGeral = pastas.reduce((sum, p) => sum + (p.total || 0), 0);
+    if (totalAllBadge) {
+      totalAllBadge.innerText = `${totalLeadsGeral} leads`;
+    }
+    if (counterInfo) {
+      counterInfo.innerText = `${pastas.length} pasta${pastas.length === 1 ? '' : 's'} de captação`;
+    }
+
+    const cardsHtml = [
+      `
+      <div class="pasta-card ${state.currentPasta === 'todos' ? 'active' : ''}" data-pasta="todos">
+        <div class="pasta-top">
+          <span class="pasta-icon">📁</span>
+          <span class="pasta-badge">TODOS</span>
+        </div>
+        <strong class="pasta-name">Todas as Pastas</strong>
+        <span class="pasta-count">${totalLeadsGeral} contatos no total</span>
+      </div>
+      `
+    ];
+
+    pastas.forEach(p => {
+      const isSelected = state.currentPasta === p.nome;
+      const dataFormatada = p.criado_em ? p.criado_em.split(' ')[0] : '';
+      cardsHtml.push(`
+        <div class="pasta-card ${isSelected ? 'active' : ''}" data-pasta="${escapeHtml(p.nome)}">
+          <div class="pasta-top">
+            <span class="pasta-icon">📂</span>
+            <span class="pasta-badge">${p.total} leads</span>
+          </div>
+          <strong class="pasta-name" title="${escapeHtml(p.nome)}">${escapeHtml(p.nome)}</strong>
+          <span class="pasta-count">${p.total} contatos ${dataFormatada ? '• ' + dataFormatada : ''}</span>
+          <div class="pasta-actions" onclick="event.stopPropagation()">
+            <button class="pasta-btn" title="Exportar esta pasta para Excel (.CSV)" onclick="exportarPasta('${escapeHtml(p.nome)}')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Excel
+            </button>
+            <button class="pasta-btn highlight" title="Criar campanha com esta pasta" onclick="iniciarCampanhaComPasta('${escapeHtml(p.nome)}')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              Disparar
+            </button>
+            <button class="pasta-btn danger" title="Excluir esta pasta e seus contatos" onclick="excluirPasta('${escapeHtml(p.nome)}')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+      `);
+    });
+
+    container.innerHTML = cardsHtml.join('');
+
+    container.querySelectorAll('.pasta-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const pasta = card.dataset.pasta;
+        state.currentPasta = pasta;
+        container.querySelectorAll('.pasta-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        loadContatos();
+      });
+    });
+
+  } catch (err) {
+    console.warn('Erro ao carregar pastas de leads:', err);
+  }
+}
+
 // Contatos
 async function loadContatos() {
   const tbody = document.getElementById('contatos-tbody');
   const counter = document.getElementById('contatos-counter');
   const busca = (document.getElementById('contatos-search')?.value || '').trim();
+  const pasta = state.currentPasta || 'todos';
 
   try {
-    const res = await fetch(`/api/contatos?limit=100&busca=${encodeURIComponent(busca)}`);
+    const res = await fetch(`/api/contatos?limit=250&busca=${encodeURIComponent(busca)}&pasta=${encodeURIComponent(pasta)}`);
     const { contatos, total } = await res.json();
     state.contatos = contatos || [];
 
     if (counter) {
-      counter.innerText = `${total} contatos cadastrados`;
+      if (pasta && pasta !== 'todos') {
+        counter.innerText = `${total} contatos na pasta "${pasta}"`;
+      } else {
+        counter.innerText = `${total} contatos cadastrados`;
+      }
     }
 
     if (!contatos || contatos.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center">Nenhum contato encontrado.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center">Nenhum contato encontrado${pasta !== 'todos' ? ` na pasta "${escapeHtml(pasta)}"` : ''}.</td></tr>`;
       return;
     }
 
@@ -379,7 +505,7 @@ async function loadContatos() {
       <tr>
         <td><strong>+${c.numero}</strong></td>
         <td>${escapeHtml(c.nome) || '<span class="text-muted">Sem nome</span>'}</td>
-        <td>${escapeHtml(c.grupo_nome) || '<span class="text-muted">Manual</span>'}</td>
+        <td><span class="badge secondary" style="font-size: 11px;">📁 ${escapeHtml(c.grupo_nome) || 'Geral'}</span></td>
         <td><span class="badge info">${c.origem_tipo}</span></td>
         <td>${c.criado_em ? c.criado_em.split(' ')[0] : '-'}</td>
       </tr>
@@ -666,16 +792,50 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Clear Contatos
+  // Clear Contatos
   document.getElementById('btn-clear-contatos').addEventListener('click', async () => {
     if (confirm('Tem certeza que deseja apagar todos os contatos da base?')) {
       await fetch('/api/contatos', { method: 'DELETE' });
       showToast('Base de contatos limpa.', 'warn');
-      loadContatos();
+      state.currentPasta = 'todos';
+      await loadPastasLeads();
+      await loadContatos();
+      await loadStatus();
     }
   });
 
-  // Import Modal
+  // Exportar Excel
+  document.getElementById('btn-export-excel')?.addEventListener('click', () => {
+    const pasta = state.currentPasta || 'todos';
+    const pastaParam = (pasta && pasta !== 'todos') ? `?pasta=${encodeURIComponent(pasta)}` : '';
+    window.open(`/api/contatos/export${pastaParam}`, '_blank');
+  });
+
+  // Import Modal & Leitura de Planilha/Arquivo (.CSV ou .TXT)
   const modalImport = document.getElementById('modal-import');
+  const importFileInput = document.getElementById('import-file');
+  const importTextarea = document.getElementById('import-textarea');
+  const importGrupoNome = document.getElementById('import-grupo-nome');
+
+  if (importFileInput) {
+    importFileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      if (!importGrupoNome.value.trim()) {
+        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-\s]+/g, ' ').trim();
+        importGrupoNome.value = cleanName;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        importTextarea.value = evt.target.result;
+        showToast(`Arquivo "${file.name}" carregado com sucesso!`, 'info');
+      };
+      reader.readAsText(file);
+    });
+  }
+
   document.getElementById('btn-open-import').addEventListener('click', () => {
     modalImport.style.display = 'flex';
   });
@@ -686,39 +846,77 @@ document.addEventListener('DOMContentLoaded', () => {
     modalImport.style.display = 'none';
   });
   document.getElementById('btn-confirm-import').addEventListener('click', async () => {
-    const rawText = document.getElementById('import-textarea').value.trim();
-    const grupoNome = document.getElementById('import-grupo-nome').value.trim();
-    if (!rawText) return alert('Insira ao menos um número.');
+    const rawText = importTextarea.value.trim();
+    const grupoNome = importGrupoNome.value.trim() || 'Importação Manual';
+    if (!rawText) return alert('Insira ou suba ao menos um contato.');
 
-    const res = await fetch('/api/contatos/import', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rawText, grupoNome })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      showToast(`${data.totalImported} contatos importados com sucesso!`, 'success');
-      modalImport.style.display = 'none';
-      document.getElementById('import-textarea').value = '';
-      loadContatos();
+    try {
+      const res = await fetch('/api/contatos/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawText, grupoNome })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`${data.totalImported} contatos importados para a pasta "${grupoNome}"!`, 'success');
+        modalImport.style.display = 'none';
+        importTextarea.value = '';
+        importGrupoNome.value = '';
+        if (importFileInput) importFileInput.value = '';
+        await loadPastasLeads();
+        await loadContatos();
+        await loadStatus();
+      } else {
+        alert(data.message || 'Erro ao importar contatos.');
+      }
+    } catch (err) {
+      alert(`Erro: ${err.message}`);
     }
   });
 
   // Nova Campanha Modal & Simulador WhatsApp Live
   const modalCampanha = document.getElementById('modal-campanha');
-  document.getElementById('btn-open-nova-campanha').addEventListener('click', async () => {
-    // Carregar grupos no select
+
+  window.openNovaCampanhaModal = async function(selectedTarget = 'todos') {
     const select = document.getElementById('camp-target');
-    select.innerHTML = '<option value="todos">Todos os Contatos da Base</option>';
-    const res = await fetch('/api/grupos');
-    const { grupos } = await res.json();
-    if (grupos) {
-      grupos.forEach(g => {
-        select.innerHTML += `<option value="grupo:${g.jid}">Apenas Membros de: ${escapeHtml(g.nome)}</option>`;
-      });
+    select.innerHTML = '<option value="todos">Todos os Contatos da Base Geral</option>';
+
+    try {
+      const [resPastas, resGrupos] = await Promise.all([
+        fetch('/api/contatos/pastas').then(r => r.json()).catch(() => ({ pastas: [] })),
+        fetch('/api/grupos').then(r => r.json()).catch(() => ({ grupos: [] }))
+      ]);
+
+      if (resPastas && resPastas.pastas && resPastas.pastas.length > 0) {
+        let optgroup = '<optgroup label="📁 Pastas e Lotes de Leads">';
+        resPastas.pastas.forEach(p => {
+          optgroup += `<option value="pasta:${escapeHtml(p.nome)}">📁 Pasta: ${escapeHtml(p.nome)} (${p.total} leads)</option>`;
+        });
+        optgroup += '</optgroup>';
+        select.innerHTML += optgroup;
+      }
+
+      if (resGrupos && resGrupos.grupos && resGrupos.grupos.length > 0) {
+        let optgroup = '<optgroup label="👥 Grupos do WhatsApp Conectado">';
+        resGrupos.grupos.forEach(g => {
+          optgroup += `<option value="grupo:${g.jid}">👥 Grupo: ${escapeHtml(g.nome)}</option>`;
+        });
+        optgroup += '</optgroup>';
+        select.innerHTML += optgroup;
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar alvos de campanha:', e);
+    }
+
+    if (selectedTarget) {
+      select.value = selectedTarget;
     }
     updateWhatsAppPreview();
     modalCampanha.style.display = 'flex';
+  };
+
+  document.getElementById('btn-open-nova-campanha').addEventListener('click', () => {
+    openNovaCampanhaModal();
   });
 
   document.getElementById('btn-close-campanha-modal').addEventListener('click', () => {
@@ -801,9 +999,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let targetType = 'todos';
     let targetGroupJid = null;
+    let targetPastaNome = null;
+
     if (targetVal.startsWith('grupo:')) {
       targetType = 'grupo';
       targetGroupJid = targetVal.replace('grupo:', '');
+    } else if (targetVal.startsWith('pasta:')) {
+      targetType = 'pasta';
+      targetPastaNome = targetVal.replace('pasta:', '');
     }
 
     try {
@@ -815,6 +1018,7 @@ document.addEventListener('DOMContentLoaded', () => {
           mensagemTemplate: template,
           targetType,
           targetGroupJid,
+          targetPastaNome,
           mediaPath: media || undefined
         })
       });
@@ -902,6 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Inicialização
   loadStatus();
+  loadPastasLeads();
   initSSE();
 });
 

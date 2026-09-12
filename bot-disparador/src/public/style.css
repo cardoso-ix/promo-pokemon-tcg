@@ -1354,3 +1354,145 @@ small {
   transform: translateY(-1px);
   box-shadow: 0 0 12px rgba(248, 113, 113, 0.2);
 }
+
+/* Pastas e Lotes de Leads */
+.pastas-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.pastas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.pastas-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.pastas-counter-info {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.pastas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.pasta-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.pasta-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(138, 180, 248, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.pasta-card.active {
+  border-color: var(--google-blue);
+  background: rgba(138, 180, 248, 0.08);
+  box-shadow: 0 0 20px rgba(138, 180, 248, 0.18);
+}
+
+.pasta-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pasta-icon {
+  font-size: 20px;
+}
+
+.pasta-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(138, 180, 248, 0.14);
+  color: var(--google-blue);
+}
+
+.pasta-badge.manual {
+  background: rgba(192, 132, 252, 0.14);
+  color: var(--gemini-purple);
+}
+
+.pasta-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pasta-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.pasta-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pasta-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.pasta-btn:hover {
+  background: rgba(138, 180, 248, 0.15);
+  border-color: var(--google-blue);
+  color: #fff;
+}
+
+.pasta-btn.danger:hover {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: var(--google-red);
+  color: #fca5a5;
+}
+
