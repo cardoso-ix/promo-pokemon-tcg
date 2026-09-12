@@ -349,7 +349,8 @@ window.extractParticipants = async function(jid) {
     });
     const data = await res.json();
     if (data.ok) {
-      showToast(`Sucesso! ${data.total} novos membros extraídos do grupo "${data.grupoNome}".`, 'success');
+      const msgAdms = data.adminsIgnorados > 0 ? ` (${data.adminsIgnorados} ADMs protegidos/ignorados)` : '';
+      showToast(`Sucesso! ${data.total} novos membros extraídos do grupo "${data.grupoNome}"${msgAdms}.`, 'success');
       loadStatus();
       loadPastasLeads();
       loadContatos();
@@ -480,6 +481,26 @@ async function loadPastasLeads() {
   }
 }
 
+// Excluir contato individual
+window.excluirContato = async function(id, numero) {
+  if (confirm(`Deseja realmente remover o contato +${numero} da base de leads?`)) {
+    try {
+      const res = await fetch(`/api/contatos/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Contato +${numero} removido com sucesso!`, 'info');
+        await loadContatos();
+        await loadPastasLeads();
+        await loadStatus();
+      } else {
+        showToast(data.message || 'Erro ao remover contato.', 'error');
+      }
+    } catch (err) {
+      showToast(`Erro: ${err.message}`, 'error');
+    }
+  }
+};
+
 // Contatos
 async function loadContatos() {
   const tbody = document.getElementById('contatos-tbody');
@@ -501,7 +522,7 @@ async function loadContatos() {
     }
 
     if (!contatos || contatos.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center">Nenhum contato encontrado${pasta !== 'todos' ? ` na pasta "${escapeHtml(pasta)}"` : ''}.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="text-center">Nenhum contato encontrado${pasta !== 'todos' ? ` na pasta "${escapeHtml(pasta)}"` : ''}.</td></tr>`;
       return;
     }
 
@@ -512,10 +533,15 @@ async function loadContatos() {
         <td><span class="badge secondary" style="font-size: 11px;">📁 ${escapeHtml(c.grupo_nome) || 'Geral'}</span></td>
         <td><span class="badge info">${c.origem_tipo}</span></td>
         <td>${c.criado_em ? c.criado_em.split(' ')[0] : '-'}</td>
+        <td style="text-align: right;">
+          <button class="btn-trash" title="Excluir este contato (+${c.numero})" onclick="excluirContato(${c.id}, '${c.numero}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+          </button>
+        </td>
       </tr>
     `).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">Erro: ${err.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Erro: ${err.message}</td></tr>`;
   }
 }
 

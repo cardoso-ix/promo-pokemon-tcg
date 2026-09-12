@@ -1496,3 +1496,27 @@ small {
   color: #fca5a5;
 }
 
+/* Botão Lixeira em Tabelas e Cards */
+.btn-trash {
+  background: rgba(242, 139, 130, 0.08);
+  color: var(--google-red);
+  border: 1px solid rgba(242, 139, 130, 0.22);
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.btn-trash:hover {
+  background: var(--google-red);
+  color: #121316;
+  border-color: var(--google-red);
+  transform: scale(1.08);
+}
+
+

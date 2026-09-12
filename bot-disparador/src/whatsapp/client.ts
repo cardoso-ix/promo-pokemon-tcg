@@ -210,7 +210,7 @@ export class WhatsAppManager {
     }
   }
 
-  public async extractGroupParticipants(groupJid: string): Promise<{ total: number; grupoNome: string }> {
+  public async extractGroupParticipants(groupJid: string): Promise<{ total: number; grupoNome: string; adminsIgnorados: number }> {
     if (!this.sock || this.state.status !== 'connected') {
       throw new Error('WhatsApp não está conectado.');
     }
@@ -219,6 +219,7 @@ export class WhatsAppManager {
     const grupoNome = meta.subject || 'Grupo WhatsApp';
     const participants = meta.participants || [];
     let count = 0;
+    let adminsIgnorados = 0;
 
     for (const p of participants) {
       const jid = p.id;
@@ -227,6 +228,13 @@ export class WhatsAppManager {
       const numero = jid.split('@')[0];
       // Ignorar o próprio bot
       if (numero === this.state.userPhone) continue;
+
+      // Ignorar administradores e criadores do grupo para proteger o usuário de denúncias
+      const isAdmin = p.admin === 'admin' || p.admin === 'superadmin';
+      if (isAdmin) {
+        adminsIgnorados++;
+        continue;
+      }
 
       const salvo = upsertContato({
         jid,
@@ -240,8 +248,8 @@ export class WhatsAppManager {
       if (salvo) count++;
     }
 
-    logSistema('info', 'extracao', `Extraídos ${count} novos membros do grupo "${grupoNome}".`);
-    return { total: count, grupoNome };
+    logSistema('info', 'extracao', `Extraídos ${count} novos membros do grupo "${grupoNome}" (${adminsIgnorados} administradores protegidos/ignorados).`);
+    return { total: count, grupoNome, adminsIgnorados };
   }
 
   private async handleIncomingMessage(msg: proto.IWebMessageInfo): Promise<void> {

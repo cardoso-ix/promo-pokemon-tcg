@@ -11,6 +11,7 @@ import {
   getPastasLeads,
   getAllContatosParaExportar,
   deletePastaLeads,
+  deleteContato,
   upsertContato,
   clearContatos,
   getAllGrupos,
@@ -324,6 +325,14 @@ export async function createServer() {
   app.delete('/api/contatos', async () => {
     clearContatos();
     logSistema('warn', 'contatos', 'Lista de contatos foi zerada.');
+    broadcastEvent('metricas', getMetricasDashboard());
+    return { ok: true };
+  });
+
+  app.delete('/api/contatos/:id', async (req: any) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id || isNaN(id)) throw new Error('ID inválido.');
+    deleteContato(id);
     broadcastEvent('metricas', getMetricasDashboard());
     return { ok: true };
   });

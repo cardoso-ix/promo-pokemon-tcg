@@ -5,7 +5,8 @@ import {
   getPastasLeads,
   getContatos,
   getAllContatosParaExportar,
-  deletePastaLeads
+  deletePastaLeads,
+  deleteContato
 } from '../src/db/database.js';
 
 test('Gerenciamento de Pastas de Leads e Exportação', () => {
@@ -81,4 +82,18 @@ test('Gerenciamento de Pastas de Leads e Exportação', () => {
 
   // Limpeza de Pasta B
   deletePastaLeads(pastaB);
+
+  // 8. Exclusão de contato individual
+  upsertContato({
+    jid: '5511900030001@s.whatsapp.net',
+    numero: '5511900030001',
+    nome: 'Contato Para Excluir',
+    grupo_nome: 'Teste Individual'
+  });
+  const contatosTeste = getContatos(10, 0, '5511900030001');
+  assert.strictEqual(contatosTeste.total, 1);
+  const targetId = contatosTeste.contatos[0].id!;
+  deleteContato(targetId);
+  const contatosTesteDepois = getContatos(10, 0, '5511900030001');
+  assert.strictEqual(contatosTesteDepois.total, 0);
 });
