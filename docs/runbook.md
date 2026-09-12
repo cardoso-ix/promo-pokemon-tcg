@@ -11,12 +11,25 @@ Tanto o **Replicador de Ofertas** quanto o **Bot Disparador & Atendimento IA** r
 ### 1.1. Painel do Replicador de Ofertas
 - **Acesso Online**: `https://promo-replica-bot-production-7d52.up.railway.app`
 - **Função**: Controla a replicação de ofertas de grupos concorrentes para os seus grupos VIP, encurtamento oficial `meli.la` e fotos oficiais 2X do Mercado Livre.
+- **Autenticação**: Protegido por login e senha. Sessão criptografada persistente de 30 dias.
 
 ### 1.2. Painel do Bot Disparador & Atendimento IA
 - **Acesso Online**: Link público HTTPS gerado no seu projeto do Railway para o serviço `bot-disparador`.
 - **Função**: Extração de leads de grupos com 1 clique, disparos automáticos em massa com proteção anti-ban (Spintax), simulador WhatsApp ao vivo e atendimento privado automático com DeepSeek V4.
+- **Autenticação**: Protegido por login e senha. Sessão criptografada persistente de 30 dias.
 
-### 1.3. Gerador Manual de Anúncios por Link (No Painel Replicador)
+### 1.3. Credenciais de Acesso (Login & Senha)
+Ambos os painéis utilizam controle de acesso por credenciais seguras e tokens assinados digitalmente com HMAC-SHA256:
+- **Usuário padrão**: `eduardo`
+- **Senha padrão**: `04052001`
+- **Duração da Sessão**: 30 dias em cookie seguro (`HttpOnly; SameSite=Lax`).
+- **Botão Sair**: Disponível na barra superior de ambos os painéis para encerramento imediato de sessão.
+- **Personalização de Credenciais (Opcional)**: Caso queira alterar no Railway, basta configurar as variáveis no painel do Railway:
+  - `ADMIN_USER`: seu novo login
+  - `ADMIN_PASS`: sua nova senha
+  - `SESSION_SECRET`: chave secreta customizada (opcional)
+
+### 1.4. Gerador Manual de Anúncios por Link (No Painel Replicador)
 - **Acesso**: Aba **⚡ Gerador de Anúncios** no Cockpit do Replicador.
 - **Como Usar**:
   1. Cole o link de afiliado ou produto do Mercado Livre (aceita `https://mercadolivre.com/sec/...`, `meli.la` ou link direto).

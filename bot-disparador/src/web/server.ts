@@ -26,6 +26,14 @@ import { whatsapp, WhatsAppState } from '../whatsapp/client.js';
 import { dispatchEngine } from '../core/engine.js';
 import { renderMessageTemplate } from '../core/spintax.js';
 import { generateDeepSeekResponse } from '../ai/deepseek.js';
+import {
+  verifyCredentials,
+  createSessionToken,
+  verifySessionToken,
+  extractSessionToken,
+  buildSessionCookie,
+  buildClearCookie
+} from './auth.js';
 
 export async function createServer() {
   const app = fastify({ logger: false });
@@ -41,6 +49,77 @@ export async function createServer() {
   await app.register(fastifyStatic, {
     root: publicDir,
     prefix: '/'
+  });
+
+  // Hook de Autenticação Global
+  app.addHook('onRequest', async (req, reply) => {
+    const url = req.raw.url || '';
+    const pathname = url.split('?')[0];
+
+    // Rotas públicas que não requerem autenticação
+    if (
+      pathname === '/health' ||
+      pathname === '/api/auth/login' ||
+      pathname === '/login.html' ||
+      pathname === '/favicon.svg'
+    ) {
+      if (pathname === '/login.html') {
+        const token = extractSessionToken(req);
+        if (token && verifySessionToken(token).valid) {
+          return reply.redirect('/', 302);
+        }
+      }
+      return;
+    }
+
+    // Validação de token de sessão
+    const token = extractSessionToken(req);
+    const auth = verifySessionToken(token);
+
+    if (!auth.valid) {
+      const accept = req.headers.accept || '';
+      if (
+        accept.includes('text/html') ||
+        pathname === '/' ||
+        pathname === '/index.html' ||
+        (!pathname.startsWith('/api') && !pathname.includes('.'))
+      ) {
+        return reply.redirect('/login.html', 302);
+      }
+
+      return reply.status(401).send({
+        ok: false,
+        error: 'Não autorizado. Faça login para acessar este recurso.'
+      });
+    }
+  });
+
+  // Healthcheck endpoint (para Railway monitor)
+  app.get('/health', async () => {
+    return { status: 'ok', time: new Date().toISOString() };
+  });
+
+  // Endpoints de Autenticação
+  app.post('/api/auth/login', async (req, reply) => {
+    const { username, password } = (req.body as any) || {};
+    if (!verifyCredentials(username, password)) {
+      return reply.status(401).send({ ok: false, error: 'Usuário ou senha incorretos' });
+    }
+
+    const token = createSessionToken(username);
+    reply.header('Set-Cookie', buildSessionCookie(token));
+    return { ok: true, message: 'Login realizado com sucesso' };
+  });
+
+  app.post('/api/auth/logout', async (req, reply) => {
+    reply.header('Set-Cookie', buildClearCookie());
+    return { ok: true, message: 'Logout realizado com sucesso' };
+  });
+
+  app.get('/api/auth/me', async (req, reply) => {
+    const token = extractSessionToken(req);
+    const auth = verifySessionToken(token);
+    return { ok: auth.valid, username: auth.username };
   });
 
   // SSE (Server-Sent Events) para atualizações em tempo real

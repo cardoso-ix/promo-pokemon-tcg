@@ -129,6 +129,19 @@
     showToast(soundEnabled ? 'Notificações sonoras ativadas 🔔' : 'Notificações sonoras em silêncio 🔕');
   });
 
+  // Botão Sair / Logout
+  const btnLogout = document.getElementById('btn-logout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+      if (confirm('Deseja realmente sair do painel Réplica Promo?')) {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' });
+        } catch {}
+        window.location.href = '/login.html';
+      }
+    });
+  }
+
   // Toasts
   function showToast(message, duration = 3000) {
     if (!toastContainer) return;

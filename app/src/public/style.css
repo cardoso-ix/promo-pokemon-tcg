@@ -1683,5 +1683,29 @@ input:checked + .slider:before {
   vertical-align: middle;
 }
 
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(255, 77, 79, 0.1);
+  border: 1px solid rgba(255, 77, 79, 0.28);
+  color: #ff7875;
+  padding: 0.42rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-logout:hover {
+  background: rgba(255, 77, 79, 0.22);
+  border-color: rgba(255, 77, 79, 0.5);
+  color: #ff9c9e;
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(255, 77, 79, 0.25);
+}
+
 
 

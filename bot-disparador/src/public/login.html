@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login · Disparador Pro & IA DeepSeek</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #080b11;
+      --card-bg: rgba(16, 21, 34, 0.78);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-focus: rgba(138, 180, 248, 0.45);
+      --gemini-blue: #8ab4f8;
+      --gemini-purple: #c084fc;
+      --gemini-cyan: #38bdf8;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --danger: #f87171;
+      --success: #34d399;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      padding: 1.5rem;
+    }
+
+    /* Ambient Background Glows */
+    .ambient-glow {
+      position: absolute;
+      width: 550px;
+      height: 550px;
+      border-radius: 50%;
+      filter: blur(150px);
+      opacity: 0.16;
+      pointer-events: none;
+      z-index: 0;
+      animation: pulse-glow 9s infinite alternate ease-in-out;
+    }
+
+    .glow-blue {
+      top: -120px;
+      left: -120px;
+      background: radial-gradient(circle, #8ab4f8 0%, transparent 70%);
+    }
+
+    .glow-purple {
+      bottom: -120px;
+      right: -120px;
+      background: radial-gradient(circle, #c084fc 0%, transparent 70%);
+      animation-delay: -4.5s;
+    }
+
+    @keyframes pulse-glow {
+      0% { transform: scale(0.9) translate(0, 0); opacity: 0.12; }
+      100% { transform: scale(1.18) translate(35px, 35px); opacity: 0.22; }
+    }
+
+    /* Subtle grid overlay */
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Container Card */
+    .login-container {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 420px;
+      background: var(--card-bg);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 2.5rem 2.2rem;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 35px rgba(138, 180, 248, 0.08);
+      animation: slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slide-up {
+      from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .login-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .brand-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 58px;
+      height: 58px;
+      background: rgba(138, 180, 248, 0.08);
+      border: 1px solid rgba(138, 180, 248, 0.25);
+      border-radius: 16px;
+      margin-bottom: 1rem;
+      box-shadow: 0 0 24px rgba(138, 180, 248, 0.2);
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.85rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #ffffff 40%, var(--gemini-blue) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.3rem;
+    }
+
+    .brand-subtitle {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .error-box {
+      display: none;
+      align-items: center;
+      gap: 0.6rem;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      color: #fca5a5;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      margin-bottom: 1.25rem;
+      animation: shake 0.4s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+      position: relative;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.45rem;
+      letter-spacing: 0.3px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 1rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-input {
+      width: 100%;
+      background: rgba(10, 14, 22, 0.7);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 0.85rem 1rem 0.85rem 2.75rem;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--card-border-focus);
+      background: rgba(14, 18, 28, 0.9);
+      box-shadow: 0 0 16px rgba(138, 180, 248, 0.22);
+    }
+
+    .toggle-pass-btn {
+      position: absolute;
+      right: 0.75rem;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.4rem;
+      display: flex;
+      align-items: center;
+      transition: color 0.2s;
+    }
+
+    .toggle-pass-btn:hover {
+      color: var(--text-main);
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, #8ab4f8 0%, #c084fc 100%);
+      color: #0b0f19;
+      border: none;
+      border-radius: 12px;
+      padding: 0.95rem 1.25rem;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      margin-top: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      transition: all 0.25s ease;
+      box-shadow: 0 6px 20px rgba(138, 180, 248, 0.25);
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(192, 132, 252, 0.35);
+      filter: brightness(1.08);
+    }
+
+    .btn-submit:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(11, 15, 25, 0.3);
+      border-top-color: #0b0f19;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      font-size: 0.76rem;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-glow glow-blue"></div>
+  <div class="ambient-glow glow-purple"></div>
+  <div class="grid-overlay"></div>
+
+  <div class="login-container">
+    <div class="login-header">
+      <div class="brand-logo">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#gemini-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 17L12 22L22 17" stroke="url(#gemini-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 12L12 17L22 12" stroke="url(#gemini-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs>
+            <linearGradient id="gemini-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#8ab4f8"/>
+              <stop offset="1" stop-color="#c084fc"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <h1 class="brand-title">Disparador Pro</h1>
+      <p class="brand-subtitle">IA DeepSeek · Painel de Envios em Massa</p>
+    </div>
+
+    <div id="error-alert" class="error-box">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span id="error-message">Usuário ou senha incorretos</span>
+    </div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label class="form-label" for="username">Usuário</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </span>
+          <input type="text" id="username" class="form-input" placeholder="Seu usuário" autocomplete="username" required autofocus>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Senha</label>
+        <div class="input-wrapper">
+          <span class="input-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </span>
+          <input type="password" id="password" class="form-input" placeholder="Sua senha de acesso" autocomplete="current-password" required>
+          <button type="button" id="toggle-pass" class="toggle-pass-btn" title="Mostrar/Ocultar senha">
+            <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" id="btn-submit" class="btn-submit">
+        <span class="spinner" id="btn-spinner"></span>
+        <span id="btn-text">Entrar no Sistema</span>
+      </button>
+    </form>
+
+    <div class="login-footer">
+      Sessão criptografada segura por 30 dias · Railway Cloud
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('login-form');
+    const userInput = document.getElementById('username');
+    const passInput = document.getElementById('password');
+    const togglePassBtn = document.getElementById('toggle-pass');
+    const eyeIcon = document.getElementById('eye-icon');
+    const submitBtn = document.getElementById('btn-submit');
+    const btnSpinner = document.getElementById('btn-spinner');
+    const btnText = document.getElementById('btn-text');
+    const errorAlert = document.getElementById('error-alert');
+    const errorMessage = document.getElementById('error-message');
+
+    togglePassBtn.addEventListener('click', () => {
+      const isPass = passInput.getAttribute('type') === 'password';
+      passInput.setAttribute('type', isPass ? 'text' : 'password');
+      eyeIcon.innerHTML = isPass
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>'
+        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+    });
+
+    function showError(msg) {
+      errorMessage.textContent = msg;
+      errorAlert.style.display = 'flex';
+    }
+
+    function hideError() {
+      errorAlert.style.display = 'none';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+
+      const username = userInput.value.trim();
+      const password = passInput.value;
+
+      if (!username || !password) {
+        showError('Preencha o usuário e a senha.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      btnSpinner.style.display = 'inline-block';
+      btnText.textContent = 'Autenticando...';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          btnText.textContent = 'Acesso Autorizado!';
+          submitBtn.style.background = 'linear-gradient(135deg, #34d399 0%, #38bdf8 100%)';
+          window.location.href = '/';
+        } else {
+          showError(data.error || 'Credenciais inválidas.');
+          submitBtn.disabled = false;
+          btnSpinner.style.display = 'none';
+          btnText.textContent = 'Entrar no Sistema';
+          passInput.focus();
+          passInput.select();
+        }
+      } catch (err) {
+        showError('Erro de conexão ao servidor. Tente novamente.');
+        submitBtn.disabled = false;
+        btnSpinner.style.display = 'none';
+        btnText.textContent = 'Entrar no Sistema';
+      }
+    });
+  </script>
+</body>
+</html>

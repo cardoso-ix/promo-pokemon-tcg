@@ -887,7 +887,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // Refresh Logs Button
   document.getElementById('btn-refresh-logs').addEventListener('click', loadLogs);
 
+  // Logout Button
+  const btnLogout = document.getElementById('btn-logout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+      if (confirm('Deseja realmente sair do Disparador Pro?')) {
+        try {
+          await fetch('/api/auth/logout', { method: 'POST' });
+        } catch {}
+        window.location.href = '/login.html';
+      }
+    });
+  }
+
   // Inicialização
   loadStatus();
   initSSE();
 });
+

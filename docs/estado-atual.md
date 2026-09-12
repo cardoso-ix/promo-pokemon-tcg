@@ -19,7 +19,7 @@ O ecossistema roda de forma desvinculada de qualquer máquina local, dividido em
 | **Atendimento IA Privado** | DeepSeek V4 (OpenCode Gateway) | 🟢 **Online 24/7 (Railway)** | Responde clientes no privado imitando especialista amigável de Pokémon TCG com digitação humanizada |
 | **Encurtador de Afiliados** | API Oficial Mercado Livre | 🟢 **Ativo** | Gera links curtos `https://meli.la/xxxxxx` via cookie de afiliado com fallback resiliente `matt_word` |
 | **Bancos de Dados SQLite** | Better-SQLite3 (WAL Mode) | 🟢 **Ativo (Volumes Persistentes)** | `replica.db` e `disparador.db` salvos com segurança em `/app/data` |
-| **Cockpits Web** | Fastify + WebSockets + UI Dark | 🟢 **Online (HTTPS)** | Painéis responsivos com estética Google Cloud / Gemini acessíveis de qualquer celular ou PC |
+| **Cockpits Web & Segurança** | Fastify + WebSockets + UI Dark | 🟢 **Online (HTTPS & Autenticado)** | Protegido com login/senha (`eduardo`), sessão HMAC de 30 dias e botão de logout |
 
 ---
 
