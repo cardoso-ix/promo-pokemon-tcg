@@ -238,6 +238,8 @@ export class WhatsAppManager {
     hasImage: boolean;
     imageMessageObj: any;
     isDocumentImage: boolean;
+    linkPreviewTitle?: string;
+    linkPreviewThumbnail?: Buffer;
   } {
     const content = this.unwrapMessage(rawMessage);
     if (!content) {
@@ -248,6 +250,8 @@ export class WhatsAppManager {
     let hasImage = false;
     let imageMessageObj: any = null;
     let isDocumentImage = false;
+    let linkPreviewTitle: string | undefined;
+    let linkPreviewThumbnail: Buffer | undefined;
 
     if (content.imageMessage) {
       rawText = content.imageMessage.caption || '';
@@ -286,13 +290,20 @@ export class WhatsAppManager {
         hasImage = true;
         imageMessageObj = content.buttonsMessage.imageMessage;
       }
-    } else if (content.extendedTextMessage?.text) {
-      rawText = content.extendedTextMessage.text;
+    } else if (content.extendedTextMessage) {
+      rawText = content.extendedTextMessage.text || '';
+      if (content.extendedTextMessage.title) {
+        linkPreviewTitle = content.extendedTextMessage.title;
+      }
+      if (content.extendedTextMessage.jpegThumbnail) {
+        const thumb = content.extendedTextMessage.jpegThumbnail;
+        linkPreviewThumbnail = Buffer.isBuffer(thumb) ? thumb : Buffer.from(thumb);
+      }
     } else if (content.conversation) {
       rawText = content.conversation;
     }
 
-    return { rawText, hasImage, imageMessageObj, isDocumentImage };
+    return { rawText, hasImage, imageMessageObj, isDocumentImage, linkPreviewTitle, linkPreviewThumbnail };
   }
 
   private async handleIncomingMessage(msg: proto.IWebMessageInfo): Promise<void> {
@@ -309,7 +320,14 @@ export class WhatsAppManager {
     }
 
     // Extrair texto e mídia desembrulhando containers (ephemeral, viewOnce, deviceSentMessage, etc.)
-    const { rawText, hasImage: messageHasImage, imageMessageObj, isDocumentImage } = this.extractMediaAndText(msg.message);
+    const {
+      rawText,
+      hasImage: messageHasImage,
+      imageMessageObj,
+      isDocumentImage,
+      linkPreviewTitle,
+      linkPreviewThumbnail
+    } = this.extractMediaAndText(msg.message);
     let imageBuffer: Buffer | null = null;
 
     if (!rawText.trim() && !messageHasImage) {
@@ -398,7 +416,8 @@ export class WhatsAppManager {
         frasesRemover,
         meliCookie,
         meliTag,
-        linkVitrineCurto
+        linkVitrineCurto,
+        linkPreviewTitle || ''
       );
 
     // REGRA DE NEGÓCIO: Apenas postar publicações do Mercado Livre
@@ -471,6 +490,12 @@ export class WhatsAppManager {
           console.warn('[Imagem ML] Falha ao obter foto do anúncio do Mercado Livre:', err);
         }
       }
+    }
+
+    // C) Fallback de Imagem: Se não conseguimos a foto em alta resolução do ML, mas tínhamos a miniatura do link preview
+    if ((!imageBuffer || imageBuffer.length === 0) && linkPreviewThumbnail && linkPreviewThumbnail.length > 500) {
+      imageBuffer = linkPreviewThumbnail;
+      console.log(`[Imagem Preview Fallback] Usando miniatura do link preview do WhatsApp (${Math.round(imageBuffer.length / 1024)} KB).`);
     }
 
     // 6. Testar Deduplicação no Banco

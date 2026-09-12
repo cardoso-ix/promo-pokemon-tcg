@@ -39,7 +39,16 @@ export function pontuarSlug(slug: string, palavras: string[]): number {
   const s = String(slug || '').toLowerCase();
   let pts = 0;
   for (const p of palavras) {
-    if (s.includes(p)) pts += p.length >= 5 ? 2 : 1;
+    if (/^\d+$/.test(p)) {
+      // Números (ex: 360, 480, 540) são especificações cruciais de produto
+      if (s.includes(p)) {
+        pts += 4; // Bônus alto para número exato
+      } else {
+        pts -= 2; // Penalidade se o slug não contém esse número específico
+      }
+    } else if (s.includes(p)) {
+      pts += p.length >= 5 ? 2 : 1;
+    }
   }
   return pts;
 }
@@ -58,7 +67,10 @@ export function normalizarFotoMl(url: string): string {
 
   if (/http2\.mlstatic\.com/i.test(u)) {
     u = u.replace(/\.webp(?=\?|#|$)/i, '.jpg');
-    u = u.replace(/-(I|W|V|G|B|C)(\.(?:jpe?g|png))(?=\?|#|$)/i, '-O$2');
+    u = u.replace(/-(I|W|V|G|B|C|T|A|E)(\.(?:jpe?g|png|webp))(?=\?|#|$)/i, '-O$2');
+    if (/\/D_Q_NP_/i.test(u)) {
+      u = u.replace(/\/D_Q_NP_/i, '/D_NQ_NP_');
+    }
     if (/\/D_NQ_NP_(?!2X_)/i.test(u)) {
       u = u.replace(/\/D_NQ_NP_/i, '/D_NQ_NP_2X_');
     }
@@ -79,9 +91,14 @@ export async function expandUrl(
   let count = 0;
   let lastHtml = '';
   let productImageUrl: string | undefined;
+  let wasSocial = false;
 
   while (count < maxRedirects) {
     try {
+      if (currentUrl.includes('/social/')) {
+        wasSocial = true;
+      }
+
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 6000);
 
@@ -99,6 +116,9 @@ export async function expandUrl(
       const location = res.headers.get('location');
       if (res.status >= 300 && res.status < 400 && location) {
         currentUrl = new URL(location, currentUrl).href;
+        if (currentUrl.includes('/social/')) {
+          wasSocial = true;
+        }
         count++;
       } else {
         lastHtml = await res.text();
@@ -109,22 +129,65 @@ export async function expandUrl(
     }
   }
 
-  // Se a URL final for uma vitrine /social/ de terceiro, extrai o produto real do HTML
-  if (currentUrl.includes('/social/') && lastHtml) {
-    const palavras = normalizarPalavras(textHint);
-    const regex = /(?:https?:\/\/)?(?:www\.)?mercadolivre\.com\.br\/([^\s"'<>]+)\/(p\/MLB\d+|up\/MLBU\d+|MLB-\d+)/gi;
-    let match;
-    const candidatos: { url: string; slug: string; pontos: number }[] = [];
+  if (currentUrl.includes('/social/')) {
+    wasSocial = true;
+  }
 
-    while ((match = regex.exec(lastHtml)) !== null) {
-      const full = match[0].startsWith('http') ? match[0] : 'https://' + match[0];
-      const slug = match[1];
-      const cleanUrl = full.split('#')[0].split('?')[0];
-      candidatos.push({
-        url: cleanUrl,
-        slug,
-        pontos: pontuarSlug(slug, palavras)
-      });
+  // Se a URL final for uma vitrine /social/ de terceiro, extrai o produto real do HTML
+  if (wasSocial && lastHtml) {
+    const ogTitleMatch = lastHtml.match(/<meta[^>]+(?:property|name)=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+    const pageTitle = ogTitleMatch ? ogTitleMatch[1].trim() : '';
+
+    const ogImageMatch = lastHtml.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+    const ogImg = ogImageMatch ? ogImageMatch[1].trim() : '';
+
+    // Verifica se a página social compartilha um produto específico (ex: link com ref)
+    const isGenericVitrine = !pageTitle || /minhas listas|recomenda[çc][õo]es|vitrine|perfil/i.test(pageTitle);
+
+    let palavras = normalizarPalavras(textHint);
+    if (!isGenericVitrine) {
+      palavras = normalizarPalavras(`${pageTitle} ${textHint}`);
+      if (ogImg && !ogImg.includes('{sanitized_title}')) {
+        productImageUrl = normalizarFotoMl(ogImg);
+      }
+    }
+
+    const candidatos: { url: string; slug: string; img?: string; pontos: number }[] = [];
+
+    // Tenta extrair produtos e fotos específicas a partir dos cards da vitrine (poly-card)
+    const cardChunks = lastHtml.split('<div id="');
+    for (const c of cardChunks) {
+      if (!c.includes('poly-card')) continue;
+      const linkMatch = c.match(/href="(https?:\/\/(?:www\.)?mercadolivre\.com\.br\/[^\s"'<>]+?\/(?:p\/MLB\d+|up\/MLBU\d+|MLB-\d+)[^"]*)"/i);
+      const imgMatch = c.match(/src="(https?:\/\/http2\.mlstatic\.com\/[^\s"']+\.(?:webp|jpe?g|png))"/i);
+      if (linkMatch) {
+        const cleanUrl = linkMatch[1].split('?')[0].split('#')[0];
+        const slugMatch = cleanUrl.match(/mercadolivre\.com\.br\/([^\s"'<>]+?)\/(?:p\/|up\/|MLB-)/i);
+        const slug = slugMatch ? slugMatch[1] : '';
+        const img = imgMatch ? normalizarFotoMl(imgMatch[1]) : undefined;
+        candidatos.push({
+          url: cleanUrl,
+          slug,
+          img,
+          pontos: pontuarSlug(slug, palavras)
+        });
+      }
+    }
+
+    // Se não encontrou por poly-card, usa o regex geral de URLs de produto no HTML
+    if (candidatos.length === 0) {
+      const regex = /(?:https?:\/\/)?(?:www\.)?mercadolivre\.com\.br\/([^\s"'<>]+)\/(p\/MLB\d+|up\/MLBU\d+|MLB-\d+)/gi;
+      let match;
+      while ((match = regex.exec(lastHtml)) !== null) {
+        const full = match[0].startsWith('http') ? match[0] : 'https://' + match[0];
+        const slug = match[1];
+        const cleanUrl = full.split('#')[0].split('?')[0];
+        candidatos.push({
+          url: cleanUrl,
+          slug,
+          pontos: pontuarSlug(slug, palavras)
+        });
+      }
     }
 
     if (candidatos.length > 0) {
@@ -132,20 +195,16 @@ export async function expandUrl(
       // Exige pontuação relevante para assumir que é o mesmo produto
       if (candidatos[0].pontos >= 2) {
         currentUrl = candidatos[0].url;
-      }
-    }
-
-    // Se temos imagens de produtos no HTML da vitrine, captura a principal para antecipar
-    if (!productImageUrl) {
-      const mlImgs = lastHtml.match(/https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi);
-      if (mlImgs && mlImgs.length > 0) {
-        productImageUrl = normalizarFotoMl(mlImgs[0]);
+        // Se ainda não temos a foto do produto, adota a foto do card correspondente
+        if (!productImageUrl && candidatos[0].img) {
+          productImageUrl = candidatos[0].img;
+        }
       }
     }
   }
 
-  // Se temos o HTML da página direta do anúncio (NÃO da vitrine /social/), extrai a imagem
-  if (lastHtml && !productImageUrl && !currentUrl.includes('/social/')) {
+  // Se temos o HTML da página direta do anúncio (e NÃO era vitrine social), extrai a foto oficial
+  if (lastHtml && !wasSocial && !productImageUrl && !currentUrl.includes('/social/')) {
     const ogMatch = lastHtml.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
     if (ogMatch && ogMatch[1] && !ogMatch[1].includes('{sanitized_title}')) {
       productImageUrl = normalizarFotoMl(ogMatch[1]);
@@ -360,13 +419,28 @@ export async function downloadProductImage(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000); // 10s para baixar imagem
 
-    const res = await fetch(targetImageUrl, {
+    let res = await fetch(targetImageUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
         'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
       },
       signal: controller.signal
     });
+    clearTimeout(timeout);
+
+    if (!res.ok && hintImageUrl && hintImageUrl !== targetImageUrl) {
+      const controllerHint = new AbortController();
+      const timeoutHint = setTimeout(() => controllerHint.abort(), 10000);
+      res = await fetch(hintImageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+        },
+        signal: controllerHint.signal
+      });
+      clearTimeout(timeoutHint);
+    }
+
     if (res.ok) {
       const arrayBuf = await res.arrayBuffer();
       const buf = Buffer.from(arrayBuf);
@@ -400,33 +474,22 @@ export function isMercadoLivreUrl(url: string): boolean {
 }
 
 /**
- * Limpa frases, arrobas e hashtags indesejadas (marcas concorrentes)
+ * Normaliza quebras de linha e remove assinaturas de concorrentes
  */
 export function cleanSpamLines(text: string, phrasesToRemove: string[]): string {
-  let lines = text.split('\n');
+  let result = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  lines = lines.map((line) => {
-    let l = line;
-    // Remove marcações com formatação markdown como _@marca_ ou *@marca*
-    l = l.replace(/[_*]{1,2}(@[a-zA-Z0-9._]+)[_*]{1,2}/gi, '$1');
-    l = l.replace(/[_*]{1,2}(#[a-zA-Z0-9._]+)[_*]{1,2}/gi, '$1');
+  for (const rawPhrase of phrasesToRemove) {
+    const p = rawPhrase.trim();
+    if (!p) continue;
+    const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`[\\*_~]*${escaped}[\\*_~]*`, 'gi');
+    result = result.replace(regex, '');
+  }
 
-    for (const phrase of phrasesToRemove) {
-      const p = phrase.trim();
-      if (!p) continue;
-      const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      l = l.replace(new RegExp(escaped, 'gi'), '');
-    }
-
-    // Se a linha tinha texto e após a remoção de marcas restou apenas pontuações residuais de markdown/espaço (ex: '__' ou ' _ ')
-    if (line.trim().length > 0 && l.replace(/[*_~`#@\s]/g, '').length === 0) {
-      return '';
-    }
-    return l;
+  result = result.replace(/^[ \t]+|[ \t]+$/gm, (m, offset, str) => {
+    return '';
   });
-
-  // Preservar quebras de linha normais entre parágrafos, permitindo no máximo 1 linha em branco consecutiva (\n\n)
-  let result = lines.join('\n');
   result = result.replace(/[ \t]+$/gm, '');
   result = result.replace(/\n{3,}/g, '\n\n');
   return result.trim();
@@ -452,7 +515,8 @@ export async function processMessageText(
   frasesRemoverRaw: string,
   meliCookie = '',
   meliTag = '',
-  shortSocialUrl = ''
+  shortSocialUrl = '',
+  textHintExtra = ''
 ): Promise<ConversionResult> {
   const phrases = frasesRemoverRaw.split('\n');
   const cleanedText = cleanSpamLines(rawText, phrases);
@@ -477,7 +541,8 @@ export async function processMessageText(
     let resolvedUrl = rawUrl;
     if (isMercadoLivreUrl(rawUrl)) {
       contemMercadoLivre = true;
-      const expansion = await expandUrl(rawUrl, rawText, meliCookie);
+      const combinedHint = textHintExtra ? `${cleanedText} ${textHintExtra}` : cleanedText;
+      const expansion = await expandUrl(rawUrl, combinedHint, meliCookie);
       resolvedUrl = expansion.resolvedUrl;
       if (!resolvedUrl.includes('/social/')) {
         resolvedProductUrl = resolvedUrl;

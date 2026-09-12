@@ -6,7 +6,10 @@ import {
   cleanSpamLines,
   generateContentHash,
   processMessageText,
-  normalizarFotoMl
+  normalizarFotoMl,
+  pontuarSlug,
+  normalizarPalavras,
+  expandUrl
 } from '../src/core/affiliate.js';
 
 test('isMercadoLivreUrl deve reconhecer dominios validos do ML', () => {
@@ -120,6 +123,28 @@ test('processMessageText deve tratar link meli.la com ponto e virgula no final e
   assert.strictEqual(result.contemMercadoLivre, true);
   assert.strictEqual(result.novoTexto.includes('https://mercadolivre.com/sec/2rM6RPm;'), true);
   assert.strictEqual(result.novoTexto.includes('2XNbgSR'), false);
+});
+
+test('pontuarSlug deve priorizar o número exato de cartas (ex: 360 vs 480)', () => {
+  const palavras = normalizarPalavras('Fichário Álbum 360 Cartas Preto');
+  const score360 = pontuarSlug('fichario-album-para-cartas-pokemon--360-cartas-pasta-otug', palavras);
+  const score480 = pontuarSlug('fichario-album-para-cartas-pokemon-480-cartas-pasta-preto', palavras);
+
+  assert.strictEqual(score360 > score480, true);
+});
+
+test('normalizarFotoMl deve converter D_Q_NP_ e sufixos -T para D_NQ_NP_2X_ e -O.jpg', () => {
+  const thumbUrl = 'https://http2.mlstatic.com/D_Q_NP_2X_683557-MLB112586912210_062026-T.webp';
+  const normalized = normalizarFotoMl(thumbUrl);
+  assert.strictEqual(normalized, 'https://http2.mlstatic.com/D_NQ_NP_2X_683557-MLB112586912210_062026-O.jpg');
+});
+
+test('expandUrl deve extrair foto do fichario e nao avatar/logo da vitrine para meli.la/1nZurKE', async () => {
+  const expansion = await expandUrl('https://meli.la/1nZurKE', 'Fichário Álbum 360 Cartas Preto');
+  assert.strictEqual(expansion.resolvedUrl.includes('360-cartas'), true);
+  assert.strictEqual(expansion.productImageUrl?.includes('653157'), true);
+  // Não deve conter o logo/avatar do CLUB PROMO (794667)
+  assert.strictEqual(expansion.productImageUrl?.includes('794667'), false);
 });
 
 
