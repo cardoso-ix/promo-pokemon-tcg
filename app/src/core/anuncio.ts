@@ -70,6 +70,7 @@ export function gerarCopyPromocional(params: {
   linhas.push('🔥 *SUPER PROMOÇÃO POKÉMON TCG!* 🔥');
   linhas.push('');
   linhas.push(`📦 *${titulo.trim()}*`);
+  linhas.push('');
 
   // Linhas de preço (se preenchidas)
   const de = (precoDe || '').trim();
@@ -80,15 +81,18 @@ export function gerarCopyPromocional(params: {
     const valorPor = por.startsWith('R$') ? por : `R$ ${por}`;
     linhas.push(`❌ ~De: ${valorDe}~`);
     linhas.push(`👉 *Por apenas: ${valorPor}*`);
+    linhas.push('');
   } else if (por) {
     const valorPor = por.startsWith('R$') ? por : `R$ ${por}`;
     linhas.push(`👉 *Por apenas: ${valorPor}*`);
+    linhas.push('');
   }
 
   // Linha de cupom opcional
   if (cupom && cupom.trim()) {
     const codCupom = cupom.trim().toUpperCase();
     linhas.push(`🎟️ Cupom de Desconto: *${codCupom}*`);
+    linhas.push('');
   }
 
   linhas.push('⚡ Produto original com estoque e envio rápido!');
