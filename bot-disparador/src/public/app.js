@@ -362,9 +362,12 @@ window.extractParticipants = async function(jid) {
 };
 
 // Funções de Gerenciamento de Pastas & Lotes de Leads
-window.exportarPasta = function(pastaNome) {
-  const pastaParam = (pastaNome && pastaNome !== 'todos') ? `?pasta=${encodeURIComponent(pastaNome)}` : '';
-  window.open(`/api/contatos/export${pastaParam}`, '_blank');
+window.exportarPasta = function(pastaNome, formato = 'excel') {
+  let url = `/api/contatos/export?formato=${encodeURIComponent(formato)}`;
+  if (pastaNome && pastaNome !== 'todos') {
+    url += `&pasta=${encodeURIComponent(pastaNome)}`;
+  }
+  window.open(url, '_blank');
 };
 
 window.iniciarCampanhaComPasta = async function(pastaNome) {
@@ -443,12 +446,13 @@ async function loadPastasLeads() {
           <strong class="pasta-name" title="${escapeHtml(p.nome)}">${escapeHtml(p.nome)}</strong>
           <span class="pasta-count">${p.total} contatos ${dataFormatada ? '• ' + dataFormatada : ''}</span>
           <div class="pasta-actions" onclick="event.stopPropagation()">
-            <button class="pasta-btn" title="Exportar esta pasta para Excel (.CSV)" onclick="exportarPasta('${escapeHtml(p.nome)}')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <button class="pasta-btn" title="Exportar esta pasta para Excel (.CSV)" onclick="exportarPasta('${escapeHtml(p.nome)}', 'excel')">
               Excel
             </button>
+            <button class="pasta-btn" title="Exportar lista formatada para Meta Ads (.CSV)" onclick="exportarPasta('${escapeHtml(p.nome)}', 'meta')" style="color: #8ab4f8;">
+              Meta Ads
+            </button>
             <button class="pasta-btn highlight" title="Criar campanha com esta pasta" onclick="iniciarCampanhaComPasta('${escapeHtml(p.nome)}')">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               Disparar
             </button>
             <button class="pasta-btn danger" title="Excluir esta pasta e seus contatos" onclick="excluirPasta('${escapeHtml(p.nome)}')">
@@ -806,9 +810,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Exportar Excel
   document.getElementById('btn-export-excel')?.addEventListener('click', () => {
-    const pasta = state.currentPasta || 'todos';
-    const pastaParam = (pasta && pasta !== 'todos') ? `?pasta=${encodeURIComponent(pasta)}` : '';
-    window.open(`/api/contatos/export${pastaParam}`, '_blank');
+    exportarPasta(state.currentPasta, 'excel');
+  });
+
+  // Exportar Meta Ads
+  document.getElementById('btn-export-meta')?.addEventListener('click', () => {
+    exportarPasta(state.currentPasta, 'meta');
   });
 
   // Import Modal & Leitura de Planilha/Arquivo (.CSV ou .TXT)

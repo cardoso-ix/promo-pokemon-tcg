@@ -215,12 +215,46 @@ export async function createServer() {
 
   app.get('/api/contatos/export', async (req: any, reply) => {
     const pasta = req.query.pasta || '';
+    const formato = (req.query.formato || 'excel').toLowerCase();
     const contatos = getAllContatosParaExportar(pasta);
 
-    // Cabeçalho CSV formatado para Excel (delimitador ponto e vírgula, com UTF-8 BOM)
+    const escapeCsv = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
+    const sanitizedName = pasta ? pasta.replace(/[^a-zA-Z0-9_-]/g, '_') : 'todos';
+
+    // Formato Otimizado para Meta Ads (Facebook & Instagram Custom Audiences)
+    if (formato === 'meta' || formato === 'facebook') {
+      // Cabeçalhos que o Gerenciador de Anúncios do Meta reconhece 100% automático
+      let csv = 'phone,fn,ln,country\r\n';
+      for (const c of contatos) {
+        let phoneDigits = (c.numero || '').replace(/\D/g, '');
+        // Adiciona DDI 55 (Brasil) se vier com DDD + número sem 55
+        if (phoneDigits.length === 10 || phoneDigits.length === 11) {
+          phoneDigits = `55${phoneDigits}`;
+        }
+        if (!phoneDigits) continue;
+
+        // Separa primeiro nome (fn) e sobrenome (ln) para maximizar o Match Rate do Meta
+        const nomeCompleto = (c.nome || '').trim();
+        let fn = '';
+        let ln = '';
+        if (nomeCompleto) {
+          const partes = nomeCompleto.split(/\s+/);
+          fn = partes[0] || '';
+          ln = partes.slice(1).join(' ') || '';
+        }
+
+        csv += `${escapeCsv(phoneDigits)},${escapeCsv(fn)},${escapeCsv(ln)},"BR"\r\n`;
+      }
+
+      const filename = `meta_ads_leads_${sanitizedName}_${new Date().toISOString().split('T')[0]}.csv`;
+      reply.header('Content-Type', 'text/csv; charset=utf-8');
+      reply.header('Content-Disposition', `attachment; filename="${filename}"`);
+      return reply.send(csv);
+    }
+
+    // Formato Padrão Microsoft Excel (delimitador ponto e vírgula, com UTF-8 BOM)
     let csv = '\uFEFFNúmero;Nome;Pasta / Grupo;Tipo de Origem;Data de Cadastro;Status\r\n';
     for (const c of contatos) {
-      const escapeCsv = (str: string) => `"${(str || '').replace(/"/g, '""')}"`;
       const num = c.numero.startsWith('+') ? c.numero : `+${c.numero}`;
       csv += [
         escapeCsv(num),
@@ -232,9 +266,7 @@ export async function createServer() {
       ].join(';') + '\r\n';
     }
 
-    const sanitizedName = pasta ? pasta.replace(/[^a-zA-Z0-9_-]/g, '_') : 'todos';
     const filename = `leads_pokemon_${sanitizedName}_${new Date().toISOString().split('T')[0]}.csv`;
-
     reply.header('Content-Type', 'text/csv; charset=utf-8');
     reply.header('Content-Disposition', `attachment; filename="${filename}"`);
     return reply.send(csv);
