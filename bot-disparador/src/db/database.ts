@@ -292,6 +292,11 @@ export function incrementCampanhaCounter(id: number, field: 'enviados' | 'falhas
   db.prepare(`UPDATE campanhas SET ${field} = ${field} + 1 WHERE id = ?`).run(id);
 }
 
+export function deleteCampanha(id: number): void {
+  db.prepare('DELETE FROM fila_envios WHERE campanha_id = ?').run(id);
+  db.prepare('DELETE FROM campanhas WHERE id = ?').run(id);
+}
+
 // Funções da Fila de Envios
 export interface ItemFila {
   id?: number;

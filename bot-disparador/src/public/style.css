@@ -913,3 +913,329 @@ small {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* Filter Bars & Live Search */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-wrapper .search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-input-wrapper .search-input {
+  padding-left: 40px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  height: 42px;
+  font-size: 13.5px;
+  transition: all var(--transition-fast);
+}
+
+.search-input-wrapper .search-input:focus {
+  background: var(--bg-elevated);
+  border-color: var(--google-blue);
+  box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.2);
+}
+
+.filter-counter {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Large 2-Column Campaign Modal */
+.modal-dialog-large {
+  max-width: 1020px;
+  width: 95vw;
+}
+
+.modal-subtitle {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+
+.modal-split {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .modal-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* WhatsApp Live Simulator Mockup */
+.preview-col {
+  background: #0b141a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #25d366;
+  background: rgba(37, 211, 102, 0.12);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.whatsapp-phone-frame {
+  background: #0b141a;
+  border: 1px solid #202c33;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+}
+
+.wa-header {
+  background: #202c33;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #e9edef;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.wa-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wa-back-btn {
+  font-size: 20px;
+  color: #aebac1;
+  cursor: default;
+}
+
+.wa-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #374248;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.wa-contact-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.wa-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #e9edef;
+}
+
+.wa-status {
+  font-size: 11px;
+  color: #25d366;
+}
+
+.wa-header-icons {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #aebac1;
+}
+
+.wa-chat-body {
+  padding: 16px 14px;
+  min-height: 220px;
+  max-height: 320px;
+  overflow-y: auto;
+  background-color: #0b141a;
+  background-image: radial-gradient(#1e2a30 0.8px, transparent 0.8px);
+  background-size: 16px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.wa-date-pill {
+  align-self: center;
+  background: #182229;
+  color: #8696a0;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+.wa-bubble-sent {
+  align-self: flex-end;
+  background: #005c4b;
+  color: #e9edef;
+  border-radius: 8px 0px 8px 8px;
+  padding: 8px 10px 6px 10px;
+  max-width: 90%;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  word-wrap: break-word;
+}
+
+.wa-bubble-sent::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -6px;
+  width: 0;
+  height: 0;
+  border-top: 6px solid #005c4b;
+  border-right: 6px solid transparent;
+}
+
+.wa-media-preview {
+  margin-bottom: 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: 180px;
+  background: #033a30;
+}
+
+.wa-media-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.wa-message-text {
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  color: #e9edef;
+}
+
+.wa-message-text strong {
+  font-weight: 700;
+  color: #fff;
+}
+
+.wa-message-text em {
+  font-style: italic;
+}
+
+.wa-message-text del {
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.wa-message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.wa-time {
+  font-size: 10.5px;
+  color: rgba(233, 237, 239, 0.6);
+}
+
+.wa-ticks {
+  font-size: 12px;
+  color: #53bdeb;
+  font-weight: 700;
+  letter-spacing: -2px;
+}
+
+.wa-bottom-bar {
+  background: #202c33;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wa-input-mock {
+  background: #2a3942;
+  color: #8696a0;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  flex: 1;
+}
+
+.wa-mic-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #00a884;
+  color: #111b21;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Campaign Trash / Delete Button */
+.btn-trash {
+  background: rgba(242, 139, 130, 0.1);
+  border: 1px solid rgba(242, 139, 130, 0.25);
+  color: var(--google-red);
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  margin-left: auto;
+}
+
+.btn-trash:hover {
+  background: rgba(242, 139, 130, 0.22);
+  border-color: var(--google-red);
+  transform: scale(1.02);
+}

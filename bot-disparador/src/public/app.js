@@ -20,6 +20,111 @@ function showToast(message, type = 'info') {
   }, 3500);
 }
 
+// Utilitários de Formatação & Sanitização
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function resolveSpintaxText(text) {
+  if (!text) return '';
+  let current = text;
+  let prev = '';
+  while (current !== prev) {
+    prev = current;
+    current = current.replace(/\{([^{}]+)\}/g, (match, choices) => {
+      const lower = choices.toLowerCase().trim();
+      if (['nome', 'saudacao', 'grupo', 'numero'].includes(lower)) {
+        return match; // Preserva as tags de substituição
+      }
+      if (choices.includes('|')) {
+        const parts = choices.split('|');
+        return parts[Math.floor(Math.random() * parts.length)].trim();
+      }
+      return match;
+    });
+  }
+  return current;
+}
+
+function formatWhatsAppMarkdown(text) {
+  if (!text) return '';
+  let esc = escapeHtml(text);
+  // Bloco de código ```...```
+  esc = esc.replace(/```([\s\S]*?)```/g, '<code style="background:rgba(255,255,255,0.1);padding:2px 4px;border-radius:3px;">$1</code>');
+  // Negrito *...*
+  esc = esc.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
+  // Itálico _..._
+  esc = esc.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+  // Riscado ~...~
+  esc = esc.replace(/~([^~\n]+)~/g, '<del>$1</del>');
+  // Quebras de linha
+  esc = esc.replace(/\n/g, '<br>');
+  return esc;
+}
+
+// Atualizador da Prévia Ao Vivo do WhatsApp
+function updateWhatsAppPreview() {
+  const templateInput = document.getElementById('camp-template');
+  const mediaInput = document.getElementById('camp-media');
+  if (!templateInput || !mediaInput) return;
+
+  const template = templateInput.value || '';
+  const mediaUrl = mediaInput.value.trim();
+  const mediaPreviewBox = document.getElementById('wa-media-preview');
+  const mediaImg = document.getElementById('wa-media-img');
+  const textElem = document.getElementById('wa-preview-text');
+  const timeElem = document.getElementById('wa-preview-time');
+
+  // Preview de foto anexada
+  if (mediaUrl) {
+    mediaPreviewBox.style.display = 'block';
+    mediaImg.src = mediaUrl;
+    mediaImg.onerror = () => {
+      mediaPreviewBox.style.display = 'none';
+    };
+  } else {
+    mediaPreviewBox.style.display = 'none';
+  }
+
+  // Horário atual formatado
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  if (timeElem) timeElem.innerText = `${hours}:${minutes}`;
+
+  // Se o campo estiver vazio
+  if (!template.trim()) {
+    if (textElem) {
+      textElem.innerHTML = '<span style="color: rgba(233,237,239,0.45); font-style: italic;">Digite sua mensagem ao lado para visualizar a prévia ao vivo...</span>';
+    }
+    return;
+  }
+
+  // Saudação de acordo com o turno
+  const hr = now.getHours();
+  let saudacao = 'Boa tarde';
+  if (hr >= 5 && hr < 12) saudacao = 'Bom dia';
+  else if (hr >= 18 || hr < 5) saudacao = 'Boa noite';
+
+  // Resolver Spintax e substituir variáveis simuladas
+  let rendered = resolveSpintaxText(template);
+  rendered = rendered
+    .replace(/\{nome\}/gi, 'Carlos')
+    .replace(/\{saudacao\}/gi, saudacao)
+    .replace(/\{grupo\}/gi, 'Pokémon TCG VIP')
+    .replace(/\{numero\}/gi, '55 11 99999-9999');
+
+  if (textElem) {
+    textElem.innerHTML = formatWhatsAppMarkdown(rendered);
+  }
+}
+
 // Navegação por Abas
 const tabTitles = {
   dashboard: { title: 'Visão Geral', desc: 'Monitore a conexão do chip, campanhas ativas e métricas em tempo real.' },
@@ -176,27 +281,45 @@ async function loadStatus() {
 }
 
 // Grupos
-async function loadGrupos() {
+async function loadGrupos(refetch = true) {
   const container = document.getElementById('grupos-list');
-  try {
-    const res = await fetch('/api/grupos');
-    const { grupos } = await res.json();
-    state.grupos = grupos;
+  const counter = document.getElementById('grupos-counter');
+  const searchInput = document.getElementById('grupos-search');
+  const query = (searchInput?.value || '').toLowerCase().trim();
 
-    if (!grupos || grupos.length === 0) {
+  try {
+    if (refetch || !state.grupos || state.grupos.length === 0) {
+      const res = await fetch('/api/grupos');
+      const { grupos } = await res.json();
+      state.grupos = grupos || [];
+    }
+
+    let list = state.grupos;
+    if (query) {
+      list = list.filter(g => 
+        (g.nome && g.nome.toLowerCase().includes(query)) ||
+        String(g.total_membros || 0).includes(query)
+      );
+    }
+
+    if (counter) {
+      counter.innerText = `${list.length} de ${state.grupos.length} grupos`;
+    }
+
+    if (!list || list.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
-          <p>Nenhum grupo sincronizado ainda. Clique em "Sincronizar Grupos do Chip".</p>
+          <p>${state.grupos.length === 0 ? 'Nenhum grupo sincronizado ainda. Conecte seu WhatsApp e clique em "Sincronizar Grupos do Chip".' : 'Nenhum grupo corresponde à sua pesquisa.'}</p>
         </div>`;
       return;
     }
 
-    container.innerHTML = grupos.map(g => `
+    container.innerHTML = list.map(g => `
       <div class="grupo-card">
         <div class="grupo-top">
           <img src="${g.foto_url || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'48\' height=\'48\' fill=\'%23282c37\'><rect width=\'48\' height=\'48\' rx=\'12\'/><text x=\'50%25\' y=\'50%25\' font-size=\'18\' fill=\'%238ab4f8\' text-anchor=\'middle\' dominant-baseline=\'middle\' font-family=\'sans-serif\'>👥</text></svg>'}" class="grupo-avatar" alt="Foto">
           <div class="grupo-info">
-            <h4>${g.nome}</h4>
+            <h4 title="${escapeHtml(g.nome)}">${escapeHtml(g.nome)}</h4>
             <p>${g.total_membros} participantes</p>
           </div>
         </div>
@@ -223,6 +346,7 @@ window.extractParticipants = async function(jid) {
     if (data.ok) {
       showToast(`Sucesso! ${data.total} novos membros extraídos do grupo "${data.grupoNome}".`, 'success');
       loadStatus();
+      loadContatos();
     } else {
       showToast(data.message || 'Falha na extração.', 'error');
     }
@@ -234,12 +358,17 @@ window.extractParticipants = async function(jid) {
 // Contatos
 async function loadContatos() {
   const tbody = document.getElementById('contatos-tbody');
-  const busca = document.getElementById('contatos-search').value;
+  const counter = document.getElementById('contatos-counter');
+  const busca = (document.getElementById('contatos-search')?.value || '').trim();
 
   try {
     const res = await fetch(`/api/contatos?limit=100&busca=${encodeURIComponent(busca)}`);
     const { contatos, total } = await res.json();
-    state.contatos = contatos;
+    state.contatos = contatos || [];
+
+    if (counter) {
+      counter.innerText = `${total} contatos cadastrados`;
+    }
 
     if (!contatos || contatos.length === 0) {
       tbody.innerHTML = `<tr><td colspan="5" class="text-center">Nenhum contato encontrado.</td></tr>`;
@@ -249,8 +378,8 @@ async function loadContatos() {
     tbody.innerHTML = contatos.map(c => `
       <tr>
         <td><strong>+${c.numero}</strong></td>
-        <td>${c.nome || '<span class="text-muted">Sem nome</span>'}</td>
-        <td>${c.grupo_nome || '<span class="text-muted">Manual</span>'}</td>
+        <td>${escapeHtml(c.nome) || '<span class="text-muted">Sem nome</span>'}</td>
+        <td>${escapeHtml(c.grupo_nome) || '<span class="text-muted">Manual</span>'}</td>
         <td><span class="badge info">${c.origem_tipo}</span></td>
         <td>${c.criado_em ? c.criado_em.split(' ')[0] : '-'}</td>
       </tr>
@@ -261,22 +390,40 @@ async function loadContatos() {
 }
 
 // Campanhas
-async function loadCampanhas() {
+async function loadCampanhas(refetch = true) {
   const container = document.getElementById('campanhas-container');
-  try {
-    const res = await fetch('/api/campanhas');
-    const { campanhas } = await res.json();
-    state.campanhas = campanhas;
+  const counter = document.getElementById('campanhas-counter');
+  const query = (document.getElementById('campanhas-search')?.value || '').toLowerCase().trim();
 
-    if (!campanhas || campanhas.length === 0) {
+  try {
+    if (refetch || !state.campanhas || state.campanhas.length === 0) {
+      const res = await fetch('/api/campanhas');
+      const { campanhas } = await res.json();
+      state.campanhas = campanhas || [];
+    }
+
+    let list = state.campanhas;
+    if (query) {
+      list = list.filter(c => 
+        (c.nome && c.nome.toLowerCase().includes(query)) ||
+        (c.status && c.status.toLowerCase().includes(query)) ||
+        (c.mensagem_template && c.mensagem_template.toLowerCase().includes(query))
+      );
+    }
+
+    if (counter) {
+      counter.innerText = `${list.length} de ${state.campanhas.length} campanhas`;
+    }
+
+    if (!list || list.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
-          <p>Nenhuma campanha criada ainda. Clique em "Nova Campanha" para começar.</p>
+          <p>${state.campanhas.length === 0 ? 'Nenhuma campanha criada ainda. Clique em "Nova Campanha" para começar.' : 'Nenhuma campanha corresponde à sua pesquisa.'}</p>
         </div>`;
       return;
     }
 
-    container.innerHTML = campanhas.map(c => {
+    container.innerHTML = list.map(c => {
       const pct = c.total_destinatarios > 0 ? Math.round((c.enviados / c.total_destinatarios) * 100) : 0;
       let badgeClass = 'info';
       if (c.status === 'executando') badgeClass = 'warning';
@@ -287,13 +434,19 @@ async function loadCampanhas() {
         <div class="glass-card">
           <div class="card-header">
             <div>
-              <h3>${c.nome}</h3>
+              <h3>${escapeHtml(c.nome)}</h3>
               <small>Criada em ${c.criado_em}</small>
             </div>
-            <span class="badge ${badgeClass}">${c.status.toUpperCase()}</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="badge ${badgeClass}">${c.status.toUpperCase()}</span>
+              <button class="btn-trash" title="Excluir campanha e envios pendentes" onclick="deleteCampanha(${c.id}, '${escapeHtml(c.nome)}')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                Excluir
+              </button>
+            </div>
           </div>
           <div class="card-body">
-            <p style="margin-bottom: 12px; font-size: 13px; color: var(--text-secondary); white-space: pre-wrap;">${c.mensagem_template.slice(0, 160)}...</p>
+            <p style="margin-bottom: 12px; font-size: 13px; color: var(--text-secondary); white-space: pre-wrap;">${escapeHtml(c.mensagem_template.slice(0, 160))}...</p>
             
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
               <span>Progresso: ${c.enviados} de ${c.total_destinatarios} enviados (${c.falhas} falhas)</span>
@@ -343,6 +496,24 @@ window.cancelCampanha = async function(id) {
   }
 };
 
+window.deleteCampanha = async function(id, nome) {
+  if (confirm(`Deseja realmente excluir a campanha "${nome}"?\nTodos os disparos pendentes desta fila também serão removidos.`)) {
+    try {
+      const res = await fetch(`/api/campanhas/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Campanha "${nome}" excluída com sucesso!`, 'success');
+        loadCampanhas(true);
+        loadStatus();
+      } else {
+        showToast(data.message || 'Erro ao excluir campanha.', 'error');
+      }
+    } catch (err) {
+      showToast(`Erro na requisição: ${err.message}`, 'error');
+    }
+  }
+};
+
 // Configurações e DeepSeek
 async function loadConfigs() {
   try {
@@ -389,20 +560,36 @@ async function saveConfigs(updates) {
 }
 
 // Logs
-async function loadLogs() {
+async function loadLogs(refetch = true) {
   const terminal = document.getElementById('terminal-logs');
+  const searchInput = document.getElementById('logs-search');
+  const query = (searchInput?.value || '').toLowerCase().trim();
+
   try {
-    const res = await fetch('/api/logs?limit=80');
-    const { logs } = await res.json();
-    if (!logs || logs.length === 0) {
-      terminal.innerHTML = '<div class="log-line info">[SISTEMA] Nenhum log registrado ainda.</div>';
+    if (refetch || !state.logs || state.logs.length === 0) {
+      const res = await fetch('/api/logs?limit=120');
+      const { logs } = await res.json();
+      state.logs = logs || [];
+    }
+
+    let list = state.logs;
+    if (query) {
+      list = list.filter(l => 
+        (l.mensagem && l.mensagem.toLowerCase().includes(query)) ||
+        (l.categoria && l.categoria.toLowerCase().includes(query)) ||
+        (l.nivel && l.nivel.toLowerCase().includes(query))
+      );
+    }
+
+    if (!list || list.length === 0) {
+      terminal.innerHTML = '<div class="log-line info">[SISTEMA] Nenhum log corresponde ao filtro atual.</div>';
       return;
     }
 
-    terminal.innerHTML = logs.map(l => `
+    terminal.innerHTML = list.map(l => `
       <div class="log-line ${l.nivel}">
         <span class="text-muted">[${l.criado_em.split(' ')[1] || l.criado_em}]</span>
-        <strong>[${l.categoria.toUpperCase()}]</strong> ${l.mensagem}
+        <strong>[${l.categoria.toUpperCase()}]</strong> ${escapeHtml(l.mensagem)}
       </div>
     `).join('');
     terminal.scrollTop = terminal.scrollHeight;
@@ -457,13 +644,25 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-refresh-grupos').addEventListener('click', async () => {
     showToast('Sincronizando grupos...', 'info');
     await fetch('/api/grupos/sync', { method: 'POST' });
-    await loadGrupos();
+    await loadGrupos(true);
     showToast('Grupos atualizados!', 'success');
   });
 
-  // Search Contatos
-  document.getElementById('contatos-search').addEventListener('input', () => {
+  // Live Search Filters
+  document.getElementById('grupos-search')?.addEventListener('input', () => {
+    loadGrupos(false);
+  });
+
+  document.getElementById('contatos-search')?.addEventListener('input', () => {
     loadContatos();
+  });
+
+  document.getElementById('campanhas-search')?.addEventListener('input', () => {
+    loadCampanhas(false);
+  });
+
+  document.getElementById('logs-search')?.addEventListener('input', () => {
+    loadLogs(false);
   });
 
   // Clear Contatos
@@ -505,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Nova Campanha Modal
+  // Nova Campanha Modal & Simulador WhatsApp Live
   const modalCampanha = document.getElementById('modal-campanha');
   document.getElementById('btn-open-nova-campanha').addEventListener('click', async () => {
     // Carregar grupos no select
@@ -515,9 +714,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const { grupos } = await res.json();
     if (grupos) {
       grupos.forEach(g => {
-        select.innerHTML += `<option value="grupo:${g.jid}">Apenas Membros de: ${g.nome}</option>`;
+        select.innerHTML += `<option value="grupo:${g.jid}">Apenas Membros de: ${escapeHtml(g.nome)}</option>`;
       });
     }
+    updateWhatsAppPreview();
     modalCampanha.style.display = 'flex';
   });
 
@@ -528,12 +728,20 @@ document.addEventListener('DOMContentLoaded', () => {
     modalCampanha.style.display = 'none';
   });
 
-  // Click tag to insert in template
+  // Listeners de digitação para o preview ao vivo do WhatsApp
+  document.getElementById('camp-template')?.addEventListener('input', updateWhatsAppPreview);
+  document.getElementById('camp-media')?.addEventListener('input', updateWhatsAppPreview);
+  document.getElementById('btn-shuffle-spintax')?.addEventListener('click', () => {
+    updateWhatsAppPreview();
+  });
+
+  // Click tag to insert in template and update preview
   document.querySelectorAll('.tags-hint code').forEach(code => {
     code.addEventListener('click', () => {
       const textarea = document.getElementById('camp-template');
       textarea.value += code.innerText;
       textarea.focus();
+      updateWhatsAppPreview();
     });
   });
 
@@ -570,7 +778,8 @@ document.addEventListener('DOMContentLoaded', () => {
         modalCampanha.style.display = 'none';
         document.getElementById('camp-nome').value = '';
         document.getElementById('camp-template').value = '';
-        loadCampanhas();
+        document.getElementById('camp-media').value = '';
+        loadCampanhas(true);
       } else {
         alert(data.message || 'Erro ao criar campanha.');
       }

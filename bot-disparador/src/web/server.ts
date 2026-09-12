@@ -14,6 +14,7 @@ import {
   getCampanhas,
   createCampanha,
   updateCampanhaStatus,
+  deleteCampanha,
   getFilaCampanha,
   addItensFila,
   getLogsSistema,
@@ -236,6 +237,15 @@ export async function createServer() {
     const id = parseInt(req.params.id, 10);
     updateCampanhaStatus(id, 'cancelada');
     broadcastEvent('campanhas_update', {});
+    return { ok: true };
+  });
+
+  app.delete('/api/campanhas/:id', async (req: any) => {
+    const id = parseInt(req.params.id, 10);
+    deleteCampanha(id);
+    logSistema('warn', 'campanha', `Campanha #${id} e seus envios pendentes foram excluídos.`);
+    broadcastEvent('campanhas_update', {});
+    broadcastEvent('metricas', getMetricasDashboard());
     return { ok: true };
   });
 
