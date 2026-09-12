@@ -1,49 +1,98 @@
 # Guia de Deploy em Nuvem 24/7 (Railway e Render)
 
-Este guia explica como manter a **Promo Réplica** rodando permanentemente na nuvem, permitindo que você acesse o painel de qualquer lugar (computador ou celular) sem precisar manter seu computador ligado.
+Este guia explica como manter as duas aplicações (**Promo Réplica** e **Bot Disparador & IA**) rodando permanentemente na nuvem, permitindo que você acesse ambos os painéis de qualquer lugar (computador ou celular) sem precisar manter seu computador ligado.
+
+---
+
+## 📦 Estrutura dos Serviços
+
+O repositório possui dois serviços independentes:
+
+1. **Replicador de Ofertas (`app/`):**
+   - Porta interna: `3000`
+   - Dockerfile: `Dockerfile` (raiz)
+   - Volume de persistência: `/app/data` (salva `replica.db` e sessão do WhatsApp)
+
+2. **Bot Disparador & Atendimento IA (`bot-disparador/`):**
+   - Porta interna: `3333`
+   - Dockerfile: `bot-disparador/Dockerfile`
+   - Volume de persistência: `/app/data` (salva `disparador.db` e sessão do WhatsApp)
 
 ---
 
 ## 🚂 Opção 1: Deploy no Railway (Mais Rápido e Recomendado)
 
-O Railway é a plataforma ideal para este projeto, pois suporta compilação direta via Dockerfile, volumes persistentes NVMe ultrarrápidos e geração instantânea de domínio com HTTPS.
+No Railway, você pode ter os **dois serviços rodando lado a lado no mesmo projeto**:
 
-### Passo a Passo:
-
-1. Acesse **[railway.app](https://railway.app)** e faça login com sua conta do **GitHub**.
-2. Clique no botão **+ New Project**.
-3. Selecione **Deploy from GitHub repo** e escolha o repositório:
+### Parte A: Subir o Replicador de Ofertas
+1. Acesse **[railway.app](https://railway.app)** e faça login com seu **GitHub**.
+2. Clique em **+ New Project** ➔ **Deploy from GitHub repo** ➔ Escolha:
    👉 `cardoso-ix/promo-pokemon-tcg`
-4. O Railway detectará automaticamente o [`Dockerfile`](../Dockerfile) e iniciará o build.
-5. **Passo Fundamental — Montagem do Volume Persistente**:
-   - Clique no cartão do seu serviço ➔ aba **Settings**.
-   - Role a página até a seção **Volumes** e clique em **+ Add Volume**.
-   - No campo **Mount Path**, digite exatamente:
+3. O Railway iniciará o build do Replicador automaticamente usando o `Dockerfile` raiz.
+4. **Adicionar Volume Persistente:**
+   - Clique no serviço ➔ **Settings** ➔ seção **Volumes** ➔ **+ Add Volume**.
+   - No campo **Mount Path**, digite:
      ```text
      /app/data
      ```
-   - *Por que isso é essencial?* Esse volume salva a sessão do seu WhatsApp (`auth_baileys`) e o banco de dados das rotas (`replica.db`), garantindo que você nunca seja desconectado mesmo em novos deploys.
-6. **Gerar Link de Acesso Público**:
-   - Ainda na aba **Settings**, role até a seção **Networking**.
-   - Clique em **Generate Domain**.
-   - O Railway fornecerá um link público seguro, por exemplo:
-     `https://promo-replica-bot-production-7d52.up.railway.app`
-7. **Conectar o WhatsApp**:
-   - Abra esse link no seu navegador (computador ou celular).
-   - O painel exibirá o QR Code de conexão em tempo real via WebSocket.
-   - No seu celular, abra o WhatsApp ➔ **Aparelhos Conectados** ➔ **Conectar um aparelho** e escaneie o código.
-   - Pronto! Conectado 24 horas por dia na nuvem.
+5. **Gerar Link de Acesso Público:**
+   - Em **Settings** ➔ seção **Networking** ➔ **Generate Domain**.
+   - Pronto! Você terá seu link HTTPS para o Replicador (ex: `https://promo-replica.up.railway.app`).
 
 ---
 
-## 🌐 Opção 2: Deploy no Render
+### Parte B: Subir o Bot Disparador & IA (No mesmo projeto do Railway)
+1. No mesmo painel do seu projeto no Railway, clique no botão **+ Create** (ou **+ New**) no canto superior direito.
+2. Selecione **GitHub Repo** ➔ Escolha o mesmo repositório:
+   👉 `cardoso-ix/promo-pokemon-tcg`
+3. Clique no novo serviço gerado ➔ abra a aba **Settings**:
+   - Em **Service Name**, renomeie para: `bot-disparador`
+   - Na seção **Build**, encontre o campo **Root Directory** e preencha:
+     ```text
+     /bot-disparador
+     ```
+   - Ou no campo **Dockerfile Path**, aponte para:
+     ```text
+     bot-disparador/Dockerfile
+     ```
+4. **Adicionar Volume Persistente para o Disparador:**
+   - Na aba **Settings** ➔ seção **Volumes** ➔ **+ Add Volume**.
+   - No campo **Mount Path**, digite:
+     ```text
+     /app/data
+     ```
+   *(Isso garante que a sessão do chip do disparador e o banco de leads fiquem 100% salvos)*.
+5. **Gerar Link de Acesso Público:**
+   - Em **Settings** ➔ **Networking** ➔ **Generate Domain**.
+   - Pronto! Você terá o link HTTPS do seu **Disparador & IA** no ar!
+
+---
+
+## 🌐 Opção 2: Deploy no Render via Blueprint
+
+O repositório já inclui o arquivo [`render.yaml`](../render.yaml) configurado para criar automaticamente os dois serviços:
 
 1. Acesse **[render.com](https://render.com)** e faça login com o **GitHub**.
-2. Clique em **New +** ➔ **Blueprint** (ele usará nosso [`render.yaml`](../render.yaml) automaticamente) ou **Web Service**.
+2. Clique em **New +** ➔ **Blueprint**.
 3. Selecione o repositório `cardoso-ix/promo-pokemon-tcg`.
-4. Em **Disks**, adicione um disco com tamanho de 1 GB no caminho:
-   ```text
-   /app/data
-   ```
-5. Clique em **Create Web Service**.
-6. Acesse a URL gerada pelo Render, escaneie o QR Code e configure as rotas normalmente.
+4. O Render lerá o `render.yaml` e provisionará automaticamente:
+   - `promo-replica-bot` (Porta 3000 + disco de 1GB)
+   - `bot-disparador-ia` (Porta 3333 + disco de 1GB)
+5. Clique em **Apply** e acesse as URLs geradas pelo Render!
+
+---
+
+## 🐳 Opção 3: Rodar os dois via Docker em VPS
+
+Se você possui uma VPS Linux (Hostinger, DigitalOcean, Hetzner, AWS, etc.):
+
+```bash
+# Clonar o repositório na VPS
+git clone https://github.com/cardoso-ix/promo-pokemon-tcg.git
+cd promo-pokemon-tcg
+
+# Subir os dois serviços em background
+docker compose up -d --build
+```
+- Replicador ativo em: `http://IP-DA-VPS:3000`
+- Disparador ativo em: `http://IP-DA-VPS:3333`

@@ -17,3 +17,22 @@ services:
       name: replica-data
       mountPath: /app/data
       sizeGB: 1
+
+  - type: web
+    name: bot-disparador-ia
+    env: docker
+    dockerfilePath: bot-disparador/Dockerfile
+    plan: starter
+    region: ohio
+    healthCheckPath: /api/status
+    envVars:
+      - key: PORT
+        value: 3333
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATA_DIR
+        value: /app/data
+    disk:
+      name: disparador-data
+      mountPath: /app/data
+      sizeGB: 1

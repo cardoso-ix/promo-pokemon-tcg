@@ -11,7 +11,7 @@ async function main() {
   console.log('   BOT DISPARADOR & ATENDIMENTO IA (DEEPSEEK V4)    ');
   console.log('====================================================');
 
-  const porta = parseInt(getConfig('porta', '3333'), 10);
+  const porta = process.env.PORT ? parseInt(process.env.PORT, 10) : parseInt(getConfig('porta', '3333'), 10);
   const server = await createServer();
 
   try {

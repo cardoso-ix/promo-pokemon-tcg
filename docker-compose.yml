@@ -16,3 +16,19 @@ services:
       - NODE_ENV=production
     volumes:
       - ./data:/app/data
+
+  bot-disparador:
+    build:
+      context: ./bot-disparador
+      dockerfile: Dockerfile
+    container_name: bot-disparador-ia
+    restart: unless-stopped
+    ports:
+      - "3333:3333"
+    environment:
+      - PORT=3333
+      - HOST=0.0.0.0
+      - DATA_DIR=/app/data
+      - NODE_ENV=production
+    volumes:
+      - ./bot-disparador/data:/app/data

@@ -24,7 +24,8 @@ export interface WhatsAppState {
   userPhone: string | null;
 }
 
-const AUTH_DIR = path.resolve('data/auth');
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.resolve('data');
+const AUTH_DIR = path.join(DATA_DIR, 'auth');
 if (!fs.existsSync(AUTH_DIR)) {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 }
