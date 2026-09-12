@@ -1,52 +1,40 @@
-# Promo Pokémon TCG — Réplica Autônoma de Promoções
+# ⚡ Promo Pokémon TCG — Plataforma Completa de Automação
 
-Aplicação moderna, leve e 100% autônoma em **Node.js e TypeScript**, projetada para operar 24 horas por dia na nuvem (Railway / Render) ou localmente. O sistema monitora grupos de WhatsApp de ofertas de Pokémon TCG, substitui links concorrentes por links oficiais de afiliado do Mercado Livre com encurtamento `meli.la`, replica mídias em alta fidelidade e republica nos grupos de destino em tempo real.
+Ecossistema profissional em **Node.js e TypeScript** para automação de vendas, promoções e captação de clientes de **Pokémon TCG** no WhatsApp.
 
----
-
-## 🚀 Funcionalidades Principais
-
-1. **Monitoramento & Replicação em Tempo Real (WhatsApp Baileys)**:
-   - Conexão nativa e direta com o WhatsApp via `@whiskeysockets/baileys` sem intermediários.
-   - Rotas flexíveis (Muitos grupos de Origem ➔ Muitos grupos de Destino).
-   - Suporte completo a mensagens com fotos diretas, mensagens temporárias (*ephemeral*), visualização única (*viewOnce*) e mensagens enviadas pelo próprio celular pareado (`deviceSentMessage`).
-
-2. **Encurtamento Oficial `meli.la` & Troca de Afiliado**:
-   - Integração com a API de Afiliados do Mercado Livre via cookie de sessão.
-   - Gera links curtos oficiais de alta conversão: `https://meli.la/xxxxxx`.
-   - Fallback automático para link parametrizado direto (`matt_word` + `matt_tool` + `forceInApp=true`).
-   - Limpeza inteligente de assinaturas concorrentes (`@rasgabooster.tcg`, hashtags) preservando quebras de linha e blocos de texto humanos.
-
-3. **Replicação Fiel de Mídias**:
-   - Desembrulha e encaminha o buffer exato da foto original enviada no WhatsApp.
-   - Para posts somente texto com link do Mercado Livre, faz scraping automático da foto oficial do produto em alta resolução (**2X**).
-
-4. **Cockpit & Dashboard Web em Tempo Real**:
-   - Alternador Geral (Ligar / Desligar Esteira).
-   - Gerenciamento de Rotas com lista de grupos sincronizados.
-   - Configuração de tags de afiliado, cookies do Mercado Livre e teste de conexão com a API.
-   - Feed de postagens ao vivo via WebSocket e histórico com filtros e paginação.
-
-5. **Alta Disponibilidade e Nuvem 24/7**:
-   - Configurado para rodar no **Railway** ou **Render** com volume persistente em `/app/data`.
-   - Mantém a sessão do WhatsApp (`auth_baileys`) e o banco SQLite (`replica.db`) preservados entre restarts e deploys.
+O projeto é dividido em **dois módulos independentes**:
 
 ---
 
-## ☁️ Como Rodar na Nuvem 24/7 (Recomendado)
+## 📦 Módulos do Sistema
 
-O sistema pode rodar 100% online sem depender do seu computador ficar ligado.
+### 1. 🔄 Módulo Replicador de Promoções (`app/` — Porta `3000`)
+- **Objetivo:** Monitora grupos de ofertas de Pokémon TCG 24/7, intercepta links concorrentes, substitui por links de afiliado oficiais do Mercado Livre com encurtamento `meli.la`, preserva/baixa fotos em 2X e replica nos seus grupos de destino.
+- **Como Iniciar:** Dê dois cliques em **`iniciar.bat`** (ou execute `cd app && npm start`).
+- **Painel:** 👉 **`http://localhost:3000`**
 
-1. **Deploy no Railway**:
-   - Crie um novo projeto no [railway.app](https://railway.app) a partir deste repositório GitHub.
-   - Adicione um Volume Persistente apontando para `/app/data`.
-   - Gere um domínio público em **Settings** ➔ **Networking**.
-   - Acesse o link gerado, escaneie o QR Code no seu WhatsApp e configure suas rotas.
-   - Consulte o guia completo e detalhado em [`docs/deploy-nuvem.md`](docs/deploy-nuvem.md).
+### 2. 🚀 Módulo Disparador & Atendimento IA (`bot-disparador/` — Porta `3333`)
+- **Objetivo:** Captação de membros de grupos em 1 clique, disparos em massa com proteção anti-ban e Spintax, simulador oficial do WhatsApp ao vivo lado a lado, modelos prontos de alta conversão de Pokémon TCG e atendimento privado automático com **Inteligência Artificial DeepSeek V4 (OpenCode)**.
+- **Como Iniciar:** Dê dois cliques em **`iniciar-disparador.bat`** (ou execute `cd bot-disparador && npm start`).
+- **Painel:** 👉 **`http://localhost:3333`**
+- **Documentação Completa:** Consulte [`bot-disparador/README.md`](bot-disparador/README.md).
 
 ---
 
-## 💻 Como Rodar Localmente (Windows)
+## 🚀 Como Rodar Localmente (Windows)
+
+| Ação | Como Executar | Acesso no Navegador |
+|---|---|---|
+| **Iniciar Replicador de Ofertas** | Duplo clique em `iniciar.bat` | `http://localhost:3000` |
+| **Iniciar Bot Disparador & IA** | Duplo clique em `iniciar-disparador.bat` | `http://localhost:3333` |
+| **Parar Replicador** | Duplo clique em `parar.bat` | — |
+
+---
+
+## ☁️ Como Rodar na Nuvem 24/7 (Replicador)
+
+O replicador pode rodar 100% online na nuvem sem depender do seu computador ficar ligado.
+Consulte o guia completo em [`docs/deploy-nuvem.md`](docs/deploy-nuvem.md) para Railway ou Render.
 
 ### Opção 1: Scripts Rápidos
 - **`iniciar.bat`**: Inicia o servidor com terminal visível para acompanhar logs em tempo real.

@@ -735,6 +735,52 @@ document.addEventListener('DOMContentLoaded', () => {
     updateWhatsAppPreview();
   });
 
+  // Modelos Prontos Pokémon TCG de Alta Conversão
+  const PRESET_TEMPLATES = {
+    'convite-grupo': {
+      nome: 'Convite Grupo VIP Pokémon TCG',
+      template: `{Olá|Fala|Oi} {nome}! {Tudo bem com você|Como estão as coisas}? Vi seu contato no grupo {grupo}! 🎴⚡\n\nCriei um grupo VIP exclusivo onde solto diariamente promoções com até *50% OFF* em Boosters, Boxes, Decks e Fichários (a maioria com frete Full grátis no Mercado Livre)!\n\nSe você curte colecionar ou jogar e quer pegar as melhores ofertas antes de esgotar, entra por aqui:\n👉 https://chat.whatsapp.com/invite\n\nTe espero lá!`,
+      media: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png'
+    },
+    'promocao-boxes': {
+      nome: 'Oferta Relâmpago Boxes & Copag',
+      template: `{Fala|Oi|E aí} {nome}! {Tudo certo|Beleza}? Passando rápido para te avisar que liberaram uma *promoção relâmpago* de Pokémon TCG hoje com estoque limitado! 🔥\n\nTem Booster Box, Coleções de Treinador Avançado e Blisters com preços bem abaixo da tabela oficial!\n\nDá uma olhada aqui na nossa vitrine oficial:\n🔗 https://mercadolivre.com/sec/2rM6RPm\n\nSe tiver qualquer dúvida sobre as cartas ou envio, pode me responder por aqui!`,
+      media: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/6.png'
+    },
+    'acessorios': {
+      nome: 'Ofertas Fichários e Sleeves',
+      template: `{Olá|Oi} {nome}! {Tudo bem|Como vai}? Se você estiver precisando organizar sua coleção ou proteger suas cartas raras, acabaram de liberar descontos em *Fichários 360 cartas, Sleeves e Deck Boxes*! 📦✨\n\nPreços a partir de R$ 35 com envio imediato no Mercado Livre Full!\nConfere aqui: https://mercadolivre.com/sec/2rM6RPm\n\nAbraço e boas aberturas de boosters! ⚡`,
+      media: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/130.png'
+    },
+    'aquecimento': {
+      nome: 'Bate-papo Amigável Colecionador',
+      template: `{Olá|Oi|Fala} {nome}! {Tudo bom|Como você tá}? Vi seu contato através do grupo {grupo}.\n\nVocê ainda está na ativa colecionando ou jogando Pokémon TCG ultimamente? Criei um grupo de promoções e alertas de estoque e queria te convidar. Se quiser o link me avisa aqui!`,
+      media: ''
+    }
+  };
+
+  // Click nos cards de modelos prontos
+  document.querySelectorAll('.preset-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const presetKey = card.dataset.preset;
+      const preset = PRESET_TEMPLATES[presetKey];
+      if (!preset) return;
+
+      const nomeInput = document.getElementById('camp-nome');
+      const templateInput = document.getElementById('camp-template');
+      const mediaInput = document.getElementById('camp-media');
+
+      if (templateInput) templateInput.value = preset.template;
+      if (nomeInput && (!nomeInput.value.trim() || nomeInput.value.startsWith('Convite') || nomeInput.value.startsWith('Oferta') || nomeInput.value.startsWith('Aquecimento'))) {
+        nomeInput.value = preset.nome;
+      }
+      if (mediaInput) mediaInput.value = preset.media || '';
+
+      updateWhatsAppPreview();
+      showToast(`Modelo "${preset.nome}" aplicado!`, 'info');
+    });
+  });
+
   // Click tag to insert in template and update preview
   document.querySelectorAll('.tags-hint code').forEach(code => {
     code.addEventListener('click', () => {
