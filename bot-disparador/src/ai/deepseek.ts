@@ -25,8 +25,18 @@ export async function generateDeepSeekResponse(
     return null;
   }
 
-  const baseUrl = getConfig('deepseek_base_url', 'https://api.deepseek.com/v1').replace(/\/+$/, '');
-  const model = getConfig('deepseek_model', 'deepseek-chat').trim();
+  const rawBaseUrl = getConfig('deepseek_base_url', 'https://api.deepseek.com/v1').trim();
+  let endpoint = rawBaseUrl.replace(/\/+$/, '');
+  if (!endpoint.endsWith('/chat/completions')) {
+    endpoint = `${endpoint}/chat/completions`;
+  }
+
+  let model = getConfig('deepseek_model', 'deepseek-chat').trim();
+  // Se estiver usando o gateway OpenCode e o modelo for o padrão deepseek-chat, ajusta para o modelo suportado
+  if (endpoint.includes('opencode.ai') && (model === 'deepseek-chat' || !model)) {
+    model = 'deepseek-v4-pro';
+  }
+
   const systemPrompt = getConfig('deepseek_prompt_sistema', '');
 
   // Salvar mensagem recebida do lead no histórico
@@ -53,12 +63,15 @@ export async function generateDeepSeekResponse(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout
 
-    const res = await fetch(`${baseUrl}/chat/completions`, {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'x-opencode-session': `session-${chatJid.replace(/[^a-zA-Z0-9_-]/g, '') || Date.now()}`
+    };
+
+    const res = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
+      headers,
       body: JSON.stringify({
         model,
         messages,
@@ -72,7 +85,7 @@ export async function generateDeepSeekResponse(
 
     if (!res.ok) {
       const errText = await res.text();
-      logSistema('error', 'deepseek', `Erro na API DeepSeek HTTP ${res.status}: ${errText.slice(0, 200)}`);
+      logSistema('error', 'deepseek', `Erro na API DeepSeek HTTP ${res.status}: ${errText.slice(0, 250)}`);
       return null;
     }
 

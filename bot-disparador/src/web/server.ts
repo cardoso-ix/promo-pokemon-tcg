@@ -264,7 +264,10 @@ export async function createServer() {
     const testMsg = prompt || 'Olá! Gostaria de saber se vocês têm o fichário de 360 cartas Pokémon.';
     const reply = await generateDeepSeekResponse('teste@s.whatsapp.net', testMsg, 'Cliente Teste');
     if (!reply) {
-      throw new Error('Falha ao gerar resposta com DeepSeek. Verifique a chave de API e logs do sistema.');
+      const logs = getLogsSistema(3);
+      const errLog = logs.find((l) => l.categoria === 'deepseek' && l.nivel === 'error');
+      const errDetail = errLog ? errLog.mensagem : 'Verifique a chave de API, endpoint e modelo nos logs.';
+      return { ok: false, message: `Falha na IA: ${errDetail}` };
     }
     return { ok: true, pergunta: testMsg, resposta: reply };
   });
