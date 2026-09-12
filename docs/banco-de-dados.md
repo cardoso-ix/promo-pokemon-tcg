@@ -32,6 +32,7 @@ Armazena configurações globais de operação no modelo Chave-Valor.
 - `affiliate_matt_tool`: ID da etiqueta de afiliados ML (ex: `96097202`).
 - `meli_cookie`: Cookie de sessão de afiliado para encurtar links com `https://meli.la/`.
 - `meli_tag`: Tag de afiliado associada ao encurtamento.
+- `link_vitrine_curto`: Link curto oficial da lista de compras/vitrine do afiliado (ex: `https://mercadolivre.com/sec/2rM6RPm`).
 - `frases_remover`: Lista de termos/assinaturas de concorrentes a remover (uma por linha).
 
 ---

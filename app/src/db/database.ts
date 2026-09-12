@@ -72,6 +72,7 @@ export function initDatabase() {
     affiliate_matt_tool: CONFIG.defaultMattTool,
     meli_cookie: '',
     meli_tag: CONFIG.defaultMattWord,
+    link_vitrine_curto: 'https://mercadolivre.com/sec/2rM6RPm',
     frases_remover: '@rasgabooster.tcg\n#rasgaboot\n@rasgabooster',
     somente_mercadolivre: 'true'
   };

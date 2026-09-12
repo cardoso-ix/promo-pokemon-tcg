@@ -71,3 +71,55 @@ test('cleanSpamLines deve preservar quebras de linha e espacamentos entre paragr
   const cleaned = cleanSpamLines(original, ['@rasgabooster.tcg']);
   assert.strictEqual(cleaned, original);
 });
+
+test('buildAffiliateUrl deve usar shortSocialUrl para /social/ e /cupons', () => {
+  const shortSocial = 'https://mercadolivre.com/sec/2rM6RPm';
+  const socialUrl = 'https://www.mercadolivre.com.br/social/concorrente123?matt_word=concorrente';
+  const cupomUrl = 'https://www.mercadolivre.com.br/cupons';
+
+  const convertedSocial = buildAffiliateUrl(socialUrl, 'caed1312314', '96097202', shortSocial);
+  assert.strictEqual(convertedSocial, shortSocial);
+
+  const convertedCupom = buildAffiliateUrl(cupomUrl, 'caed1312314', '96097202', shortSocial);
+  assert.strictEqual(convertedCupom, shortSocial);
+});
+
+test('processMessageText deve converter links de cupom e vitrine para o link curto configurado', async () => {
+  const msg = `💛 CUPOM DE 25% OFF NO MERCADO LIVRE\n\n1️⃣ Entre no app do Meli:\nhttps://www.mercadolivre.com.br/social/concorrente123?matt_word=concorrente\n2️⃣ Resgate o cupom`;
+  const result = await processMessageText(
+    msg,
+    'group1',
+    'caed1312314',
+    '96097202',
+    '@terceiro',
+    '',
+    '',
+    'https://mercadolivre.com/sec/2rM6RPm'
+  );
+
+  assert.strictEqual(result.linksConvertidos, 1);
+  assert.strictEqual(result.contemMercadoLivre, true);
+  assert.strictEqual(result.novoTexto.includes('https://mercadolivre.com/sec/2rM6RPm'), true);
+  assert.strictEqual(result.novoTexto.includes('concorrente123'), false);
+});
+
+test('processMessageText deve tratar link meli.la com ponto e virgula no final e substituir pelo link curto', async () => {
+  const msg = `Resgate na área! 25% OFF em entregas Full!\n\nPasso a passo para resgatar:\n1. Entre no app através do link: 🔗 https://meli.la/2XNbgSR;\n2. Cliquem em "Mais"`;
+  const result = await processMessageText(
+    msg,
+    'group1',
+    'caed1312314',
+    '96097202',
+    '@terceiro',
+    '',
+    '',
+    'https://mercadolivre.com/sec/2rM6RPm'
+  );
+
+  assert.strictEqual(result.linksConvertidos, 1);
+  assert.strictEqual(result.contemMercadoLivre, true);
+  assert.strictEqual(result.novoTexto.includes('https://mercadolivre.com/sec/2rM6RPm;'), true);
+  assert.strictEqual(result.novoTexto.includes('2XNbgSR'), false);
+});
+
+

@@ -134,6 +134,14 @@ export async function expandUrl(
         currentUrl = candidatos[0].url;
       }
     }
+
+    // Se temos imagens de produtos no HTML da vitrine, captura a principal para antecipar
+    if (!productImageUrl) {
+      const mlImgs = lastHtml.match(/https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi);
+      if (mlImgs && mlImgs.length > 0) {
+        productImageUrl = normalizarFotoMl(mlImgs[0]);
+      }
+    }
   }
 
   // Se temos o HTML da página direta do anúncio (NÃO da vitrine /social/), extrai a imagem
@@ -152,19 +160,79 @@ export async function expandUrl(
   return { resolvedUrl: currentUrl, productImageUrl };
 }
 
+let cachedSocialLinks: Record<string, { link: string; expiresAt: number }> = {};
+
+/**
+ * Consulta a vitrine/perfil mobile do Mercado Livre e descobre o link de compartilhamento oficial (ex: https://mercadolivre.com/sec/...)
+ */
+export async function fetchSocialShortLink(mattWord: string): Promise<string | null> {
+  const cleanWord = (mattWord || '').trim();
+  if (!cleanWord) return null;
+
+  const cached = cachedSocialLinks[cleanWord];
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.link;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(`https://www.mercadolivre.com.br/social/${cleanWord}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      },
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    if (res.ok) {
+      const html = await res.text();
+      const match = html.match(/"shareLink"\s*:\s*"([^"]+)"/);
+      if (match && match[1]) {
+        const cleanLink = match[1].replace(/\\u002F/g, '/').replace(/\\/g, '');
+        if (cleanLink.startsWith('http')) {
+          cachedSocialLinks[cleanWord] = {
+            link: cleanLink,
+            expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24h
+          };
+          return cleanLink;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Social Short Link] Falha ao resolver shareLink oficial:', err);
+  }
+
+  return null;
+}
+
 /**
  * Transforma uma URL do Mercado Livre injetando os parâmetros de afiliado
  */
-export function buildAffiliateUrl(rawUrl: string, mattWord: string, mattTool: string): string {
+export function buildAffiliateUrl(
+  rawUrl: string,
+  mattWord: string,
+  mattTool: string,
+  shortSocialUrl?: string
+): string {
   try {
     const urlObj = new URL(rawUrl);
 
-    // Se for vitrine de terceiros ou cupom sem produto, redireciona para a vitrine do Eduardo
-    if (urlObj.pathname.includes('/social/') && !urlObj.pathname.includes(mattWord)) {
+    // Se for vitrine de terceiros, perfil social ou cupom sem produto, redireciona para a vitrine do Eduardo
+    if (urlObj.pathname.includes('/social/') || urlObj.pathname.startsWith('/cupons')) {
+      if (shortSocialUrl && shortSocialUrl.trim().startsWith('http')) {
+        return shortSocialUrl.trim();
+      }
       return `https://www.mercadolivre.com.br/social/${mattWord}?matt_word=${mattWord}&matt_tool=${mattTool}&forceInApp=true`;
     }
 
-    if (urlObj.pathname.startsWith('/cupons')) {
+    // Se for um link de encurtador (meli.la / ml.la) que não expandiu para produto, nunca anexa query params diretamente
+    const host = urlObj.hostname.toLowerCase();
+    if (host.includes('meli.la') || host.includes('ml.la')) {
+      if (shortSocialUrl && shortSocialUrl.trim().startsWith('http')) {
+        return shortSocialUrl.trim();
+      }
       return `https://www.mercadolivre.com.br/social/${mattWord}?matt_word=${mattWord}&matt_tool=${mattTool}&forceInApp=true`;
     }
 
@@ -256,9 +324,13 @@ export async function downloadProductImage(
   if (!targetImageUrl && productUrl && !productUrl.includes('/social/')) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 6000);
+      const timeout = setTimeout(() => controller.abort(), 12000); // 12s resiliente para resposta do ML
 
-      const headers: Record<string, string> = { ...BROWSER_HEADERS };
+      const headers: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'pt-BR,pt;q=0.9'
+      };
       if (cookie) headers['cookie'] = cookie;
 
       const res = await fetch(productUrl, {
@@ -286,14 +358,15 @@ export async function downloadProductImage(
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 10000); // 10s para baixar imagem
 
     const res = await fetch(targetImageUrl, {
-      headers: BROWSER_HEADERS,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+      },
       signal: controller.signal
     });
-    clearTimeout(timeout);
-
     if (res.ok) {
       const arrayBuf = await res.arrayBuffer();
       const buf = Buffer.from(arrayBuf);
@@ -378,19 +451,29 @@ export async function processMessageText(
   mattTool: string,
   frasesRemoverRaw: string,
   meliCookie = '',
-  meliTag = ''
+  meliTag = '',
+  shortSocialUrl = ''
 ): Promise<ConversionResult> {
   const phrases = frasesRemoverRaw.split('\n');
   const cleanedText = cleanSpamLines(rawText, phrases);
 
-  const urls = cleanedText.match(URL_REGEX) || [];
+  const rawUrls = cleanedText.match(URL_REGEX) || [];
   let novoTexto = cleanedText;
   let linksConvertidos = 0;
   let contemMercadoLivre = false;
   let productImageUrl: string | undefined;
   let resolvedProductUrl: string | undefined;
 
-  for (const rawUrl of urls) {
+  for (const rawUrlWithPunct of rawUrls) {
+    // Isolar pontuação final como ; , . ! ? ) ] * _ ~ " ' para não quebrar a URL
+    let rawUrl = rawUrlWithPunct;
+    let trailingPunctuation = '';
+    const punctMatch = rawUrlWithPunct.match(/^(https?:\/\/[^\s]+?)([;,.:!?)\]*~"'_]+)$/);
+    if (punctMatch) {
+      rawUrl = punctMatch[1];
+      trailingPunctuation = punctMatch[2];
+    }
+
     let resolvedUrl = rawUrl;
     if (isMercadoLivreUrl(rawUrl)) {
       contemMercadoLivre = true;
@@ -406,17 +489,20 @@ export async function processMessageText(
 
     if (isMercadoLivreUrl(resolvedUrl)) {
       contemMercadoLivre = true;
-      const affiliateUrl = buildAffiliateUrl(resolvedUrl, mattWord, mattTool);
+      const affiliateUrl = buildAffiliateUrl(resolvedUrl, mattWord, mattTool, shortSocialUrl);
 
       let finalLink = affiliateUrl;
-      if (meliCookie.trim()) {
+      const isAlreadyShort = finalLink.includes('meli.la/') || finalLink.includes('mercadolivre.com/sec/');
+      const isSocialOrCoupon = resolvedUrl.includes('/social/') || resolvedUrl.includes('/cupons');
+
+      if (meliCookie.trim() && !isAlreadyShort && !isSocialOrCoupon) {
         const short = await shortenToMeli(affiliateUrl, meliCookie, meliTag || mattWord);
         if (short) {
           finalLink = short;
         }
       }
 
-      novoTexto = novoTexto.replace(rawUrl, finalLink);
+      novoTexto = novoTexto.replace(rawUrlWithPunct, finalLink + trailingPunctuation);
       linksConvertidos++;
     }
   }

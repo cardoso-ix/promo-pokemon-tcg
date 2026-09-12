@@ -82,6 +82,9 @@
   const cfgMaxDelay = document.getElementById('cfg-max-delay');
   const cfgMeliCookie = document.getElementById('cfg-meli-cookie');
   const cfgMeliTag = document.getElementById('cfg-meli-tag');
+  const cfgLinkVitrineCurto = document.getElementById('cfg-link-vitrine-curto');
+  const btnDetectarVitrine = document.getElementById('btn-detectar-vitrine');
+  const vitrineDetectFeedback = document.getElementById('vitrine-detect-feedback');
   const cfgSomenteMeli = document.getElementById('cfg-somente-meli');
   const btnTestarCookie = document.getElementById('btn-testar-cookie');
   const cookieTestFeedback = document.getElementById('cookie-test-feedback');
@@ -263,6 +266,7 @@
       cfgMaxDelay.value = data.configs.atraso_maximo_segundos || '600';
       if (cfgMeliCookie) cfgMeliCookie.value = data.configs.meli_cookie || '';
       if (cfgMeliTag) cfgMeliTag.value = data.configs.meli_tag || '';
+      if (cfgLinkVitrineCurto) cfgLinkVitrineCurto.value = data.configs.link_vitrine_curto || 'https://mercadolivre.com/sec/2rM6RPm';
       if (cfgSomenteMeli) cfgSomenteMeli.checked = data.configs.somente_mercadolivre !== 'false';
       cfgFrases.value = data.configs.frases_remover || '';
 
@@ -620,7 +624,7 @@
     'ml-direto': `🔥 OFERTA IMPERDÍVEL POKÉMON TCG! 🔥\nDeck Pokémon Espada e Escudo Rillaboom Copag Original Lacrado!\nDe R$ 89,90 por apenas R$ 49,90 com envio FULL no Mercado Livre!\n\nGaranta o seu deck no link oficial:\nhttps://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917\n\nEstoque super limitado!`,
     'spam-concorrente': `⚡ SUPER PROMOÇÃO DE BOOSTER PACK! ⚡\nBox Pokémon TCG Coleção Especial de Batalha com cartas holográficas raras!\nPreço promocional imperdível: R$ 139,90 parcelado sem juros!\n\nLink da oferta oficial:\nhttps://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917\n\n_Siga nosso canal concorrente @rasgabooster.tcg_\n#rasgaboot #pokemontcg #cartas\nEntre no grupo VIP!`,
     'multi-links': `💥 COMBO DUPLO POKÉMON COPAG! 💥\nGaranta os dois decks mais fortes do formato com super desconto!\n\nDeck 1 - Rillaboom (R$ 49,90):\nhttps://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917\n\nDeck 2 - Cinderace (R$ 54,90):\nhttps://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-cinderace-copag/p/MLB27197918\n\nAproveite o frete único no carrinho!`,
-    'cupom': `🎟️ SUPER CUPOM MERCADO LIVRE ATIVO! 🎟️\nR$ 50 OFF em compras acima de R$ 250 em colecionáveis Pokémon!\n\nCódigo do Cupom: POKESTOCK50\nVálido até 23:59 de hoje ou até esgotar!\n\nAtive o cupom e aproveite no link:\nhttps://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917`,
+    'cupom': `💛 CUPOM DE 25% OFF NO MERCADO LIVRE\n\nPara usar a partir de meia-noite\n\n👉 Siga o tutorial para conseguir resgatar\n\n1️⃣ Entre no app do Meli:\nhttps://www.mercadolivre.com.br/social/concorrente123?matt_word=concorrente123\n2️⃣ Clique na aba "mais" no rodapé\n3️⃣ Clique em "cupons relâmpago"\n4️⃣ Resgate o cupom de 25% off em Full\n\n🚨 Só vai conseguir usar amanhã quem resgatar HOJE, então resgatem JÁ!`,
     'amazon': `📦 OFERTA POKÉMON TCG NA AMAZON BRASIL! 📦\nLata Pokémon Coleção Destinos Brilhantes Copag Original!\nPor apenas R$ 119,00 para membros Prime com entrega grátis!\n\nAcesse na Amazon:\nhttps://www.amazon.com.br/dp/B08WPNQ9PZ\n\nPreço exclusivo para assinantes!`
   };
 
@@ -886,6 +890,11 @@
       await fetch('/api/configs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chave: 'link_vitrine_curto', valor: cfgLinkVitrineCurto ? cfgLinkVitrineCurto.value.trim() : '' })
+      });
+      await fetch('/api/configs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chave: 'frases_remover', valor: cfgFrases.value })
       });
       await fetch('/api/configs', {
@@ -924,26 +933,54 @@
         const res = await fetch('/api/test-meli-cookie', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cookie,
-            tag: (cfgMeliTag && cfgMeliTag.value.trim()) || (cfgMattWord && cfgMattWord.value.trim()) || 'myshoplist'
-          })
+          body: JSON.stringify({ cookie, tag: cfgMeliTag ? cfgMeliTag.value.trim() : '' })
         });
         const data = await res.json();
         if (res.ok && data.ok) {
           cookieTestFeedback.textContent = `✅ ${data.message}`;
           cookieTestFeedback.style.color = 'var(--accent-green)';
-          updateMeliBadge(cookie);
-          showToast('Cookie do Mercado Livre validado com sucesso! ⚡');
+          showToast('Cookie validado e funcionando com meli.la! ✓');
         } else {
-          cookieTestFeedback.textContent = `❌ ${data.error || 'Cookie inválido ou rejeitado'}`;
+          cookieTestFeedback.textContent = `❌ ${data.error || 'Cookie inválido'}`;
           cookieTestFeedback.style.color = 'var(--accent-danger)';
         }
       } catch (err) {
-        cookieTestFeedback.textContent = '❌ Falha de rede ao testar.';
+        cookieTestFeedback.textContent = '❌ Erro de conexão ao testar.';
         cookieTestFeedback.style.color = 'var(--accent-danger)';
       } finally {
         btnTestarCookie.disabled = false;
+      }
+    });
+  }
+
+  if (btnDetectarVitrine) {
+    btnDetectarVitrine.addEventListener('click', async () => {
+      const mattWord = cfgMattWord ? cfgMattWord.value.trim() : '';
+      btnDetectarVitrine.disabled = true;
+      vitrineDetectFeedback.textContent = '⏳ Buscando link oficial...';
+      vitrineDetectFeedback.style.color = 'var(--text-muted)';
+
+      try {
+        const res = await fetch('/api/detect-social-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mattWord })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok && data.shortLink) {
+          if (cfgLinkVitrineCurto) cfgLinkVitrineCurto.value = data.shortLink;
+          vitrineDetectFeedback.textContent = `✅ Encontrado: ${data.shortLink}`;
+          vitrineDetectFeedback.style.color = 'var(--accent-green)';
+          showToast('Link oficial detectado! Salve para aplicar. ✓');
+        } else {
+          vitrineDetectFeedback.textContent = `❌ ${data.error || 'Não encontrado'}`;
+          vitrineDetectFeedback.style.color = 'var(--accent-danger)';
+        }
+      } catch (err) {
+        vitrineDetectFeedback.textContent = '❌ Erro de conexão.';
+        vitrineDetectFeedback.style.color = 'var(--accent-danger)';
+      } finally {
+        btnDetectarVitrine.disabled = false;
       }
     });
   }

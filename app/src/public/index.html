@@ -349,6 +349,16 @@
             <label for="cfg-matt-tool">matt_tool (Etiqueta de Ferramenta)</label>
             <input type="text" id="cfg-matt-tool" class="input-field" placeholder="Ex: 96097202">
           </div>
+
+          <div class="form-group">
+            <label for="cfg-link-vitrine-curto">Link Curto da Lista de Compras / Vitrine (Cupons)</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="text" id="cfg-link-vitrine-curto" class="input-field" placeholder="Ex: https://mercadolivre.com/sec/2rM6RPm">
+              <button type="button" id="btn-detectar-vitrine" class="btn btn-secondary" style="white-space: nowrap;">🔍 Buscar Oficial</button>
+            </div>
+            <span class="field-hint">Link curto oficial (<code>mercadolivre.com/sec/...</code> ou <code>meli.la/...</code>) da sua lista de compras/vitrine. Usado em postagens de tutoriais e cupons de desconto sem anúncio fixo.</span>
+            <span id="vitrine-detect-feedback" class="action-feedback" style="display: block; margin-top: 4px;"></span>
+          </div>
         </div>
 
         <div class="card">

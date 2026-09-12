@@ -387,6 +387,7 @@ export class WhatsAppManager {
     const meliCookie = getConfig('meli_cookie', '');
     const meliTag = getConfig('meli_tag', mattWord);
     const frasesRemover = getConfig('frases_remover', '');
+    const linkVitrineCurto = getConfig('link_vitrine_curto', 'https://mercadolivre.com/sec/2rM6RPm');
 
     const { novoTexto, linksConvertidos, hashConteudo, contemMercadoLivre, productImageUrl, resolvedProductUrl } =
       await processMessageText(
@@ -396,7 +397,8 @@ export class WhatsAppManager {
         mattTool,
         frasesRemover,
         meliCookie,
-        meliTag
+        meliTag,
+        linkVitrineCurto
       );
 
     // REGRA DE NEGÓCIO: Apenas postar publicações do Mercado Livre

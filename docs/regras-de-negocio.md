@@ -42,6 +42,11 @@ Toda mensagem que chega aos grupos de WhatsApp em que o chip participa é avalia
 - Isso garante que 100% das ofertas enviadas aos seus grupos de destino gerem comissões oficiais no seu painel de afiliado.
 - Esta opção pode ser ajustada a qualquer momento na aba Configurações (*"Postar Apenas Mercado Livre"*).
 
+### 2.4. Cupons e Listas de Compras (`link_vitrine_curto`)
+- Mensagens de tutoriais e cupons de desconto que não contêm um anúncio MLB específico apontam para a vitrine do afiliado.
+- Como a API de criação de links rejeita rotas `/social/`, o sistema substitui automaticamente links de concorrentes pelo **link curto oficial da sua lista de compras** (`link_vitrine_curto`, ex: `https://mercadolivre.com/sec/2rM6RPm`).
+- O operador pode editar ou autodetectar esse link oficial a qualquer momento na aba Configurações.
+
 ---
 
 ## 3. Limpeza de Texto e Preservação de Formatação

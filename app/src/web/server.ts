@@ -20,7 +20,8 @@ import { whatsAppManager, WhatsAppState } from '../whatsapp/client.js';
 import {
   shortenToMeli,
   processMessageText,
-  downloadProductImage
+  downloadProductImage,
+  fetchSocialShortLink
 } from '../core/affiliate.js';
 
 import fs from 'node:fs';
@@ -202,6 +203,27 @@ export async function createServer() {
     }
   });
 
+  // API REST: Autodetectar link curto da vitrine / lista de compras no Mercado Livre
+  app.post<{ Body: { mattWord?: string } }>('/api/detect-social-link', async (req, reply) => {
+    const mattWord = (req.body?.mattWord || getConfig('affiliate_matt_word', CONFIG.defaultMattWord)).trim();
+    if (!mattWord) {
+      return reply.status(400).send({ ok: false, error: 'Informe o apelido (matt_word).' });
+    }
+
+    try {
+      const shortLink = await fetchSocialShortLink(mattWord);
+      if (shortLink) {
+        return { ok: true, shortLink, message: `Link oficial encontrado: ${shortLink}` };
+      }
+      return reply.status(404).send({
+        ok: false,
+        error: 'Não foi possível detectar o link curto da vitrine automaticamente. Cole manualmente o link curto compartilhado do app.'
+      });
+    } catch (err: any) {
+      return reply.status(500).send({ ok: false, error: err?.message || 'Erro ao buscar link da vitrine.' });
+    }
+  });
+
   // API REST: Laboratório de Testes (Simulador de Pipeline)
   app.post<{ Body: { text: string } }>('/api/test-pipeline', async (req, reply) => {
     const { text } = req.body || {};
@@ -215,6 +237,7 @@ export async function createServer() {
       const frasesRemover = getConfig('frases_remover', '@rasgabooster.tcg\n#rasgaboot\n@rasgabooster');
       const meliCookie = getConfig('meli_cookie', '');
       const meliTag = getConfig('meli_tag', mattWord);
+      const linkVitrineCurto = getConfig('link_vitrine_curto', 'https://mercadolivre.com/sec/2rM6RPm');
 
       const result = await processMessageText(
         text,
@@ -223,7 +246,8 @@ export async function createServer() {
         mattTool,
         frasesRemover,
         meliCookie,
-        meliTag
+        meliTag,
+        linkVitrineCurto
       );
 
       let imagePreviewUrl: string | null = null;
