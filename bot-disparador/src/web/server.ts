@@ -59,6 +59,7 @@ export async function createServer() {
     // Rotas públicas que não requerem autenticação
     if (
       pathname === '/health' ||
+      pathname === '/api/status' ||
       pathname === '/api/auth/login' ||
       pathname === '/login.html' ||
       pathname === '/favicon.svg'
