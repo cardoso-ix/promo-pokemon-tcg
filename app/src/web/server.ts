@@ -14,7 +14,8 @@ import {
   deleteRota,
   getRecentLogs,
   getCachedChats,
-  getPostsLastHour
+  getPostsLastHour,
+  insertLog
 } from '../db/database.js';
 import { whatsAppManager, WhatsAppState } from '../whatsapp/client.js';
 import {
@@ -23,6 +24,7 @@ import {
   downloadProductImage,
   fetchSocialShortLink
 } from '../core/affiliate.js';
+import { extrairDadosAnuncio } from '../core/anuncio.js';
 
 import fs from 'node:fs';
 
@@ -295,6 +297,111 @@ export async function createServer() {
       return reply.status(500).send({ ok: false, error: err?.message || 'Falha ao disparar para o WhatsApp.' });
     }
   });
+
+  // API REST: Gerador de Anúncios - Extrair Dados por Link
+  app.post<{ Body: { url: string; cupom?: string; precoDe?: string; precoPor?: string } }>(
+    '/api/anuncio/extrair',
+    async (req, reply) => {
+      const { url, cupom, precoDe, precoPor } = req.body || {};
+      if (!url || !url.trim()) {
+        return reply.status(400).send({ ok: false, error: 'Cole o link do Mercado Livre para gerar o anúncio.' });
+      }
+
+      try {
+        const mattWord = getConfig('affiliate_matt_word', CONFIG.defaultMattWord);
+        const mattTool = getConfig('affiliate_matt_tool', CONFIG.defaultMattTool);
+        const meliCookie = getConfig('meli_cookie', '');
+        const meliTag = getConfig('meli_tag', mattWord);
+
+        const dados = await extrairDadosAnuncio(
+          { url, cupom, precoDe, precoPor },
+          { mattWord, mattTool, meliCookie, meliTag }
+        );
+
+        return dados;
+      } catch (err: any) {
+        return reply.status(500).send({ ok: false, error: err?.message || 'Erro ao extrair dados do anúncio.' });
+      }
+    }
+  );
+
+  // API REST: Gerador de Anúncios - Publicar no WhatsApp
+  app.post<{ Body: { destinos: string[]; texto: string; imageUrl?: string } }>(
+    '/api/anuncio/publicar',
+    async (req, reply) => {
+      const { destinos, texto, imageUrl } = req.body || {};
+      if (!destinos || !Array.isArray(destinos) || destinos.length === 0) {
+        return reply.status(400).send({ ok: false, error: 'Selecione pelo menos um grupo de destino para publicar.' });
+      }
+      if (!texto || !texto.trim()) {
+        return reply.status(400).send({ ok: false, error: 'O texto do anúncio não pode estar vazio.' });
+      }
+
+      try {
+        let imageBuffer: Buffer | null = null;
+        if (imageUrl && imageUrl.startsWith('http')) {
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000);
+            const res = await fetch(imageUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              },
+              signal: controller.signal
+            });
+            clearTimeout(timeout);
+            if (res.ok) {
+              const arrayBuf = await res.arrayBuffer();
+              imageBuffer = Buffer.from(arrayBuf);
+            }
+          } catch (e) {
+            console.warn('[Publicar Anúncio] Falha ao baixar imagem remota:', e);
+          }
+        }
+
+        let enviados = 0;
+        const falhas: string[] = [];
+
+        for (const destino of destinos) {
+          try {
+            await whatsAppManager.sendDirectMessage(destino, texto, imageBuffer);
+            enviados++;
+
+            insertLog({
+              origem_chat_id: 'gerador_manual',
+              origem_nome: 'Gerador Manual de Anúncios',
+              destino_chat_id: destino,
+              hash_conteudo: `manual_${Date.now()}_${Math.random()}`,
+              texto_original: texto,
+              texto_publicado: texto,
+              tem_foto: Boolean(imageBuffer && imageBuffer.length > 0),
+              links_convertidos: 1,
+              status: 'enviado',
+              motivo: 'disparo_manual_gerador'
+            });
+          } catch (err: any) {
+            console.error(`Erro ao disparar para ${destino}:`, err);
+            falhas.push(destino);
+          }
+        }
+
+        broadcast('stats_update', {
+          postsLastHour: getPostsLastHour(),
+          totalEnviadosHoje: getRecentLogs(100).filter((l) => l.status === 'enviado').length
+        });
+        broadcast('logs_update', getRecentLogs(30));
+
+        return {
+          ok: true,
+          totalEnviados: enviados,
+          falhas,
+          message: `Anúncio publicado com sucesso em ${enviados} grupo(s)!`
+        };
+      } catch (err: any) {
+        return reply.status(500).send({ ok: false, error: err?.message || 'Falha ao publicar anúncio.' });
+      }
+    }
+  );
 
   return app;
 }

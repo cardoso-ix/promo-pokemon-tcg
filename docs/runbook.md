@@ -16,6 +16,15 @@ Tanto o **Replicador de Ofertas** quanto o **Bot Disparador & Atendimento IA** r
 - **Acesso Online**: Link público HTTPS gerado no seu projeto do Railway para o serviço `bot-disparador`.
 - **Função**: Extração de leads de grupos com 1 clique, disparos automáticos em massa com proteção anti-ban (Spintax), simulador WhatsApp ao vivo e atendimento privado automático com DeepSeek V4.
 
+### 1.3. Gerador Manual de Anúncios por Link (No Painel Replicador)
+- **Acesso**: Aba **⚡ Gerador de Anúncios** no Cockpit do Replicador.
+- **Como Usar**:
+  1. Cole o link de afiliado ou produto do Mercado Livre (aceita `https://mercadolivre.com/sec/...`, `meli.la` ou link direto).
+  2. *(Opcional)* Preencha o campo de **Cupom de Desconto** (ex: `APP10`) e os campos de preço (De / Por).
+  3. Clique em **⚡ Puxar Dados & Gerar Anúncio**: o sistema extrai a foto 2X HD do Mercado Livre e monta a copy persuasiva para Pokémon TCG.
+  4. Marque os grupos de destino desejados (ou use o botão "Marcar Todos os Destinos de Rotas").
+  5. Clique em **🚀 Publicar no WhatsApp** para disparar a foto com a legenda com 1 clique!
+
 ---
 
 ## 2. Operação Diária do Bot Disparador na Nuvem

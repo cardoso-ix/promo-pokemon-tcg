@@ -224,9 +224,11 @@
       case 'rotas_updated':
         allRotas = data;
         renderRotas(data);
+        renderAnuncioDestinos();
         break;
       case 'chats_updated':
         allChats = data;
+        renderAnuncioDestinos();
         break;
       case 'stats_update':
         updateStats(data);
@@ -278,6 +280,7 @@
     allChats = data.chats || [];
     allRotas = data.rotas || [];
     renderRotas(allRotas);
+    renderAnuncioDestinos();
 
     // 4. Logs no Feed
     feedLogs = data.logs || [];
@@ -1034,6 +1037,262 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#039;');
+  }
+
+  // ==========================================
+  // GERADOR DE ANÚNCIOS POR LINK
+  // ==========================================
+  const anuncioUrl = document.getElementById('anuncio-url');
+  const anuncioCupom = document.getElementById('anuncio-cupom');
+  const anuncioPrecoDe = document.getElementById('anuncio-preco-de');
+  const anuncioPrecoPor = document.getElementById('anuncio-preco-por');
+  const btnGerarAnuncio = document.getElementById('btn-gerar-anuncio');
+  const btnGerarSpinner = document.getElementById('btn-gerar-spinner');
+  const btnGerarLabel = document.getElementById('btn-gerar-label');
+  const btnLimparAnuncio = document.getElementById('btn-limpar-anuncio');
+  const anuncioFeedback = document.getElementById('anuncio-feedback');
+
+  const anuncioStatusBadge = document.getElementById('anuncio-status-badge');
+  const anuncioImagePlaceholder = document.getElementById('anuncio-image-placeholder');
+  const anuncioImagePreview = document.getElementById('anuncio-image-preview');
+  const anuncioHdBadge = document.getElementById('anuncio-hd-badge');
+
+  const anuncioTextoFinal = document.getElementById('anuncio-texto-final');
+  const anuncioCharCounter = document.getElementById('anuncio-char-counter');
+  const btnSelectAllDestinos = document.getElementById('btn-select-all-destinos');
+  const anuncioDestinosList = document.getElementById('anuncio-destinos-list');
+
+  const btnPublicarAnuncio = document.getElementById('btn-publicar-anuncio');
+  const btnPublicarSpinner = document.getElementById('btn-publicar-spinner');
+  const btnPublicarLabel = document.getElementById('btn-publicar-label');
+  const btnCopiarAnuncio = document.getElementById('btn-copiar-anuncio');
+  const anuncioPublishStatus = document.getElementById('anuncio-publish-status');
+
+  let currentAnuncioData = null;
+
+  function renderAnuncioDestinos() {
+    if (!anuncioDestinosList) return;
+    if (!allChats || allChats.length === 0) {
+      anuncioDestinosList.innerHTML = '<span class="text-muted" style="font-size: 0.8rem;">Nenhum grupo sincronizado. Conecte o WhatsApp para listar seus grupos.</span>';
+      return;
+    }
+
+    // Coletar destinos configurados nas rotas ativas
+    const rotaDestinosSet = new Set();
+    if (allRotas) {
+      for (const r of allRotas) {
+        if (r.ativa && r.destinos) {
+          for (const d of r.destinos) {
+            rotaDestinosSet.add(d);
+          }
+        }
+      }
+    }
+
+    anuncioDestinosList.innerHTML = '';
+    allChats.forEach((chat) => {
+      const isRouteDest = rotaDestinosSet.has(chat.chat_id);
+      const item = document.createElement('label');
+      item.className = 'destino-item';
+      item.innerHTML = `
+        <input type="checkbox" value="${escapeHtml(chat.chat_id)}" ${isRouteDest ? 'checked' : ''}>
+        <span>${escapeHtml(chat.nome || chat.chat_id)}</span>
+        ${isRouteDest ? '<span class="badge badge-meli" style="margin-left: auto; font-size: 0.7rem; padding: 2px 6px;">Destino Rota</span>' : ''}
+      `;
+      anuncioDestinosList.appendChild(item);
+    });
+  }
+
+  if (anuncioTextoFinal && anuncioCharCounter) {
+    anuncioTextoFinal.addEventListener('input', () => {
+      anuncioCharCounter.textContent = `${anuncioTextoFinal.value.length} caracteres`;
+    });
+  }
+
+  if (btnSelectAllDestinos) {
+    btnSelectAllDestinos.addEventListener('click', () => {
+      const checkboxes = anuncioDestinosList.querySelectorAll('input[type="checkbox"]');
+      const allChecked = Array.from(checkboxes).every((c) => c.checked);
+      checkboxes.forEach((c) => (c.checked = !allChecked));
+      btnSelectAllDestinos.textContent = allChecked ? 'Marcar Todos os Grupos' : 'Desmarcar Todos';
+    });
+  }
+
+  if (btnLimparAnuncio) {
+    btnLimparAnuncio.addEventListener('click', () => {
+      anuncioUrl.value = '';
+      anuncioCupom.value = '';
+      anuncioPrecoDe.value = '';
+      anuncioPrecoPor.value = '';
+      anuncioFeedback.textContent = '';
+      anuncioFeedback.className = 'action-feedback';
+      anuncioTextoFinal.value = '';
+      anuncioCharCounter.textContent = '0 caracteres';
+      anuncioImagePreview.src = '';
+      anuncioImagePreview.style.display = 'none';
+      anuncioImagePlaceholder.style.display = 'flex';
+      anuncioHdBadge.style.display = 'none';
+      anuncioStatusBadge.style.display = 'none';
+      btnPublicarAnuncio.disabled = true;
+      anuncioPublishStatus.textContent = '';
+      currentAnuncioData = null;
+    });
+  }
+
+  if (btnCopiarAnuncio) {
+    btnCopiarAnuncio.addEventListener('click', async () => {
+      const text = anuncioTextoFinal.value;
+      if (!text) {
+        showToast('Nenhum texto para copiar!');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('Mensagem copiada para a área de transferência! 📋');
+      } catch {
+        anuncioTextoFinal.select();
+        document.execCommand('copy');
+        showToast('Mensagem copiada! 📋');
+      }
+    });
+  }
+
+  if (btnGerarAnuncio) {
+    btnGerarAnuncio.addEventListener('click', async () => {
+      const url = (anuncioUrl.value || '').trim();
+      if (!url) {
+        anuncioFeedback.textContent = '⚠️ Informe a URL do produto ou link de afiliado.';
+        anuncioFeedback.className = 'action-feedback error';
+        anuncioUrl.focus();
+        return;
+      }
+
+      btnGerarAnuncio.disabled = true;
+      btnGerarSpinner.style.display = 'inline-block';
+      btnGerarLabel.textContent = 'Extraindo dados...';
+      anuncioFeedback.textContent = 'Conectando ao Mercado Livre e buscando foto HD...';
+      anuncioFeedback.className = 'action-feedback';
+
+      try {
+        const payload = {
+          url,
+          cupom: (anuncioCupom.value || '').trim(),
+          precoDe: (anuncioPrecoDe.value || '').trim(),
+          precoPor: (anuncioPrecoPor.value || '').trim()
+        };
+
+        const res = await fetch('/api/anuncio/extrair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || 'Falha ao processar dados do anúncio.');
+        }
+
+        currentAnuncioData = data;
+
+        // Atualizar imagem
+        if (data.imageUrl) {
+          anuncioImagePreview.src = data.imageUrl;
+          anuncioImagePreview.style.display = 'block';
+          anuncioImagePlaceholder.style.display = 'none';
+          anuncioHdBadge.style.display = 'block';
+        } else {
+          anuncioImagePreview.style.display = 'none';
+          anuncioImagePlaceholder.style.display = 'flex';
+          anuncioHdBadge.style.display = 'none';
+        }
+
+        // Atualizar copy
+        anuncioTextoFinal.value = data.textoGerado;
+        anuncioCharCounter.textContent = `${data.textoGerado.length} caracteres`;
+
+        // Ativar botão de publicar
+        btnPublicarAnuncio.disabled = false;
+        anuncioStatusBadge.style.display = 'inline-flex';
+        anuncioStatusBadge.className = 'badge badge-connected';
+        anuncioStatusBadge.textContent = 'Pronto para Postar';
+
+        anuncioFeedback.textContent = '✅ Anúncio e foto oficial 2X HD gerados com sucesso!';
+        anuncioFeedback.className = 'action-feedback success';
+
+        showToast('Anúncio e foto oficial 2X HD gerados com sucesso! ✨');
+        playChime();
+      } catch (err) {
+        console.error('Erro ao gerar anúncio:', err);
+        anuncioFeedback.textContent = `❌ ${err.message || 'Erro ao conectar.'}`;
+        anuncioFeedback.className = 'action-feedback error';
+        showToast(`Falha: ${err.message || 'Erro ao extrair dados.'}`);
+      } finally {
+        btnGerarAnuncio.disabled = false;
+        btnGerarSpinner.style.display = 'none';
+        btnGerarLabel.textContent = '⚡ Puxar Dados & Gerar Anúncio';
+      }
+    });
+  }
+
+  if (btnPublicarAnuncio) {
+    btnPublicarAnuncio.addEventListener('click', async () => {
+      const texto = (anuncioTextoFinal.value || '').trim();
+      if (!texto) {
+        showToast('O texto do anúncio não pode estar vazio!');
+        return;
+      }
+
+      const checkboxes = anuncioDestinosList.querySelectorAll('input[type="checkbox"]:checked');
+      const destinos = Array.from(checkboxes).map((c) => c.value);
+
+      if (destinos.length === 0) {
+        alert('Selecione pelo menos um grupo de destino para publicar o anúncio.');
+        return;
+      }
+
+      if (!confirm(`Deseja disparar este anúncio com foto para ${destinos.length} grupo(s) no WhatsApp?`)) {
+        return;
+      }
+
+      btnPublicarAnuncio.disabled = true;
+      btnPublicarSpinner.style.display = 'inline-block';
+      btnPublicarLabel.textContent = 'Publicando...';
+      anuncioPublishStatus.textContent = `Disparando para ${destinos.length} grupo(s)...`;
+      anuncioPublishStatus.className = 'action-feedback';
+
+      try {
+        const payload = {
+          destinos,
+          texto,
+          imageUrl: currentAnuncioData?.imageUrl || undefined
+        };
+
+        const res = await fetch('/api/anuncio/publicar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || 'Falha ao publicar anúncio.');
+        }
+
+        anuncioPublishStatus.textContent = `✅ ${data.message}`;
+        anuncioPublishStatus.className = 'action-feedback success';
+        showToast(data.message);
+        playChime();
+      } catch (err) {
+        console.error('Erro ao publicar anúncio:', err);
+        anuncioPublishStatus.textContent = `❌ ${err.message || 'Falha ao disparar.'}`;
+        anuncioPublishStatus.className = 'action-feedback error';
+        showToast(`Erro no envio: ${err.message}`);
+      } finally {
+        btnPublicarAnuncio.disabled = false;
+        btnPublicarSpinner.style.display = 'none';
+        btnPublicarLabel.textContent = '🚀 Publicar no WhatsApp';
+      }
+    });
   }
 
   // Iniciar WebSocket

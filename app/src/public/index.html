@@ -107,6 +107,9 @@
       <button class="tab-btn" data-tab="rotas">
         <span class="tab-icon">🔀</span> Rotas de Grupos (<span id="rotas-count">0</span>)
       </button>
+      <button class="tab-btn" data-tab="anuncio">
+        <span class="tab-icon">⚡</span> Gerador de Anúncios
+      </button>
       <button class="tab-btn" data-tab="lab">
         <span class="tab-icon">🧪</span> Laboratório de Testes
       </button>
@@ -171,7 +174,109 @@
       </div>
     </main>
 
-    <!-- TAB 3: Laboratório de Testes (Simulador de Pipeline) -->
+    <!-- TAB 3: Gerador de Anúncios por Link -->
+    <main id="tab-anuncio" class="tab-content">
+      <div class="section-toolbar">
+        <div>
+          <h2>⚡ Gerador de Anúncios por Link</h2>
+          <p class="section-desc">Cole o link de afiliado ou produto do Mercado Livre. O sistema extrai a foto 2X HD, formata a copy com cupom e permite postar com 1 clique.</p>
+        </div>
+      </div>
+
+      <div class="anuncio-grid-layout">
+        <!-- Coluna 1: Entrada de Dados -->
+        <div class="card anuncio-card">
+          <div class="card-header-flex">
+            <h3>1. Dados da Oferta</h3>
+            <span class="badge badge-meli">Mercado Livre</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="anuncio-url">Link do Produto ou Afiliado *</label>
+            <input type="text" id="anuncio-url" class="input-field" placeholder="https://mercadolivre.com/sec/xxxx ou https://meli.la/xxxx ou link do produto">
+            <span class="form-hint">Aceita link curto oficial do app (sec/...), meli.la ou link completo do anúncio.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="anuncio-cupom">🎟️ Cupom de Desconto (Opcional)</label>
+            <input type="text" id="anuncio-cupom" class="input-field" placeholder="Ex: APP10, 10OFF, POKEMON15">
+            <span class="form-hint">Se preenchido, adiciona automaticamente a linha de cupom destacada na mensagem.</span>
+          </div>
+
+          <div class="price-grid">
+            <div class="form-group">
+              <label class="form-label" for="anuncio-preco-de">Preço DE (Opcional)</label>
+              <input type="text" id="anuncio-preco-de" class="input-field" placeholder="Ex: 180,00">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="anuncio-preco-por">Preço POR (Opcional)</label>
+              <input type="text" id="anuncio-preco-por" class="input-field" placeholder="Ex: 122,00">
+            </div>
+          </div>
+
+          <div class="anuncio-actions">
+            <button id="btn-gerar-anuncio" class="btn btn-primary btn-foil btn-large">
+              <span id="btn-gerar-spinner" class="spinner-small" style="display: none;"></span>
+              <span id="btn-gerar-label">⚡ Puxar Dados & Gerar Anúncio</span>
+            </button>
+            <button id="btn-limpar-anuncio" class="btn btn-ghost">Limpar</button>
+          </div>
+          <span id="anuncio-feedback" class="action-feedback"></span>
+        </div>
+
+        <!-- Coluna 2: Preview do Post & Publicação -->
+        <div class="card anuncio-card">
+          <div class="card-header-flex">
+            <h3>2. Preview & Publicação</h3>
+            <span id="anuncio-status-badge" class="badge badge-disconnected" style="display: none;">Aguardando Link</span>
+          </div>
+
+          <div id="anuncio-preview-box" class="anuncio-preview-box">
+            <!-- Imagem HD do Produto -->
+            <div class="anuncio-image-wrapper">
+              <div id="anuncio-image-placeholder" class="anuncio-image-placeholder">
+                <div class="placeholder-icon">🖼️</div>
+                <span>A foto oficial em 2X HD aparecerá aqui após gerar</span>
+              </div>
+              <img id="anuncio-image-preview" class="anuncio-image-preview" style="display: none;" alt="Preview Produto">
+              <div id="anuncio-hd-badge" class="anuncio-hd-badge" style="display: none;">✨ FOTO 2X HD</div>
+            </div>
+
+            <!-- Editor da Copy -->
+            <div class="form-group" style="margin-top: 14px;">
+              <div class="card-header-flex">
+                <label class="form-label" for="anuncio-texto-final">Mensagem Formatada (Editável):</label>
+                <span id="anuncio-char-counter" class="char-counter">0 caracteres</span>
+              </div>
+              <textarea id="anuncio-texto-final" class="textarea-field anuncio-textarea" rows="8" placeholder="A mensagem pronta com emojis, título, link e cupom aparecerá aqui..."></textarea>
+            </div>
+
+            <!-- Seleção de Destinos -->
+            <div class="destinos-section">
+              <div class="card-header-flex" style="margin-bottom: 8px;">
+                <label class="form-label">Grupos de Destino:</label>
+                <button type="button" id="btn-select-all-destinos" class="btn-link">Marcar Todos os Destinos de Rotas</button>
+              </div>
+              <div id="anuncio-destinos-list" class="anuncio-destinos-list">
+                <span class="text-muted">Carregando grupos disponíveis...</span>
+              </div>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="anuncio-dispatch-actions">
+              <button id="btn-publicar-anuncio" class="btn btn-primary btn-large" style="flex: 1;" disabled>
+                <span id="btn-publicar-spinner" class="spinner-small" style="display: none;"></span>
+                <span id="btn-publicar-label">🚀 Publicar no WhatsApp</span>
+              </button>
+              <button id="btn-copiar-anuncio" class="btn btn-secondary" title="Copiar texto da mensagem">📋 Copiar</button>
+            </div>
+            <span id="anuncio-publish-status" class="action-feedback"></span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 4: Laboratório de Testes (Simulador de Pipeline) -->
     <main id="tab-lab" class="tab-content">
       <div class="section-toolbar">
         <div>
