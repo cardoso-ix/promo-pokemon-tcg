@@ -30,7 +30,7 @@ Ambos os serviços operam 24/7 na nuvem:
 * **Painel Replicador de Ofertas (Railway)**:  
   👉 **`https://promo-replica-bot-production-7d52.up.railway.app`**
 * **Painel Bot Disparador & Atendimento IA (Railway)**:  
-  👉 **Disponível no painel do seu projeto no Railway** *(porta interna mapeada automaticamente com domínio HTTPS)*
+  👉 **`https://bot-disparador-ia-production.up.railway.app`**
 * **Repositório GitHub Oficial**:  
   👉 `https://github.com/cardoso-ix/promo-pokemon-tcg` (Branch: `main`)
 

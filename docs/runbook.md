@@ -14,7 +14,7 @@ Tanto o **Replicador de Ofertas** quanto o **Bot Disparador & Atendimento IA** r
 - **Autenticação**: Protegido por login e senha. Sessão criptografada persistente de 30 dias.
 
 ### 1.2. Painel do Bot Disparador & Atendimento IA
-- **Acesso Online**: Link público HTTPS gerado no seu projeto do Railway para o serviço `bot-disparador`.
+- **Acesso Online**: `https://bot-disparador-ia-production.up.railway.app`
 - **Função**: Extração de leads de grupos com 1 clique, disparos automáticos em massa com proteção anti-ban (Spintax), simulador WhatsApp ao vivo e atendimento privado automático com DeepSeek V4.
 - **Autenticação**: Protegido por login e senha. Sessão criptografada persistente de 30 dias.
 
