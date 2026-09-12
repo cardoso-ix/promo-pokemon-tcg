@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Disparador Pro & IA DeepSeek — Google Cloud Aesthetic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Sidebar / Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#gemini-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 17L12 22L22 17" stroke="url(#gemini-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 12L12 17L22 12" stroke="url(#gemini-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="gemini-grad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#8ab4f8"/>
+                <stop offset="1" stop-color="#c084fc"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h2>Disparador Pro</h2>
+          <span class="brand-badge">DeepSeek V4</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="dashboard">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+          <span>Visão Geral</span>
+        </button>
+        <button class="nav-item" data-tab="grupos">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span>Captação de Grupos</span>
+        </button>
+        <button class="nav-item" data-tab="contatos">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span>Base de Leads</span>
+        </button>
+        <button class="nav-item" data-tab="campanhas">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          <span>Disparador em Massa</span>
+        </button>
+        <button class="nav-item" data-tab="deepseek">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 2a10 10 0 0 1 10 10h-10V2z"></path><path d="M12 12l8 8"></path></svg>
+          <span>Atendimento IA</span>
+        </button>
+        <button class="nav-item" data-tab="configuracoes">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span>Anti-Ban & Ajustes</span>
+        </button>
+        <button class="nav-item" data-tab="logs">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          <span>Logs ao Vivo</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="status-dot disconnected" id="connection-dot"></span>
+          <div class="status-meta">
+            <span class="status-title" id="connection-title">Desconectado</span>
+            <span class="status-sub" id="connection-sub">Aguardando login</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-title">
+          <h1 id="page-title">Visão Geral</h1>
+          <p id="page-desc">Monitore a conexão do chip, campanhas ativas e métricas em tempo real.</p>
+        </div>
+
+        <div class="header-actions">
+          <div class="chip-info" id="phone-pill" style="display: none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            <span id="phone-display">+55 ...</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-sync-all">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            Sincronizar
+          </button>
+        </div>
+      </header>
+
+      <!-- TAB 1: DASHBOARD -->
+      <section class="tab-pane active" id="pane-dashboard">
+        <!-- Metric Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon blue">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Total de Leads Captados</span>
+              <h3 class="metric-value" id="stat-contatos">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Grupos Detectados</span>
+              <h3 class="metric-value" id="stat-grupos">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon green">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Disparos Enviados Hoje</span>
+              <h3 class="metric-value" id="stat-envios">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon cyan">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12l8 8"></path></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Respostas IA (DeepSeek)</span>
+              <h3 class="metric-value" id="stat-ia">0</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connection Card & Quick Actions -->
+        <div class="dashboard-grid">
+          <div class="glass-card connection-card">
+            <div class="card-header">
+              <h3>Conexão com o WhatsApp</h3>
+              <span class="badge" id="card-badge-status">Desconectado</span>
+            </div>
+            <div class="card-body">
+              <!-- QR Code Display -->
+              <div class="qr-container" id="qr-box">
+                <div class="qr-placeholder" id="qr-placeholder">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#5f6368" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                  <p>Inicie a conexão para gerar o QR Code ou Código de Pareamento</p>
+                </div>
+                <img id="qr-image" src="" alt="QR Code" style="display: none;">
+              </div>
+
+              <!-- Pairing Code Display -->
+              <div class="pairing-code-box" id="pairing-code-container" style="display: none;">
+                <label>Código de Emparelhamento (8 dígitos):</label>
+                <div class="pairing-code-display" id="pairing-code-val">---- ----</div>
+                <small>Digite este código no seu WhatsApp em: Aparelhos Conectados &gt; Conectar com número de telefone.</small>
+              </div>
+
+              <!-- Connection Actions Form -->
+              <div class="connection-form">
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="pairing-phone-input">Número do Celular (Opcional p/ Pairing Code):</label>
+                    <input type="text" id="pairing-phone-input" placeholder="Ex: 5511999999999" class="input-field">
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button class="btn btn-primary" id="btn-connect-qr">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    Conectar WhatsApp
+                  </button>
+                  <button class="btn btn-danger" id="btn-disconnect" style="display: none;">
+                    Desconectar Sessão
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions & Overview -->
+          <div class="glass-card">
+            <div class="card-header">
+              <h3>Painel de Ações Rápidas</h3>
+            </div>
+            <div class="card-body quick-actions-list">
+              <button class="quick-action-btn" data-action="go-grupos">
+                <div class="action-icon purple">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                </div>
+                <div class="action-text">
+                  <h4>Captar Membros de Grupos</h4>
+                  <p>Extraia contatos e números com 1 clique de todos os seus grupos.</p>
+                </div>
+                <span class="chevron">→</span>
+              </button>
+
+              <button class="quick-action-btn" data-action="go-campanhas">
+                <div class="action-icon green">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
+                </div>
+                <div class="action-text">
+                  <h4>Nova Campanha de Disparo</h4>
+                  <p>Dispare ofertas personalizadas com Spintax anti-ban.</p>
+                </div>
+                <span class="chevron">→</span>
+              </button>
+
+              <button class="quick-action-btn" data-action="go-deepseek">
+                <div class="action-icon cyan">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path></svg>
+                </div>
+                <div class="action-text">
+                  <h4>Configurar Atendimento IA (DeepSeek)</h4>
+                  <p>Defina o tom de voz e instruções para o bot responder no privado.</p>
+                </div>
+                <span class="chevron">→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: GRUPOS & EXTRAÇÃO -->
+      <section class="tab-pane" id="pane-grupos">
+        <div class="pane-header">
+          <div>
+            <h2>Grupos do WhatsApp Conectado</h2>
+            <p>Selecione um grupo para extrair instantaneamente os participantes e criar listas de leads.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-refresh-grupos">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            Sincronizar Grupos do Chip
+          </button>
+        </div>
+
+        <div class="grupos-grid" id="grupos-list">
+          <div class="empty-state">
+            <p>Nenhum grupo sincronizado ainda. Conecte seu WhatsApp e clique em sincronizar.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: CONTATOS / LEADS -->
+      <section class="tab-pane" id="pane-contatos">
+        <div class="pane-header">
+          <div>
+            <h2>Base de Leads e Destinatários</h2>
+            <p>Contatos captados automaticamente de grupos ou importados manualmente.</p>
+          </div>
+          <div class="header-btns">
+            <button class="btn btn-secondary" id="btn-open-import">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              Importar Lista
+            </button>
+            <button class="btn btn-danger btn-outline" id="btn-clear-contatos">
+              Limpar Lista
+            </button>
+          </div>
+        </div>
+
+        <!-- Search & Filter bar -->
+        <div class="filter-bar">
+          <input type="text" id="contatos-search" placeholder="Buscar por nome, número ou grupo..." class="input-field">
+        </div>
+
+        <div class="glass-card table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Número</th>
+                <th>Nome</th>
+                <th>Grupo de Origem</th>
+                <th>Tipo</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody id="contatos-tbody">
+              <tr>
+                <td colspan="5" class="text-center">Carregando contatos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- TAB 4: CAMPANHAS & DISPARADOR -->
+      <section class="tab-pane" id="pane-campanhas">
+        <div class="pane-header">
+          <div>
+            <h2>Campanhas de Disparo</h2>
+            <p>Crie e gerencie filas de envios em massa com Spintax inteligente e anti-ban.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-open-nova-campanha">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Nova Campanha
+          </button>
+        </div>
+
+        <div class="campanhas-list" id="campanhas-container">
+          <div class="empty-state">
+            <p>Nenhuma campanha criada ainda. Clique em "Nova Campanha" para começar.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: DEEPSEEK IA -->
+      <section class="tab-pane" id="pane-deepseek">
+        <div class="pane-header">
+          <div>
+            <h2>Atendimento Inteligente com DeepSeek</h2>
+            <p>Configure a inteligência artificial para responder clientes no privado imitando o seu tom de voz.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-save-deepseek">
+            Salvar Configurações IA
+          </button>
+        </div>
+
+        <div class="deepseek-grid">
+          <!-- Settings Card -->
+          <div class="glass-card">
+            <div class="card-header">
+              <h3>Credenciais & Comportamento</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="toggle-label">
+                  <input type="checkbox" id="deepseek-ativo-toggle">
+                  <span class="toggle-text">Ativar Respostas Automáticas no Privado</span>
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label for="deepseek-key-input">Chave de API do DeepSeek (API Key):</label>
+                <input type="password" id="deepseek-key-input" placeholder="sk-..." class="input-field">
+              </div>
+
+              <div class="form-group">
+                <label for="deepseek-url-input">URL Base da API (Endpoint):</label>
+                <input type="text" id="deepseek-url-input" value="https://api.deepseek.com/v1" class="input-field">
+                <small>Compatível com a API padrão DeepSeek e OpenCode.</small>
+              </div>
+
+              <div class="form-group">
+                <label for="deepseek-model-input">Modelo:</label>
+                <input type="text" id="deepseek-model-input" value="deepseek-chat" class="input-field">
+              </div>
+
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Tempo Mínimo Digitando (s):</label>
+                  <input type="number" id="deepseek-delay-min" value="3" class="input-field">
+                </div>
+                <div class="form-group flex-1">
+                  <label>Tempo Máximo Digitando (s):</label>
+                  <input type="number" id="deepseek-delay-max" value="6" class="input-field">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prompt & Persona Card -->
+          <div class="glass-card">
+            <div class="card-header">
+              <h3>Personalidade e Regras da IA (Prompt de Sistema)</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label for="deepseek-prompt-textarea">Instruções para a IA (Como ela deve falar):</label>
+                <textarea id="deepseek-prompt-textarea" rows="10" class="input-field textarea-field"></textarea>
+                <small>Diga como quer que ela responda, regras de Pokémon TCG, valores e links recomendados.</small>
+              </div>
+
+              <!-- Interactive Test Sandbox -->
+              <div class="test-sandbox">
+                <h4>Simulador de Conversa (Teste Rápido)</h4>
+                <div class="test-input-row">
+                  <input type="text" id="deepseek-test-input" placeholder="Digite uma pergunta de teste..." class="input-field">
+                  <button class="btn btn-secondary" id="btn-test-deepseek">Testar IA</button>
+                </div>
+                <div class="test-reply-box" id="deepseek-test-output" style="display: none;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: ANTI-BAN & AJUSTES -->
+      <section class="tab-pane" id="pane-configuracoes">
+        <div class="pane-header">
+          <div>
+            <h2>Proteção Anti-Banimento & Parâmetros</h2>
+            <p>Regule os intervalos de envio, limites de aquecimento de chip e horários de operação.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-save-configs">
+            Salvar Parâmetros
+          </button>
+        </div>
+
+        <div class="glass-card">
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Delay Mínimo entre Mensagens (segundos):</label>
+                <input type="number" id="cfg-delay-min" class="input-field">
+                <small>Recomendado: no mínimo 25s para chips novos.</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>Delay Máximo entre Mensagens (segundos):</label>
+                <input type="number" id="cfg-delay-max" class="input-field">
+                <small>Recomendado: 60s ou mais.</small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Pausa de Descanso Obrigatória (a cada N envios):</label>
+                <input type="number" id="cfg-pausa-cada" class="input-field">
+              </div>
+              <div class="form-group flex-1">
+                <label>Duração da Pausa (minutos):</label>
+                <input type="number" id="cfg-pausa-minutos" class="input-field">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Horário de Início dos Disparos:</label>
+                <input type="time" id="cfg-hora-inicio" class="input-field">
+              </div>
+              <div class="form-group flex-1">
+                <label>Horário de Término dos Disparos:</label>
+                <input type="time" id="cfg-hora-fim" class="input-field">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Limite Diário de Envios (Aquecimento de Chip):</label>
+              <input type="number" id="cfg-limite-diario" class="input-field">
+              <small>Evita ultrapassar a cota segura diária em números recém-adquiridos.</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: LOGS DO SISTEMA -->
+      <section class="tab-pane" id="pane-logs">
+        <div class="pane-header">
+          <div>
+            <h2>Logs de Operação do Sistema</h2>
+            <p>Registro cronológico de disparos, respostas da IA e eventos do WhatsApp.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-refresh-logs">Atualizar Logs</button>
+        </div>
+
+        <div class="terminal-card">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="terminal-title">sistema.log — Tempo Real</span>
+          </div>
+          <div class="terminal-body" id="terminal-logs">
+            <div class="log-line info">[SISTEMA] Conectando ao fluxo de logs...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal Nova Campanha -->
+  <div class="modal-overlay" id="modal-campanha" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Criar Nova Campanha de Disparo</h3>
+        <button class="btn-close" id="btn-close-campanha-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="camp-nome">Nome da Campanha:</label>
+          <input type="text" id="camp-nome" placeholder="Ex: Ofertas Fichários Pokémon Fev" class="input-field">
+        </div>
+
+        <div class="form-group">
+          <label for="camp-target">Público-Alvo (Destinatários):</label>
+          <select id="camp-target" class="input-field">
+            <option value="todos">Todos os Contatos da Base</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="camp-template">Mensagem com Spintax & Tags:</label>
+          <textarea id="camp-template" rows="6" class="input-field textarea-field" placeholder="{Olá|Oi|Fala} {nome}! Tudo bem? Olha essa oferta no grupo {grupo}..."></textarea>
+          <div class="tags-hint">
+            <span>Tags disponíveis:</span>
+            <code>{nome}</code>
+            <code>{saudacao}</code>
+            <code>{grupo}</code>
+            <code>{numero}</code>
+            <small>Spintax: <code>{Opção 1|Opção 2|Opção 3}</code></small>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="camp-media">Caminho da Imagem Opcional (URL ou caminho local):</label>
+          <input type="text" id="camp-media" placeholder="Opcional: URL ou caminho da foto" class="input-field">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-campanha">Cancelar</button>
+        <button class="btn btn-primary" id="btn-save-campanha">Salvar e Enfileirar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Importar Contatos -->
+  <div class="modal-overlay" id="modal-import" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3>Importar Contatos Manualmente</h3>
+        <button class="btn-close" id="btn-close-import-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="import-grupo-nome">Nome ou Tag da Lista:</label>
+          <input type="text" id="import-grupo-nome" placeholder="Ex: Leads Importados Instagram" class="input-field">
+        </div>
+        <div class="form-group">
+          <label for="import-textarea">Cole a lista (um número por linha):</label>
+          <textarea id="import-textarea" rows="8" class="input-field textarea-field" placeholder="5511999999999&#10;5521988888888, Carlos&#10;+55 31 97777-7777"></textarea>
+          <small>Aceita formatos com ou sem pontuação, com ou sem nome.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-import">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirm-import">Importar Números</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="app-toast"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
