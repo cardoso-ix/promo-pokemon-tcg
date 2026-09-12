@@ -44,10 +44,20 @@ A aplicação roda de forma independente na porta **`3333`** (`http://localhost:
 
 ---
 
-## 🚀 Como Iniciar
+## ☁️ Operação em Produção (Nuvem 24/7)
+
+O **Bot Disparador & Atendimento IA** opera **100% online no Railway** dentro do contêiner Docker oficial com volume persistente montado em `/app/data`:
+- **Acesso:** Abra a URL HTTPS pública gerada pelo Railway no seu computador, tablet ou celular.
+- **Conexão WhatsApp:** Escaneie o QR Code diretamente pelo navegador. As chaves criptográficas ficam salvas no volume persistente, garantindo conexão permanente mesmo em novos deploys.
+- **Zero Dependência Local:** Não precisa manter seu computador ligado.
+
+---
+
+## 💻 Ambiente Local de Desenvolvimento (Opcional)
+
+Caso queira testar novas funções localmente:
 
 ### Opção 1: Script Automático (Windows)
-Basta dar dois cliques no arquivo na raiz do projeto:
 ```text
 iniciar-disparador.bat
 ```
@@ -59,9 +69,7 @@ npm install
 npm run build
 npm start
 ```
-
-Após iniciar, abra no navegador:
-👉 **`http://localhost:3333`**
+Após iniciar, abra: 👉 `http://localhost:3333`
 
 ---
 

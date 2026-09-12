@@ -1,83 +1,74 @@
-# Arquitetura — Promo Réplica Autônoma
+# Arquitetura — Plataforma Promo Pokémon TCG (Nuvem 24/7)
 
 ## 1. Visão Geral
 
-A **Promo Réplica** é uma aplicação completa e autônoma desenvolvida em **Node.js 22 LTS e TypeScript**. Ela opera sem dependência de plataformas externas de automação (como n8n), sem intermediários de API de terceiros (como Evolution API) e sem bancos de dados pesados externos.
+A plataforma é um ecossistema de alto rendimento desenvolvido em **Node.js 22 LTS e TypeScript**, operando em **produção contínua na nuvem (Railway)** através de contêineres Docker independentes com armazenamento persistente NVMe.
 
-O sistema integra a biblioteca oficial de protocolo do WhatsApp (`@whiskeysockets/baileys`), um servidor web ultraleve com WebSockets (`Fastify`), um banco de dados relacional embarcado de alta velocidade (`better-sqlite3`), e um motor de processamento de texto e links de afiliados com suporte à API do Mercado Livre.
+O sistema divide-se em dois grandes serviços desacoplados:
+1. **Replicador de Ofertas (`app/`):** Escuta promoções de Pokémon TCG em grupos de monitoramento, higieniza mensagens, encurta links via API oficial do Mercado Livre (`meli.la`) com fallback de afiliado, desembrulha mídias/fotos em 2X e replica nos grupos VIP.
+2. **Bot Disparador & Atendimento IA (`bot-disparador/`):** Plataforma de prospecção e conversão contínua. Extrai contatos de grupos com 1 clique, dispara mensagens em massa anti-ban com Spintax `{Opção 1|Opção 2}` e variáveis dinâmicas, inclui simulador WhatsApp ao vivo no cockpit web e atendimento privado humanizado com **DeepSeek V4 via OpenCode Gateway**.
 
 ---
 
-## 2. Diagrama de Fluxo de Dados
+## 2. Diagrama de Arquitetura em Nuvem (Railway)
 
 ```text
-  [ WhatsApp - Grupos de Origem ]
-                │
-                ▼ (Baileys WebSocket / messages.upsert)
-  ┌─────────────────────────────────────────────────────────────┐
-  │                   Núcleo da Aplicação                       │
-  │                                                             │
-  │  1. Desembrulhar Mídia / Texto (Normalização)               │
-  │     ├── Ephemeral, ViewOnce, deviceSentMessage              │
-  │     └── Extração de legenda e buffer de imagem              │
-  │                                                             │
-  │  2. Consulta de Rotas & Filtro Anti-Loop (SQLite)           │
-  │     └── Valida se a origem está cadastrada e ativa          │
-  │                                                             │
-  │  3. Motor de Afiliados & Tratamento de Texto                │
-  │     ├── Preservação de quebras de linha e blocos de texto   │
-  │     ├── Remoção de assinaturas concorrentes (@rasgabooster) │
-  │     └── Encurtador oficial meli.la (ou fallback matt_word)  │
-  │                                                             │
-  │  4. Enriquecimento de Mídia (Scraper ML)                    │
-  │     └── Se não houver foto, baixa imagem oficial 2X do ML   │
-  │                                                             │
-  │  5. Persistência & Transmissão                              │
-  │     ├── Gravação no diário SQLite (replica.db)              │
-  │     └── Transmissão em tempo real via WebSocket             │
-  └─────────────────────────────────────────────────────────────┘
-          │                                      │
-          ▼ (Baileys sendMessage)                ▼ (WebSocket /ws)
-  [ Grupos de Destino WhatsApp ]         [ Cockpit Web Dashboard ]
+                                  NUVEM RAILWAY (PRODUÇÃO 24/7)
+ ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │                                                                                                  │
+ │  ┌──────────────────────────────────────────────┐  ┌───────────────────────────────────────────┐ │
+ │  │        SERVIÇO 1: REPLICADOR DE OFERTAS      │  │        SERVIÇO 2: BOT DISPARADOR & IA     │ │
+ │  │                  (Porta 3000)                │  │                  (Porta 3333)             │ │
+ │  │                                              │  │                                           │ │
+ │  │  • WhatsApp Baileys (Chip Replicador)        │  │  • WhatsApp Baileys (Chip de Disparos)     │ │
+ │  │  • Encurtador Oficial API Mercado Livre      │  │  • Extrator Automático de Grupos/Leads     │ │
+ │  │  • Scraper ML Imagens Oficiais 2X            │  │  • Fila Anti-Ban + Motor Spintax          │ │
+ │  │  • SQLite Embarcado: replica.db              │  │  • SQLite Embarcado: disparador.db        │ │
+ │  │  • Cockpit Web Fastify + WebSockets          │  │  • Cockpit Web Fastify + Simulador Live   │ │
+ │  │                                              │  │  • Atendimento IA DeepSeek V4 (OpenCode)  │ │
+ │  └──────────────────────┬───────────────────────┘  └─────────────────────┬─────────────────────┘ │
+ │                         │                                                │                       │
+ │                         ▼                                                ▼                       │
+ │  ┌──────────────────────────────────────────────┐  ┌───────────────────────────────────────────┐ │
+ │  │      VOLUME PERSISTENTE 1 (/app/data)        │  │      VOLUME PERSISTENTE 2 (/app/data)     │ │
+ │  │  • auth_baileys/ (Sessão Replicador)         │  │  • auth/ (Sessão Disparador)              │ │
+ │  │  • replica.db (Rotas, Configs, Logs)         │  │  • disparador.db (Leads, Fila, Histórico) │ │
+ │  └──────────────────────────────────────────────┘  └───────────────────────────────────────────┘ │
+ │                                                                                                  │
+ └──────────────────────────────────────────────────────────────────────────────────────────────────┘
+                 │                                                    │
+                 ▼                                                    ▼
+      Domínio Público HTTPS Replicador                     Domínio Público HTTPS Disparador
 ```
 
 ---
 
-## 3. Módulos do Sistema
+## 3. Detalhamento dos Componentes
 
-### 3.1. Gerenciador WhatsApp (`app/src/whatsapp/client.ts`)
-- **Biblioteca**: `@whiskeysockets/baileys`.
-- **Autenticação**: `useMultiFileAuthState` apontando para o diretório de dados persistente (`data/auth_baileys/`).
-- **Gerenciamento de Ciclo de Vida**: Reconexão automática com backoff exponencial; geração e transmissão de QR Code para o painel web; sincronização em background dos nomes e metadados dos grupos participantes.
-- **Normalização de Mídias**: Descompacta camadas de encapsulamento do WhatsApp (`ephemeralMessage`, `viewOnceMessageV2`, `deviceSentMessage`) garantindo que nenhuma postagem com imagem seja ignorada.
+### 3.1. Replicador de Ofertas (`app/`)
+- **Engine**: TypeScript + Node.js 22 LTS.
+- **Protocolo WhatsApp**: `@whiskeysockets/baileys` Multi-Device.
+- **Encurtador ML**: Conecta em `https://www.mercadolivre.com.br/affiliate-program/api/v1/links` para produzir links curtos `https://meli.la/xxxxxx`.
+- **Desembrulho de Mídia**: Converte mensagens de visualização única (`viewOnceMessageV2`), efêmeras e anexos normais em buffers para reenvio fiel aos canais de destino.
+- **Armazenamento**: SQLite em modo WAL (`replica.db`).
 
-### 3.2. Motor de Afiliados e Texto (`app/src/core/affiliate.ts`)
-- **Encurtamento Oficial `meli.la`**: Conecta diretamente ao endpoint de afiliados do Mercado Livre (`/affiliate-program/api/v1/links`) utilizando o cookie de sessão do usuário. Retorna links curtos oficiais.
-- **Fallback Parametrizado**: Se o cookie expirar ou falhar, insere instantaneamente os parâmetros de afiliado cadastrados (`matt_word`, `matt_tool` e `forceInApp=true`).
-- **Preservação de Formatação**: Mantém a estrutura humana da mensagem original (títulos, descrições, preços e quebras de linha duplas `\n\n`), removendo apenas menções a canais concorrentes, links de convite e hashtags invasivas.
-- **Scraper de Imagem Oficial**: Para postagens apenas de texto que possuam link do Mercado Livre, busca a tag `og:image` do anúncio e converte a resolução para `2X` de alta definição.
-
-### 3.3. Banco de Dados Embarcado (`app/src/db/database.ts`)
-- **Engine**: SQLite 3 via `better-sqlite3`.
-- **Características**: Modos WAL (Write-Ahead Logging) para concorrência de leitura/escrita ultrarrápida, transações seguras e zero latência de rede.
-- **Localização**: `/app/data/replica.db` (na nuvem) ou `data/replica.db` (local).
-
-### 3.4. Servidor Web & WebSocket (`app/src/web/server.ts`)
-- **Engine**: Fastify 5 com plugin `@fastify/websocket`.
-- **Frontend**: Servido estaticamente a partir de `app/src/public/`.
-- **Rotas REST**: Healthcheck (`/health`), configurações, rotas, logs e teste de cookie do Mercado Livre.
-- **Canal WebSocket (`/ws`)**: Comunicação bidirecional contínua para atualização do status do WhatsApp, QR Code, métricas de envio e feed de atividades em tempo real.
+### 3.2. Bot Disparador & Prospecção (`bot-disparador/`)
+- **Captador de Membros**: Varre grupos conectados, normaliza JIDs e salva participantes em lote na tabela de contatos.
+- **Motor Spintax**: Avalia padrões `{A|B|C}` recursivamente e substitui tags `{nome}`, `{saudacao}`, `{grupo}` para garantir que nenhuma mensagem seja disparada idêntica no WhatsApp.
+- **Fila Anti-Ban Inteligente**:
+  - Delays randômicos entre mensagens (35s a 70s).
+  - Pausa de descanso de 5 minutos a cada 15 envios.
+  - Horário operacional controlado (ex: 08:00 às 22:00).
+- **Simulador do WhatsApp Ao Vivo**: Renderiza em tempo real um mockup oficial do WhatsApp no frontend, permitindo validar o visual, quebras de linha e formatações (`*negrito*`, `_itálico_`) antes do disparo.
+- **Atendimento DeepSeek V4**:
+  - Integração via OpenCode Gateway (`https://opencode.ai/zen/go/v1`).
+  - Modelo `deepseek-v4-flash` / `deepseek-v4-pro`.
+  - Simula digitação humana no WhatsApp (delay de 3 a 6 segundos) e responde como especialista amigável de Pokémon TCG.
 
 ---
 
-## 4. Persistência e Nuvem (Railway / Render)
+## 4. Persistência de Dados e Recuperação de Falhas
 
-Na nuvem, o contêiner Docker monta um **Volume Persistente** no caminho:
-```text
-/app/data
-```
-Esse volume isola e protege:
-1. `data/replica.db`: Todas as suas rotas, configurações e histórico.
-2. `data/auth_baileys/`: Todas as chaves criptográficas e credenciais da sessão do WhatsApp.
-
-Mesmo quando um novo código é implantado ou o container é reiniciado, **a sessão do WhatsApp permanece conectada** e as configurações são 100% preservadas.
+Ambos os serviços utilizam volumes NVMe montados em `/app/data`:
+1. **Sessões do WhatsApp**: As chaves criptográficas (`creds.json`, app-state) permanecem salvas, evitando a necessidade de ler QR Code após novos deploys ou reinicializações.
+2. **Bancos SQLite**: Operam com journaling em WAL (`PRAGMA journal_mode = WAL`), garantindo que leituras e escritas concorrentes não causem locks e que nenhuma alteração se perca.

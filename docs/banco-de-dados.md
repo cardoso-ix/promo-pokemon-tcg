@@ -1,134 +1,72 @@
-# Banco de Dados — SQLite Embarcado
+# Banco de Dados — SQLite Embarcado (WAL Mode)
 
 O sistema utiliza o **SQLite 3** por meio do driver de alta performance `better-sqlite3`. Ele opera em modo WAL (*Write-Ahead Logging*), garantindo máxima velocidade de leitura e escrita com consistência transacional e sem a necessidade de gerenciar servidores de banco de dados externos.
 
 ---
 
-## 1. Localização e Persistência
+## 1. Localização e Persistência dos Bancos
 
-| Ambiente | Caminho do Arquivo | Detalhe de Persistência |
-| --- | --- | --- |
-| **Nuvem (Railway / Render)** | `/app/data/replica.db` | Montado no Volume Persistente `/app/data` (salvo permanentemente) |
-| **Local (Windows / Linux)** | `data/replica.db` | Salvo na pasta local do projeto (ignorado pelo Git) |
+A plataforma opera com dois bancos de dados independentes, salvos no volume persistente NVMe de cada contêiner no Railway:
+
+| Aplicação | Arquivo do Banco | Localização na Nuvem | Detalhe de Persistência |
+| --- | --- | --- | --- |
+| **Replicador de Ofertas** | `replica.db` | `/app/data/replica.db` | Montado no volume `/app/data` do serviço replicador |
+| **Bot Disparador & IA** | `disparador.db` | `/app/data/disparador.db` | Montado no volume `/app/data` do serviço disparador |
 
 ---
 
-## 2. Esquema das Tabelas
+## 2. Esquema do Banco do Replicador (`replica.db`)
 
 ### 2.1. `configs`
-Armazena configurações globais de operação no modelo Chave-Valor.
-
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `chave` | `TEXT PRIMARY KEY` | Nome do parâmetro |
-| `valor` | `TEXT NOT NULL` | Valor da configuração |
-
-**Chaves semeadas por padrão:**
-- `ativo`: `'true'` ou `'false'` (liga/desliga geral da esteira).
-- `delay_segundos`: Tempo de espera antes de postar no destino (padrão: `8`).
-- `teto_hora`: Limite máximo de posts replicados por hora (padrão: `40`).
-- `atraso_maximo_segundos`: Descarta mensagens com atraso superior a este valor (padrão: `600`).
-- `affiliate_matt_word`: Parâmetro de apelido do afiliado ML (ex: `caed1312314`).
-- `affiliate_matt_tool`: ID da etiqueta de afiliados ML (ex: `96097202`).
-- `meli_cookie`: Cookie de sessão de afiliado para encurtar links com `https://meli.la/`.
-- `meli_tag`: Tag de afiliado associada ao encurtamento.
-- `link_vitrine_curto`: Link curto oficial da lista de compras/vitrine do afiliado (ex: `https://mercadolivre.com/sec/2rM6RPm`).
-- `frases_remover`: Lista de termos/assinaturas de concorrentes a remover (uma por linha).
-
----
+Armazena parâmetros operacionais no modelo Chave-Valor (`ativo`, `delay_segundos`, `teto_hora`, `affiliate_matt_word`, `meli_cookie`, etc.).
 
 ### 2.2. `rotas`
-Cadastro das rotas de replicação criadas pelo operador.
+Cadastro das rotas de replicação de ofertas criadas pelo operador (`id`, `nome`, `ativa`, `criada_em`).
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `id` | `INTEGER PRIMARY KEY AUTOINCREMENT` | Identificador único da rota |
-| `nome` | `TEXT NOT NULL` | Rótulo amigável (ex: "Promoções Principais") |
-| `ativa` | `INTEGER NOT NULL DEFAULT 1` | `1` se a rota estiver ativa, `0` se pausada |
-| `criada_em` | `DATETIME` | Data e hora de criação |
+### 2.3. `rota_origens` e `rota_destinos`
+Associa os grupos de origem monitorados e os grupos de destino receptores para cada rota.
 
----
+### 2.4. `logs`
+Diário de bordo de todas as mensagens tratadas, contendo hash SHA-256 para desduplicação, status (`enviado`, `ignorado`), links convertidos e se continha mídia.
 
-### 2.3. `rota_origens`
-Associação de grupos de WhatsApp de **origem** vinculados a uma rota.
-
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `rota_id` | `INTEGER NOT NULL` | Chave estrangeira para `rotas(id)` |
-| `chat_id` | `TEXT NOT NULL` | JID do WhatsApp (ex: `120363048912345678@g.us`) |
+### 2.5. `chats_cache`
+Cache dos grupos de WhatsApp em que o chip do replicador participa.
 
 ---
 
-### 2.4. `rota_destinos`
-Associação de grupos de WhatsApp de **destino** vinculados a uma rota.
+## 3. Esquema do Banco do Bot Disparador (`disparador.db`)
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `rota_id` | `INTEGER NOT NULL` | Chave estrangeira para `rotas(id)` |
-| `chat_id` | `TEXT NOT NULL` | JID do WhatsApp de destino |
+### 3.1. `configuracoes`
+Armazena parâmetros do disparador, regras anti-ban e credenciais da IA DeepSeek:
+- `deepseek_api_key`: Chave do gateway OpenCode.
+- `deepseek_base_url`: `https://opencode.ai/zen/go/v1`.
+- `deepseek_model`: `deepseek-v4-flash` / `deepseek-v4-pro`.
+- `deepseek_prompt_sistema`: Personalidade do assistente especialista em Pokémon TCG.
+- `disparo_delay_min` / `disparo_delay_max`: Delays humanizados entre mensagens (ex: 35s a 70s).
+- `disparo_pausa_a_cada` / `disparo_pausa_tempo_minutos`: Pausas de segurança anti-ban.
+- `disparo_horario_inicio` / `disparo_horario_fim`: Janela de envio.
+- `disparo_limite_diario`: Cota segura diária (ex: 50 envios no 1º dia).
 
----
+### 3.2. `contatos`
+Base de leads extraídos de grupos ou importados manualmente:
+- `jid` (TEXT UNIQUE): Identificador WhatsApp (ex: `5511999999999@s.whatsapp.net`).
+- `numero`, `nome`, `origem_grupo`, `grupo_nome`, `origem_tipo`, `ativo`.
 
-### 2.5. `logs`
-Diário de bordo de todas as mensagens capturadas, status de envio e desduplicação.
+### 3.3. `grupos`
+Cache dos grupos dos quais o chip do disparador participa:
+- `jid` (TEXT UNIQUE), `nome`, `total_membros`, `foto_url`, `sincronizado_em`.
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `id` | `INTEGER PRIMARY KEY AUTOINCREMENT` | ID do registro |
-| `origem_chat_id` | `TEXT` | JID do grupo de onde a mensagem veio |
-| `origem_nome` | `TEXT` | Nome amigável do grupo de origem |
-| `destino_chat_id` | `TEXT` | JID do grupo para onde a mensagem foi enviada |
-| `hash_conteudo` | `TEXT UNIQUE` | Hash SHA-256 do conteúdo para evitar duplicações |
-| `texto_original` | `TEXT` | Texto original recebido do WhatsApp |
-| `texto_publicado` | `TEXT` | Texto processado com links convertidos |
-| `tem_foto` | `INTEGER DEFAULT 0` | `1` se continha foto, `0` se apenas texto |
-| `links_convertidos`| `INTEGER DEFAULT 0` | Quantidade de links ML convertidos |
-| `status` | `TEXT NOT NULL` | `enviado`, `ignorado`, `erro` |
-| `motivo` | `TEXT` | Motivo de descarte ou mensagem de erro |
-| `criado_em` | `DATETIME` | Horário de registro |
+### 3.4. `campanhas`
+Campanhas de disparo em massa criadas:
+- `id`, `nome`, `mensagem_template`, `midia_tipo`, `midia_url`, `status` (`criada`, `executando`, `pausada`, `concluida`), `total_destinatarios`, `enviados`, `falhas`.
 
----
+### 3.5. `fila_envios`
+Fila ordenada de mensagens a enviar:
+- `campanha_id` (FK), `destinatario_jid`, `destinatario_nome`, `mensagem_gerada` (já processada com Spintax único), `status` (`pendente`, `enviando`, `enviado`, `falha`), `erro`, `enviado_em`.
 
-### 2.6. `chats_cache`
-Cache dos grupos de WhatsApp em que a conta conectada participa.
+### 3.6. `historico_ia`
+Histórico de atendimento humanizado no privado:
+- `chat_jid`, `remetente` (`lead` ou `bot`), `mensagem`, `criado_em`.
 
-| Coluna | Tipo | Descrição |
-| --- | --- | --- |
-| `chat_id` | `TEXT PRIMARY KEY` | JID do chat no WhatsApp |
-| `nome` | `TEXT NOT NULL` | Nome legível do grupo ou contato |
-| `is_group` | `INTEGER DEFAULT 1` | `1` para grupos, `0` para chats individuais |
-| `atualizado_em` | `DATETIME` | Última sincronização pelo Baileys |
-
----
-
-## 3. Consultas Úteis para Monitoramento
-
-Para consultar o banco localmente:
-```bash
-# Abrir o sqlite via terminal
-sqlite3 data/replica.db
-```
-
-### Ver últimas 10 postagens replicadas com sucesso:
-```sql
-SELECT id, criado_em, origem_nome, links_convertidos, tem_foto, status 
-FROM logs 
-WHERE status = 'enviado' 
-ORDER BY id DESC LIMIT 10;
-```
-
-### Ver total de mensagens enviadas hoje:
-```sql
-SELECT count(*) as total_hoje 
-FROM logs 
-WHERE status = 'enviado' 
-  AND date(criado_em) = date('now');
-```
-
-### Ver todas as rotas ativas com suas origens e destinos:
-```sql
-SELECT r.id, r.nome, r.ativa, o.chat_id AS origem, d.chat_id AS destino
-FROM rotas r
-LEFT JOIN rota_origens o ON r.id = o.rota_id
-LEFT JOIN rota_destinos d ON r.id = d.rota_id;
-```
+### 3.7. `logs_sistema`
+Auditoria de eventos do disparador, categorizados por `info`, `warn`, `error`, `ia` e `disparo`.

@@ -1,74 +1,69 @@
 # Runbook — Manual de Operação e Manutenção
 
-Guia prático para operação diária, manutenção e gerenciamento da Promo Réplica.
+Guia prático para a operação diária, manutenção e gerenciamento das duas aplicações em produção na nuvem.
 
 ---
 
 ## 1. Operação em Nuvem (Railway — 24/7)
 
-### 1.1. Acessando o Painel
-- **URL Pública**: `https://promo-replica-bot-production-7d52.up.railway.app` (ou o domínio personalizado configurado nas configurações de Networking do Railway).
-- Pode ser acessado diretamente do computador, tablet ou celular.
+Tanto o **Replicador de Ofertas** quanto o **Bot Disparador & Atendimento IA** rodam de forma autônoma e ininterrupta no Railway, acessíveis de qualquer navegador (computador, tablet ou celular), sem que você precise manter seu computador ligado.
 
-### 1.2. Atualização de Código
-- O Railway está conectado diretamente à branch `main` do GitHub.
-- Toda alteração enviada com `git push origin main` dispara uma nova compilação e deploy automático em menos de 2 minutos.
-- O volume persistente em `/app/data` garante que o WhatsApp **não desconecte** durante os redeploys.
+### 1.1. Painel do Replicador de Ofertas
+- **Acesso Online**: `https://promo-replica-bot-production-7d52.up.railway.app`
+- **Função**: Controla a replicação de ofertas de grupos concorrentes para os seus grupos VIP, encurtamento oficial `meli.la` e fotos oficiais 2X do Mercado Livre.
 
-### 1.3. Reiniciar o Serviço
-- Se necessário forçar um reinício, acesse o painel do Railway ➔ clique no serviço `promo-replica-bot` ➔ clique nos três pontinhos no canto superior direito ➔ **Restart**.
+### 1.2. Painel do Bot Disparador & Atendimento IA
+- **Acesso Online**: Link público HTTPS gerado no seu projeto do Railway para o serviço `bot-disparador`.
+- **Função**: Extração de leads de grupos com 1 clique, disparos automáticos em massa com proteção anti-ban (Spintax), simulador WhatsApp ao vivo e atendimento privado automático com DeepSeek V4.
 
 ---
 
-## 2. Operação Local (Windows)
+## 2. Operação Diária do Bot Disparador na Nuvem
 
-Caso queira rodar uma instância de testes ou operar localmente:
+### 2.1. Conectando o Novo Chip no WhatsApp (Pelo Navegador)
+1. Acesse o **Painel Online do Bot Disparador** pelo celular ou computador.
+2. Na aba inicial, o painel exibirá o **QR Code** em tempo real gerado pelo Baileys.
+3. No celular onde o novo chip está ativado:
+   - Abra o WhatsApp ➔ **Aparelhos Conectados** ➔ **Conectar um aparelho**.
+   - Aponte a câmera para o QR Code no navegador (ou utilize o código de pareamento de 8 dígitos).
+4. O status mudará imediatamente para 🟢 **Conectado** e sincronizará os grupos do chip automaticamente.
+5. O volume persistente (`/app/data`) do Railway garante que você **não seja desconectado** mesmo após novos deploys ou reinicializações do container.
 
-| Ação | Como Fazer |
-| --- | --- |
-| **Iniciar com Logs Visíveis** | Duplo clique em `iniciar.bat`. Abre uma janela preta do prompt exibindo todas as mensagens e logs. |
-| **Iniciar Silencioso (Background)** | Duplo clique em `iniciar-segundo-plano.vbs`. Roda o servidor sem nenhuma janela aberta. |
-| **Parar a Aplicação** | Duplo clique em `parar.bat`. Localiza o processo na porta 3000 e o encerra com segurança. |
-| **Acessar o Painel Local** | Abra `http://localhost:3000` no seu navegador. |
+### 2.2. Extração de Leads de Grupos Alvo
+1. No painel online do disparador, vá para a aba **Grupos**.
+2. Utilize a **barra de busca instantânea** para encontrar o grupo desejado (ex: grupos de Pokémon TCG, colecionadores, torneios).
+3. Clique em **Extrair Membros**.
+4. Todos os números de participantes serão salvos instantaneamente na base de dados com o grupo de origem.
 
----
+### 2.3. Criação e Disparo de Campanhas
+1. Vá na aba **Campanhas** ➔ clique em **Nova Campanha**.
+2. Clique em um dos **Modelos Prontos Pokémon TCG** (ex: *Convite Grupo VIP Pokémon TCG*).
+3. O **Simulador Oficial do WhatsApp Ao Vivo** ao lado exibirá exatamente como a mensagem chegará no WhatsApp do cliente, incluindo formatação, tags dinâmicas e horário.
+4. Ajuste o texto ou Spintax se desejar.
+5. Selecione o grupo ou lista de contatos e clique em **Criar e Iniciar Campanha**.
+6. Acompanhe o progresso da fila em tempo real pelo painel online.
 
-## 3. Gestão da Conexão do WhatsApp
-
-### 3.1. Primeira Conexão (Pareamento)
-1. Abra o painel no navegador.
-2. O cartão **Status WhatsApp** exibirá o **QR Code**.
-3. No celular com o chip de envio, abra o WhatsApp ➔ vá em **Aparelhos Conectados** ➔ toque em **Conectar um aparelho**.
-4. Aponte a câmera para o QR Code no painel. Em instantes o status mudará para **Conectado** (verde).
-
-### 3.2. Trocar de Número ou Resetar Conexão
-- No celular: acesse Aparelhos Conectados, toque na sessão do bot e escolha **Desconectar**.
-- Ou no servidor: exclua o conteúdo da pasta `data/auth_baileys/` e recarregue o painel para gerar um novo QR Code.
-
----
-
-## 4. Gestão de Rotas de Replicação
-
-1. No painel, acesse a aba **Rotas**.
-2. Clique em **+ Nova Rota**:
-   - **Nome**: Dê um nome descritivo (ex: "Ofertas TCG ➔ Grupo VIP").
-   - **Grupos de Origem**: Marque os grupos de onde o bot deve capturar mensagens.
-   - **Grupos de Destino**: Marque os grupos para onde as ofertas tratadas devem ser enviadas.
-3. Clique em **Salvar Rota**.
-4. Utilize a chave de ativação individual de cada rota para pausar ou retomar o envio a qualquer momento.
+### 2.4. Atendimento Automático com IA (DeepSeek V4)
+- Quando qualquer destinatário responder no privado, o motor de IA assumirá o atendimento automaticamente.
+- A IA responde como um especialista amigável de Pokémon TCG, esclarece dúvidas, simula digitação humana (3 a 6 segundos) e direciona para o seu grupo VIP ou lista de ofertas.
+- Todas as conversas ficam registradas na aba de histórico do painel.
 
 ---
 
-## 5. Atualização do Cookie do Mercado Livre
+## 3. Gestão de Atualizações e Deploy Contínuo (CI/CD)
 
-O encurtador oficial `meli.la` utiliza um cookie de sessão de afiliado para autenticar requisições na API do Mercado Livre. Caso o cookie expire:
+- O Railway está conectado à branch `main` do GitHub: `https://github.com/cardoso-ix/promo-pokemon-tcg`.
+- Sempre que uma alteração for enviada para o repositório (`git push origin main`), o Railway recompila e atualiza os contêineres automaticamente em menos de 2 minutos.
+- Os volumes persistentes (`/app/data`) garantem que os bancos de dados (`replica.db` e `disparador.db`) e as sessões ativas do WhatsApp permaneçam intactos.
 
-1. No seu navegador, faça login no [Mercado Livre](https://www.mercadolivre.com.br).
-2. Pressione `F12` para abrir o DevTools ➔ vá na aba **Application** (ou Armazenamento) ➔ **Cookies** ➔ selecione `mercadolivre.com.br`.
-3. Copie o valor do cookie principal de sessão (ou copie todo o cabeçalho `cookie` de uma requisição de rede).
-4. No Cockpit da Réplica, vá na aba **Configurações**.
-5. Cole no campo **Cookie de Sessão do Mercado Livre** e clique no botão **Testar Cookie**.
-6. O painel exibirá imediatamente o resultado:
-   - ✅ *"Cookie válido! API respondeu com sucesso."*
-   - ❌ *"Falha na validação do cookie."*
-7. Clique em **Salvar Configurações**.
+---
+
+## 4. Operação Local (Opcional / Ambiente de Testes)
+
+Caso queira realizar testes offline ou trabalhar em novas funcionalidades locais:
+
+| Ação | Comando / Script | Acesso Local |
+| --- | --- | --- |
+| **Iniciar Replicador Local** | `iniciar.bat` (ou `cd app && npm start`) | `http://localhost:3000` |
+| **Iniciar Disparador Local** | `iniciar-disparador.bat` (ou `cd bot-disparador && npm start`) | `http://localhost:3333` |
+| **Parar Serviços Locais** | `parar.bat` | — |
