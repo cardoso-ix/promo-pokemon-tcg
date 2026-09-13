@@ -448,7 +448,8 @@ export async function createServer() {
 
   app.get('/api/campanhas/:id/fila', async (req: any) => {
     const id = parseInt(req.params.id, 10);
-    return { fila: getFilaCampanha(id) };
+    const limit = parseInt(req.query.limit || '1000', 10);
+    return { fila: getFilaCampanha(id, limit) };
   });
 
   // Configurações
