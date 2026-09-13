@@ -5,9 +5,10 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc && node scripts/copy-assets.js",
-    "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts",
+    "build": "tsc && node scripts/copy-assets.js && node scripts/patch-baileys.js",
+    "postinstall": "node scripts/patch-baileys.js",
+    "start": "node scripts/patch-baileys.js && node dist/index.js",
+    "dev": "node scripts/patch-baileys.js && tsx watch src/index.ts",
     "test": "tsx --test test/**/*.test.ts test/*.test.ts"
   },
   "keywords": [

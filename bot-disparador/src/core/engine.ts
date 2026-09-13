@@ -54,13 +54,18 @@ class DispatchEngine {
         }).format(this.blockPauseUntil!)
       : null;
 
+    const warmup = getWarmupStatus();
+    const dailyLimitReached = this.isDailyLimitReached();
+
     return {
       isRunning: this.isRunning,
       consecutiveSends: this.consecutiveSends,
       inBlockPause: isPaused,
       pauseUntil: isPaused ? this.blockPauseUntil!.toISOString() : null,
       pauseTimeFormatted,
-      remainingMinutes: remainingMin
+      remainingMinutes: remainingMin,
+      dailyLimitReached,
+      warmup
     };
   }
 

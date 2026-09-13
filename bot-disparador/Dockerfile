@@ -5,16 +5,16 @@ WORKDIR /app
 # Instalar ferramentas de compilação para better-sqlite3 e curl para healthcheck
 RUN apt-get update && apt-get install -y python3 make g++ curl && rm -rf /var/lib/apt/lists/*
 
-# Copiar arquivos de dependências
+# Copiar arquivos de dependências e scripts de apoio
 COPY package*.json ./
+COPY scripts ./scripts
 
 # Instalar todas as dependências (compila better-sqlite3 nativamente)
 RUN npm ci
 
-# Copiar tsconfig, scripts e código fonte
+# Copiar tsconfig e código fonte
 COPY tsconfig.json ./
 COPY src ./src
-COPY scripts ./scripts
 
 # Compilar TypeScript e copiar assets estáticos
 RUN npm run build
@@ -32,4 +32,4 @@ RUN mkdir -p /app/data
 EXPOSE 3000
 EXPOSE 3333
 
-CMD ["node", "dist/index.js"]
+CMD ["npm", "start"]

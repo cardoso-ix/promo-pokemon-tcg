@@ -94,16 +94,16 @@
 
       <!-- TAB 1: DASHBOARD -->
       <section class="tab-pane active" id="pane-dashboard">
-        <!-- Banner de Pausa em Bloco (Fator Humano) -->
+        <!-- Banner de Pausa em Bloco (Fator Humano) ou Limite Seguro -->
         <div id="engine-pause-banner" style="display: none; margin-bottom: 20px; padding: 16px 20px; background: rgba(245, 158, 11, 0.12); border: 1px solid #f59e0b; border-radius: 12px; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
           <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 26px;">⏸️</span>
+            <span style="font-size: 26px;" id="pause-banner-icon">⏸️</span>
             <div>
-              <strong style="color: #f59e0b; font-size: 14px;">MOTOR EM PAUSA LONGA HUMANA (Descanso de Chip)</strong>
+              <strong style="color: #f59e0b; font-size: 14px;" id="pause-banner-title">MOTOR EM PAUSA LONGA HUMANA (Descanso de Chip)</strong>
               <p id="pause-banner-msg" style="margin: 2px 0 0; font-size: 13px; color: var(--text-secondary);">Descansando o chip para proteger seu número. Retoma automaticamente em breve.</p>
             </div>
           </div>
-          <button class="btn btn-warning" id="btn-force-resume" onclick="resumeEngineNow()" style="background: #f59e0b; color: #121212; font-weight: 700; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <button class="btn btn-warning" id="btn-force-resume" onclick="handlePauseAction()" style="background: #f59e0b; color: #121212; font-weight: 700; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
             ▶️ Retomar Envios Imediatamente
           </button>
         </div>

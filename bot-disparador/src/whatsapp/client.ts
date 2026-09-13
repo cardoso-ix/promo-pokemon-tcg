@@ -3,7 +3,8 @@ import makeWASocket, {
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
   proto,
-  jidNormalizedUser
+  jidNormalizedUser,
+  Browsers
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import path from 'node:path';
@@ -86,7 +87,9 @@ export class WhatsAppManager {
         auth: state,
         logger: this.logger,
         printQRInTerminal: false,
-        browser: ['Disparador Pro', 'Chrome', '128.0.0.0'],
+        browser: Browsers.windows('Chrome'),
+        markOnlineOnConnect: true,
+        getMessage: async () => undefined,
         syncFullHistory: false
       });
 

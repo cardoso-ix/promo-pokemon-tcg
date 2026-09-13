@@ -170,6 +170,7 @@ function switchTab(tabId) {
   if (tabId === 'deepseek' || tabId === 'configuracoes') loadConfigs();
   if (tabId === 'logs') loadLogs();
 }
+window.switchTab = switchTab;
 
 // Atualizar Interface do WhatsApp
 function updateWhatsAppUI(wa) {
@@ -327,14 +328,59 @@ async function loadStatus() {
   }
 }
 
+let pauseActionType = 'resume';
+
+window.handlePauseAction = function() {
+  if (pauseActionType === 'resume') {
+    resumeEngineNow();
+  } else if (pauseActionType === 'config') {
+    if (typeof window.switchTab === 'function') {
+      window.switchTab('configuracoes');
+    }
+  }
+};
+
 function updateEnginePauseUI(status) {
   const banner = document.getElementById('engine-pause-banner');
+  const iconElem = document.getElementById('pause-banner-icon');
+  const titleElem = document.getElementById('pause-banner-title');
   const msgElem = document.getElementById('pause-banner-msg');
+  const btnElem = document.getElementById('btn-force-resume');
   if (!banner || !msgElem) return;
 
   if (status && status.inBlockPause) {
+    pauseActionType = 'resume';
     banner.style.display = 'flex';
-    msgElem.innerText = `Bloco concluído. O chip está em pausa natural para descanso e proteção anti-bloqueio. Retoma automaticamente às ${status.pauseTimeFormatted || 'instantes'} (${status.remainingMinutes} min restantes).`;
+    banner.style.borderColor = '#f59e0b';
+    banner.style.background = 'rgba(245, 158, 11, 0.12)';
+    if (iconElem) iconElem.innerText = '⏸️';
+    if (titleElem) {
+      titleElem.innerText = 'MOTOR EM PAUSA LONGA HUMANA (Descanso de Chip)';
+      titleElem.style.color = '#f59e0b';
+    }
+    msgElem.innerText = `Bloco concluído. O chip está descansando para evitar comportamento robótico e proteger seu número. Retoma automaticamente às ${status.pauseTimeFormatted || 'instantes'} (${status.remainingMinutes} min restantes).`;
+    if (btnElem) {
+      btnElem.innerText = '▶️ Retomar Envios Agora';
+      btnElem.style.background = '#f59e0b';
+      btnElem.style.color = '#121212';
+    }
+  } else if (status && status.dailyLimitReached) {
+    pauseActionType = 'config';
+    banner.style.display = 'flex';
+    banner.style.borderColor = '#3b82f6';
+    banner.style.background = 'rgba(59, 130, 246, 0.12)';
+    if (iconElem) iconElem.innerText = '🛡️';
+    if (titleElem) {
+      titleElem.innerText = 'COTA DIÁRIA DE SEGURANÇA ATINGIDA (Modo Aquecimento de Chip)';
+      titleElem.style.color = '#60a5fa';
+    }
+    const w = status.warmup;
+    msgElem.innerText = `Você atingiu a cota de hoje (${w?.enviosHoje || 20}/${w?.limiteHoje || 20} mensagens - Dia ${w?.diaAtual || 1}). Para proteger seu chip novo de ser banido, os envios pausam até amanhã. Quer enviar mais agora? Você pode alterar a cota ou desativar o aquecimento na aba de configurações.`;
+    if (btnElem) {
+      btnElem.innerText = '⚙️ Ajustar Limite nas Configurações';
+      btnElem.style.background = '#3b82f6';
+      btnElem.style.color = '#ffffff';
+    }
   } else {
     banner.style.display = 'none';
   }
