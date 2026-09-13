@@ -1,4 +1,4 @@
-import { getConfig, addHistoricoIA, getHistoricoIA, logSistema } from '../db/database.js';
+import { getConfig, setConfig, addHistoricoIA, getHistoricoIA, logSistema } from '../db/database.js';
 
 export interface DeepSeekMessage {
   role: 'system' | 'user' | 'assistant';
@@ -25,12 +25,7 @@ export async function generateDeepSeekResponse(
     return null;
   }
 
-  const rawBaseUrl = getConfig('deepseek_base_url', 'https://opencode.ai/zen/go/v1').trim();
-  let endpoint = rawBaseUrl.replace(/\/+$/, '');
-  if (!endpoint.endsWith('/chat/completions')) {
-    endpoint = `${endpoint}/chat/completions`;
-  }
-
+  let rawBaseUrl = getConfig('deepseek_base_url', 'https://opencode.ai/zen/go/v1').trim();
   let model = getConfig('deepseek_model', 'deepseek-flash').trim();
 
   // Normalização de aliases amigáveis para modelos OpenCode e DeepSeek
@@ -43,6 +38,17 @@ export async function generateDeepSeekResponse(
     model = 'deepseek-flash';
   } else if (modelLower === 'deepseek-v4-pro' || modelLower === 'v4-pro') {
     model = 'deepseek-v4-pro';
+  }
+
+  // Auto-correção: se a URL for api.deepseek.com mas o modelo for do OpenCode (flash, v4, etc.)
+  if (rawBaseUrl.includes('api.deepseek.com') && (model.includes('flash') || model.includes('pro') || model.includes('v4') || model === 'deepseek-flash')) {
+    rawBaseUrl = 'https://opencode.ai/zen/go/v1';
+    setConfig('deepseek_base_url', rawBaseUrl);
+  }
+
+  let endpoint = rawBaseUrl.replace(/\/+$/, '');
+  if (!endpoint.endsWith('/chat/completions')) {
+    endpoint = `${endpoint}/chat/completions`;
   }
 
   // Se estiver usando o gateway OpenCode e o modelo for o padrão deepseek-chat ou vazio, usa deepseek-flash
@@ -82,7 +88,7 @@ export async function generateDeepSeekResponse(
       'x-opencode-session': `session-${chatJid.replace(/[^a-zA-Z0-9_-]/g, '') || Date.now()}`
     };
 
-    const res = await fetch(endpoint, {
+    let res = await fetch(endpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify({
@@ -95,6 +101,39 @@ export async function generateDeepSeekResponse(
       signal: controller.signal
     });
     clearTimeout(timeout);
+
+    // Se deu 401 na API oficial da DeepSeek, tenta automaticamente no gateway OpenCode
+    if (!res.ok && res.status === 401 && endpoint.includes('api.deepseek.com')) {
+      logSistema('warn', 'deepseek', 'Chave rejeitada pela api.deepseek.com (401). Redirecionando automaticamente para gateway OpenCode Zen Go...');
+      const opencodeEndpoint = 'https://opencode.ai/zen/go/v1/chat/completions';
+      const retryModel = (model === 'deepseek-chat' || !model) ? 'deepseek-flash' : model;
+      try {
+        const retryRes = await fetch(opencodeEndpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            model: retryModel,
+            messages,
+            temperature: 0.7,
+            max_tokens: 600,
+            stream: false
+          })
+        });
+        if (retryRes.ok) {
+          const retryData = (await retryRes.json()) as any;
+          const retryReply = retryData?.choices?.[0]?.message?.content?.trim() || retryData?.choices?.[0]?.message?.reasoning_content?.trim();
+          if (retryReply) {
+            setConfig('deepseek_base_url', 'https://opencode.ai/zen/go/v1');
+            setConfig('deepseek_model', retryModel);
+            addHistoricoIA(chatJid, 'bot', retryReply);
+            logSistema('ia', 'deepseek', `Resposta gerada com sucesso via OpenCode para ${chatJid.split('@')[0]}: "${retryReply.slice(0, 70)}..."`);
+            return retryReply;
+          }
+        }
+      } catch (retryErr) {
+        // Segue para o log de erro original
+      }
+    }
 
     if (!res.ok) {
       const errText = await res.text();

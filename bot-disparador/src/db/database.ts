@@ -145,6 +145,16 @@ if (!currentPrompt.includes('IFxkHX9ADT29EIUHRkCHVo')) {
   setConfig('deepseek_prompt_sistema', DEFAULTS['deepseek_prompt_sistema']);
 }
 
+// Migrar automaticamente URL e modelo legados para OpenCode Zen Go e deepseek-flash
+const currentUrl = getConfig('deepseek_base_url', '');
+if (!currentUrl || currentUrl === 'https://api.deepseek.com/v1' || currentUrl.includes('api.deepseek.com')) {
+  setConfig('deepseek_base_url', 'https://opencode.ai/zen/go/v1');
+}
+const currentModel = getConfig('deepseek_model', '');
+if (!currentModel || currentModel === 'deepseek-chat') {
+  setConfig('deepseek_model', 'deepseek-flash');
+}
+
 // Funções de Acesso a Configurações
 export function getConfig(chave: string, defaultValue = ''): string {
   const row = db.prepare('SELECT valor FROM configuracoes WHERE chave = ?').get(chave) as { valor: string } | undefined;

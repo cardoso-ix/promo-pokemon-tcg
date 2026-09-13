@@ -704,11 +704,19 @@ async function loadConfigs() {
     const cfg = await res.json();
     state.configs = cfg;
 
-    // DeepSeek Form
+    // DeepSeek & OpenCode Form
     document.getElementById('deepseek-ativo-toggle').checked = cfg.deepseek_ativo === 'true';
     document.getElementById('deepseek-key-input').value = cfg.deepseek_api_key || '';
-    document.getElementById('deepseek-url-input').value = cfg.deepseek_base_url || 'https://api.deepseek.com/v1';
-    document.getElementById('deepseek-model-input').value = cfg.deepseek_model || 'deepseek-chat';
+    let currentUrl = cfg.deepseek_base_url;
+    if (!currentUrl || currentUrl === 'https://api.deepseek.com/v1' || currentUrl.includes('api.deepseek.com')) {
+      currentUrl = 'https://opencode.ai/zen/go/v1';
+    }
+    let currentModel = cfg.deepseek_model;
+    if (!currentModel || currentModel === 'deepseek-chat') {
+      currentModel = 'deepseek-flash';
+    }
+    document.getElementById('deepseek-url-input').value = currentUrl;
+    document.getElementById('deepseek-model-input').value = currentModel;
     document.getElementById('deepseek-prompt-textarea').value = cfg.deepseek_prompt_sistema || '';
     document.getElementById('deepseek-delay-min').value = cfg.deepseek_delay_min || '3';
     document.getElementById('deepseek-delay-max').value = cfg.deepseek_delay_max || '6';
@@ -1217,6 +1225,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Save DeepSeek Configs
+  // Atalhos rápidos para seleção de gateway de IA
+  document.querySelectorAll('.ai-gateway-quick').forEach((tag) => {
+    tag.addEventListener('click', () => {
+      const url = tag.getAttribute('data-url');
+      if (url) {
+        document.getElementById('deepseek-url-input').value = url;
+        showToast(`Gateway selecionado: ${url}`, 'info');
+      }
+    });
+  });
+
   // Atalhos rápidos para seleção de modelo de IA
   document.querySelectorAll('.ai-model-quick').forEach((tag) => {
     tag.addEventListener('click', () => {
@@ -1240,18 +1259,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Test DeepSeek
+  // Test DeepSeek / OpenCode
   document.getElementById('btn-test-deepseek').addEventListener('click', async () => {
     const input = document.getElementById('deepseek-test-input').value.trim();
     const output = document.getElementById('deepseek-test-output');
     output.style.display = 'block';
-    output.innerText = 'Pensando com DeepSeek... Aguarde...';
+    output.innerText = 'Pensando com IA... Aguarde...';
+
+    const apiKey = document.getElementById('deepseek-key-input').value.trim();
+    const baseUrl = document.getElementById('deepseek-url-input').value.trim();
+    const model = document.getElementById('deepseek-model-input').value.trim();
+    const promptSistema = document.getElementById('deepseek-prompt-textarea').value.trim();
 
     try {
       const res = await fetch('/api/deepseek/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: input || undefined })
+        body: JSON.stringify({
+          prompt: input || undefined,
+          apiKey: apiKey || undefined,
+          baseUrl: baseUrl || undefined,
+          model: model || undefined,
+          promptSistema: promptSistema || undefined
+        })
       });
       const data = await res.json();
       if (data.ok) {

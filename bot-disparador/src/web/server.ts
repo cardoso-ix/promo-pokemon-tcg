@@ -455,9 +455,14 @@ export async function createServer() {
     return { ok: true, warmup: getWarmupStatus() };
   });
 
-  // Testar DeepSeek
+  // Testar DeepSeek / OpenCode
   app.post('/api/deepseek/test', async (req: any) => {
-    const { prompt } = req.body || {};
+    const { prompt, apiKey, baseUrl, model, promptSistema } = req.body || {};
+    if (apiKey) setConfig('deepseek_api_key', apiKey.trim());
+    if (baseUrl) setConfig('deepseek_base_url', baseUrl.trim());
+    if (model) setConfig('deepseek_model', model.trim());
+    if (promptSistema) setConfig('deepseek_prompt_sistema', promptSistema.trim());
+
     const testMsg = prompt || 'Olá! Gostaria de saber se vocês têm o fichário de 360 cartas Pokémon.';
     const reply = await generateDeepSeekResponse('teste@s.whatsapp.net', testMsg, 'Cliente Teste');
     if (!reply) {
