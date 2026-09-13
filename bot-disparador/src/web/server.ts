@@ -395,7 +395,7 @@ export async function createServer() {
   app.post('/api/campanhas/:id/start', async (req: any) => {
     const id = parseInt(req.params.id, 10);
     updateCampanhaStatus(id, 'executando');
-    dispatchEngine.start();
+    dispatchEngine.start(true); // Forçar retomada imediata de qualquer pausa
     broadcastEvent('campanhas_update', {});
     return { ok: true };
   });
@@ -405,6 +405,29 @@ export async function createServer() {
     updateCampanhaStatus(id, 'pausada');
     broadcastEvent('campanhas_update', {});
     return { ok: true };
+  });
+
+  app.post('/api/engine/resume', async () => {
+    dispatchEngine.resumeNow();
+    broadcastEvent('campanhas_update', {});
+    return { ok: true, status: dispatchEngine.getStatus() };
+  });
+
+  app.get('/api/engine/status', async () => {
+    return dispatchEngine.getStatus();
+  });
+
+  app.post('/api/whatsapp/test-send', async (req: any) => {
+    const { phone, text } = req.body || {};
+    if (!phone) throw new Error('Número de telefone é obrigatório.');
+
+    const targetPhone = phone.replace(/\D/g, '');
+    const cleanJid = targetPhone.startsWith('55') ? `${targetPhone}@s.whatsapp.net` : `55${targetPhone}@s.whatsapp.net`;
+    const msgText = text || '⚡ Teste de conexão do Disparador Pro! Se você recebeu esta mensagem, o envio direto está funcionando perfeitamente.';
+
+    await whatsapp.sendDirectMessage(cleanJid, msgText);
+    logSistema('disparo', 'disparo', `[TESTE MANUAL] Mensagem de teste enviada com sucesso para ${cleanJid.split('@')[0]}`);
+    return { ok: true, destinatario: cleanJid };
   });
 
   app.post('/api/campanhas/:id/cancel', async (req: any) => {

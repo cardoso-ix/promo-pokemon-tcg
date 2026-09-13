@@ -94,6 +94,20 @@
 
       <!-- TAB 1: DASHBOARD -->
       <section class="tab-pane active" id="pane-dashboard">
+        <!-- Banner de Pausa em Bloco (Fator Humano) -->
+        <div id="engine-pause-banner" style="display: none; margin-bottom: 20px; padding: 16px 20px; background: rgba(245, 158, 11, 0.12); border: 1px solid #f59e0b; border-radius: 12px; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 26px;">⏸️</span>
+            <div>
+              <strong style="color: #f59e0b; font-size: 14px;">MOTOR EM PAUSA LONGA HUMANA (Descanso de Chip)</strong>
+              <p id="pause-banner-msg" style="margin: 2px 0 0; font-size: 13px; color: var(--text-secondary);">Descansando o chip para proteger seu número. Retoma automaticamente em breve.</p>
+            </div>
+          </div>
+          <button class="btn btn-warning" id="btn-force-resume" onclick="resumeEngineNow()" style="background: #f59e0b; color: #121212; font-weight: 700; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            ▶️ Retomar Envios Imediatamente
+          </button>
+        </div>
+
         <!-- Metric Cards -->
         <div class="metrics-grid">
           <div class="metric-card">
@@ -216,6 +230,17 @@
                 <div class="action-text">
                   <h4>Nova Campanha de Disparo</h4>
                   <p>Dispare ofertas personalizadas com Spintax anti-ban.</p>
+                </div>
+                <span class="chevron">→</span>
+              </button>
+
+              <button class="quick-action-btn" onclick="openTestModal()">
+                <div class="action-icon blue">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </div>
+                <div class="action-text">
+                  <h4>Testar Disparo no Meu WhatsApp</h4>
+                  <p>Envie uma mensagem de teste imediata para verificar no seu aparelho.</p>
                 </div>
                 <span class="chevron">→</span>
               </button>
@@ -874,6 +899,34 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btn-cancel-campanha">Cancelar</button>
         <button class="btn btn-primary" id="btn-save-campanha">Salvar e Enfileirar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Teste de Disparo no WhatsApp -->
+  <div class="modal-overlay" id="modal-test-send" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h3>⚡ Testar Disparo no WhatsApp</h3>
+          <p class="modal-subtitle">Envie uma mensagem instantânea para comprovar o funcionamento no seu aparelho.</p>
+        </div>
+        <button class="btn-close" onclick="closeTestModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="test-phone-input">Número de Telefone (com DDD):</label>
+          <input type="text" id="test-phone-input" placeholder="Ex: 5586920026214 ou seu número" class="input-field">
+          <small>Você pode digitar seu próprio número conectado para ver a mensagem chegar em segundos.</small>
+        </div>
+        <div class="form-group">
+          <label for="test-message-input">Mensagem de Teste:</label>
+          <textarea id="test-message-input" rows="3" class="input-field textarea-field" placeholder="Digite uma mensagem de teste...">⚡ Olá! Este é um disparo de teste direto do seu Disparador Pro. A conexão com o WhatsApp está ativa e funcionando 100%!</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeTestModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btn-submit-test-send" onclick="sendTestMessage()">🚀 Disparar Teste Agora</button>
       </div>
     </div>
   </div>

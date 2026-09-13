@@ -315,10 +315,97 @@ async function loadStatus() {
     if (data.whatsapp) updateWhatsAppUI(data.whatsapp);
     if (data.metricas) updateMetricasUI(data.metricas);
     if (data.configs) state.configs = data.configs;
+
+    // Verificar se o motor de disparos está em pausa de descanso
+    try {
+      const engineRes = await fetch('/api/engine/status');
+      const engineStatus = await engineRes.json();
+      updateEnginePauseUI(engineStatus);
+    } catch {}
   } catch (err) {
     console.warn('Falha ao carregar status inicial:', err);
   }
 }
+
+function updateEnginePauseUI(status) {
+  const banner = document.getElementById('engine-pause-banner');
+  const msgElem = document.getElementById('pause-banner-msg');
+  if (!banner || !msgElem) return;
+
+  if (status && status.inBlockPause) {
+    banner.style.display = 'flex';
+    msgElem.innerText = `Bloco concluído. O chip está em pausa natural para descanso e proteção anti-bloqueio. Retoma automaticamente às ${status.pauseTimeFormatted || 'instantes'} (${status.remainingMinutes} min restantes).`;
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+window.resumeEngineNow = async function() {
+  try {
+    const res = await fetch('/api/engine/resume', { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('Pausa encerrada! O motor retomou a fila de disparos agora mesmo.', 'success');
+      loadStatus();
+      loadCampanhas();
+      loadLogs();
+    }
+  } catch (err) {
+    showToast(`Erro ao retomar: ${err.message}`, 'error');
+  }
+};
+
+window.openTestModal = function() {
+  const modal = document.getElementById('modal-test-send');
+  const inputPhone = document.getElementById('test-phone-input');
+  if (state.whatsapp?.userPhone && inputPhone && !inputPhone.value) {
+    inputPhone.value = state.whatsapp.userPhone;
+  }
+  if (modal) modal.style.display = 'flex';
+};
+
+window.closeTestModal = function() {
+  const modal = document.getElementById('modal-test-send');
+  if (modal) modal.style.display = 'none';
+};
+
+window.sendTestMessage = async function() {
+  const phoneInput = document.getElementById('test-phone-input');
+  const msgInput = document.getElementById('test-message-input');
+  const btn = document.getElementById('btn-submit-test-send');
+
+  const phone = phoneInput?.value.trim();
+  const text = msgInput?.value.trim();
+
+  if (!phone) {
+    showToast('Por favor, informe um número de telefone com DDD.', 'warning');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerText = 'Enviando teste...';
+
+  try {
+    const res = await fetch('/api/whatsapp/test-send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, text })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(`Sucesso! Mensagem de teste entregue para ${data.destinatario.split('@')[0]}. Verifique seu WhatsApp!`, 'success');
+      closeTestModal();
+      loadLogs();
+    } else {
+      showToast(data.message || 'Falha ao enviar mensagem de teste.', 'error');
+    }
+  } catch (err) {
+    showToast(`Erro no teste: ${err.message}`, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '🚀 Disparar Teste Agora';
+  }
+};
 
 // Grupos
 async function loadGrupos(refetch = true) {
@@ -1374,5 +1461,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadStatus();
   loadPastasLeads();
   initSSE();
+  setInterval(loadStatus, 10000);
 });
 

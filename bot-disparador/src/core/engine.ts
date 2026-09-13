@@ -40,16 +40,57 @@ class DispatchEngine {
   private isRunning = false;
   private consecutiveSends = 0;
   private loopTimer: NodeJS.Timeout | null = null;
+  private blockPauseUntil: Date | null = null;
 
-  public async start(): Promise<void> {
-    if (this.isRunning) return;
+  public getStatus() {
+    const isPaused = this.blockPauseUntil !== null && this.blockPauseUntil.getTime() > Date.now();
+    const remainingMs = isPaused ? this.blockPauseUntil!.getTime() - Date.now() : 0;
+    const remainingMin = Math.ceil(remainingMs / 60000);
+    const pauseTimeFormatted = isPaused
+      ? new Intl.DateTimeFormat('pt-BR', {
+          timeZone: 'America/Sao_Paulo',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).format(this.blockPauseUntil!)
+      : null;
+
+    return {
+      isRunning: this.isRunning,
+      consecutiveSends: this.consecutiveSends,
+      inBlockPause: isPaused,
+      pauseUntil: isPaused ? this.blockPauseUntil!.toISOString() : null,
+      pauseTimeFormatted,
+      remainingMinutes: remainingMin
+    };
+  }
+
+  public async start(forceResume = false): Promise<void> {
+    if (this.loopTimer && forceResume) {
+      clearTimeout(this.loopTimer);
+      this.loopTimer = null;
+      this.blockPauseUntil = null;
+    }
+    if (this.isRunning && !forceResume) return;
     this.isRunning = true;
     logSistema('info', 'disparo', 'Motor de disparos iniciado.');
     this.processNext();
   }
 
+  public resumeNow(): void {
+    if (this.loopTimer) {
+      clearTimeout(this.loopTimer);
+      this.loopTimer = null;
+    }
+    this.blockPauseUntil = null;
+    this.consecutiveSends = 0;
+    this.isRunning = true;
+    logSistema('info', 'disparo', 'Pausa forçada encerrada pelo usuário. Retomando fila de disparos agora!');
+    this.processNext();
+  }
+
   public stop(): void {
     this.isRunning = false;
+    this.blockPauseUntil = null;
     if (this.loopTimer) {
       clearTimeout(this.loopTimer);
       this.loopTimer = null;
@@ -61,8 +102,13 @@ class DispatchEngine {
     const inicio = getConfig('disparo_horario_inicio', '08:00');
     const fim = getConfig('disparo_horario_fim', '21:30');
 
-    const agora = new Date();
-    const horaMinutoAtual = agora.toTimeString().slice(0, 5);
+    // Fuso horário oficial do Brasil (Brasília / America/Sao_Paulo)
+    const horaMinutoAtual = new Intl.DateTimeFormat('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).format(new Date());
 
     return horaMinutoAtual >= inicio && horaMinutoAtual <= fim;
   }
@@ -133,14 +179,23 @@ class DispatchEngine {
       const pausaMinutos = calculateBlockPauseMinutes(pausaMinutosMin, pausaMinutosMax);
       const agora = new Date();
       agora.setMinutes(agora.getMinutes() + pausaMinutos);
-      const horaRetorno = agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      this.blockPauseUntil = agora;
+
+      const horaRetorno = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(agora);
 
       logSistema(
         'info',
         'disparo',
         `[PAUSA LONGA HUMANA] Bloco de ${pausaACada} envios concluído! Pausando por ${pausaMinutos} minutos para descanso natural do chip (retoma às ${horaRetorno})...`
       );
-      this.loopTimer = setTimeout(() => this.processNext(), pausaMinutos * 60 * 1000);
+      this.loopTimer = setTimeout(() => {
+        this.blockPauseUntil = null;
+        this.processNext();
+      }, pausaMinutos * 60 * 1000);
       return;
     }
 
