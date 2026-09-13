@@ -17,7 +17,7 @@ test('Atendimento IA - Configurações e Aliases do OpenCode Zen Go e DeepSeek F
   assert.strictEqual(ativo, 'true');
 });
 
-test('Atendimento IA - Resposta com OpenCode e DeepSeek Flash em tempo real', async () => {
+test('Atendimento IA - Resposta com OpenCode e envio do link do grupo WhatsApp', async () => {
   const apiKey = getConfig('deepseek_api_key', '').trim();
   if (!apiKey) {
     console.log('Skipping live OpenCode call: deepseek_api_key não configurada.');
@@ -29,12 +29,18 @@ test('Atendimento IA - Resposta com OpenCode e DeepSeek Flash em tempo real', as
   setConfig('deepseek_ativo', 'true');
 
   const resposta = await generateDeepSeekResponse(
-    '5511999999999@s.whatsapp.net',
-    'Olá Eduardo! Gostaria de saber como funciona o grupo de Pokémon TCG.',
-    'Lucas'
+    '5511888888888@s.whatsapp.net',
+    'Opa Eduardo, tudo bem? Pode me mandar o link do grupo sim, quero entrar e conferir as cartas!',
+    'Rodrigo'
   );
 
   assert.ok(resposta, 'Deveria retornar uma resposta gerada pela IA');
   assert.strictEqual(typeof resposta, 'string');
-  assert.ok(resposta.length > 10, 'A resposta deve ter conteúdo textual suficiente');
+  console.log('\n--- RESPOSTA DA IA COM LINK DO GRUPO ---');
+  console.log(resposta);
+  console.log('-----------------------------------------\n');
+  assert.ok(
+    resposta.includes('https://chat.whatsapp.com/IFxkHX9ADT29EIUHRkCHVo') || resposta.includes('IFxkHX9ADT29EIUHRkCHVo'),
+    'A IA deve incluir o link oficial do grupo WhatsApp na resposta para quem aceitou o convite'
+  );
 });

@@ -1093,7 +1093,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modelos de Ofertas & Vendas
     'convite-grupo': {
       nome: 'Convite Grupo VIP Pokémon TCG',
-      template: `{Olá|Fala|Oi} {nome}! {Tudo bem com você|Como estão as coisas}? Vi seu contato no grupo {grupo}! 🎴⚡\n\nCriei um grupo VIP exclusivo onde solto diariamente promoções com até *50% OFF* em Boosters, Boxes, Decks e Fichários (a maioria com frete Full grátis no Mercado Livre)!\n\nSe você curte colecionar ou jogar e quer pegar as melhores ofertas antes de esgotar, entra por aqui:\n👉 https://chat.whatsapp.com/invite\n\nTe espero lá!`,
+      template: `{Olá|Fala|Oi} {nome}! {Tudo bem com você|Como estão as coisas}? Vi seu contato no grupo {grupo}! 🎴⚡\n\nCriei um grupo VIP exclusivo onde solto diariamente promoções com até *50% OFF* em Boosters, Boxes, Decks e Fichários (a maioria com frete Full grátis no Mercado Livre)!\n\nSe você curte colecionar ou jogar e quer pegar as melhores ofertas antes de esgotar, entra por aqui:\n👉 https://chat.whatsapp.com/IFxkHX9ADT29EIUHRkCHVo\n\nTe espero lá!`,
       media: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png'
     },
     'promocao-boxes': {
