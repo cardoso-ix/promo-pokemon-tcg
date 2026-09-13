@@ -559,6 +559,14 @@
                 <small>Limite após aquecimento concluído</small>
               </div>
             </div>
+
+            <!-- Dica de ouro para aquecimento anti-spam -->
+            <div style="margin-top: 14px; padding: 12px 14px; background: rgba(251, 146, 60, 0.08); border-left: 3px solid #fb923c; border-radius: 4px;">
+              <strong style="color: #fb923c; font-size: 13px;">💡 Dica de Ouro Anti-Spam:</strong>
+              <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-secondary); line-height: 1.4;">
+                Ao aquecer um chip novo, <strong>evite disparar links externos diretamente</strong>. Use nossos <strong>5 Modelos de Aquecimento Seguro</strong> na criação de campanhas: eles utilizam Spintax rico e fazem perguntas amigáveis sobre Pokémon que fazem o contato responder. Quando o destinatário responde à mensagem, a pontuação do seu número no WhatsApp sobe expressivamente e o risco de ban cai para quase zero.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -676,7 +684,12 @@
           </div>
 
           <div class="form-group">
-            <label for="camp-template">Mensagem com Spintax & Tags:</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label for="camp-template" style="margin-bottom: 0;">Mensagem com Spintax & Tags:</label>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-random-warmup" style="font-size: 11.5px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px; border-color: rgba(251, 146, 60, 0.4); color: #fb923c;">
+                🎲 Sortear Frase de Aquecimento
+              </button>
+            </div>
             <textarea id="camp-template" rows="7" class="input-field textarea-field" placeholder="{Olá|Oi|Fala} {nome}! Tudo bem? Olha essa oportunidade especial no nosso grupo {grupo}..."></textarea>
             <div class="tags-hint">
               <span>Inserir tags:</span>
@@ -690,10 +703,63 @@
 
           <!-- Modelos Prontos de Alta Conversão Pokémon TCG -->
           <div class="presets-container">
-            <div class="presets-header">
-              <span class="presets-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                Modelos Prontos Pokémon TCG (Clique para aplicar):
+            <!-- Categoria 1: Aquecimento Anti-Spam (Sem Links, Foco em Resposta) -->
+            <div class="presets-header" style="margin-bottom: 8px;">
+              <span class="presets-title" style="color: #fb923c;">
+                🔥 Modelos de Aquecimento Seguro (Anti-Spam • Sem Links)
+              </span>
+            </div>
+            <div class="presets-grid" style="margin-bottom: 14px;">
+              <button type="button" class="preset-card" data-preset="aquecimento-pergunta">
+                <div class="preset-card-top">
+                  <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Aquecimento 1</span>
+                  <span class="preset-badge-icon">💬</span>
+                </div>
+                <strong>Pergunta de Colecionador</strong>
+                <p>Incentiva o lead a responder qual coleção ou Pokémon favorito ele curte.</p>
+              </button>
+
+              <button type="button" class="preset-card" data-preset="aquecimento-grupo">
+                <div class="preset-card-top">
+                  <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Aquecimento 2</span>
+                  <span class="preset-badge-icon">🤝</span>
+                </div>
+                <strong>Bate-papo do Grupo</strong>
+                <p>Saudação casual não-invasiva mencionando o grupo de origem sem tentar vender.</p>
+              </button>
+
+              <button type="button" class="preset-card" data-preset="aquecimento-permissao">
+                <div class="preset-card-top">
+                  <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Aquecimento 3</span>
+                  <span class="preset-badge-icon">🎯</span>
+                </div>
+                <strong>Convite com Permissão</strong>
+                <p>Avisa do grupo VIP e pede resposta ("responde sim") antes de enviar qualquer link.</p>
+              </button>
+
+              <button type="button" class="preset-card" data-preset="aquecimento-megaspintax">
+                <div class="preset-card-top">
+                  <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Aquecimento 4</span>
+                  <span class="preset-badge-icon">🎲</span>
+                </div>
+                <strong>Mega-Spintax Anti-Bloqueio</strong>
+                <p>4 camadas de variação profunda para gerar centenas de mensagens únicas.</p>
+              </button>
+
+              <button type="button" class="preset-card" data-preset="aquecimento-curiosidade" style="grid-column: span 2;">
+                <div class="preset-card-top">
+                  <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Aquecimento 5</span>
+                  <span class="preset-badge-icon">❓</span>
+                </div>
+                <strong>Dúvida & Curiosidade Pokémon</strong>
+                <p>Pergunta leve se o contato prefere cartas avulsas, boosters ou coleções recentes.</p>
+              </button>
+            </div>
+
+            <!-- Categoria 2: Vendas & Ofertas (Para Chips Já Aquecidos) -->
+            <div class="presets-header" style="margin-bottom: 8px;">
+              <span class="presets-title" style="color: var(--google-blue);">
+                📢 Modelos de Ofertas & Vendas (Para Chips Já Aquecidos)
               </span>
             </div>
             <div class="presets-grid">
@@ -703,7 +769,7 @@
                   <span class="preset-badge-icon">🎴</span>
                 </div>
                 <strong>Grupo de Ofertas VIP</strong>
-                <p>Apresentação natural, citando o grupo de origem e convidando para o grupo de ofertas.</p>
+                <p>Apresentação e link direto para entrar no grupo de ofertas.</p>
               </button>
 
               <button type="button" class="preset-card" data-preset="promocao-boxes">
@@ -712,25 +778,16 @@
                   <span class="preset-badge-icon">⚡</span>
                 </div>
                 <strong>Booster Boxes & Copag</strong>
-                <p>Alerta de desconto relâmpago com link oficial da vitrine no Mercado Livre Full.</p>
+                <p>Alerta de desconto relâmpago com link da vitrine Mercado Livre Full.</p>
               </button>
 
-              <button type="button" class="preset-card" data-preset="acessorios">
+              <button type="button" class="preset-card" data-preset="acessorios" style="grid-column: span 2;">
                 <div class="preset-card-top">
                   <span class="preset-tag">Acessórios</span>
                   <span class="preset-badge-icon">📦</span>
                 </div>
                 <strong>Fichários & Sleeves</strong>
                 <p>Ofertas de pastas de 360 cartas, sleeves protetores e deck boxes.</p>
-              </button>
-
-              <button type="button" class="preset-card" data-preset="aquecimento">
-                <div class="preset-card-top">
-                  <span class="preset-tag">Aquecimento</span>
-                  <span class="preset-badge-icon">💬</span>
-                </div>
-                <strong>Bate-papo Amigável</strong>
-                <p>Texto curto e humanizado para aquecer chip novo e incentivar resposta do lead.</p>
               </button>
             </div>
           </div>

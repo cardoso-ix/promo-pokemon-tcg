@@ -33,3 +33,37 @@ test('renderMessageTemplate deve substituir tags dinâmicas {nome}, {saudacao} e
   assert.strictEqual(rendered.includes('{nome}'), false);
   assert.strictEqual(rendered.includes('{saudacao}'), false);
 });
+
+test('Templates Amigáveis de Aquecimento Seguro devem ter alta variabilidade e sem erros de Spintax', () => {
+  const templatesAquecimento = [
+    `{Olá|Oi|Fala|E aí} {nome}! {{saudacao}|Tudo bem com você|Como estão as coisas}? Vi seu contato no grupo {grupo}.`,
+    `{{saudacao}|Oi|Opa|Fala} {nome}, {tudo certo|tudo bem|beleza}? Vi que você também participa no grupo {grupo}.`,
+    `{Fala|Oi|Olá|Opa} {nome}! {Tudo bem|Como você tá|Beleza}? Vi seu contato no grupo {grupo}. Quer que eu te envie o convite?`,
+    `{{saudacao}|{Olá|Oi|Fala|E aí}} {nome}! {{Tudo bem|Tudo certo|Como você tá}?|} Vi seu contato no grupo {grupo}.`,
+    `{Opa|Oi|Olá} {nome}! {Tudo joia|Tudo tranquilo}? Vi seu perfil no grupo {grupo}.`
+  ];
+
+  const contato = {
+    nome: 'Carlos Eduardo',
+    numero: '5511988887777',
+    grupo_nome: 'Colecionadores Pokémon SP'
+  };
+
+  for (const t of templatesAquecimento) {
+    const outputs = new Set<string>();
+    for (let i = 0; i < 30; i++) {
+      const rendered = renderMessageTemplate(t, contato);
+      // Não deve sobrar chaves nem pipes
+      assert.strictEqual(rendered.includes('{'), false);
+      assert.strictEqual(rendered.includes('}'), false);
+      assert.strictEqual(rendered.includes('|'), false);
+      // Deve ter substituído as tags
+      assert.strictEqual(rendered.includes('Carlos'), true);
+      assert.strictEqual(rendered.includes('Colecionadores Pokémon SP'), true);
+      outputs.add(rendered);
+    }
+    // Deve haver variação significativa
+    assert.ok(outputs.size >= 4, `Template deve gerar variações distintas (gerou ${outputs.size})`);
+  }
+});
+

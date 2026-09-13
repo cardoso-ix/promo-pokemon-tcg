@@ -114,13 +114,13 @@ function updateWhatsAppPreview() {
   if (hr >= 5 && hr < 12) saudacao = 'Bom dia';
   else if (hr >= 18 || hr < 5) saudacao = 'Boa noite';
 
-  // Resolver Spintax e substituir variáveis simuladas
-  let rendered = resolveSpintaxText(template);
-  rendered = rendered
+  // Resolver tags dinâmicas primeiro e depois processar Spintax
+  let rendered = template
     .replace(/\{nome\}/gi, 'Carlos')
     .replace(/\{saudacao\}/gi, saudacao)
     .replace(/\{grupo\}/gi, 'Pokémon TCG VIP')
     .replace(/\{numero\}/gi, '55 11 99999-9999');
+  rendered = resolveSpintaxText(rendered);
 
   if (textElem) {
     textElem.innerHTML = formatWhatsAppMarkdown(rendered);
@@ -1018,6 +1018,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Modelos Prontos Pokémon TCG de Alta Conversão
   const PRESET_TEMPLATES = {
+    // 1. Aquecimento: Pergunta de Colecionador (Foco em provocar resposta do lead)
+    'aquecimento-pergunta': {
+      nome: 'Aquecimento: Pergunta de Colecionador',
+      template: `{Olá|Oi|Fala|E aí} {nome}! {{saudacao}|Tudo bem com você|Como estão as coisas}? 😊\n\n{Vi seu contato|Achei você|Vi seu número} {lá|recentemente} no grupo {grupo} e {resolvi te mandar um alô|quis trocar uma ideia|lembrei de te mandar uma mensagem}.\n\n{Você ainda coleciona|Você ainda tá na ativa colecionando|Também curte colecionar} cartas de Pokémon TCG {ultimamente|ou tá jogando também|atualmente}? {Qual coleção você mais curte|Qual seu Pokémon preferido}?\n\n{Um abraço|Valeu|Tamo junto}! ⚡`,
+      media: ''
+    },
+    // 2. Aquecimento: Bate-papo Leve do Grupo (Não invasivo, sem vendas)
+    'aquecimento-grupo': {
+      nome: 'Aquecimento: Bate-papo do Grupo',
+      template: `{{saudacao}|Oi|Opa|Fala} {nome}, {tudo certo|tudo bem|beleza}?\n\n{Passando só para dar um oi rápido!|Espero que seu dia esteja sendo ótimo!|Tudo tranquilo por aí?}\n\n{Notei que você tá|Vi que você também participa} no grupo {grupo}. {Também sou fã|Também acompanho muito o universo} de Pokémon TCG {já faz um tempo|aqui no Brasil}.\n\n{Depois quando tiver um tempo me dá um alô por aqui|Se você também curte novidades e trocas|Depois me conta se você coleciona ou joga}, {um abraço|valeu|até mais}! 🎴`,
+      media: ''
+    },
+    // 3. Aquecimento: Convite com Permissão (Zero Spam: só passa link se responder!)
+    'aquecimento-permissao': {
+      nome: 'Aquecimento: Convite com Permissão',
+      template: `{Fala|Oi|Olá|Opa} {nome}! {Tudo bem|Como você tá|Beleza}? 🤝\n\n{Tô organizando|Criei|Montei} um {grupo fechado|espaço exclusivo|grupo VIP} {só para a galera|para membros} que curtem Pokémon TCG, {com avisos de estoque e promoções que realmente valem a pena|onde a gente monitora os menores preços de boosters e caixas|com descontos bem legais}.\n\n{Como vi seu contato no grupo {grupo}, lembrei de você!|Vi você lá no grupo {grupo}.|Te achei no grupo {grupo}.}\n\n{Se tiver interesse em participar|Se você quiser que eu te mande o link|Quer que eu te envie o convite}? {Me responde um "sim" ou dá um toque aqui que te passo|Só me avisar por aqui|É só me responder aqui}! {Abraço|Valeu}!`,
+      media: ''
+    },
+    // 4. Aquecimento: Mega-Spintax Anti-Bloqueio (Centenas de permutações)
+    'aquecimento-megaspintax': {
+      nome: 'Aquecimento: Mega-Spintax Anti-Bloqueio',
+      template: `{{saudacao}|{Olá|Oi|Fala|E aí}} {nome}! {{Tudo bem|Tudo certo|Como você tá|Tudo em paz}?|☀️}\n\n{Vi seu contato|Te achei|Notei sua presença} {no grupo {grupo}|através do {grupo}|no grupo de Pokémon}.\n\n{Você {continua colecionando|tá focado em alguma coleção de|ainda curte jogar} Pokémon TCG?|Tô mandando mensagem para a galera do grupo pra {trocar umas dicas|conhecer mais colecionadores|saber quais cartas o pessoal tá caçando}.|Você prefere {colecionar em fichário|abrir booster box|jogar casualmente}?}\n\n{Depois me conta aqui!|Quando puder me responde um oi!|Qualquer hora trocamos uma ideia!} {Valeu|Abraços|Até mais}!`,
+      media: ''
+    },
+    // 5. Aquecimento: Dúvida & Curiosidade Pokémon
+    'aquecimento-curiosidade': {
+      nome: 'Aquecimento: Dúvida de Colecionador',
+      template: `{Opa|Oi|Olá} {nome}! {Tudo joia|Tudo tranquilo}? 👋\n\n{Tava dando uma olhada nos membros do {grupo}|Vi seu perfil no grupo {grupo}} e {fiquei curioso|queria te fazer uma pergunta rápida}.\n\n{Você costuma comprar mais cartas avulsas ou curte abrir pacotinhos/blisters?|Qual expansão recente de Pokémon você achou mais bonita?|Você coleciona cartas em português ou em japonês/inglês também?}\n\n{Tô separando umas novidades para a comunidade e queria saber a preferência do pessoal!|Perguntando só por curiosidade mesmo de fã para fã haha.}\n\n{Abraço|Valeu|Um ótimo dia pra você}! ✨`,
+      media: ''
+    },
+    // Modelos de Ofertas & Vendas
     'convite-grupo': {
       nome: 'Convite Grupo VIP Pokémon TCG',
       template: `{Olá|Fala|Oi} {nome}! {Tudo bem com você|Como estão as coisas}? Vi seu contato no grupo {grupo}! 🎴⚡\n\nCriei um grupo VIP exclusivo onde solto diariamente promoções com até *50% OFF* em Boosters, Boxes, Decks e Fichários (a maioria com frete Full grátis no Mercado Livre)!\n\nSe você curte colecionar ou jogar e quer pegar as melhores ofertas antes de esgotar, entra por aqui:\n👉 https://chat.whatsapp.com/invite\n\nTe espero lá!`,
@@ -1032,13 +1063,34 @@ document.addEventListener('DOMContentLoaded', () => {
       nome: 'Ofertas Fichários e Sleeves',
       template: `{Olá|Oi} {nome}! {Tudo bem|Como vai}? Se você estiver precisando organizar sua coleção ou proteger suas cartas raras, acabaram de liberar descontos em *Fichários 360 cartas, Sleeves e Deck Boxes*! 📦✨\n\nPreços a partir de R$ 35 com envio imediato no Mercado Livre Full!\nConfere aqui: https://mercadolivre.com/sec/2rM6RPm\n\nAbraço e boas aberturas de boosters! ⚡`,
       media: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/130.png'
-    },
-    'aquecimento': {
-      nome: 'Bate-papo Amigável Colecionador',
-      template: `{Olá|Oi|Fala} {nome}! {Tudo bom|Como você tá}? Vi seu contato através do grupo {grupo}.\n\nVocê ainda está na ativa colecionando ou jogando Pokémon TCG ultimamente? Criei um grupo de promoções e alertas de estoque e queria te convidar. Se quiser o link me avisa aqui!`,
-      media: ''
     }
   };
+
+  // Botão de Sortear Frase Amigável de Aquecimento
+  const btnRandomWarmup = document.getElementById('btn-random-warmup');
+  if (btnRandomWarmup) {
+    btnRandomWarmup.addEventListener('click', () => {
+      const warmupKeys = [
+        'aquecimento-pergunta',
+        'aquecimento-grupo',
+        'aquecimento-permissao',
+        'aquecimento-megaspintax',
+        'aquecimento-curiosidade'
+      ];
+      const randomKey = warmupKeys[Math.floor(Math.random() * warmupKeys.length)];
+      const preset = PRESET_TEMPLATES[randomKey];
+      if (preset) {
+        document.getElementById('camp-template').value = preset.template;
+        const nomeInput = document.getElementById('camp-nome');
+        if (nomeInput && (!nomeInput.value.trim() || nomeInput.value.startsWith('Aquecimento') || nomeInput.value.startsWith('Convite') || nomeInput.value.startsWith('Oferta'))) {
+          nomeInput.value = preset.nome;
+        }
+        document.getElementById('camp-media').value = '';
+        updateWhatsAppPreview();
+        showToast(`🎲 Sorteado: "${preset.nome}"`, 'info');
+      }
+    });
+  }
 
   // Click nos cards de modelos prontos
   document.querySelectorAll('.preset-card').forEach(card => {

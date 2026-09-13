@@ -5,8 +5,8 @@
 export function parseSpintax(text: string): string {
   if (!text) return '';
 
-  // Só trata como Spintax se houver separador de opções (|)
-  const spintaxRegex = /\{([^{}]+?\|[^{}]+?)\}/;
+  // Suporta opções mesmo com campos vazios, ex: {opção 1|}
+  const spintaxRegex = /\{([^{}]*?\|[^{}]*?)\}/;
   let matches;
 
   let result = text;
@@ -36,8 +36,6 @@ export function renderMessageTemplate(
   template: string,
   contato: { nome?: string; numero: string; grupo_nome?: string }
 ): string {
-  let rendered = parseSpintax(template);
-
   // Extrair primeiro nome ou fallback
   let primeiroNome = (contato.nome || '').trim().split(' ')[0] || '';
   if (!primeiroNome || /^[0-9+]+$/.test(primeiroNome)) {
@@ -47,10 +45,15 @@ export function renderMessageTemplate(
   const saudacao = getSaudacaoHorario();
   const grupoNome = contato.grupo_nome || 'Pokémon TCG';
 
-  rendered = rendered.replace(/\{nome\}/gi, primeiroNome);
-  rendered = rendered.replace(/\{saudacao\}/gi, saudacao);
-  rendered = rendered.replace(/\{numero\}/gi, contato.numero);
-  rendered = rendered.replace(/\{grupo\}/gi, grupoNome);
+  // 1. Substitui tags dinâmicas primeiro (permitindo que tags estejam aninhadas dentro do Spintax)
+  let rendered = template
+    .replace(/\{nome\}/gi, primeiroNome)
+    .replace(/\{saudacao\}/gi, saudacao)
+    .replace(/\{numero\}/gi, contato.numero)
+    .replace(/\{grupo\}/gi, grupoNome);
+
+  // 2. Processa Spintax recursivo
+  rendered = parseSpintax(rendered);
 
   return rendered.trim();
 }
