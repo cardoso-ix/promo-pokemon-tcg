@@ -34,13 +34,13 @@ test('renderMessageTemplate deve substituir tags dinâmicas {nome}, {saudacao} e
   assert.strictEqual(rendered.includes('{saudacao}'), false);
 });
 
-test('Templates Amigáveis de Aquecimento Seguro devem ter alta variabilidade e sem erros de Spintax', () => {
+test('Templates Amigáveis de Aquecimento Seguro (De Fã para Fãs) devem ter alta variabilidade e sem erros de Spintax', () => {
   const templatesAquecimento = [
-    `{Olá|Oi|Fala|E aí} {nome}! {{saudacao}|Tudo bem com você|Como estão as coisas}? Vi seu contato no grupo {grupo}.`,
-    `{{saudacao}|Oi|Opa|Fala} {nome}, {tudo certo|tudo bem|beleza}? Vi que você também participa no grupo {grupo}.`,
-    `{Fala|Oi|Olá|Opa} {nome}! {Tudo bem|Como você tá|Beleza}? Vi seu contato no grupo {grupo}. Quer que eu te envie o convite?`,
-    `{{saudacao}|{Olá|Oi|Fala|E aí}} {nome}! {{Tudo bem|Tudo certo|Como você tá}?|} Vi seu contato no grupo {grupo}.`,
-    `{Opa|Oi|Olá} {nome}! {Tudo joia|Tudo tranquilo}? Vi seu perfil no grupo {grupo}.`
+    `{Olá|Oi|Fala|E aí} {nome}! {{saudacao}|Tudo bem|Como você tá}? Aqui é o Eduardo! Vi seu contato no grupo {grupo}. Como também sou colecionador e fãzaço de Pokémon TCG, montei um grupo bem legal {feito de verdade de um fã para outros fãs|criado de coração de fã pra fã}. {Posso te fazer um convite para o meu grupo?|Queria saber se posso te fazer um convite para entrar no meu grupo?}`,
+    `{{saudacao}|Oi|Opa|Fala} {nome}, {tudo certo|tudo bem|tudo joia}? Aqui é o Eduardo do grupo {grupo}. Criei uma comunidade {feita de fã para fãs|criada de fã pra fã de coração}. {Posso te fazer um convite para meu grupo?|Será que posso te fazer um convite pro meu grupo?}`,
+    `{Fala|Oi|Olá|Opa} {nome}! Aqui é o Eduardo! Vi você no grupo {grupo}. Criei um grupo {totalmente feito de um fã para fãs|feito de fã pra fã de colecionador}. {Posso te fazer um convite para o meu grupo?|Queria saber se posso te fazer um convite pro meu grupo?}`,
+    `{{saudacao}|{Olá|Oi|Fala|E aí}} {nome}! {{Tudo bem|Tudo certo|Como você tá}?|} Aqui é o Eduardo do {grupo}! Criei um grupo {feito de um fã para fãs|criado de fã pra fã de verdade}. {Posso te fazer um convite para meu grupo?|Queria te perguntar se posso te fazer um convite para entrar no meu grupo?}`,
+    `{Opa|Oi|Olá} {nome}! Aqui é o Eduardo! Vi você no grupo {grupo}. Como colecionador de Pokémon TCG, criei um espaço {100% feito de um fã para fãs|feito de coração de fã pra fã}. {Posso te fazer um convite para o meu grupo?|Queria saber se posso te fazer um convite pra participar com a gente?}`
   ];
 
   const contato = {
@@ -57,9 +57,14 @@ test('Templates Amigáveis de Aquecimento Seguro devem ter alta variabilidade e 
       assert.strictEqual(rendered.includes('{'), false);
       assert.strictEqual(rendered.includes('}'), false);
       assert.strictEqual(rendered.includes('|'), false);
-      // Deve ter substituído as tags
+      // Deve conter o nome e grupo
       assert.strictEqual(rendered.includes('Carlos'), true);
       assert.strictEqual(rendered.includes('Colecionadores Pokémon SP'), true);
+      // Deve conter "Eduardo"
+      assert.strictEqual(rendered.includes('Eduardo'), true);
+      // Deve conter "fã" e convite
+      assert.strictEqual(rendered.toLowerCase().includes('fã'), true);
+      assert.strictEqual(rendered.toLowerCase().includes('convite'), true);
       outputs.add(rendered);
     }
     // Deve haver variação significativa

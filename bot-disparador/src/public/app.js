@@ -1018,34 +1018,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Modelos Prontos Pokémon TCG de Alta Conversão
   const PRESET_TEMPLATES = {
-    // 1. Aquecimento: Pergunta de Colecionador (Foco em provocar resposta do lead)
-    'aquecimento-pergunta': {
-      nome: 'Aquecimento: Pergunta de Colecionador',
-      template: `{Olá|Oi|Fala|E aí} {nome}! {{saudacao}|Tudo bem com você|Como estão as coisas}? 😊\n\n{Vi seu contato|Achei você|Vi seu número} {lá|recentemente} no grupo {grupo} e {resolvi te mandar um alô|quis trocar uma ideia|lembrei de te mandar uma mensagem}.\n\n{Você ainda coleciona|Você ainda tá na ativa colecionando|Também curte colecionar} cartas de Pokémon TCG {ultimamente|ou tá jogando também|atualmente}? {Qual coleção você mais curte|Qual seu Pokémon preferido}?\n\n{Um abraço|Valeu|Tamo junto}! ⚡`,
+    // 1. De Fã para Fã: Apresentação Pessoal do Eduardo
+    'aquecimento-fa-pra-fa': {
+      nome: 'Aquecimento: De Fã para Fã',
+      template: `{Olá|Oi|Fala|E aí} {nome}! {{saudacao}|Tudo bem|Como você tá}? Aqui é o Eduardo! 😊\n\n{Vi seu contato|Achei você|Vi você} no grupo {grupo}. {Como também sou colecionador e fãzaço de Pokémon TCG|Também curto colecionar e jogar Pokémon}, montei um grupo bem legal {feito de verdade de um fã para outros fãs|criado de coração de fã pra fã}, sem enrolação e sem spam, só com dicas e alertas das melhores ofertas e estoques.\n\n{Posso te fazer um convite para o meu grupo?|Queria saber se posso te fazer um convite para entrar no meu grupo?}\n\nSe você curtir, me dá um toque aqui que te passo o link! {Valeu|Abraço|Tamo junto}! ⚡`,
       media: ''
     },
-    // 2. Aquecimento: Bate-papo Leve do Grupo (Não invasivo, sem vendas)
-    'aquecimento-grupo': {
-      nome: 'Aquecimento: Bate-papo do Grupo',
-      template: `{{saudacao}|Oi|Opa|Fala} {nome}, {tudo certo|tudo bem|beleza}?\n\n{Passando só para dar um oi rápido!|Espero que seu dia esteja sendo ótimo!|Tudo tranquilo por aí?}\n\n{Notei que você tá|Vi que você também participa} no grupo {grupo}. {Também sou fã|Também acompanho muito o universo} de Pokémon TCG {já faz um tempo|aqui no Brasil}.\n\n{Depois quando tiver um tempo me dá um alô por aqui|Se você também curte novidades e trocas|Depois me conta se você coleciona ou joga}, {um abraço|valeu|até mais}! 🎴`,
+    // 2. Papo de Colecionador & Convite Gentil
+    'aquecimento-conversa-leve': {
+      nome: 'Aquecimento: Papo de Colecionador',
+      template: `{{saudacao}|Oi|Opa|Fala} {nome}, {tudo certo|tudo bem|tudo joia}? Tudo tranquilo por aí?\n\nAqui é o Eduardo! {Notei que você tá|Vi que você também participa} no grupo {grupo}. Passando só pra dar um alô: criei uma comunidade no WhatsApp {feita de fã para fãs|criada de fã pra fã de coração}, onde a gente se ajuda a encontrar cartas, fichários e boosters com preços justos de verdade.\n\n{Posso te fazer um convite para meu grupo?|Será que posso te fazer um convite pro meu grupo?}\n\nSe fizer sentido pra você, só me responder aqui que te mando o link na hora! {Um abraço|Valeu demais}! 🎴`,
       media: ''
     },
-    // 3. Aquecimento: Convite com Permissão (Zero Spam: só passa link se responder!)
-    'aquecimento-permissao': {
-      nome: 'Aquecimento: Convite com Permissão',
-      template: `{Fala|Oi|Olá|Opa} {nome}! {Tudo bem|Como você tá|Beleza}? 🤝\n\n{Tô organizando|Criei|Montei} um {grupo fechado|espaço exclusivo|grupo VIP} {só para a galera|para membros} que curtem Pokémon TCG, {com avisos de estoque e promoções que realmente valem a pena|onde a gente monitora os menores preços de boosters e caixas|com descontos bem legais}.\n\n{Como vi seu contato no grupo {grupo}, lembrei de você!|Vi você lá no grupo {grupo}.|Te achei no grupo {grupo}.}\n\n{Se tiver interesse em participar|Se você quiser que eu te mande o link|Quer que eu te envie o convite}? {Me responde um "sim" ou dá um toque aqui que te passo|Só me avisar por aqui|É só me responder aqui}! {Abraço|Valeu}!`,
+    // 3. Espaço de Fã para Fã (Sem Spams)
+    'aquecimento-comunidade-vip': {
+      nome: 'Aquecimento: Comunidade Sem Spam',
+      template: `{Fala|Oi|Olá|Opa} {nome}! {Tudo bem|Como você tá|Beleza}? Aqui é o Eduardo! 🤝\n\n{Como te vi no grupo {grupo}, lembrei de te mandar uma mensagem rápida|Vi seu contato lá no {grupo}}! Eu sou apaixonado por Pokémon TCG desde criança e resolvi juntar uma galera bacana num grupo novo, {totalmente feito de um fã para fãs|feito de fã pra fã de colecionador}, focado em economizar nas compras e trocar experiências.\n\n{Posso te fazer um convite para o meu grupo?|Queria saber se posso te fazer um convite pro meu grupo?}\n\n{Me responde com um "sim" ou me dá um alô aqui que te envio o link|Se quiser participar, só me avisar aqui}! {Abraço|Valeu}! ✨`,
       media: ''
     },
-    // 4. Aquecimento: Mega-Spintax Anti-Bloqueio (Centenas de permutações)
-    'aquecimento-megaspintax': {
-      nome: 'Aquecimento: Mega-Spintax Anti-Bloqueio',
-      template: `{{saudacao}|{Olá|Oi|Fala|E aí}} {nome}! {{Tudo bem|Tudo certo|Como você tá|Tudo em paz}?|☀️}\n\n{Vi seu contato|Te achei|Notei sua presença} {no grupo {grupo}|através do {grupo}|no grupo de Pokémon}.\n\n{Você {continua colecionando|tá focado em alguma coleção de|ainda curte jogar} Pokémon TCG?|Tô mandando mensagem para a galera do grupo pra {trocar umas dicas|conhecer mais colecionadores|saber quais cartas o pessoal tá caçando}.|Você prefere {colecionar em fichário|abrir booster box|jogar casualmente}?}\n\n{Depois me conta aqui!|Quando puder me responde um oi!|Qualquer hora trocamos uma ideia!} {Valeu|Abraços|Até mais}!`,
+    // 4. Mega-Spintax Super Humano & De Fã para Fãs
+    'aquecimento-mega-humano': {
+      nome: 'Aquecimento: Mega-Spintax Humano',
+      template: `{{saudacao}|{Olá|Oi|Fala|E aí}} {nome}! {{Tudo bem|Tudo certo|Como você tá}?|☀️} Aqui é o Eduardo!\n\n{Vi seu contato|Te achei|Notei que você tá} {no grupo {grupo}|através do {grupo}|no grupo de Pokémon}. Eu {coleciono|sou muito fã de} cartas de Pokémon e acabei de criar um grupo {muito especial|fechado|exclusivo} {feito de um fã para fãs|criado de fã pra fã de verdade}.\n\nA ideia é avisar dos menores preços e novidades antes de esgotar, sem flood. {Posso te fazer um convite para meu grupo?|Queria te perguntar se posso te fazer um convite para entrar no meu grupo?}\n\n{Se topar, me dá um salve aqui|Se você quiser, é só me responder aqui|Qualquer coisa me dá um alô} que já te passo o link! {Valeu demais|Forte abraço|Até mais}! ⚡`,
       media: ''
     },
-    // 5. Aquecimento: Dúvida & Curiosidade Pokémon
-    'aquecimento-curiosidade': {
-      nome: 'Aquecimento: Dúvida de Colecionador',
-      template: `{Opa|Oi|Olá} {nome}! {Tudo joia|Tudo tranquilo}? 👋\n\n{Tava dando uma olhada nos membros do {grupo}|Vi seu perfil no grupo {grupo}} e {fiquei curioso|queria te fazer uma pergunta rápida}.\n\n{Você costuma comprar mais cartas avulsas ou curte abrir pacotinhos/blisters?|Qual expansão recente de Pokémon você achou mais bonita?|Você coleciona cartas em português ou em japonês/inglês também?}\n\n{Tô separando umas novidades para a comunidade e queria saber a preferência do pessoal!|Perguntando só por curiosidade mesmo de fã para fã haha.}\n\n{Abraço|Valeu|Um ótimo dia pra você}! ✨`,
+    // 5. Pergunta & Convite de Fã
+    'aquecimento-pergunta-direta': {
+      nome: 'Aquecimento: Pergunta & Convite de Fã',
+      template: `{Opa|Oi|Olá} {nome}! {Tudo joia|Tudo tranquilo}? Aqui é o Eduardo! 👋\n\n{Tava olhando os membros do {grupo}|Vi você no grupo {grupo}} e resolvi te mandar um oi. Como colecionador assíduo de Pokémon TCG, criei um espaço bem acolhedor, {100% feito de um fã para fãs|feito de coração de fã pra fã}, pra gente se ajudar com promoções reais do Mercado Livre Full e novidades de Copag.\n\n{Posso te fazer um convite para o meu grupo?|Queria saber se posso te fazer um convite pra participar com a gente?}\n\nSe você puder me responder se quer receber o link, te mando em seguida! {Abraço e boas aberturas de cartas|Valeu|Um ótimo dia pra você}! 📦✨`,
       media: ''
     },
     // Modelos de Ofertas & Vendas
@@ -1071,11 +1071,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnRandomWarmup) {
     btnRandomWarmup.addEventListener('click', () => {
       const warmupKeys = [
-        'aquecimento-pergunta',
-        'aquecimento-grupo',
-        'aquecimento-permissao',
-        'aquecimento-megaspintax',
-        'aquecimento-curiosidade'
+        'aquecimento-fa-pra-fa',
+        'aquecimento-conversa-leve',
+        'aquecimento-comunidade-vip',
+        'aquecimento-mega-humano',
+        'aquecimento-pergunta-direta'
       ];
       const randomKey = warmupKeys[Math.floor(Math.random() * warmupKeys.length)];
       const preset = PRESET_TEMPLATES[randomKey];
@@ -1091,6 +1091,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
 
   // Click nos cards de modelos prontos
   document.querySelectorAll('.preset-card').forEach(card => {
