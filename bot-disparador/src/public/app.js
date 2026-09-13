@@ -16,10 +16,18 @@ function showToast(message, type = 'info') {
   const toast = document.getElementById('app-toast');
   toast.innerText = message;
   toast.style.display = 'block';
-  toast.style.borderColor = type === 'error' ? 'var(--google-red)' : 'var(--google-blue)';
+  toast.style.borderColor =
+    type === 'error'
+      ? 'var(--google-red)'
+      : type === 'warning'
+      ? '#f59e0b'
+      : type === 'success'
+      ? 'var(--google-green)'
+      : 'var(--google-blue)';
+  const timeoutMs = type === 'warning' ? 6000 : 3500;
   setTimeout(() => {
     toast.style.display = 'none';
-  }, 3500);
+  }, timeoutMs);
 }
 
 // Utilitários de Formatação & Sanitização
@@ -377,7 +385,17 @@ window.extractParticipants = async function(jid) {
     const data = await res.json();
     if (data.ok) {
       const msgAdms = data.adminsIgnorados > 0 ? ` (${data.adminsIgnorados} ADMs protegidos/ignorados)` : '';
-      showToast(`Sucesso! ${data.total} novos membros extraídos do grupo "${data.grupoNome}"${msgAdms}.`, 'success');
+      const msgOcultos = data.ocultosIgnorados > 0 ? ` [${data.ocultosIgnorados} números ocultos de comunidade ignorados]` : '';
+
+      if (data.total === 0 && data.ocultosIgnorados > 0) {
+        showToast(
+          `Aviso: Os ${data.ocultosIgnorados} membros deste grupo estão com o telefone oculto por regras de comunidade do WhatsApp. O WhatsApp não permite envio para contatos com número privado.`,
+          'warning'
+        );
+      } else {
+        showToast(`Sucesso! ${data.total} novos membros extraídos do grupo "${data.grupoNome}"${msgAdms}${msgOcultos}.`, 'success');
+      }
+
       loadStatus();
       loadPastasLeads();
       loadContatos();

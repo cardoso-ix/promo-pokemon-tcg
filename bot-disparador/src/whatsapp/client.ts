@@ -2,7 +2,8 @@ import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
   fetchLatestBaileysVersion,
-  proto
+  proto,
+  jidNormalizedUser
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import path from 'node:path';
@@ -220,7 +221,12 @@ export class WhatsAppManager {
     }
   }
 
-  public async extractGroupParticipants(groupJid: string): Promise<{ total: number; grupoNome: string; adminsIgnorados: number }> {
+  public async extractGroupParticipants(groupJid: string): Promise<{
+    total: number;
+    grupoNome: string;
+    adminsIgnorados: number;
+    ocultosIgnorados: number;
+  }> {
     if (!this.sock || this.state.status !== 'connected') {
       throw new Error('WhatsApp não está conectado.');
     }
@@ -230,13 +236,28 @@ export class WhatsAppManager {
     const participants = meta.participants || [];
     let count = 0;
     let adminsIgnorados = 0;
+    let ocultosIgnorados = 0;
 
-    for (const p of participants) {
-      const jid = p.id;
-      if (!jid || jid.includes(':')) continue; // Ignorar IDs com sufixo de dispositivo
+    for (const p of participants as any[]) {
+      // 1. Resolver identificador: em comunidades, p.phoneNumber traz o telefone real se visível
+      let realJid = p.phoneNumber || p.id;
+      if (!realJid) continue;
 
-      const numero = jid.split('@')[0];
-      // Ignorar o próprio bot
+      if (!realJid.includes('@')) {
+        realJid = `${realJid.replace(/\D/g, '')}@s.whatsapp.net`;
+      }
+
+      // Normalizar para remover sufixos de dispositivo (:1, :2, etc.)
+      realJid = jidNormalizedUser(realJid);
+
+      // Se ainda for @lid, significa que o contato está com o número oculto pelas regras de comunidade do WhatsApp
+      if (realJid.endsWith('@lid')) {
+        ocultosIgnorados++;
+        continue;
+      }
+
+      const numero = realJid.split('@')[0];
+      // Ignorar o próprio bot conectado
       if (numero === this.state.userPhone) continue;
 
       // Ignorar administradores e criadores do grupo para proteger o usuário de denúncias
@@ -247,9 +268,9 @@ export class WhatsAppManager {
       }
 
       const salvo = upsertContato({
-        jid,
+        jid: realJid,
         numero,
-        nome: '',
+        nome: p.notify || p.name || '',
         origem_grupo: groupJid,
         grupo_nome: grupoNome,
         origem_tipo: 'extracao'
@@ -258,8 +279,20 @@ export class WhatsAppManager {
       if (salvo) count++;
     }
 
-    logSistema('info', 'extracao', `Extraídos ${count} novos membros do grupo "${grupoNome}" (${adminsIgnorados} administradores protegidos/ignorados).`);
-    return { total: count, grupoNome, adminsIgnorados };
+    if (ocultosIgnorados > 0) {
+      logSistema(
+        'warn',
+        'extracao',
+        `Grupo "${grupoNome}": ${ocultosIgnorados} membros possuem número oculto por privacidade de comunidade do WhatsApp e foram ignorados para evitar mensagens perdidas.`
+      );
+    }
+
+    logSistema(
+      'info',
+      'extracao',
+      `Extração concluída no grupo "${grupoNome}": ${count} contatos válidos extraídos (${adminsIgnorados} admins ignorados, ${ocultosIgnorados} números ocultos ignorados).`
+    );
+    return { total: count, grupoNome, adminsIgnorados, ocultosIgnorados };
   }
 
   private async handleIncomingMessage(msg: proto.IWebMessageInfo): Promise<void> {
@@ -352,33 +385,85 @@ export class WhatsAppManager {
       throw new Error('WhatsApp não está conectado.');
     }
 
-    // Simulação dinâmica e humana de digitação ou áudio
-    await this.simulateHumanPresence(toJid, text, mediaPath);
+    if (!toJid || toJid.endsWith('@lid')) {
+      throw new Error('Contato possui número oculto no grupo (@lid) e não permite mensagens diretas no WhatsApp.');
+    }
 
+    // Normalizar JID de usuário (remove sufixos de dispositivo tipo :1@s.whatsapp.net)
+    let cleanJid = jidNormalizedUser(toJid);
+    if (!cleanJid.includes('@')) {
+      cleanJid = `${cleanJid.replace(/\D/g, '')}@s.whatsapp.net`;
+    }
+
+    // Validar se o contato existe e obter o JID canônico registrado no WhatsApp
+    let checked: any = null;
+    try {
+      const results = await this.sock.onWhatsApp(cleanJid);
+      checked = results?.[0];
+    } catch (err: any) {
+      logSistema('warn', 'whatsapp', `Aviso ao consultar onWhatsApp para ${cleanJid}: ${err?.message || err}`);
+    }
+
+    const digitsOnly = cleanJid.split('@')[0].replace(/\D/g, '');
+    // Se não encontrou e for número brasileiro com 13 dígitos (55 + DDD + 9 dígitos), tentar sem o 9
+    if ((!checked || !checked.exists) && digitsOnly.startsWith('55') && digitsOnly.length === 13) {
+      const numWithout9 = digitsOnly.slice(0, 4) + digitsOnly.slice(5, 13) + '@s.whatsapp.net';
+      try {
+        const fallbackResults = await this.sock.onWhatsApp(numWithout9);
+        if (fallbackResults?.[0]?.exists) {
+          checked = fallbackResults[0];
+        }
+      } catch {}
+    }
+    // Se for número brasileiro com 12 dígitos (55 + DDD + 8 dígitos), tentar com o 9
+    else if ((!checked || !checked.exists) && digitsOnly.startsWith('55') && digitsOnly.length === 12) {
+      const numWith9 = digitsOnly.slice(0, 4) + '9' + digitsOnly.slice(4, 12) + '@s.whatsapp.net';
+      try {
+        const fallbackResults = await this.sock.onWhatsApp(numWith9);
+        if (fallbackResults?.[0]?.exists) {
+          checked = fallbackResults[0];
+        }
+      } catch {}
+    }
+
+    if (!checked || !checked.exists) {
+      throw new Error(`Número ${digitsOnly} não está registrado ou não possui conta ativa no WhatsApp.`);
+    }
+
+    const targetJid = checked.jid || cleanJid;
+
+    // Simulação dinâmica e humana de digitação ou áudio
+    await this.simulateHumanPresence(targetJid, text, mediaPath);
+
+    let sentResult: any = null;
     if (mediaPath && fs.existsSync(mediaPath)) {
       const ext = path.extname(mediaPath).toLowerCase();
       const mediaBuf = fs.readFileSync(mediaPath);
 
       if (['.mp3', '.ogg', '.opus', '.m4a', '.wav'].includes(ext)) {
-        await this.sock.sendMessage(toJid, {
+        sentResult = await this.sock.sendMessage(targetJid, {
           audio: mediaBuf,
           mimetype: ext === '.mp3' ? 'audio/mp4' : 'audio/ogg; codecs=opus',
           ptt: true
         });
       } else {
-        await this.sock.sendMessage(toJid, {
+        sentResult = await this.sock.sendMessage(targetJid, {
           image: mediaBuf,
           caption: text
         });
       }
     } else {
-      await this.sock.sendMessage(toJid, {
+      sentResult = await this.sock.sendMessage(targetJid, {
         text
       });
     }
 
+    if (!sentResult || !sentResult.key) {
+      throw new Error(`Falha ao entregar mensagem para ${targetJid}: WhatsApp não confirmou o envio.`);
+    }
+
     try {
-      await this.sock.sendPresenceUpdate('paused', toJid);
+      await this.sock.sendPresenceUpdate('paused', targetJid);
     } catch {}
 
     return true;

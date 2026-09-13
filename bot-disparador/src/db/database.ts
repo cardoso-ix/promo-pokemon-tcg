@@ -155,6 +155,23 @@ if (!currentModel || currentModel === 'deepseek-chat') {
   setConfig('deepseek_model', 'deepseek-flash');
 }
 
+// Sanitização e limpeza automática de registros com @lid (números ocultos de comunidades)
+try {
+  db.exec(`
+    DELETE FROM contatos WHERE jid LIKE '%@lid' OR numero LIKE '%@lid';
+    UPDATE fila_envios 
+    SET status = 'falha', erro = 'Número oculto de comunidade (@lid) não suporta envio direto' 
+    WHERE destinatario_jid LIKE '%@lid' AND status IN ('pendente', 'enviando', 'enviado');
+
+    UPDATE campanhas SET 
+      enviados = (SELECT COUNT(1) FROM fila_envios WHERE fila_envios.campanha_id = campanhas.id AND fila_envios.status = 'enviado'),
+      falhas = (SELECT COUNT(1) FROM fila_envios WHERE fila_envios.campanha_id = campanhas.id AND fila_envios.status = 'falha')
+    WHERE id IN (SELECT DISTINCT campanha_id FROM fila_envios);
+  `);
+} catch (err) {
+  console.warn('Aviso ao sanitizar registros @lid no banco:', err);
+}
+
 // Funções de Acesso a Configurações
 export function getConfig(chave: string, defaultValue = ''): string {
   const row = db.prepare('SELECT valor FROM configuracoes WHERE chave = ?').get(chave) as { valor: string } | undefined;
@@ -193,6 +210,10 @@ export interface Contato {
 }
 
 export function upsertContato(contato: Contato): boolean {
+  if (!contato.jid || contato.jid.includes('@lid') || (contato.numero && contato.numero.includes('@lid'))) {
+    return false;
+  }
+
   try {
     db.prepare(`
       INSERT INTO contatos (jid, numero, nome, origem_grupo, grupo_nome, origem_tipo, criado_em, atualizado_em)
