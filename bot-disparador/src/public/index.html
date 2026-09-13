@@ -407,13 +407,18 @@
               <div class="form-group">
                 <label for="deepseek-url-input">URL Base da API (Endpoint):</label>
                 <input type="text" id="deepseek-url-input" value="https://opencode.ai/zen/go/v1" class="input-field">
-                <small>Para OpenCode, use: <code>https://opencode.ai/zen/go/v1</code> ou <code>https://api.deepseek.com/v1</code>.</small>
+                <small>Para OpenCode Zen Go: <code>https://opencode.ai/zen/go/v1</code> ou DeepSeek oficial: <code>https://api.deepseek.com/v1</code>.</small>
               </div>
 
               <div class="form-group">
                 <label for="deepseek-model-input">Modelo:</label>
-                <input type="text" id="deepseek-model-input" value="deepseek-v4-pro" class="input-field" placeholder="Ex: deepseek-v4-pro, deepseek-v4-flash, deepseek-chat">
-                <small>No OpenCode, use: <code>deepseek-v4-pro</code> ou <code>deepseek-v4-flash</code>.</small>
+                <input type="text" id="deepseek-model-input" value="deepseek-flash" class="input-field" placeholder="Ex: deepseek-flash, deepseek-v4-flash, deepseek-v4-pro">
+                <div class="tags-hint" style="margin-top: 6px;">
+                  <span>Modelos OpenCode:</span>
+                  <code class="ai-model-quick" data-model="deepseek-flash" title="Clique para selecionar">⚡ deepseek-flash (Recomendado)</code>
+                  <code class="ai-model-quick" data-model="deepseek-v4-flash" title="Clique para selecionar">🚀 deepseek-v4-flash</code>
+                  <code class="ai-model-quick" data-model="deepseek-v4-pro" title="Clique para selecionar">🧠 deepseek-v4-pro</code>
+                </div>
               </div>
 
               <div class="form-row">

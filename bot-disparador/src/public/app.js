@@ -1217,6 +1217,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Save DeepSeek Configs
+  // Atalhos rápidos para seleção de modelo de IA
+  document.querySelectorAll('.ai-model-quick').forEach((tag) => {
+    tag.addEventListener('click', () => {
+      const model = tag.getAttribute('data-model');
+      if (model) {
+        document.getElementById('deepseek-model-input').value = model;
+        showToast(`Modelo selecionado: ${model}`, 'info');
+      }
+    });
+  });
+
   document.getElementById('btn-save-deepseek').addEventListener('click', () => {
     saveConfigs({
       deepseek_ativo: document.getElementById('deepseek-ativo-toggle').checked ? 'true' : 'false',

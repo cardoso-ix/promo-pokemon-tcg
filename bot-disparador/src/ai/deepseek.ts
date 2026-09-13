@@ -25,16 +25,29 @@ export async function generateDeepSeekResponse(
     return null;
   }
 
-  const rawBaseUrl = getConfig('deepseek_base_url', 'https://api.deepseek.com/v1').trim();
+  const rawBaseUrl = getConfig('deepseek_base_url', 'https://opencode.ai/zen/go/v1').trim();
   let endpoint = rawBaseUrl.replace(/\/+$/, '');
   if (!endpoint.endsWith('/chat/completions')) {
     endpoint = `${endpoint}/chat/completions`;
   }
 
-  let model = getConfig('deepseek_model', 'deepseek-chat').trim();
-  // Se estiver usando o gateway OpenCode e o modelo for o padrão deepseek-chat, ajusta para o modelo suportado
-  if (endpoint.includes('opencode.ai') && (model === 'deepseek-chat' || !model)) {
+  let model = getConfig('deepseek_model', 'deepseek-flash').trim();
+
+  // Normalização de aliases amigáveis para modelos OpenCode e DeepSeek
+  const modelLower = model.toLowerCase();
+  if (modelLower === 'deepseek flash' || modelLower === 'deepseek-flash' || modelLower === 'flash') {
+    model = 'deepseek-flash';
+  } else if (modelLower === 'deepseek-v4-flash' || modelLower === 'v4-flash') {
+    model = 'deepseek-v4-flash';
+  } else if (modelLower === 'open code go' || modelLower === 'opencode go' || modelLower === 'go') {
+    model = 'deepseek-flash';
+  } else if (modelLower === 'deepseek-v4-pro' || modelLower === 'v4-pro') {
     model = 'deepseek-v4-pro';
+  }
+
+  // Se estiver usando o gateway OpenCode e o modelo for o padrão deepseek-chat ou vazio, usa deepseek-flash
+  if (endpoint.includes('opencode.ai') && (!model || model === 'deepseek-chat')) {
+    model = 'deepseek-flash';
   }
 
   const systemPrompt = getConfig('deepseek_prompt_sistema', '');
@@ -90,7 +103,7 @@ export async function generateDeepSeekResponse(
     }
 
     const data = (await res.json()) as any;
-    const reply = data?.choices?.[0]?.message?.content?.trim();
+    const reply = data?.choices?.[0]?.message?.content?.trim() || data?.choices?.[0]?.message?.reasoning_content?.trim();
 
     if (reply) {
       // Salvar resposta no histórico
