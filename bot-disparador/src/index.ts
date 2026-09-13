@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
 import { createServer } from './web/server.js';
 import { getConfig, logSistema } from './db/database.js';
 import { dispatchEngine } from './core/engine.js';
@@ -41,6 +43,16 @@ async function main() {
 
     // Iniciar motor de fila em segundo plano
     dispatchEngine.start();
+
+    // Se já existem credenciais salvas do WhatsApp, auto-conecta na inicialização
+    const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.resolve('data');
+    const authCredsFile = path.join(dataDir, 'auth', 'creds.json');
+    if (fs.existsSync(authCredsFile)) {
+      console.log('[WHATSAPP] Credenciais prévias encontradas. Reconectando automaticamente...');
+      whatsapp.start().catch((err: any) => {
+        console.warn('[WHATSAPP] Falha ao auto-reconectar:', err.message);
+      });
+    }
   } catch (err: any) {
     console.error(`Erro ao iniciar servidor na porta ${porta}:`, err);
     process.exit(1);
