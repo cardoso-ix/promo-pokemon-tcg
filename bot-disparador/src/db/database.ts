@@ -107,10 +107,21 @@ Regras de atendimento:
 6. Mantenha as mensagens objetivas, evitando parágrafos gigantes para fluir bem no WhatsApp.`,
   deepseek_delay_min: '3',
   deepseek_delay_max: '6',
-  disparo_delay_min: '30',
-  disparo_delay_max: '65',
-  disparo_pausa_a_cada: '20',
-  disparo_pausa_tempo_minutos: '5',
+  disparo_delay_min: '15',
+  disparo_delay_max: '45',
+  disparo_pausa_a_cada: '50',
+  disparo_pausa_minutos_min: '30',
+  disparo_pausa_minutos_max: '60',
+  disparo_pausa_tempo_minutos: '30',
+  disparo_simular_digitacao: 'true',
+  disparo_digitacao_min: '3',
+  disparo_digitacao_max: '10',
+  disparo_presenca_tipo: 'auto',
+  aquecimento_ativo: 'true',
+  aquecimento_inicio_diario: '20',
+  aquecimento_incremento_diario: '5',
+  aquecimento_limite_maximo: '100',
+  aquecimento_data_inicio: new Date().toISOString().split('T')[0],
   disparo_horario_inicio: '08:00',
   disparo_horario_fim: '21:30',
   disparo_limite_diario: '100'
@@ -447,6 +458,79 @@ export function getLogsSistema(limit = 100): any[] {
   return db.prepare(`SELECT * FROM logs_sistema ORDER BY id DESC LIMIT ?`).all(limit);
 }
 
+// Funções de Aquecimento de Chip (Warm Up)
+export interface WarmupStatus {
+  ativo: boolean;
+  diaAtual: number;
+  limiteHoje: number;
+  enviosHoje: number;
+  restantesHoje: number;
+  dataInicio: string;
+  volumeInicial: number;
+  incrementoDiario: number;
+  limiteMaximo: number;
+  concluido: boolean;
+}
+
+export function getWarmupStatus(): WarmupStatus {
+  const ativo = getConfig('aquecimento_ativo', 'true') === 'true';
+  const volumeInicial = parseInt(getConfig('aquecimento_inicio_diario', '20'), 10) || 20;
+  const incrementoDiario = parseInt(getConfig('aquecimento_incremento_diario', '5'), 10) || 5;
+  const limiteMaximo = parseInt(getConfig('aquecimento_limite_maximo', '100'), 10) || 100;
+
+  let dataInicioStr = getConfig('aquecimento_data_inicio');
+  if (!dataInicioStr) {
+    dataInicioStr = new Date().toISOString().split('T')[0];
+    setConfig('aquecimento_data_inicio', dataInicioStr);
+  }
+
+  // Calcular dias transcorridos
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
+  const [ano, mes, dia] = dataInicioStr.split('-').map(Number);
+  const inicio = new Date(ano, (mes || 1) - 1, dia || 1);
+  inicio.setHours(0, 0, 0, 0);
+
+  const diffTime = Math.max(0, hoje.getTime() - inicio.getTime());
+  const diasPassados = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const diaAtual = diasPassados + 1; // Dia 1, Dia 2, etc.
+
+  // Volume do dia = volumeInicial + (diasPassados * incrementoDiario)
+  const limiteCalculado = volumeInicial + (diasPassados * incrementoDiario);
+  const limiteHoje = ativo
+    ? Math.min(limiteMaximo, limiteCalculado)
+    : parseInt(getConfig('disparo_limite_diario', '100'), 10);
+
+  const enviosHoje = (
+    db.prepare(`
+      SELECT COUNT(*) as c FROM fila_envios
+      WHERE status = 'enviado' AND date(enviado_em) = date('now', 'localtime')
+    `).get() as any
+  )?.c || 0;
+
+  const restantesHoje = Math.max(0, limiteHoje - enviosHoje);
+  const concluido = limiteCalculado >= limiteMaximo;
+
+  return {
+    ativo,
+    diaAtual,
+    limiteHoje,
+    enviosHoje,
+    restantesHoje,
+    dataInicio: dataInicioStr,
+    volumeInicial,
+    incrementoDiario,
+    limiteMaximo,
+    concluido
+  };
+}
+
+export function resetWarmupStartDate(): void {
+  const hoje = new Date().toISOString().split('T')[0];
+  setConfig('aquecimento_data_inicio', hoje);
+}
+
 // Métricas do Dashboard
 export function getMetricasDashboard() {
   const totalContatos = (db.prepare('SELECT COUNT(*) as c FROM contatos WHERE ativo = 1').get() as any).c;
@@ -463,13 +547,15 @@ export function getMetricasDashboard() {
     SELECT COUNT(*) as c FROM historico_ia
     WHERE remetente = 'bot' AND date(criado_em) = date('now', 'localtime')
   `).get() as any).c;
+  const warmup = getWarmupStatus();
 
   return {
     totalContatos,
     totalGrupos,
     enviosHoje,
     falhasHoje,
-    respostasIaHoje
+    respostasIaHoje,
+    warmup
   };
 }
 

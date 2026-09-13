@@ -30,6 +30,16 @@ if (!fs.existsSync(AUTH_DIR)) {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 }
 
+export function calculateTypingDelay(textLength: number, minSec = 3, maxSec = 10): number {
+  const minMs = Math.max(1, minSec) * 1000;
+  const maxMs = Math.max(minMs, maxSec * 1000);
+  const baseMs = 1500 + textLength * 35;
+  // Jitter +/- 15%
+  const jitter = (Math.random() * 0.3 - 0.15) * baseMs;
+  const calculated = Math.round(baseMs + jitter);
+  return Math.min(maxMs, Math.max(minMs, calculated));
+}
+
 export class WhatsAppManager {
   private sock: any = null;
   private logger = pino({ level: 'silent' });
@@ -289,6 +299,50 @@ export class WhatsAppManager {
     }
   }
 
+  private async simulateHumanPresence(toJid: string, text: string, mediaPath?: string): Promise<void> {
+    if (!this.sock) return;
+    const simular = getConfig('disparo_simular_digitacao', 'true') === 'true';
+    if (!simular) return;
+
+    const presencaConfig = getConfig('disparo_presenca_tipo', 'auto');
+    let presence: 'composing' | 'recording' = 'composing';
+
+    if (presencaConfig === 'recording') {
+      presence = 'recording';
+    } else if (presencaConfig === 'composing') {
+      presence = 'composing';
+    } else {
+      const ext = mediaPath ? path.extname(mediaPath).toLowerCase() : '';
+      if (['.mp3', '.ogg', '.opus', '.m4a', '.wav'].includes(ext)) {
+        presence = 'recording';
+      } else {
+        presence = 'composing';
+      }
+    }
+
+    const minSec = parseInt(getConfig('disparo_digitacao_min', '3'), 10) || 3;
+    const maxSec = parseInt(getConfig('disparo_digitacao_max', '10'), 10) || 10;
+    const totalDelayMs = calculateTypingDelay(text.length, minSec, maxSec);
+
+    try {
+      await this.sock.sendPresenceUpdate(presence, toJid);
+
+      // WhatsApp expira presença após ~5-8s. Se o delay for maior que 4.5s, renovamos o status.
+      let elapsed = 0;
+      const interval = 4000;
+      while (elapsed < totalDelayMs) {
+        const sleepTime = Math.min(interval, totalDelayMs - elapsed);
+        await new Promise((r) => setTimeout(r, sleepTime));
+        elapsed += sleepTime;
+        if (elapsed < totalDelayMs) {
+          await this.sock.sendPresenceUpdate(presence, toJid);
+        }
+      }
+    } catch {
+      // Ignora erro de presença para não travar o fluxo de disparo
+    }
+  }
+
   public async sendDirectMessage(
     toJid: string,
     text: string,
@@ -298,23 +352,35 @@ export class WhatsAppManager {
       throw new Error('WhatsApp não está conectado.');
     }
 
-    // Simular digitação por 2 segundos antes de disparar
-    await this.sock.sendPresenceUpdate('composing', toJid);
-    await new Promise((r) => setTimeout(r, 2000));
+    // Simulação dinâmica e humana de digitação ou áudio
+    await this.simulateHumanPresence(toJid, text, mediaPath);
 
     if (mediaPath && fs.existsSync(mediaPath)) {
+      const ext = path.extname(mediaPath).toLowerCase();
       const mediaBuf = fs.readFileSync(mediaPath);
-      await this.sock.sendMessage(toJid, {
-        image: mediaBuf,
-        caption: text
-      });
+
+      if (['.mp3', '.ogg', '.opus', '.m4a', '.wav'].includes(ext)) {
+        await this.sock.sendMessage(toJid, {
+          audio: mediaBuf,
+          mimetype: ext === '.mp3' ? 'audio/mp4' : 'audio/ogg; codecs=opus',
+          ptt: true
+        });
+      } else {
+        await this.sock.sendMessage(toJid, {
+          image: mediaBuf,
+          caption: text
+        });
+      }
     } else {
       await this.sock.sendMessage(toJid, {
         text
       });
     }
 
-    await this.sock.sendPresenceUpdate('paused', toJid);
+    try {
+      await this.sock.sendPresenceUpdate('paused', toJid);
+    } catch {}
+
     return true;
   }
 }

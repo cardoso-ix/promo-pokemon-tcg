@@ -242,6 +242,33 @@ function updateMetricasUI(m) {
   document.getElementById('stat-grupos').innerText = m.totalGrupos || 0;
   document.getElementById('stat-envios').innerText = m.enviosHoje || 0;
   document.getElementById('stat-ia').innerText = m.respostasIaHoje || 0;
+
+  const w = m.warmup;
+  if (w) {
+    const lbl = document.getElementById('stat-warmup-label');
+    const val = document.getElementById('stat-warmup-val');
+    if (lbl && val) {
+      if (w.ativo) {
+        lbl.innerText = `Aquecimento (Dia ${w.diaAtual})`;
+        val.innerText = `${w.enviosHoje} / ${w.limiteHoje}`;
+      } else {
+        lbl.innerText = 'Limite Diário Fixo';
+        val.innerText = `${w.enviosHoje} / ${w.limiteHoje}`;
+      }
+    }
+
+    const badgeDay = document.getElementById('warmup-badge-day');
+    const badgeDesc = document.getElementById('warmup-badge-desc');
+    if (badgeDay && badgeDesc) {
+      if (w.ativo) {
+        badgeDay.innerText = `Aquecimento Ativo: Dia ${w.diaAtual} ${w.concluido ? '(Meta Atingida)' : ''}`;
+        badgeDesc.innerText = `Cota de hoje: ${w.limiteHoje} disparos (${w.enviosHoje} enviados hoje • ${w.restantesHoje} restantes)`;
+      } else {
+        badgeDay.innerText = 'Aquecimento Gradual Desativado';
+        badgeDesc.innerText = `Operando com limite fixo de ${w.limiteHoje} disparos/dia (${w.enviosHoje} enviados hoje)`;
+      }
+    }
+  }
 }
 
 // Conectar via SSE para tempo real
@@ -686,11 +713,34 @@ async function loadConfigs() {
     document.getElementById('deepseek-delay-min').value = cfg.deepseek_delay_min || '3';
     document.getElementById('deepseek-delay-max').value = cfg.deepseek_delay_max || '6';
 
-    // Anti-ban Form
-    document.getElementById('cfg-delay-min').value = cfg.disparo_delay_min || '30';
-    document.getElementById('cfg-delay-max').value = cfg.disparo_delay_max || '65';
-    document.getElementById('cfg-pausa-cada').value = cfg.disparo_pausa_a_cada || '20';
-    document.getElementById('cfg-pausa-minutos').value = cfg.disparo_pausa_tempo_minutos || '5';
+    // Anti-ban & Fator Humano Form
+    document.getElementById('cfg-delay-min').value = cfg.disparo_delay_min || '15';
+    document.getElementById('cfg-delay-max').value = cfg.disparo_delay_max || '45';
+
+    const simularElem = document.getElementById('cfg-simular-digitacao');
+    if (simularElem) simularElem.checked = cfg.disparo_simular_digitacao !== 'false';
+    const presencaElem = document.getElementById('cfg-presenca-tipo');
+    if (presencaElem) presencaElem.value = cfg.disparo_presenca_tipo || 'auto';
+    const digMinElem = document.getElementById('cfg-digitacao-min');
+    if (digMinElem) digMinElem.value = cfg.disparo_digitacao_min || '3';
+    const digMaxElem = document.getElementById('cfg-digitacao-max');
+    if (digMaxElem) digMaxElem.value = cfg.disparo_digitacao_max || '10';
+
+    const aqAtivoElem = document.getElementById('cfg-aquecimento-ativo');
+    if (aqAtivoElem) aqAtivoElem.checked = cfg.aquecimento_ativo !== 'false';
+    const aqIniElem = document.getElementById('cfg-aquecimento-inicio');
+    if (aqIniElem) aqIniElem.value = cfg.aquecimento_inicio_diario || '20';
+    const aqIncElem = document.getElementById('cfg-aquecimento-incremento');
+    if (aqIncElem) aqIncElem.value = cfg.aquecimento_incremento_diario || '5';
+    const aqTetoElem = document.getElementById('cfg-aquecimento-teto');
+    if (aqTetoElem) aqTetoElem.value = cfg.aquecimento_limite_maximo || '100';
+
+    document.getElementById('cfg-pausa-cada').value = cfg.disparo_pausa_a_cada || '50';
+    const pMinElem = document.getElementById('cfg-pausa-minutos-min');
+    if (pMinElem) pMinElem.value = cfg.disparo_pausa_minutos_min || '30';
+    const pMaxElem = document.getElementById('cfg-pausa-minutos-max');
+    if (pMaxElem) pMaxElem.value = cfg.disparo_pausa_minutos_max || '60';
+
     document.getElementById('cfg-hora-inicio').value = cfg.disparo_horario_inicio || '08:00';
     document.getElementById('cfg-hora-fim').value = cfg.disparo_horario_fim || '21:30';
     document.getElementById('cfg-limite-diario').value = cfg.disparo_limite_diario || '100';
@@ -1108,18 +1158,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Save Anti-Ban Configs
+  // Save Anti-Ban & Human Factor Configs
   document.getElementById('btn-save-configs').addEventListener('click', () => {
     saveConfigs({
-      disparo_delay_min: document.getElementById('cfg-delay-min').value,
-      disparo_delay_max: document.getElementById('cfg-delay-max').value,
-      disparo_pausa_a_cada: document.getElementById('cfg-pausa-cada').value,
-      disparo_pausa_tempo_minutos: document.getElementById('cfg-pausa-minutos').value,
-      disparo_horario_inicio: document.getElementById('cfg-hora-inicio').value,
-      disparo_horario_fim: document.getElementById('cfg-hora-fim').value,
-      disparo_limite_diario: document.getElementById('cfg-limite-diario').value
+      disparo_delay_min: document.getElementById('cfg-delay-min').value || '15',
+      disparo_delay_max: document.getElementById('cfg-delay-max').value || '45',
+      disparo_simular_digitacao: document.getElementById('cfg-simular-digitacao')?.checked ? 'true' : 'false',
+      disparo_presenca_tipo: document.getElementById('cfg-presenca-tipo')?.value || 'auto',
+      disparo_digitacao_min: document.getElementById('cfg-digitacao-min')?.value || '3',
+      disparo_digitacao_max: document.getElementById('cfg-digitacao-max')?.value || '10',
+      aquecimento_ativo: document.getElementById('cfg-aquecimento-ativo')?.checked ? 'true' : 'false',
+      aquecimento_inicio_diario: document.getElementById('cfg-aquecimento-inicio')?.value || '20',
+      aquecimento_incremento_diario: document.getElementById('cfg-aquecimento-incremento')?.value || '5',
+      aquecimento_limite_maximo: document.getElementById('cfg-aquecimento-teto')?.value || '100',
+      disparo_pausa_a_cada: document.getElementById('cfg-pausa-cada')?.value || '50',
+      disparo_pausa_minutos_min: document.getElementById('cfg-pausa-minutos-min')?.value || '30',
+      disparo_pausa_minutos_max: document.getElementById('cfg-pausa-minutos-max')?.value || '60',
+      disparo_horario_inicio: document.getElementById('cfg-hora-inicio')?.value || '08:00',
+      disparo_horario_fim: document.getElementById('cfg-hora-fim')?.value || '21:30',
+      disparo_limite_diario: document.getElementById('cfg-limite-diario')?.value || '100'
     });
   });
+
+  // Reset Warmup Button
+  const btnResetWarmup = document.getElementById('btn-reset-warmup');
+  if (btnResetWarmup) {
+    btnResetWarmup.addEventListener('click', async () => {
+      if (confirm('Deseja reiniciar a contagem de aquecimento do chip para o Dia 1 a partir de hoje?')) {
+        try {
+          const res = await fetch('/api/warmup/reset', { method: 'POST' });
+          const data = await res.json();
+          if (data.ok) {
+            showToast('Aquecimento reiniciado para o Dia 1 com sucesso!', 'success');
+            loadConfigs();
+            loadStatus();
+          }
+        } catch (err) {
+          showToast(`Erro ao reiniciar aquecimento: ${err.message}`, 'error');
+        }
+      }
+    });
+  }
 
   // Refresh Logs Button
   document.getElementById('btn-refresh-logs').addEventListener('click', loadLogs);

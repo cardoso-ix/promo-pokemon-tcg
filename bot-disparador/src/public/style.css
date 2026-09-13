@@ -294,6 +294,7 @@ body {
 .metric-icon.purple { background: rgba(192, 132, 252, 0.12); color: var(--gemini-purple); }
 .metric-icon.green { background: rgba(129, 201, 149, 0.12); color: var(--google-green); }
 .metric-icon.cyan { background: rgba(103, 232, 249, 0.12); color: #67e8f9; }
+.metric-icon.orange { background: rgba(251, 146, 60, 0.14); color: #fb923c; }
 
 .metric-data {
   display: flex;

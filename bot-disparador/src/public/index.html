@@ -135,6 +135,16 @@
               <h3 class="metric-value" id="stat-ia">0</h3>
             </div>
           </div>
+
+          <div class="metric-card" id="card-stat-warmup">
+            <div class="metric-icon orange">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label" id="stat-warmup-label">Aquecimento (Dia 1)</span>
+              <h3 class="metric-value" id="stat-warmup-val">0 / 20</h3>
+            </div>
+          </div>
         </div>
 
         <!-- Connection Card & Quick Actions -->
@@ -445,44 +455,146 @@
         </div>
       </section>
 
-      <!-- TAB 6: ANTI-BAN & AJUSTES -->
+      <!-- TAB 6: ANTI-BAN & AJUSTES (FATOR HUMANO) -->
       <section class="tab-pane" id="pane-configuracoes">
         <div class="pane-header">
           <div>
-            <h2>Proteção Anti-Banimento & Parâmetros</h2>
-            <p>Regule os intervalos de envio, limites de aquecimento de chip e horários de operação.</p>
+            <h2>Proteção Anti-Banimento & Fator Humano</h2>
+            <p>Ajuste delays variáveis, simulação de presença, aquecimento gradual (warm up) e pausas em blocos.</p>
           </div>
           <button class="btn btn-primary" id="btn-save-configs">
             Salvar Parâmetros
           </button>
         </div>
 
-        <div class="glass-card">
+        <!-- 1. Delay Variável -->
+        <div class="glass-card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <h3>⏱️ 1. Delay Variável entre Mensagens (Ritmo Humano)</h3>
+            <span class="badge" style="background: rgba(129, 201, 149, 0.15); color: var(--google-green);">Anti-Padrão Fixo</span>
+          </div>
           <div class="card-body">
+            <p class="text-muted" style="margin-bottom: 14px; font-size: 13px;">Intervalos dinâmicos e aleatórios sorteados a cada mensagem enviada. O sistema garante matematicamente que nunca haverá um intervalo fixo ou metronômico.</p>
             <div class="form-row">
               <div class="form-group flex-1">
-                <label>Delay Mínimo entre Mensagens (segundos):</label>
-                <input type="number" id="cfg-delay-min" class="input-field">
-                <small>Recomendado: no mínimo 25s para chips novos.</small>
+                <label>Delay Mínimo (segundos):</label>
+                <input type="number" id="cfg-delay-min" class="input-field" min="5" placeholder="15">
+                <small>Recomendado: 15 segundos</small>
               </div>
               <div class="form-group flex-1">
-                <label>Delay Máximo entre Mensagens (segundos):</label>
-                <input type="number" id="cfg-delay-max" class="input-field">
-                <small>Recomendado: 60s ou mais.</small>
+                <label>Delay Máximo (segundos):</label>
+                <input type="number" id="cfg-delay-max" class="input-field" min="10" placeholder="45">
+                <small>Recomendado: 45 segundos</small>
               </div>
             </div>
+          </div>
+        </div>
 
+        <!-- 2. Simulação de Digitação & Presença -->
+        <div class="glass-card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <h3>✍️ 2. Simulação de Presença ("Digitando..." / "Gravando Áudio...")</h3>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-simular-digitacao" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="card-body">
+            <p class="text-muted" style="margin-bottom: 14px; font-size: 13px;">Exibe o status de digitação ou gravação de áudio no WhatsApp do destinatário antes do envio. A velocidade é calculada de forma orgânica e proporcional ao tamanho do texto.</p>
             <div class="form-row">
               <div class="form-group flex-1">
-                <label>Pausa de Descanso Obrigatória (a cada N envios):</label>
-                <input type="number" id="cfg-pausa-cada" class="input-field">
+                <label>Tipo de Status de Presença:</label>
+                <select id="cfg-presenca-tipo" class="input-field">
+                  <option value="auto">Automático (Detecta mídia: texto = Digitando, áudio = Gravando)</option>
+                  <option value="composing">Sempre "Digitando..."</option>
+                  <option value="recording">Sempre "Gravando áudio..."</option>
+                </select>
               </div>
               <div class="form-group flex-1">
-                <label>Duração da Pausa (minutos):</label>
-                <input type="number" id="cfg-pausa-minutos" class="input-field">
+                <label>Duração Mínima (segundos):</label>
+                <input type="number" id="cfg-digitacao-min" class="input-field" min="1" placeholder="3">
+              </div>
+              <div class="form-group flex-1">
+                <label>Duração Máxima (segundos):</label>
+                <input type="number" id="cfg-digitacao-max" class="input-field" min="3" placeholder="10">
               </div>
             </div>
+          </div>
+        </div>
 
+        <!-- 3. Aquecimento Gradual (Warm Up) -->
+        <div class="glass-card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <h3>🚀 3. Volume Gradual e Aquecimento do Chip (Warm Up Automático)</h3>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-aquecimento-ativo" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="card-body">
+            <!-- Box informativo do status do Warm Up -->
+            <div id="warmup-info-box" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; background: rgba(251, 146, 60, 0.08); border: 1px solid rgba(251, 146, 60, 0.25); border-radius: 8px; padding: 14px 18px; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <strong style="color: #fb923c; font-size: 15px;" id="warmup-badge-day">Aquecimento Ativo: Dia 1</strong>
+                <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-secondary);" id="warmup-badge-desc">Cota de hoje: 20 disparos (0 enviados hoje • 20 restantes)</p>
+              </div>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-warmup" style="font-size: 12px;">🔄 Reiniciar Aquecimento para este Chip</button>
+            </div>
+
+            <p class="text-muted" style="margin-bottom: 14px; font-size: 13px;">Se o número for novo, o robô começa enviando poucas mensagens por dia e expande o volume aos poucos ao longo das semanas de forma 100% automática.</p>
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Volume Inicial no Dia 1 (msgs/dia):</label>
+                <input type="number" id="cfg-aquecimento-inicio" class="input-field" min="5" placeholder="20">
+                <small>Recomendado: 15 a 20 msgs</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>Incremento Diário (+msgs por dia):</label>
+                <input type="number" id="cfg-aquecimento-incremento" class="input-field" min="1" placeholder="5">
+                <small>Ex: +5 msgs/dia</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>Teto Diário Máximo (msgs/dia):</label>
+                <input type="number" id="cfg-aquecimento-teto" class="input-field" min="20" placeholder="100">
+                <small>Limite após aquecimento concluído</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Pausas Longas em Blocos -->
+        <div class="glass-card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <h3>☕ 4. Pausas Longas em Blocos (Descanso Natural)</h3>
+          </div>
+          <div class="card-body">
+            <p class="text-muted" style="margin-bottom: 14px; font-size: 13px;">Após um bloco contínuo de disparos, o disparador faz uma pausa longa com tempo aleatório, simulando exatamente o descanso natural de um ser humano real.</p>
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Tamanho do Bloco (a cada N disparos):</label>
+                <input type="number" id="cfg-pausa-cada" class="input-field" min="5" placeholder="50">
+                <small>Padrão recomendado: 50 mensagens</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>Pausa Mínima (minutos):</label>
+                <input type="number" id="cfg-pausa-minutos-min" class="input-field" min="5" placeholder="30">
+                <small>Padrão: 30 minutos</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>Pausa Máxima (minutos):</label>
+                <input type="number" id="cfg-pausa-minutos-max" class="input-field" min="10" placeholder="60">
+                <small>Padrão: 60 minutos</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Janela de Horário e Limite Manual -->
+        <div class="glass-card">
+          <div class="card-header">
+            <h3>🕒 5. Janela de Horário Permitida & Fallback</h3>
+          </div>
+          <div class="card-body">
             <div class="form-row">
               <div class="form-group flex-1">
                 <label>Horário de Início dos Disparos:</label>
@@ -495,9 +607,9 @@
             </div>
 
             <div class="form-group">
-              <label>Limite Diário de Envios (Aquecimento de Chip):</label>
+              <label>Limite Diário Fixo (usado apenas se o Aquecimento Gradual for desativado):</label>
               <input type="number" id="cfg-limite-diario" class="input-field">
-              <small>Evita ultrapassar a cota segura diária em números recém-adquiridos.</small>
+              <small>Evita ultrapassar a cota se preferir limite constante sem incremento diário.</small>
             </div>
           </div>
         </div>

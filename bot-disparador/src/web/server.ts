@@ -23,6 +23,8 @@ import {
   addItensFila,
   getLogsSistema,
   getMetricasDashboard,
+  getWarmupStatus,
+  resetWarmupStartDate,
   logSistema,
   db
 } from '../db/database.js';
@@ -437,7 +439,20 @@ export async function createServer() {
       setConfig(k, String(v));
     }
     logSistema('info', 'config', 'Configurações atualizadas via painel.');
-    return { ok: true, configs: getAllConfigs() };
+    broadcastEvent('metricas', getMetricasDashboard());
+    return { ok: true, configs: getAllConfigs(), warmup: getWarmupStatus() };
+  });
+
+  // Aquecimento de Chip
+  app.get('/api/warmup', async () => {
+    return { warmup: getWarmupStatus() };
+  });
+
+  app.post('/api/warmup/reset', async () => {
+    resetWarmupStartDate();
+    logSistema('info', 'aquecimento', 'Data de início do aquecimento reiniciada para hoje.');
+    broadcastEvent('metricas', getMetricasDashboard());
+    return { ok: true, warmup: getWarmupStatus() };
   });
 
   // Testar DeepSeek

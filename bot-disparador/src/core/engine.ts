@@ -6,9 +6,35 @@ import {
   updateCampanhaStatus,
   incrementCampanhaCounter,
   getCampanhaById,
+  getWarmupStatus,
   db
 } from '../db/database.js';
 import { whatsapp } from '../whatsapp/client.js';
+
+export function calculateDynamicDelay(minSec = 15, maxSec = 45): number {
+  let min = Math.max(5, minSec);
+  let max = Math.max(5, maxSec);
+  if (min > max) [min, max] = [max, min];
+
+  // Garante que NUNCA haja intervalo fixo mesmo se min == max
+  if (min === max) {
+    min = Math.max(5, Math.floor(min * 0.8));
+    max = Math.ceil(max * 1.2) + 2;
+  }
+
+  const randomizedSec = Math.floor(Math.random() * (max - min + 1) + min);
+  // Adiciona jitter adicional de milissegundos para naturalidade absoluta
+  const jitterMs = Math.floor(Math.random() * 900);
+  return randomizedSec * 1000 + jitterMs;
+}
+
+export function calculateBlockPauseMinutes(minMin = 30, maxMin = 60): number {
+  let min = Math.max(1, minMin);
+  let max = Math.max(1, maxMin);
+  if (min > max) [min, max] = [max, min];
+  if (min === max) max = min + 5;
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
 
 class DispatchEngine {
   private isRunning = false;
@@ -42,15 +68,8 @@ class DispatchEngine {
   }
 
   private isDailyLimitReached(): boolean {
-    const limite = parseInt(getConfig('disparo_limite_diario', '100'), 10);
-    const enviosHoje = (
-      db.prepare(`
-        SELECT COUNT(*) as c FROM fila_envios
-        WHERE status = 'enviado' AND date(enviado_em) = date('now', 'localtime')
-      `).get() as any
-    ).c;
-
-    return enviosHoje >= limite;
+    const warmup = getWarmupStatus();
+    return warmup.enviosHoje >= warmup.limiteHoje;
   }
 
   private async processNext(): Promise<void> {
@@ -69,9 +88,22 @@ class DispatchEngine {
       return;
     }
 
-    // Verificar limite diário
+    // Verificar limite diário (com Warm Up / Aquecimento Inteligente)
     if (this.isDailyLimitReached()) {
-      logSistema('warn', 'disparo', 'Limite diário de disparos atingido para aquecimento do chip.');
+      const warmup = getWarmupStatus();
+      if (warmup.ativo) {
+        logSistema(
+          'warn',
+          'disparo',
+          `[AQUECIMENTO] Limite diário de segurança atingido (Dia ${warmup.diaAtual}: ${warmup.enviosHoje}/${warmup.limiteHoje} mensagens). O volume aumentará amanhã gradativamente.`
+        );
+      } else {
+        logSistema(
+          'warn',
+          'disparo',
+          `Limite diário de disparos atingido (${warmup.enviosHoje}/${warmup.limiteHoje}).`
+        );
+      }
       this.loopTimer = setTimeout(() => this.processNext(), 60000);
       return;
     }
@@ -91,16 +123,22 @@ class DispatchEngine {
       return;
     }
 
-    // Checar descanso periódico
-    const pausaACada = parseInt(getConfig('disparo_pausa_a_cada', '20'), 10);
-    const pausaMinutos = parseInt(getConfig('disparo_pausa_tempo_minutos', '5'), 10);
+    // Checar descanso periódico e pausas longas em blocos (Fator Humano)
+    const pausaACada = parseInt(getConfig('disparo_pausa_a_cada', '50'), 10);
+    const pausaMinutosMin = parseInt(getConfig('disparo_pausa_minutos_min', '30'), 10);
+    const pausaMinutosMax = parseInt(getConfig('disparo_pausa_minutos_max', '60'), 10);
 
     if (pausaACada > 0 && this.consecutiveSends >= pausaACada) {
       this.consecutiveSends = 0;
+      const pausaMinutos = calculateBlockPauseMinutes(pausaMinutosMin, pausaMinutosMax);
+      const agora = new Date();
+      agora.setMinutes(agora.getMinutes() + pausaMinutos);
+      const horaRetorno = agora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
       logSistema(
         'info',
         'disparo',
-        `Pausa de proteção anti-ban ativada: descansando por ${pausaMinutos} minutos...`
+        `[PAUSA LONGA HUMANA] Bloco de ${pausaACada} envios concluído! Pausando por ${pausaMinutos} minutos para descanso natural do chip (retoma às ${horaRetorno})...`
       );
       this.loopTimer = setTimeout(() => this.processNext(), pausaMinutos * 60 * 1000);
       return;
@@ -144,12 +182,16 @@ class DispatchEngine {
       logSistema('info', 'disparo', `Campanha #${item.campanha_id} concluída com sucesso!`);
     }
 
-    // Delay randômico anti-ban entre mensagens
-    const delayMin = parseInt(getConfig('disparo_delay_min', '30'), 10);
-    const delayMax = parseInt(getConfig('disparo_delay_max', '65'), 10);
-    const delayRandom = Math.floor(Math.random() * (delayMax - delayMin + 1) + delayMin) * 1000;
+    // Delay randômico anti-ban entre mensagens (dinâmico e nunca fixo)
+    const delayMin = parseInt(getConfig('disparo_delay_min', '15'), 10);
+    const delayMax = parseInt(getConfig('disparo_delay_max', '45'), 10);
+    const delayRandom = calculateDynamicDelay(delayMin, delayMax);
 
-    logSistema('info', 'disparo', `Próximo disparo em ${Math.round(delayRandom / 1000)} segundos...`);
+    logSistema(
+      'info',
+      'disparo',
+      `Próximo disparo em ${Math.round(delayRandom / 1000)}s (intervalo variável)...`
+    );
     this.loopTimer = setTimeout(() => this.processNext(), delayRandom);
   }
 }
