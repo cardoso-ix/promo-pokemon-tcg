@@ -1009,6 +1009,48 @@ document.addEventListener('DOMContentLoaded', () => {
     modalCampanha.style.display = 'none';
   });
 
+  // Fechar modal ao clicar fora (backdrop)
+  modalCampanha?.addEventListener('click', (e) => {
+    if (e.target === modalCampanha) {
+      modalCampanha.style.display = 'none';
+    }
+  });
+  modalImport?.addEventListener('click', (e) => {
+    if (e.target === modalImport) {
+      modalImport.style.display = 'none';
+    }
+  });
+
+  // Fechar modal ao pressionar ESC
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (modalCampanha) modalCampanha.style.display = 'none';
+      if (modalImport) modalImport.style.display = 'none';
+    }
+  });
+
+  // Alternância de abas de presets (Aquecimento Seguro vs Ofertas & Vendas)
+  const tabAquecimento = document.getElementById('tab-presets-aquecimento');
+  const tabVendas = document.getElementById('tab-presets-vendas');
+  const panelAquecimento = document.getElementById('panel-presets-aquecimento');
+  const panelVendas = document.getElementById('panel-presets-vendas');
+
+  if (tabAquecimento && tabVendas && panelAquecimento && panelVendas) {
+    tabAquecimento.addEventListener('click', () => {
+      tabAquecimento.classList.add('active');
+      tabVendas.classList.remove('active');
+      panelAquecimento.style.display = 'block';
+      panelVendas.style.display = 'none';
+    });
+
+    tabVendas.addEventListener('click', () => {
+      tabVendas.classList.add('active');
+      tabAquecimento.classList.remove('active');
+      panelVendas.style.display = 'block';
+      panelAquecimento.style.display = 'none';
+    });
+  }
+
   // Listeners de digitação para o preview ao vivo do WhatsApp
   document.getElementById('camp-template')?.addEventListener('input', updateWhatsAppPreview);
   document.getElementById('camp-media')?.addEventListener('input', updateWhatsAppPreview);

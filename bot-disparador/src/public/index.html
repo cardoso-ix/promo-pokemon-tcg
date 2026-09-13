@@ -703,92 +703,95 @@
 
           <!-- Modelos Prontos de Alta Conversão Pokémon TCG -->
           <div class="presets-container">
-            <!-- Categoria 1: Aquecimento Anti-Spam (Sem Links, Foco em Resposta) -->
-            <div class="presets-header" style="margin-bottom: 8px;">
-              <span class="presets-title" style="color: #fb923c;">
-                🔥 Modelos de Aquecimento Seguro (Anti-Spam • Sem Links)
-              </span>
+            <div class="preset-category-tabs">
+              <button type="button" class="preset-tab-btn active tab-aquecimento" id="tab-presets-aquecimento">
+                🔥 Aquecimento Seguro (5 De Fã para Fãs)
+              </button>
+              <button type="button" class="preset-tab-btn tab-vendas" id="tab-presets-vendas">
+                📢 Ofertas & Vendas (3)
+              </button>
             </div>
-            <div class="presets-grid" style="margin-bottom: 14px;">
-              <button type="button" class="preset-card" data-preset="aquecimento-fa-pra-fa">
-                <div class="preset-card-top">
-                  <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Fã para Fã 1</span>
-                  <span class="preset-badge-icon">⚡</span>
-                </div>
-                <strong>Apresentação & De Fã para Fãs</strong>
-                <p>Eduardo se apresenta, fala do grupo de fã para fãs e pergunta: "posso te fazer um convite?".</p>
-              </button>
 
-              <button type="button" class="preset-card" data-preset="aquecimento-conversa-leve">
-                <div class="preset-card-top">
-                  <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Fã para Fã 2</span>
-                  <span class="preset-badge-icon">🎴</span>
-                </div>
-                <strong>Papo Leve de Colecionador</strong>
-                <p>Conversa amigável e descontraída perguntando se pode fazer um convite pro grupo.</p>
-              </button>
+            <!-- Categoria 1: Aquecimento Anti-Spam (Sem Links, Foco em Resposta) -->
+            <div class="preset-panel" id="panel-presets-aquecimento">
+              <div class="presets-grid">
+                <button type="button" class="preset-card" data-preset="aquecimento-fa-pra-fa">
+                  <div class="preset-card-top">
+                    <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Fã para Fã 1</span>
+                    <span class="preset-badge-icon">⚡</span>
+                  </div>
+                  <strong>Apresentação & De Fã para Fãs</strong>
+                  <p>Eduardo se apresenta, fala do grupo de fã para fãs e pergunta: "posso te fazer um convite?".</p>
+                </button>
 
-              <button type="button" class="preset-card" data-preset="aquecimento-comunidade-vip">
-                <div class="preset-card-top">
-                  <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Fã para Fã 3</span>
-                  <span class="preset-badge-icon">🤝</span>
-                </div>
-                <strong>Espaço Exclusivo sem Spam</strong>
-                <p>Explica que o grupo foi feito de fã pra fã e pede permissão para enviar o link.</p>
-              </button>
+                <button type="button" class="preset-card" data-preset="aquecimento-conversa-leve">
+                  <div class="preset-card-top">
+                    <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Fã para Fã 2</span>
+                    <span class="preset-badge-icon">🎴</span>
+                  </div>
+                  <strong>Papo Leve de Colecionador</strong>
+                  <p>Conversa amigável e descontraída perguntando se pode fazer um convite pro grupo.</p>
+                </button>
 
-              <button type="button" class="preset-card" data-preset="aquecimento-mega-humano">
-                <div class="preset-card-top">
-                  <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Fã para Fã 4</span>
-                  <span class="preset-badge-icon">🎲</span>
-                </div>
-                <strong>Mega-Spintax Super Humano</strong>
-                <p>Centenas de variações naturais do Eduardo perguntando se pode convidar pro grupo.</p>
-              </button>
+                <button type="button" class="preset-card" data-preset="aquecimento-comunidade-vip">
+                  <div class="preset-card-top">
+                    <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Fã para Fã 3</span>
+                    <span class="preset-badge-icon">🤝</span>
+                  </div>
+                  <strong>Espaço Exclusivo sem Spam</strong>
+                  <p>Explica que o grupo foi feito de fã pra fã e pede permissão para enviar o link.</p>
+                </button>
 
-              <button type="button" class="preset-card" data-preset="aquecimento-pergunta-direta" style="grid-column: span 2;">
-                <div class="preset-card-top">
-                  <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Fã para Fã 5</span>
-                  <span class="preset-badge-icon">📦</span>
-                </div>
-                <strong>Pergunta Gentil de Fã</strong>
-                <p>Abordagem calorosa de colecionador para colecionador perguntando se aceita o convite.</p>
-              </button>
+                <button type="button" class="preset-card" data-preset="aquecimento-mega-humano">
+                  <div class="preset-card-top">
+                    <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Fã para Fã 4</span>
+                    <span class="preset-badge-icon">🎲</span>
+                  </div>
+                  <strong>Mega-Spintax Super Humano</strong>
+                  <p>Centenas de variações naturais do Eduardo perguntando se pode convidar pro grupo.</p>
+                </button>
+
+                <button type="button" class="preset-card" data-preset="aquecimento-pergunta-direta" style="grid-column: span 2;">
+                  <div class="preset-card-top">
+                    <span class="preset-tag" style="background: rgba(251, 146, 60, 0.12); color: #fb923c;">Fã para Fã 5</span>
+                    <span class="preset-badge-icon">📦</span>
+                  </div>
+                  <strong>Pergunta Gentil de Fã</strong>
+                  <p>Abordagem calorosa de colecionador para colecionador perguntando se aceita o convite.</p>
+                </button>
+              </div>
             </div>
 
             <!-- Categoria 2: Vendas & Ofertas (Para Chips Já Aquecidos) -->
-            <div class="presets-header" style="margin-bottom: 8px;">
-              <span class="presets-title" style="color: var(--google-blue);">
-                📢 Modelos de Ofertas & Vendas (Para Chips Já Aquecidos)
-              </span>
-            </div>
-            <div class="presets-grid">
-              <button type="button" class="preset-card" data-preset="convite-grupo">
-                <div class="preset-card-top">
-                  <span class="preset-tag">Convite VIP</span>
-                  <span class="preset-badge-icon">🎴</span>
-                </div>
-                <strong>Grupo de Ofertas VIP</strong>
-                <p>Apresentação e link direto para entrar no grupo de ofertas.</p>
-              </button>
+            <div class="preset-panel" id="panel-presets-vendas" style="display: none;">
+              <div class="presets-grid">
+                <button type="button" class="preset-card" data-preset="convite-grupo">
+                  <div class="preset-card-top">
+                    <span class="preset-tag">Convite VIP</span>
+                    <span class="preset-badge-icon">🎴</span>
+                  </div>
+                  <strong>Grupo de Ofertas VIP</strong>
+                  <p>Apresentação e link direto para entrar no grupo de ofertas.</p>
+                </button>
 
-              <button type="button" class="preset-card" data-preset="promocao-boxes">
-                <div class="preset-card-top">
-                  <span class="preset-tag">Oferta</span>
-                  <span class="preset-badge-icon">⚡</span>
-                </div>
-                <strong>Booster Boxes & Copag</strong>
-                <p>Alerta de desconto relâmpago com link da vitrine Mercado Livre Full.</p>
-              </button>
+                <button type="button" class="preset-card" data-preset="promocao-boxes">
+                  <div class="preset-card-top">
+                    <span class="preset-tag">Oferta</span>
+                    <span class="preset-badge-icon">⚡</span>
+                  </div>
+                  <strong>Booster Boxes & Copag</strong>
+                  <p>Alerta de desconto relâmpago com link da vitrine Mercado Livre Full.</p>
+                </button>
 
-              <button type="button" class="preset-card" data-preset="acessorios" style="grid-column: span 2;">
-                <div class="preset-card-top">
-                  <span class="preset-tag">Acessórios</span>
-                  <span class="preset-badge-icon">📦</span>
-                </div>
-                <strong>Fichários & Sleeves</strong>
-                <p>Ofertas de pastas de 360 cartas, sleeves protetores e deck boxes.</p>
-              </button>
+                <button type="button" class="preset-card" data-preset="acessorios" style="grid-column: span 2;">
+                  <div class="preset-card-top">
+                    <span class="preset-tag">Acessórios</span>
+                    <span class="preset-badge-icon">📦</span>
+                  </div>
+                  <strong>Fichários & Sleeves</strong>
+                  <p>Ofertas de pastas de 360 cartas, sleeves protetores e deck boxes.</p>
+                </button>
+              </div>
             </div>
           </div>
 
