@@ -14,12 +14,12 @@ O ecossistema roda de forma desvinculada de qualquer máquina local, dividido em
 
 | Módulo | Tecnologia | Ambiente / Status | Descrição |
 | --- | --- | --- | --- |
-| **Replicador de Ofertas** | TypeScript + Baileys + Fastify | 🟢 **Online 24/7 (Railway)** | Monitora grupos de ofertas, intercepta links concorrentes, encurta para `meli.la` oficial e replica com fotos 2X |
+| **Replicador de Ofertas** | TypeScript + Baileys + Fastify | 🟢 **Online 24/7 (Railway)** | Monitora grupos de ofertas, intercepta links concorrentes, encurta para `meli.la` oficial e replica com fotos 2X. Watchdog Baileys e esteira resiliente com isolamento por grupo. |
 | **Bot Disparador & Leads** | TypeScript + Baileys + Spintax | 🟢 **Online 24/7 (Railway)** | Extração de membros de grupos em 1 clique, disparador anti-ban com Spintax dinâmico e simulador ao vivo |
 | **Atendimento IA Privado** | DeepSeek V4 (OpenCode Gateway) | 🟢 **Online 24/7 (Railway)** | Responde clientes no privado imitando especialista amigável de Pokémon TCG com digitação humanizada |
-| **Encurtador de Afiliados** | API Oficial Mercado Livre | 🟢 **Ativo** | Gera links curtos `https://meli.la/xxxxxx` via cookie de afiliado com fallback resiliente `matt_word` |
+| **Encurtador de Afiliados** | API Oficial Mercado Livre | 🟢 **Ativo (Sentinel 45m)** | Monitorado pelo Cookie Sentinel em tempo real, encurtador oficial `https://meli.la/xxxxxx` e fallback resiliente |
 | **Bancos de Dados SQLite** | Better-SQLite3 (WAL Mode) | 🟢 **Ativo (Volumes Persistentes)** | `replica.db` e `disparador.db` salvos com segurança em `/app/data` |
-| **Cockpits Web & Segurança** | Fastify + WebSockets + UI Dark | 🟢 **Online (HTTPS & Autenticado)** | Protegido com login/senha (`eduardo`), sessão HMAC de 30 dias e botão de logout |
+| **Cockpits Web & Segurança** | Fastify + WebSockets + UI TCG | 🟢 **Online (Ultra Ball & Holo Foil)** | Interface temática Pokémon TCG com efeito Rare Holo Foil, badges de energia, barra de HP da sessão e balões WhatsApp Dark autênticos |
 
 ---
 

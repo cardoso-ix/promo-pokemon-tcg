@@ -62,6 +62,15 @@
   const kpiWa = document.getElementById('kpi-wa');
   const kpiPhoneSub = document.getElementById('kpi-phone-sub');
 
+  // Pokémon TCG HP Meter & Sentinel DOM elements
+  const hpMeterFill = document.getElementById('hp-meter-fill');
+  const hpMeterPercent = document.getElementById('hp-meter-percent');
+  const cookieSentinelBanner = document.getElementById('cookie-sentinel-banner');
+  const sentinelTitle = document.getElementById('sentinel-title');
+  const sentinelDesc = document.getElementById('sentinel-desc');
+  const btnRecheckCookie = document.getElementById('btn-recheck-cookie');
+  const btnFixCookie = document.getElementById('btn-fix-cookie');
+
   const rotasCount = document.getElementById('rotas-count');
   const feedList = document.getElementById('feed-list');
   const feedSearch = document.getElementById('feed-search');
@@ -219,6 +228,9 @@
       case 'stats_update':
         updateStats(data);
         break;
+      case 'cookie_status':
+        updateCookieSentinelUI(data);
+        break;
       case 'config_updated':
         if (data.chave === 'ativo') {
           updateMasterSwitch(data.valor === 'true');
@@ -227,6 +239,68 @@
         }
         break;
     }
+  }
+
+  function updateCookieSentinelUI(cookieStatus) {
+    if (!cookieSentinelBanner || !cookieStatus) return;
+
+    if (cookieStatus.status === 'expired' || cookieStatus.status === 'warning') {
+      cookieSentinelBanner.style.display = 'flex';
+      cookieSentinelBanner.className = 'cookie-sentinel-banner';
+      if (sentinelTitle) sentinelTitle.textContent = 'Alerta Sentinel · Cookie Mercado Livre Expirado';
+      if (sentinelDesc) sentinelDesc.textContent = cookieStatus.message || 'Sua sessão de afiliado expirou. Renove o cookie para continuar gerando links oficiais meli.la.';
+      if (meliStatusBadge) {
+        meliStatusBadge.className = 'badge badge-disconnected';
+        meliStatusText.textContent = 'meli.la Inativo';
+      }
+    } else if (cookieStatus.status === 'missing') {
+      cookieSentinelBanner.style.display = 'flex';
+      cookieSentinelBanner.className = 'cookie-sentinel-banner';
+      if (sentinelTitle) sentinelTitle.textContent = 'Cookie Mercado Livre Não Configurado';
+      if (sentinelDesc) sentinelDesc.textContent = 'Para utilizar o encurtador oficial meli.la e obter a foto oficial do anúncio, configure o cookie de sessão.';
+      if (meliStatusBadge) {
+        meliStatusBadge.className = 'badge badge-neutral';
+        meliStatusText.textContent = 'Modo Padrão';
+      }
+    } else if (cookieStatus.status === 'valid') {
+      cookieSentinelBanner.style.display = 'none';
+      if (meliStatusBadge) {
+        meliStatusBadge.className = 'badge badge-meli';
+        meliStatusText.textContent = 'meli.la Operacional ✓';
+      }
+    }
+  }
+
+  if (btnFixCookie) {
+    btnFixCookie.addEventListener('click', () => {
+      const configTabBtn = document.querySelector('.tab-btn[data-tab="config"]');
+      if (configTabBtn) configTabBtn.click();
+      setTimeout(() => {
+        if (cfgMeliCookie) {
+          cfgMeliCookie.focus();
+          cfgMeliCookie.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 200);
+    });
+  }
+
+  if (btnRecheckCookie) {
+    btnRecheckCookie.addEventListener('click', async () => {
+      btnRecheckCookie.disabled = true;
+      const originalText = btnRecheckCookie.textContent;
+      btnRecheckCookie.textContent = '⏳ Verificando...';
+      try {
+        const res = await fetch('/api/cookie/check', { method: 'POST' });
+        const data = await res.json();
+        updateCookieSentinelUI(data);
+        showToast(data.status === 'valid' ? 'Cookie verificado e válido! ✓' : 'Aviso: Cookie recusado pelo Mercado Livre');
+      } catch (e) {
+        showToast('Erro ao testar cookie');
+      } finally {
+        btnRecheckCookie.disabled = false;
+        btnRecheckCookie.textContent = originalText;
+      }
+    });
   }
 
   function updateMeliBadge(cookieValue) {
@@ -275,6 +349,11 @@
     // 5. Stats
     if (data.stats) {
       updateStats(data.stats);
+    }
+
+    // 6. Cookie Sentinel Status
+    if (data.cookieStatus) {
+      updateCookieSentinelUI(data.cookieStatus);
     }
   }
 
@@ -338,9 +417,22 @@
   }
 
   function updateStats(stats) {
+    const teto = parseInt(cfgTeto?.value || '40', 10);
     if (stats.postsLastHour !== undefined) {
-      const teto = cfgTeto.value || '40';
       kpiHour.innerHTML = `${stats.postsLastHour} <span class="kpi-limit">/ ${teto}</span>`;
+
+      if (hpMeterFill && hpMeterPercent) {
+        const percent = Math.min(100, Math.round((stats.postsLastHour / Math.max(teto, 1)) * 100));
+        hpMeterFill.style.width = `${percent}%`;
+        hpMeterPercent.textContent = `${percent}%`;
+
+        hpMeterFill.classList.remove('warning', 'critical');
+        if (percent >= 80) {
+          hpMeterFill.classList.add('critical');
+        } else if (percent >= 50) {
+          hpMeterFill.classList.add('warning');
+        }
+      }
     }
     if (stats.totalEnviadosHoje !== undefined) {
       kpiToday.textContent = stats.totalEnviadosHoje;
@@ -399,30 +491,39 @@
 
   function createFeedElement(log, isHighlight) {
     const item = document.createElement('div');
-    item.className = 'feed-item' + (isHighlight ? ' new-arrival' : '');
+    item.className = 'feed-item holo-foil' + (isHighlight ? ' new-arrival' : '');
 
+    const isEnviado = log.status === 'enviado';
     const statusBadge =
-      log.status === 'enviado'
-        ? '<span class="badge badge-connected">Enviado</span>'
+      isEnviado
+        ? '<span class="badge badge-connected"><span class="indicator-dot"></span>⚡ Enviado</span>'
         : log.status === 'ignorado'
-        ? `<span class="badge badge-qr" title="${escapeHtml(log.motivo || '')}">Ignorado</span>`
-        : `<span class="badge badge-disconnected" title="${escapeHtml(log.motivo || '')}">Erro</span>`;
+        ? `<span class="badge badge-qr" title="${escapeHtml(log.motivo || '')}"><span class="indicator-dot"></span>🛡️ Ignorado</span>`
+        : `<span class="badge badge-disconnected" title="${escapeHtml(log.motivo || '')}"><span class="indicator-dot"></span>🔥 Erro</span>`;
 
     const timeFormatted = log.criado_em
       ? new Date(log.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
       : new Date().toLocaleTimeString('pt-BR');
 
     const rawContent = log.texto_publicado || log.texto_original || '(Sem texto)';
+    const bubbleClass = isEnviado ? 'feed-body' : 'feed-body inbound-bubble';
+    const checkmarks = isEnviado ? '<span class="wa-ticks">✓✓</span>' : '';
 
     item.innerHTML = `
       <div class="feed-header">
-        <span class="feed-origem">Origem: ${escapeHtml(log.origem_nome || log.origem_chat_id || 'Grupo Desconhecido')}</span>
+        <span class="feed-origem">⚡ Origem: ${escapeHtml(log.origem_nome || log.origem_chat_id || 'Grupo Desconhecido')}</span>
         <div class="feed-meta">
           <span>${timeFormatted}</span>
           ${statusBadge}
         </div>
       </div>
-      <div class="feed-body">${escapeHtml(rawContent)}</div>
+      <div class="${bubbleClass}">
+        <div>${escapeHtml(rawContent)}</div>
+        <div class="wa-bubble-footer">
+          <span>${timeFormatted}</span>
+          ${checkmarks}
+        </div>
+      </div>
       <div class="feed-footer">
         <span>Destino: ${escapeHtml(log.destino_chat_id || 'Nenhum')} · ${log.tem_foto ? '📷 Com Foto' : '📝 Somente Texto'} · ${log.links_convertidos || 0} links ML</span>
         <button class="btn-copy-card" data-content="${encodeURIComponent(rawContent)}" title="Copiar texto tratado para a área de transferência">

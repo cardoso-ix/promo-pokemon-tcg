@@ -4,6 +4,27 @@ Este registro documenta a evolução arquitetural e as decisões estratégicas d
 
 ---
 
+## Decisão 66 — Redesign Pokémon TCG "Ultra Ball & Rare Holo Foil" e Esteira Sentinela de Resiliência
+**Data:** 15/09/2026 · **Decisor:** Eduardo / Antigravity
+
+- **A decisão**:
+  1. **Redesign Visual Pokémon TCG "Ultra Ball & Rare Holo Foil"**:
+     - Paleta inspirada na Ultra Ball e na arena Pokémon TCG com Cosmic Dark (`#060810`), Ultra Gold (`#FFD700`) e Electric Cyan (`#00E5FF`).
+     - Efeito holográfico de cartas raras (*Rare Holo Foil*) em CSS com reflexo dinâmico no hover dos cards e do feed.
+     - Badges temáticos de tipos de Energia Pokémon (⚡ Elétrico, 💧 Água, 🌿 Planta, 🔥 Fogo e 🔮 Psíquico).
+     - Medidor animado de **HP da Sessão** na quota anti-flood por hora, com transição dinâmica de cores (Verde -> Amarelo -> Vermelho crítico).
+     - Balões de conversa no feed com visual autêntico do WhatsApp Dark (`#005c4b` e `#202c33`), tipografia nativa e confirmação de entrega dupla (`✓✓`).
+  2. **Watchdog de Keepalive Baileys**:
+     - Monitoramento ativo de integridade da conexão WebSocket a cada 45 segundos, com envio de heartbeat ping e detecção preventiva de conexões zumbis, garantindo auto-recuperação sem desemparelhar.
+  3. **Sentinel do Cookie Mercado Livre (`meli.la`)**:
+     - Verificação periódica automática da saúde da sessão do Mercado Livre a cada 45 minutos.
+     - Notificação instantânea via WebSocket e banner contextual estilo *Pokémon Trainer Alert* na interface alertando o operador caso o cookie expire.
+  4. **Esteira de Disparo Resiliente com Isolamento por Grupo**:
+     - Tratamento isolado por destino com proteção contra buffers de imagem excessivos (>8MB) e validação estrita de JID, evitando que erros em um grupo interrompam o envio para os demais.
+- **Motivo**: Elevar a experiência do usuário com identidade visual imersiva e marcante do universo Pokémon TCG, aliada à máxima estabilidade e tolerância a falhas na operação autônoma 24/7.
+
+---
+
 ## Decisão 65 — Resiliência no Pareamento do WhatsApp, Assinatura Windows Chrome e Auto-Reset
 **Data:** 15/09/2026 · **Decisor:** Eduardo / Antigravity
 

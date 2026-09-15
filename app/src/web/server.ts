@@ -140,6 +140,65 @@ export async function createServer() {
     }
   }
 
+  // Sentinel de Cookie Mercado Livre
+  let currentCookieStatus = {
+    status: 'missing' as 'valid' | 'warning' | 'expired' | 'missing',
+    lastChecked: new Date().toISOString(),
+    message: 'Nenhum cookie configurado'
+  };
+
+  async function checkMeliCookieHealth() {
+    const cookie = getConfig('meli_cookie', '').trim();
+    const tag = getConfig('meli_tag', getConfig('affiliate_matt_word', 'caed1312314'));
+
+    if (!cookie || cookie.length < 10) {
+      currentCookieStatus = {
+        status: 'missing',
+        lastChecked: new Date().toISOString(),
+        message: 'Nenhum cookie configurado'
+      };
+      return currentCookieStatus;
+    }
+
+    const testUrl = 'https://www.mercadolivre.com.br/deck-pokemon-espada-e-escudo-rillaboom-copag/p/MLB27197917';
+    try {
+      const shortUrl = await shortenToMeli(testUrl, cookie, tag);
+      if (shortUrl && shortUrl.startsWith('https://meli.la/')) {
+        currentCookieStatus = {
+          status: 'valid',
+          lastChecked: new Date().toISOString(),
+          message: 'Cookie válido e encurtador meli.la ativo'
+        };
+      } else {
+        currentCookieStatus = {
+          status: 'expired',
+          lastChecked: new Date().toISOString(),
+          message: 'Cookie recusado pelo Mercado Livre (sessão expirada)'
+        };
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      currentCookieStatus = {
+        status: 'warning',
+        lastChecked: new Date().toISOString(),
+        message: `Aviso no teste do cookie: ${msg}`
+      };
+    }
+    return currentCookieStatus;
+  }
+
+  // Verificação inicial após boot do servidor
+  setTimeout(async () => {
+    const res = await checkMeliCookieHealth();
+    broadcast('cookie_status', res);
+  }, 3500);
+
+  // Verificação periódica a cada 45 minutos
+  setInterval(async () => {
+    const res = await checkMeliCookieHealth();
+    broadcast('cookie_status', res);
+  }, 45 * 60 * 1000);
+
   // Monitorar eventos do WhatsApp e transmitir para o painel via WebSocket
   whatsAppManager.onStateChange((state: WhatsAppState) => {
     broadcast('whatsapp_state', state);
@@ -167,6 +226,7 @@ export async function createServer() {
           rotas: getAllRotas(),
           chats: getCachedChats(),
           logs: getRecentLogs(30),
+          cookieStatus: currentCookieStatus,
           stats: {
             postsLastHour: getPostsLastHour(),
             totalEnviadosHoje: getRecentLogs(100).filter((l) => l.status === 'enviado').length
@@ -186,8 +246,16 @@ export async function createServer() {
       whatsapp: whatsAppManager.getState(),
       isAtivo: getConfig('ativo', 'true') === 'true',
       postsLastHour: getPostsLastHour(),
+      cookieStatus: currentCookieStatus,
       configs: getAllConfigs()
     };
+  });
+
+  // API REST: Forçar checagem do Cookie do Mercado Livre
+  app.post('/api/cookie/check', async () => {
+    const res = await checkMeliCookieHealth();
+    broadcast('cookie_status', res);
+    return { ok: true, ...res };
   });
 
   // API REST: Configurações
@@ -200,6 +268,14 @@ export async function createServer() {
     if (!chave) return reply.status(400).send({ error: 'Chave obrigatória' });
     setConfig(chave, String(valor));
     broadcast('config_updated', { chave, valor });
+
+    if (chave === 'meli_cookie') {
+      setTimeout(async () => {
+        const res = await checkMeliCookieHealth();
+        broadcast('cookie_status', res);
+      }, 500);
+    }
+
     return { ok: true, chave, valor };
   });
 

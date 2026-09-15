@@ -12,6 +12,7 @@ A plataforma opera **100% online na nuvem (Railway)** com persistência contínu
 - **Status:** 🟢 **Online 24/7 (Railway)**
 - **Painel em Produção:** 👉 **`https://promo-replica-bot-production.up.railway.app`**
 - **Objetivo:** Monitora grupos de ofertas de Pokémon TCG 24/7, intercepta links concorrentes, substitui por links de afiliado oficiais do Mercado Livre com encurtamento `meli.la`, preserva/baixa fotos oficiais em 2X e replica nos seus grupos de destino.
+- **Interface & Resiliência:** Cockpit temático **Pokémon TCG (Ultra Ball & Rare Holo Foil)** com medidor animado de **HP da Sessão**, simulador autêntico de balões do WhatsApp Dark, **Watchdog Baileys** (heartbeat a cada 45s) e **Cookie Sentinel** automático para validação contínua da sessão do Mercado Livre.
 
 ### 2. 🚀 Bot Disparador, Prospecção & Atendimento IA (`bot-disparador/`)
 - **Status:** 🟢 **Online 24/7 (Railway)**

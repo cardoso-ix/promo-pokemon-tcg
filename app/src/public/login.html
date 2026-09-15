@@ -297,11 +297,34 @@
 
   <div class="login-container">
     <div class="login-header">
-      <div class="brand-badge">
-        <img src="favicon.svg" alt="RP" width="32" height="32">
+      <div class="brand-badge ultra-ball-badge" title="Pokéball TCG Engine">
+        <svg class="ultra-ball-svg" viewBox="0 0 48 48" width="36" height="36">
+          <defs>
+            <linearGradient id="loginUltraBlack" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#1e293b"/>
+              <stop offset="100%" stop-color="#090d16"/>
+            </linearGradient>
+            <linearGradient id="loginUltraGold" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#FFE866"/>
+              <stop offset="100%" stop-color="#F59E0B"/>
+            </linearGradient>
+            <linearGradient id="loginBallWhite" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#cbd5e1"/>
+            </linearGradient>
+          </defs>
+          <circle cx="24" cy="24" r="22" fill="url(#loginBallWhite)" stroke="#090d16" stroke-width="2.5"/>
+          <path d="M 2 24 A 22 22 0 0 1 46 24 Z" fill="url(#loginUltraBlack)"/>
+          <path d="M 9 14 C 13 8, 20 6, 24 6 C 21 10, 18 16, 15 22 Z" fill="url(#loginUltraGold)"/>
+          <path d="M 39 14 C 35 8, 28 6, 24 6 C 27 10, 30 16, 33 22 Z" fill="url(#loginUltraGold)"/>
+          <line x1="2" y1="24" x2="46" y2="24" stroke="#090d16" stroke-width="3"/>
+          <circle cx="24" cy="24" r="7" fill="#090d16"/>
+          <circle cx="24" cy="24" r="4.5" fill="#ffffff" stroke="#00e5ff" stroke-width="1.5"/>
+          <circle cx="24" cy="24" r="2" fill="#00e5ff"/>
+        </svg>
       </div>
       <h1 class="brand-title">RÉPLICA PROMO</h1>
-      <p class="brand-subtitle">POKÉMON TCG · COCKPIT AUTÔNOMO</p>
+      <p class="brand-subtitle">POKÉMON TCG · ULTRA BALL COCKPIT</p>
     </div>
 
     <div id="error-alert" class="error-box">

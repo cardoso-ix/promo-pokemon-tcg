@@ -41,6 +41,35 @@ export class WhatsAppManager {
   private onMessageProcessedListeners: ((log: any) => void)[] = [];
   private reconnectAttempts = 0;
   private lastSyncTime = 0;
+  private watchdogInterval: NodeJS.Timeout | null = null;
+
+  private startWatchdog(): void {
+    this.stopWatchdog();
+    this.watchdogInterval = setInterval(() => {
+      if (this.state.status === 'connected' && this.sock) {
+        try {
+          const ws = (this.sock as any)?.ws;
+          const readyState = ws?.readyState;
+          if (readyState !== undefined && readyState !== 1) {
+            console.warn(`[WA Watchdog] Conexão WebSocket Baileys inativa (readyState=${readyState}). Reconectando...`);
+            this.reconnectAttempts = 0;
+            this.start();
+          } else if (ws && typeof ws.ping === 'function') {
+            ws.ping();
+          }
+        } catch (err) {
+          console.warn('[WA Watchdog] Heartbeat falhou:', err);
+        }
+      }
+    }, 45000);
+  }
+
+  private stopWatchdog(): void {
+    if (this.watchdogInterval) {
+      clearInterval(this.watchdogInterval);
+      this.watchdogInterval = null;
+    }
+  }
 
   constructor() {
     this.logger = pino({ level: 'warn' });
@@ -94,6 +123,7 @@ export class WhatsAppManager {
 
   public async resetSession(): Promise<void> {
     console.log('[WA] Reset de sessão solicitado.');
+    this.stopWatchdog();
     if (this.sock) {
       try {
         await this.sock.logout();
@@ -156,6 +186,7 @@ export class WhatsAppManager {
         }
 
         if (connection === 'close') {
+          this.stopWatchdog();
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
           const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
           const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515;
@@ -200,6 +231,7 @@ export class WhatsAppManager {
           this.state.qrDataUrl = null;
           this.state.userPhone = this.sock?.user?.id?.split(':')[0] || null;
           this.notifyStateChange();
+          this.startWatchdog();
 
           console.log(`WhatsApp conectado com sucesso como: ${this.state.userPhone}`);
           await this.syncGroups();
@@ -249,6 +281,7 @@ export class WhatsAppManager {
   }
 
   public async logout(): Promise<void> {
+    this.stopWatchdog();
     if (this.sock) {
       try {
         await this.sock.logout();
@@ -589,13 +622,27 @@ export class WhatsAppManager {
       await new Promise((resolve) => setTimeout(resolve, delaySegundos * 1000));
     }
 
-    // 8. Enviar para todos os destinos configurados
+    // 8. Enviar para todos os destinos configurados com isolamento de falhas
     if (this.sock) {
+      let safeImageBuffer: Buffer | null = imageBuffer;
+      if (safeImageBuffer && safeImageBuffer.length > 8 * 1024 * 1024) {
+        console.warn(`[Mídia Segura] Imagem excede 8MB (${Math.round(safeImageBuffer.length / 1024)} KB). Enviando apenas texto para evitar travamento.`);
+        safeImageBuffer = null;
+      }
+
+      let enviosSucesso = 0;
+      let enviosFalha = 0;
+
       for (const destino of destinoIds) {
+        if (!destino || (!destino.endsWith('@g.us') && !destino.endsWith('@s.whatsapp.net'))) {
+          console.warn(`[REPLICA SKIP] JID de destino inválido descartado: "${destino}"`);
+          continue;
+        }
+
         try {
-          if (imageBuffer && imageBuffer.length > 0) {
+          if (safeImageBuffer && safeImageBuffer.length > 0) {
             await this.sock.sendMessage(destino, {
-              image: imageBuffer,
+              image: safeImageBuffer,
               caption: novoTexto
             });
           } else {
@@ -603,11 +650,16 @@ export class WhatsAppManager {
               text: novoTexto
             });
           }
-          console.log(`[REPLICA OK] Post enviado para destino: ${destino} (com foto: ${Boolean(imageBuffer)})`);
-        } catch (err) {
-          console.error(`Erro ao enviar para destino ${destino}:`, err);
+          enviosSucesso++;
+          console.log(`[REPLICA OK] Post enviado com sucesso para destino: ${destino} (com foto: ${Boolean(safeImageBuffer)})`);
+        } catch (err: unknown) {
+          enviosFalha++;
+          const msgErro = err instanceof Error ? err.message : String(err);
+          console.error(`[REPLICA ERRO] Falha ao enviar para destino ${destino}: ${msgErro}`);
         }
       }
+
+      console.log(`[REPLICA RESULTADO] Broadcast finalizado: ${enviosSucesso} enviados com sucesso, ${enviosFalha} falhas.`);
     }
 
     // Notificar painel via WebSocket

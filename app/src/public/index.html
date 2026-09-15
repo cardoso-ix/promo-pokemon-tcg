@@ -15,18 +15,50 @@
   <!-- Ambient background glow effects -->
   <div class="ambient-glow glow-gold"></div>
   <div class="ambient-glow glow-cyan"></div>
+  <div class="ambient-glow glow-purple"></div>
+  <div class="pokeball-watermark">
+    <svg viewBox="0 0 200 200" width="450" height="450" fill="none">
+      <circle cx="100" cy="100" r="94" stroke="rgba(255,215,0,0.035)" stroke-width="5"/>
+      <line x1="6" y1="100" x2="194" y2="100" stroke="rgba(255,215,0,0.035)" stroke-width="5"/>
+      <circle cx="100" cy="100" r="32" stroke="rgba(255,215,0,0.04)" stroke-width="5" fill="rgba(11,13,23,0.3)"/>
+      <circle cx="100" cy="100" r="16" fill="rgba(0,229,255,0.05)" stroke="rgba(0,229,255,0.1)" stroke-width="3"/>
+    </svg>
+  </div>
   <div class="scanlines"></div>
 
   <div class="app-shell">
     <!-- Header -->
     <header class="top-bar">
       <div class="brand">
-        <div class="brand-badge">
-          <img src="favicon.svg" alt="RP" width="28" height="28" style="vertical-align: middle;">
+        <div class="brand-badge ultra-ball-badge" title="Pokéball TCG Engine">
+          <svg class="ultra-ball-svg" viewBox="0 0 48 48" width="34" height="34">
+            <defs>
+              <linearGradient id="ultraBlack" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#1e293b"/>
+                <stop offset="100%" stop-color="#090d16"/>
+              </linearGradient>
+              <linearGradient id="ultraGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FFE866"/>
+                <stop offset="100%" stop-color="#F59E0B"/>
+              </linearGradient>
+              <linearGradient id="ballWhite" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="100%" stop-color="#cbd5e1"/>
+              </linearGradient>
+            </defs>
+            <circle cx="24" cy="24" r="22" fill="url(#ballWhite)" stroke="#090d16" stroke-width="2.5"/>
+            <path d="M 2 24 A 22 22 0 0 1 46 24 Z" fill="url(#ultraBlack)"/>
+            <path d="M 9 14 C 13 8, 20 6, 24 6 C 21 10, 18 16, 15 22 Z" fill="url(#ultraGold)"/>
+            <path d="M 39 14 C 35 8, 28 6, 24 6 C 27 10, 30 16, 33 22 Z" fill="url(#ultraGold)"/>
+            <line x1="2" y1="24" x2="46" y2="24" stroke="#090d16" stroke-width="3"/>
+            <circle cx="24" cy="24" r="7" fill="#090d16"/>
+            <circle cx="24" cy="24" r="4.5" fill="#ffffff" stroke="#00e5ff" stroke-width="1.5" class="pokeball-center-btn"/>
+            <circle cx="24" cy="24" r="2" fill="#00e5ff"/>
+          </svg>
         </div>
         <div class="brand-text">
           <h1>REPLICA PROMO</h1>
-          <span class="brand-sub">POKÉMON TCG · AUTÔNOMO</span>
+          <span class="brand-sub"><span class="holo-text">POKÉMON TCG</span> · ULTRA BALL COCKPIT</span>
         </div>
       </div>
 
@@ -70,39 +102,68 @@
       </div>
     </header>
 
-    <!-- KPI Summary Cards -->
+    <!-- Mercado Livre Cookie Sentinel Alert Banner -->
+    <div id="cookie-sentinel-banner" class="cookie-sentinel-banner" style="display: none;">
+      <div class="sentinel-content">
+        <div class="sentinel-icon-wrap">
+          <span class="sentinel-icon">🔥</span>
+        </div>
+        <div class="sentinel-text">
+          <div class="sentinel-heading">
+            <strong id="sentinel-title">Alerta Sentinel · Encurtador meli.la</strong>
+            <span class="sentinel-tag">TCG SENTINEL</span>
+          </div>
+          <p id="sentinel-desc">O cookie de sessão do Mercado Livre expirou ou não foi configurado. Os links utilizarão o formato alternativo.</p>
+        </div>
+      </div>
+      <div class="sentinel-actions">
+        <button type="button" id="btn-recheck-cookie" class="btn btn-secondary btn-sm" title="Reverificar cookie agora">🔄 Reverificar</button>
+        <button type="button" id="btn-fix-cookie" class="btn btn-primary btn-sm" title="Ir para configurações de cookie">⚙️ Renovar Cookie</button>
+      </div>
+    </div>
+
+    <!-- KPI Summary Cards with Pokémon TCG Holo Card Styling -->
     <section class="kpi-grid">
-      <div class="kpi-card">
+      <div class="kpi-card tcg-card holo-foil">
         <div class="kpi-header">
           <span class="kpi-title">ESTADO DO SISTEMA</span>
-          <span class="kpi-icon">⚡</span>
+          <span class="energy-pill energy-electric" title="Tipo Elétrico">⚡</span>
         </div>
         <div id="kpi-status" class="kpi-value text-gold">ATIVO</div>
         <div class="kpi-sub" id="kpi-sub-status">Aguardando ofertas nos grupos</div>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card tcg-card holo-foil">
         <div class="kpi-header">
           <span class="kpi-title">ENVIADOS HOJE</span>
-          <span class="kpi-icon">📦</span>
+          <span class="energy-pill energy-grass" title="Tipo Planta">🌿</span>
         </div>
         <div id="kpi-today" class="kpi-value">0</div>
-        <div class="kpi-sub">Mensagens replicadas com sucesso</div>
+        <div class="kpi-sub">Ofertas replicadas com sucesso</div>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card tcg-card holo-foil">
         <div class="kpi-header">
-          <span class="kpi-title">FLUXO NA ÚLTIMA HORA</span>
-          <span class="kpi-icon">⏱️</span>
+          <span class="kpi-title">ENERGIA & FLUXO / HORA</span>
+          <span class="energy-pill energy-fire" title="Tipo Fogo">🔥</span>
         </div>
         <div id="kpi-hour" class="kpi-value">0 <span class="kpi-limit">/ 40</span></div>
-        <div class="kpi-sub" id="kpi-cap-sub">Anti-flood dentro do limite</div>
+        <div class="hp-meter-wrap" title="Medidor de HP e Quota Anti-Flood por Hora">
+          <div class="hp-meter-track">
+            <div id="hp-meter-fill" class="hp-meter-fill" style="width: 0%;"></div>
+          </div>
+          <div class="hp-meter-meta">
+            <span class="hp-label">⚡ HP DA SESSÃO</span>
+            <span id="hp-meter-percent" class="hp-val">0%</span>
+          </div>
+        </div>
+        <div class="kpi-sub" id="kpi-cap-sub">Anti-flood operacional</div>
       </div>
 
-      <div class="kpi-card">
+      <div class="kpi-card tcg-card holo-foil">
         <div class="kpi-header">
           <span class="kpi-title">WHATSAPP</span>
-          <span class="kpi-icon">💬</span>
+          <span class="energy-pill energy-water" title="Tipo Água">💧</span>
         </div>
         <div id="kpi-wa" class="kpi-value text-cyan">DESCONECTADO</div>
         <div class="kpi-sub" id="kpi-phone-sub">Abra a aba Conectar para ler o QR</div>
@@ -115,10 +176,10 @@
         <span class="tab-icon">⚡</span> Feed em Tempo Real
       </button>
       <button class="tab-btn" data-tab="rotas">
-        <span class="tab-icon">🔀</span> Rotas de Grupos (<span id="rotas-count">0</span>)
+        <span class="tab-icon">🔮</span> Rotas de Grupos (<span id="rotas-count">0</span>)
       </button>
       <button class="tab-btn" data-tab="anuncio">
-        <span class="tab-icon">⚡</span> Gerador de Anúncios
+        <span class="tab-icon">✨</span> Gerador de Anúncios
       </button>
       <button class="tab-btn" data-tab="conectar">
         <span class="tab-icon">📱</span> Conectar WhatsApp
