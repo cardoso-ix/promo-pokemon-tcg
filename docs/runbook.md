@@ -39,6 +39,17 @@ Ambos os painéis utilizam controle de acesso por credenciais seguras e tokens a
   4. Marque os grupos de destino desejados (ou use o botão "Marcar Todos os Destinos de Rotas").
   5. Clique em **🚀 Publicar no WhatsApp** para disparar a foto com a legenda com 1 clique!
 
+### 1.5. Protocolo de Reativação Rápida em 30s (Pelo Celular ou Computador)
+Se o WhatsApp desconectar ou se você trocar de aparelho, você pode restabelecer tudo em **menos de 30 segundos** diretamente pelo celular:
+1. Abra no navegador do seu smartphone:  
+   👉 **`https://promo-replica-bot-production.up.railway.app`**
+2. Se o status no topo indicar 🔴 **Desconectado** ou 🟡 **Aguardando QR**:
+   * Toque na aba **📱 Conectar WhatsApp**.
+   * Se o QR Code estiver visível, aponte a câmera do WhatsApp (**Aparelhos Conectados ➔ Conectar Aparelho**).
+   * Se a sessão parecer travada ou o WhatsApp não conectar de primeira: toque no botão **🔄 Reiniciar Sessão / Gerar Novo QR Code**. O robô faz a limpeza das chaves no servidor e gera um QR novo em 2 segundos.
+3. Se por algum motivo externo a nuvem precisar de um reinício completo:
+   * Abra o dashboard do Railway no celular e clique em **Restart Service**. O volume persistente NVMe preserva seu banco e suas rotas intactos.
+
 ---
 
 ## 2. Operação Diária do Bot Disparador na Nuvem
