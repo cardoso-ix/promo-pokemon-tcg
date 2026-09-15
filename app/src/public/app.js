@@ -73,6 +73,8 @@
   const waConnectedBox = document.getElementById('wa-connected-box');
   const waConnectedPhone = document.getElementById('wa-connected-phone');
   const btnWaLogout = document.getElementById('btn-wa-logout');
+  const waDisconnectedActions = document.getElementById('wa-disconnected-actions');
+  const btnWaForceQr = document.getElementById('btn-wa-force-qr');
 
   // Config inputs
   const cfgMattWord = document.getElementById('cfg-matt-word');
@@ -291,6 +293,7 @@
       qrBox.style.display = 'none';
       waConnectedBox.style.display = 'block';
       waConnectedPhone.textContent = `Número: ${state.userPhone || 'Conectado'}`;
+      if (waDisconnectedActions) waDisconnectedActions.style.display = 'none';
     } else if (state.status === 'qr' && state.qrDataUrl) {
       waStatusBadge.classList.add('badge-qr');
       waStatusText.textContent = 'Ler QR Code';
@@ -301,21 +304,23 @@
       qrBox.style.display = 'inline-block';
       waConnectedBox.style.display = 'none';
       qrBox.innerHTML = `<img src="${state.qrDataUrl}" alt="QR Code WhatsApp">`;
+      if (waDisconnectedActions) waDisconnectedActions.style.display = 'block';
     } else {
       waStatusBadge.classList.add('badge-disconnected');
-      waStatusText.textContent = 'Desconectado';
-      kpiWa.textContent = 'DESCONECTADO';
+      waStatusText.textContent = state.status === 'connecting' ? 'Conectando...' : 'Desconectado';
+      kpiWa.textContent = state.status === 'connecting' ? 'CONECTANDO' : 'DESCONECTADO';
       kpiWa.className = 'kpi-value text-danger';
-      kpiPhoneSub.textContent = 'Conexão inativa';
+      kpiPhoneSub.textContent = state.status === 'connecting' ? 'Preparando conexão' : 'Conexão inativa';
 
       qrBox.style.display = 'inline-block';
       waConnectedBox.style.display = 'none';
       qrBox.innerHTML = `
         <div class="qr-placeholder">
           <div class="spinner"></div>
-          <span>Gerando QR Code...</span>
+          <span>${state.status === 'connecting' ? 'Conectando ao WhatsApp...' : 'Aguardando inicialização do QR Code...'}</span>
         </div>
       `;
+      if (waDisconnectedActions) waDisconnectedActions.style.display = 'block';
     }
   }
 
@@ -1059,6 +1064,48 @@
         btnPublicarAnuncio.disabled = false;
         btnPublicarSpinner.style.display = 'none';
         btnPublicarLabel.textContent = '🚀 Publicar no WhatsApp';
+      }
+    });
+  }
+
+  if (btnWaLogout) {
+    btnWaLogout.addEventListener('click', async () => {
+      if (!confirm('Deseja realmente desconectar o WhatsApp? Será necessário ler o QR Code novamente.')) {
+        return;
+      }
+      btnWaLogout.disabled = true;
+      btnWaLogout.textContent = 'Desconectando...';
+      try {
+        const res = await fetch('/api/whatsapp/logout', { method: 'POST' });
+        const data = await res.json();
+        showToast(data.message || 'Desconectado com sucesso!');
+      } catch (err) {
+        showToast('Erro ao desconectar WhatsApp');
+      } finally {
+        setTimeout(() => {
+          btnWaLogout.disabled = false;
+          btnWaLogout.textContent = 'Desconectar / Trocar Aparelho';
+        }, 2000);
+      }
+    });
+  }
+
+  if (btnWaForceQr) {
+    btnWaForceQr.addEventListener('click', async () => {
+      btnWaForceQr.disabled = true;
+      const originalText = btnWaForceQr.innerHTML;
+      btnWaForceQr.innerHTML = '⏳ Resetando sessão e gerando QR...';
+      try {
+        const res = await fetch('/api/whatsapp/reset', { method: 'POST' });
+        const data = await res.json();
+        showToast(data.message || 'Sessão limpa! Aguardando novo QR Code...');
+      } catch (err) {
+        showToast('Erro ao solicitar novo QR Code');
+      } finally {
+        setTimeout(() => {
+          btnWaForceQr.disabled = false;
+          btnWaForceQr.innerHTML = originalText;
+        }, 4000);
       }
     });
   }

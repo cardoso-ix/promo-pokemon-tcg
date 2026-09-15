@@ -9,6 +9,7 @@ import makeWASocket, {
 import QRCode from 'qrcode';
 import pino from 'pino';
 import fs from 'node:fs';
+import path from 'node:path';
 import { AUTH_DIR } from '../config.js';
 import {
   getConfig,
@@ -78,10 +79,56 @@ export class WhatsAppManager {
     }
   }
 
+  public cleanAuthDir(): void {
+    try {
+      if (fs.existsSync(AUTH_DIR)) {
+        fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+      }
+      fs.mkdirSync(AUTH_DIR, { recursive: true });
+      console.log('[WA] Diretório de autenticação limpo com sucesso.');
+    } catch (err) {
+      console.error('[WA] Erro ao limpar AUTH_DIR:', err);
+    }
+  }
+
+  public async resetSession(): Promise<void> {
+    console.log('[WA] Reset de sessão solicitado.');
+    if (this.sock) {
+      try {
+        await this.sock.logout();
+      } catch {}
+      try {
+        this.sock.end(undefined);
+      } catch {}
+      this.sock = null;
+    }
+    this.cleanAuthDir();
+    this.reconnectAttempts = 0;
+    this.state = { status: 'connecting', qrDataUrl: null, userPhone: null };
+    this.notifyStateChange();
+    await this.start();
+  }
+
   public async start(): Promise<void> {
     try {
       this.state.status = 'connecting';
       this.notifyStateChange();
+
+      // Verificar integridade dos dados de autenticação antes de carregar
+      const credsFile = path.join(AUTH_DIR, 'creds.json');
+      if (fs.existsSync(credsFile)) {
+        try {
+          const credsContent = fs.readFileSync(credsFile, 'utf8');
+          const parsed = JSON.parse(credsContent);
+          if (parsed && parsed.registered === false) {
+            console.log('[WA] Detectada sessão antiga/não registrada em creds.json. Limpando para forçar novo QR Code...');
+            this.cleanAuthDir();
+          }
+        } catch (e) {
+          console.error('[WA] creds.json corrompido. Limpando pasta de auth:', e);
+          this.cleanAuthDir();
+        }
+      }
 
       const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
       const { version } = await fetchLatestBaileysVersion();
@@ -90,7 +137,6 @@ export class WhatsAppManager {
         version,
         auth: state,
         logger: this.logger,
-        printQRInTerminal: true,
         browser: ['Promo Replica', 'Chrome', '124.0.0']
       });
 
@@ -104,6 +150,7 @@ export class WhatsAppManager {
             this.state.qrDataUrl = await QRCode.toDataURL(qr);
             this.state.status = 'qr';
             this.notifyStateChange();
+            console.log('[WA] Novo QR Code gerado e pronto para pareamento.');
           } catch (e) {
             console.error('Erro ao gerar imagem QR:', e);
           }
@@ -111,25 +158,32 @@ export class WhatsAppManager {
 
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
-          const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+          const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+          const shouldReconnect = !isLoggedOut;
 
-          console.log(`Conexão fechada com status ${statusCode}. Reconectar? ${shouldReconnect}`);
+          console.log(`[WA] Conexão fechada com status ${statusCode}. Deslogado/Revogado: ${isLoggedOut}. Reconectar sessão: ${shouldReconnect}`);
 
           this.state.status = 'disconnected';
           this.state.qrDataUrl = null;
           this.state.userPhone = null;
           this.notifyStateChange();
 
-          if (statusCode === DisconnectReason.loggedOut) {
-            console.log('Sessão encerrada (loggedOut). Limpando dados de auth...');
+          if (isLoggedOut) {
+            console.log('[WA] Sessão encerrada/revogada pelo WhatsApp. Limpando dados de auth para gerar novo QR Code...');
+            this.reconnectAttempts = 0;
             try {
-              fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+              if (this.sock) {
+                this.sock.end(undefined);
+                this.sock = null;
+              }
             } catch {}
-          }
-
-          if (shouldReconnect) {
+            this.cleanAuthDir();
+            // Reiniciar automaticamente para emitir um novo QR Code limpo!
+            console.log('[WA] Reiniciando Baileys em 1.5s para gerar novo QR Code...');
+            setTimeout(() => this.start(), 1500);
+          } else if (shouldReconnect) {
             const delay = Math.min(10000, 2000 * Math.pow(1.5, this.reconnectAttempts++));
-            console.log(`Tentando reconectar em ${delay / 1000}s...`);
+            console.log(`[WA] Tentando reconectar sessão em ${delay / 1000}s...`);
             setTimeout(() => this.start(), delay);
           }
         } else if (connection === 'open') {
@@ -191,11 +245,12 @@ export class WhatsAppManager {
       try {
         await this.sock.logout();
       } catch {}
+      try {
+        this.sock.end(undefined);
+      } catch {}
       this.sock = null;
     }
-    try {
-      fs.rmSync(AUTH_DIR, { recursive: true, force: true });
-    } catch {}
+    this.cleanAuthDir();
     this.state = { status: 'disconnected', qrDataUrl: null, userPhone: null };
     this.notifyStateChange();
   }

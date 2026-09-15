@@ -20,7 +20,7 @@ import {
 import { generateDeepSeekResponse } from '../ai/deepseek.js';
 
 export interface WhatsAppState {
-  status: 'disconnected' | 'connecting' | 'connected' | 'qr_ready';
+  status: 'disconnected' | 'connecting' | 'connected' | 'qr_ready' | 'pairing_ready';
   qrDataUrl: string | null;
   pairingCode: string | null;
   userPhone: string | null;
@@ -79,6 +79,18 @@ export class WhatsAppManager {
     this.notifyState();
 
     try {
+      const credsFile = path.join(AUTH_DIR, 'creds.json');
+      if (fs.existsSync(credsFile)) {
+        try {
+          const creds = JSON.parse(fs.readFileSync(credsFile, 'utf8'));
+          if (creds && creds.registered === false) {
+            logSistema('warn', 'whatsapp', 'Detectada sessão não registrada em creds.json. Limpando para gerar novo QR...');
+            fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+            fs.mkdirSync(AUTH_DIR, { recursive: true });
+          }
+        } catch {}
+      }
+
       const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
       const { version } = await fetchLatestBaileysVersion();
 
@@ -95,19 +107,20 @@ export class WhatsAppManager {
 
       this.sock.ev.on('creds.update', saveCreds);
 
-      // Gerar Pairing Code caso solicitado para chip novo
+      // Código de pareamento numérico (se solicitado antes de iniciar)
       if (!this.sock.authState.creds.registered && this.pendingPairingPhone) {
+        const phone = this.pendingPairingPhone;
+        this.pendingPairingPhone = null;
         setTimeout(async () => {
           try {
-            if (this.sock && this.pendingPairingPhone) {
-              const code = await this.sock.requestPairingCode(this.pendingPairingPhone);
-              this.state.pairingCode = code;
-              this.state.status = 'qr_ready';
-              this.notifyState();
-              logSistema('info', 'whatsapp', `Código de emparelhamento gerado: ${code}`);
-            }
-          } catch (err: any) {
-            logSistema('error', 'whatsapp', `Erro ao solicitar código de emparelhamento: ${err?.message || err}`);
+            const code = await this.sock!.requestPairingCode(phone);
+            this.state.pairingCode = code;
+            this.state.status = 'pairing_ready';
+            this.notifyState();
+            logSistema('info', 'whatsapp', `Código de pareamento gerado: ${code}`);
+          } catch (err) {
+            console.error('Erro ao gerar pairing code:', err);
+            logSistema('error', 'whatsapp', 'Falha ao gerar código de pareamento por número.');
           }
         }, 3000);
       }
@@ -115,7 +128,7 @@ export class WhatsAppManager {
       this.sock.ev.on('connection.update', async (update: any) => {
         const { connection, lastDisconnect, qr } = update;
 
-        if (qr && !this.pendingPairingPhone) {
+        if (qr) {
           try {
             this.state.qrDataUrl = await QRCode.toDataURL(qr, { margin: 2, scale: 6 });
             this.state.status = 'qr_ready';
@@ -128,7 +141,8 @@ export class WhatsAppManager {
 
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
-          const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+          const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
+          const shouldReconnect = !isLoggedOut;
 
           this.state.status = 'disconnected';
           this.state.qrDataUrl = null;
@@ -136,15 +150,25 @@ export class WhatsAppManager {
           this.state.userPhone = null;
           this.notifyState();
 
-          logSistema('warn', 'whatsapp', `Conexão encerrada (status: ${statusCode}). Reconectar: ${shouldReconnect}`);
+          logSistema('warn', 'whatsapp', `Conexão encerrada (status: ${statusCode}). Deslogado: ${isLoggedOut}. Reconectar: ${shouldReconnect}`);
 
-          if (statusCode === DisconnectReason.loggedOut) {
+          if (isLoggedOut) {
+            logSistema('warn', 'whatsapp', 'Sessão deslogada/revogada pelo WhatsApp. Limpando auth e gerando novo QR Code...');
+            this.reconnectAttempts = 0;
             try {
-              fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+              if (this.sock) {
+                this.sock.end(undefined);
+                this.sock = null;
+              }
             } catch {}
-          }
-
-          if (shouldReconnect) {
+            try {
+              if (fs.existsSync(AUTH_DIR)) {
+                fs.rmSync(AUTH_DIR, { recursive: true, force: true });
+              }
+              fs.mkdirSync(AUTH_DIR, { recursive: true });
+            } catch {}
+            setTimeout(() => this.start(), 1500);
+          } else if (shouldReconnect) {
             const delay = Math.min(10000, 2000 * Math.pow(1.5, this.reconnectAttempts++));
             setTimeout(() => this.start(), delay);
           }

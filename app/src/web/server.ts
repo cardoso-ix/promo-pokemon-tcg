@@ -256,6 +256,12 @@ export async function createServer() {
     return { ok: true, message: 'WhatsApp desconectado. Novo QR Code será gerado.' };
   });
 
+  // API REST: Resetar sessão e forçar novo QR Code
+  app.post('/api/whatsapp/reset', async () => {
+    await whatsAppManager.resetSession();
+    return { ok: true, message: 'Sessão resetada com sucesso. Gerando novo QR Code...' };
+  });
+
   // API REST: Testar Cookie do Mercado Livre
   app.post<{ Body: { cookie: string; tag?: string } }>('/api/test-meli-cookie', async (req, reply) => {
     const { cookie, tag } = req.body || {};
