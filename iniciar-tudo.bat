@@ -11,4 +11,4 @@ echo [OK] Servidores iniciados em janelas dedicadas!
 echo   - Promo Replica:    http://localhost:3000
 echo   - Bot Disparador:   http://localhost:3333
 echo.
-timeout /t 4
+timeout /t 4 >nul

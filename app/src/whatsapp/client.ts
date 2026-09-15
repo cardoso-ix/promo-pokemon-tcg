@@ -4,7 +4,8 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
   downloadMediaMessage,
   proto,
-  WASocket
+  WASocket,
+  Browsers
 } from '@whiskeysockets/baileys';
 import QRCode from 'qrcode';
 import pino from 'pino';
@@ -114,16 +115,11 @@ export class WhatsAppManager {
       this.state.status = 'connecting';
       this.notifyStateChange();
 
-      // Verificar integridade dos dados de autenticação antes de carregar
+      // Verificar se creds.json está corrompido (JSON inválido)
       const credsFile = path.join(AUTH_DIR, 'creds.json');
       if (fs.existsSync(credsFile)) {
         try {
-          const credsContent = fs.readFileSync(credsFile, 'utf8');
-          const parsed = JSON.parse(credsContent);
-          if (parsed && parsed.registered === false) {
-            console.log('[WA] Detectada sessão antiga/não registrada em creds.json. Limpando para forçar novo QR Code...');
-            this.cleanAuthDir();
-          }
+          JSON.parse(fs.readFileSync(credsFile, 'utf8'));
         } catch (e) {
           console.error('[WA] creds.json corrompido. Limpando pasta de auth:', e);
           this.cleanAuthDir();
@@ -137,7 +133,10 @@ export class WhatsAppManager {
         version,
         auth: state,
         logger: this.logger,
-        browser: ['Promo Replica', 'Chrome', '124.0.0']
+        browser: Browsers.windows('Chrome'),
+        markOnlineOnConnect: true,
+        getMessage: async () => undefined,
+        syncFullHistory: false
       });
 
       this.sock.ev.on('creds.update', saveCreds);
@@ -159,9 +158,18 @@ export class WhatsAppManager {
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
           const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
-          const shouldReconnect = !isLoggedOut;
+          const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515;
 
-          console.log(`[WA] Conexão fechada com status ${statusCode}. Deslogado/Revogado: ${isLoggedOut}. Reconectar sessão: ${shouldReconnect}`);
+          console.log(`[WA] Conexão fechada com status ${statusCode}. Deslogado/Revogado: ${isLoggedOut}. RestartRequired: ${isRestartRequired}`);
+
+          if (isRestartRequired) {
+            // Status 515 acontece imediatamente após o celular escanear o QR Code.
+            // É fundamental reconectar IMEDIATAMENTE preservando as credenciais recebidas do WhatsApp!
+            console.log('[WA] Pareamento detectado (status 515)! Conectando aparelho imediatamente...');
+            this.reconnectAttempts = 0;
+            this.start();
+            return;
+          }
 
           this.state.status = 'disconnected';
           this.state.qrDataUrl = null;
@@ -178,10 +186,10 @@ export class WhatsAppManager {
               }
             } catch {}
             this.cleanAuthDir();
-            // Reiniciar automaticamente para emitir um novo QR Code limpo!
             console.log('[WA] Reiniciando Baileys em 1.5s para gerar novo QR Code...');
             setTimeout(() => this.start(), 1500);
-          } else if (shouldReconnect) {
+          } else {
+            // Erros temporários ou rotação de QR (ex: 408 timedOut, 428 connectionClosed)
             const delay = Math.min(10000, 2000 * Math.pow(1.5, this.reconnectAttempts++));
             console.log(`[WA] Tentando reconectar sessão em ${delay / 1000}s...`);
             setTimeout(() => this.start(), delay);

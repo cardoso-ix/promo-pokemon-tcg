@@ -82,13 +82,13 @@ export class WhatsAppManager {
       const credsFile = path.join(AUTH_DIR, 'creds.json');
       if (fs.existsSync(credsFile)) {
         try {
-          const creds = JSON.parse(fs.readFileSync(credsFile, 'utf8'));
-          if (creds && creds.registered === false) {
-            logSistema('warn', 'whatsapp', 'Detectada sessão não registrada em creds.json. Limpando para gerar novo QR...');
+          JSON.parse(fs.readFileSync(credsFile, 'utf8'));
+        } catch {
+          try {
             fs.rmSync(AUTH_DIR, { recursive: true, force: true });
             fs.mkdirSync(AUTH_DIR, { recursive: true });
-          }
-        } catch {}
+          } catch {}
+        }
       }
 
       const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
@@ -142,15 +142,22 @@ export class WhatsAppManager {
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
           const isLoggedOut = statusCode === DisconnectReason.loggedOut || statusCode === 401 || statusCode === 403;
-          const shouldReconnect = !isLoggedOut;
+          const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515;
+
+          logSistema('warn', 'whatsapp', `Conexão encerrada (status: ${statusCode}). Deslogado: ${isLoggedOut}. RestartRequired: ${isRestartRequired}`);
+
+          if (isRestartRequired) {
+            logSistema('info', 'whatsapp', 'Pareamento detectado (status 515)! Conectando aparelho imediatamente...');
+            this.reconnectAttempts = 0;
+            this.start();
+            return;
+          }
 
           this.state.status = 'disconnected';
           this.state.qrDataUrl = null;
           this.state.pairingCode = null;
           this.state.userPhone = null;
           this.notifyState();
-
-          logSistema('warn', 'whatsapp', `Conexão encerrada (status: ${statusCode}). Deslogado: ${isLoggedOut}. Reconectar: ${shouldReconnect}`);
 
           if (isLoggedOut) {
             logSistema('warn', 'whatsapp', 'Sessão deslogada/revogada pelo WhatsApp. Limpando auth e gerando novo QR Code...');
@@ -168,7 +175,7 @@ export class WhatsAppManager {
               fs.mkdirSync(AUTH_DIR, { recursive: true });
             } catch {}
             setTimeout(() => this.start(), 1500);
-          } else if (shouldReconnect) {
+          } else {
             const delay = Math.min(10000, 2000 * Math.pow(1.5, this.reconnectAttempts++));
             setTimeout(() => this.start(), delay);
           }
