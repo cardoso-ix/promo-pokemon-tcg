@@ -10,7 +10,7 @@ A plataforma opera **100% online na nuvem (Railway)** com persistência contínu
 
 ### 1. 🔄 Replicador de Ofertas (`app/`)
 - **Status:** 🟢 **Online 24/7 (Railway)**
-- **Painel em Produção:** 👉 **`https://promo-replica-bot-production-7d52.up.railway.app`**
+- **Painel em Produção:** 👉 **`https://promo-replica-bot-production.up.railway.app`**
 - **Objetivo:** Monitora grupos de ofertas de Pokémon TCG 24/7, intercepta links concorrentes, substitui por links de afiliado oficiais do Mercado Livre com encurtamento `meli.la`, preserva/baixa fotos oficiais em 2X e replica nos seus grupos de destino.
 
 ### 2. 🚀 Bot Disparador, Prospecção & Atendimento IA (`bot-disparador/`)
@@ -37,6 +37,7 @@ Caso queira testar ou desenvolver novas funcionalidades na sua máquina antes de
 
 | Módulo | Como Iniciar | Porta Local |
 |---|---|---|
+| **Iniciar Tudo (Ambos os Módulos)** | Duplo clique em `iniciar-tudo.bat` | Portas 3000 e 3333 |
 | **Replicador de Ofertas** | Duplo clique em `iniciar.bat` | `http://localhost:3000` |
 | **Bot Disparador & IA** | Duplo clique em `iniciar-disparador.bat` | `http://localhost:3333` |
 | **Parar Serviços Locais** | Duplo clique em `parar.bat` | — |

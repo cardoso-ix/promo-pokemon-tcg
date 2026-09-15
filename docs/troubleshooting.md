@@ -16,15 +16,17 @@ Guia para solução rápida de incidentes na Promo Réplica.
 
 ---
 
-## T2 — WhatsApp desconectado ou QR Code não aparece
+## T2 — WhatsApp desconectado ou QR Code não conecta
 
-**Causa 1: Sessão desvinculada no celular**
-- O WhatsApp pode desvincular aparelhos se o chip ficar sem conexão ou por política de segurança do aplicativo.
-- **Solução**: Acesse o painel. Se o status for **Desconectado** ou **Aguardando QR Code**, um novo QR Code será renderizado na tela. Basta escanear pelo celular.
+**Causa 1: Sessão desvinculada no celular (Status 401 / LoggedOut)**
+- O WhatsApp desvinculou o aparelho pelo smartphone em **Aparelhos Conectados** ou por política de segurança periódica da Meta.
+- **Auto-recuperação**: A aplicação detecta o status 401, limpa automaticamente as chaves revogadas de `data/auth_baileys/` e reinicia o Baileys em 1,5 segundos gerando um QR Code novo.
+- **Botão de Emergência**: Caso queira forçar um novo QR Code manualmente, acesse a aba **Conectar WhatsApp** e clique em **🔄 Reiniciar Sessão / Gerar Novo QR Code** (ou faça `POST /api/whatsapp/reset`).
 
-**Causa 2: Chaves de sessão corrompidas**
-- Se a conexão ficar travada em ciclo de reconexão:
-- **Solução**: Pare o serviço, limpe o diretório `data/auth_baileys/` e reinicie. Um novo QR Code limpo será emitido.
+**Causa 2: Celular lê o QR Code mas não finaliza a conexão (Status 515)**
+- Ao escanear o QR Code, o WhatsApp envia o código `515 (restartRequired)` para reiniciar a conexão em modo autenticado.
+- O sistema trata o status 515 reconectando **imediatamente (0ms)** e preservando as credenciais recebidas.
+- A assinatura do cliente utiliza obrigatoriamente `Browsers.windows('Chrome')` (`['Windows', 'Chrome', '10.0.22631']`) com `syncFullHistory: false`, atendendo aos requisitos criptográficos da Meta e prevenindo estouro de memória no container.
 
 ---
 

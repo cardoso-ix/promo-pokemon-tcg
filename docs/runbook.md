@@ -9,9 +9,10 @@ Guia prático para a operação diária, manutenção e gerenciamento das duas a
 Tanto o **Replicador de Ofertas** quanto o **Bot Disparador & Atendimento IA** rodam de forma autônoma e ininterrupta no Railway, acessíveis de qualquer navegador (computador, tablet ou celular), sem que você precise manter seu computador ligado.
 
 ### 1.1. Painel do Replicador de Ofertas
-- **Acesso Online**: `https://promo-replica-bot-production-7d52.up.railway.app`
+- **Acesso Online**: `https://promo-replica-bot-production.up.railway.app`
 - **Função**: Controla a replicação de ofertas de grupos concorrentes para os seus grupos VIP, encurtamento oficial `meli.la` e fotos oficiais 2X do Mercado Livre.
 - **Autenticação**: Protegido por login e senha. Sessão criptografada persistente de 30 dias.
+- **Pareamento do WhatsApp**: Na aba **Pareamento**, escaneie o QR Code. Se precisar redefinir a conexão ou gerar um código novo a qualquer momento, clique no botão **🔄 Reiniciar Sessão / Gerar Novo QR Code**.
 
 ### 1.2. Painel do Bot Disparador & Atendimento IA
 - **Acesso Online**: `https://bot-disparador-ia-production.up.railway.app`
@@ -86,6 +87,7 @@ Caso queira realizar testes offline ou trabalhar em novas funcionalidades locais
 
 | Ação | Comando / Script | Acesso Local |
 | --- | --- | --- |
+| **Iniciar Todos os Módulos** | Duplo clique em `iniciar-tudo.bat` | Portas 3000 e 3333 |
 | **Iniciar Replicador Local** | `iniciar.bat` (ou `cd app && npm start`) | `http://localhost:3000` |
 | **Iniciar Disparador Local** | `iniciar-disparador.bat` (ou `cd bot-disparador && npm start`) | `http://localhost:3333` |
 | **Parar Serviços Locais** | `parar.bat` | — |

@@ -4,6 +4,18 @@ Este registro documenta a evolução arquitetural e as decisões estratégicas d
 
 ---
 
+## Decisão 65 — Resiliência no Pareamento do WhatsApp, Assinatura Windows Chrome e Auto-Reset
+**Data:** 15/09/2026 · **Decisor:** Eduardo / Antigravity
+
+- **A decisão**:
+  1. Auto-recuperação imediata no status `401 / loggedOut`: o robô apaga resíduos de chaves revogadas de `data/auth_baileys` e reinicia o Baileys automaticamente para emitir novo QR Code sem depender de reinicialização manual.
+  2. Reconexão instantânea (0ms) no status `515 (restartRequired)` preservando as credenciais recebidas, viabilizando o handshake seguro pós-leitura de QR Code pelo celular.
+  3. Adoção da assinatura oficial `Browsers.windows('Chrome')` (`['Windows', 'Chrome', '10.0.22631']`) e desativação de download completo de histórico inicial (`syncFullHistory: false`), atendendo ao protocolo atualizado da Meta e prevenindo estouro de memória no Railway.
+  4. Disponibilização de endpoint `POST /api/whatsapp/reset` e botão de reset manual na aba de conexão do painel web.
+- **Motivo**: Prevenir que desvinculações ou rotações de chaves travem o sistema em telas de loading infinito, assegurando que o pareamento do smartphone seja 100% confiável.
+
+---
+
 ## Decisão 64 — Limpeza e Unificação Geral do Repositório
 **Data:** 10/09/2026 · **Decisor:** Eduardo / Antigravity
 

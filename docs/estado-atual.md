@@ -28,7 +28,7 @@ O ecossistema roda de forma desvinculada de qualquer máquina local, dividido em
 Ambos os serviços operam 24/7 na nuvem:
 
 * **Painel Replicador de Ofertas (Railway)**:  
-  👉 **`https://promo-replica-bot-production-7d52.up.railway.app`**
+  👉 **`https://promo-replica-bot-production.up.railway.app`**
 * **Painel Bot Disparador & Atendimento IA (Railway)**:  
   👉 **`https://bot-disparador-ia-production.up.railway.app`**
 * **Repositório GitHub Oficial**:  
