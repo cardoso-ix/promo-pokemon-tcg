@@ -26,6 +26,11 @@ import {
 } from '../core/affiliate.js';
 import { extrairDadosAnuncio } from '../core/anuncio.js';
 import {
+  extrairDadosOferta,
+  registrarOfertaPlanilha,
+  APPS_SCRIPT_TEMPLATE
+} from '../core/sheets.js';
+import {
   verifyCredentials,
   createSessionToken,
   verifySessionToken,
@@ -541,6 +546,17 @@ export async function createServer() {
           }
         }
 
+        if (enviados > 0) {
+          try {
+            const dadosOferta = extrairDadosOferta(texto, imageUrl, 'Gerador Manual');
+            registrarOfertaPlanilha(dadosOferta).catch((e: unknown) => {
+              console.warn('[Google Sheets] Erro em background ao registrar anúncio manual:', e);
+            });
+          } catch (e: unknown) {
+            console.warn('[Google Sheets] Falha ao extrair dados do anúncio manual:', e);
+          }
+        }
+
         broadcast('stats_update', {
           postsLastHour: getPostsLastHour(),
           totalEnviadosHoje: getRecentLogs(100).filter((l) => l.status === 'enviado').length
@@ -558,6 +574,49 @@ export async function createServer() {
       }
     }
   );
+
+  // API REST: Configuração do Google Sheets
+  app.get('/api/sheets/config', async () => {
+    return {
+      webhookUrl: getConfig('google_sheets_webhook_url', ''),
+      ativo: getConfig('google_sheets_ativo', 'true') === 'true',
+      appsScriptCode: APPS_SCRIPT_TEMPLATE
+    };
+  });
+
+  app.post<{ Body: { webhookUrl?: string; ativo?: boolean } }>('/api/sheets/config', async (req) => {
+    const { webhookUrl, ativo } = req.body || {};
+    if (webhookUrl !== undefined) {
+      setConfig('google_sheets_webhook_url', webhookUrl.trim());
+    }
+    if (ativo !== undefined) {
+      setConfig('google_sheets_ativo', ativo ? 'true' : 'false');
+    }
+    return { ok: true, message: 'Configurações do Google Planilhas salvas com sucesso!' };
+  });
+
+  // API REST: Disparar Linha de Teste para o Google Sheets
+  app.post<{ Body: { webhookUrl?: string } }>('/api/sheets/test', async (req, reply) => {
+    const customUrl = req.body?.webhookUrl;
+    const testOferta = {
+      data: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+      produto: '🧪 Teste de Conexão - Pokémon TCG Charizard ex',
+      valorPor: 'R$ 199,90',
+      valorDe: 'R$ 299,90',
+      link: 'https://meli.la/exemplo-teste',
+      grupo: 'Painel Web (Teste)'
+    };
+
+    const resultado = await registrarOfertaPlanilha(testOferta, customUrl);
+    if (resultado.ok) {
+      return { ok: true, message: 'Linha de teste adicionada com sucesso no Google Planilhas!' };
+    } else {
+      return reply.status(400).send({
+        ok: false,
+        error: resultado.error || 'Falha ao conectar com o Google Sheets Webhook.'
+      });
+    }
+  });
 
   return app;
 }

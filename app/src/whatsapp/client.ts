@@ -21,6 +21,7 @@ import {
   getChatName
 } from '../db/database.js';
 import { processMessageText, downloadProductImage } from '../core/affiliate.js';
+import { extrairDadosOferta, registrarOfertaPlanilha } from '../core/sheets.js';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr';
 
@@ -660,6 +661,18 @@ export class WhatsAppManager {
       }
 
       console.log(`[REPLICA RESULTADO] Broadcast finalizado: ${enviosSucesso} enviados com sucesso, ${enviosFalha} falhas.`);
+
+      // 9. Registrar oferta no Google Sheets (assíncrono em background)
+      if (enviosSucesso > 0) {
+        try {
+          const dadosOferta = extrairDadosOferta(novoTexto, resolvedProductUrl, origemNome);
+          registrarOfertaPlanilha(dadosOferta).catch((e: unknown) => {
+            console.warn('[Google Sheets] Erro em background ao registrar oferta:', e);
+          });
+        } catch (errSheets: unknown) {
+          console.warn('[Google Sheets] Falha ao extrair dados da oferta para a planilha:', errSheets);
+        }
+      }
     }
 
     // Notificar painel via WebSocket

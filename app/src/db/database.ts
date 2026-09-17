@@ -74,7 +74,9 @@ export function initDatabase() {
     meli_tag: CONFIG.defaultMattWord,
     link_vitrine_curto: 'https://mercadolivre.com/sec/2rM6RPm',
     frases_remover: '@rasgabooster.tcg\n#rasgaboot\n@rasgabooster',
-    somente_mercadolivre: 'true'
+    somente_mercadolivre: 'true',
+    google_sheets_webhook_url: '',
+    google_sheets_ativo: 'true'
   };
 
   const insertConfig = db.prepare(`

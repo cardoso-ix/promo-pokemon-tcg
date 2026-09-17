@@ -100,6 +100,12 @@
   const btnTestarCookie = document.getElementById('btn-testar-cookie');
   const cookieTestFeedback = document.getElementById('cookie-test-feedback');
   const cfgFrases = document.getElementById('cfg-frases');
+  const cfgSheetsAtivo = document.getElementById('cfg-sheets-ativo');
+  const cfgSheetsWebhook = document.getElementById('cfg-sheets-webhook');
+  const btnTestarSheets = document.getElementById('btn-testar-sheets');
+  const sheetsTestFeedback = document.getElementById('sheets-test-feedback');
+  const sheetsScriptCode = document.getElementById('sheets-script-code');
+  const btnCopiarScript = document.getElementById('btn-copiar-script');
   const btnSalvarConfig = document.getElementById('btn-salvar-config');
   const configStatusMsg = document.getElementById('config-status-msg');
 
@@ -330,10 +336,22 @@
       if (cfgMeliTag) cfgMeliTag.value = data.configs.meli_tag || '';
       if (cfgLinkVitrineCurto) cfgLinkVitrineCurto.value = data.configs.link_vitrine_curto || 'https://mercadolivre.com/sec/2rM6RPm';
       if (cfgSomenteMeli) cfgSomenteMeli.checked = data.configs.somente_mercadolivre !== 'false';
+      if (cfgSheetsWebhook) cfgSheetsWebhook.value = data.configs.google_sheets_webhook_url || '';
+      if (cfgSheetsAtivo) cfgSheetsAtivo.checked = data.configs.google_sheets_ativo !== 'false';
       cfgFrases.value = data.configs.frases_remover || '';
 
       updateMasterSwitch(data.configs.ativo === 'true');
       updateMeliBadge(data.configs.meli_cookie);
+
+      // Carregar código do script do Google Apps Script
+      fetch('/api/sheets/config')
+        .then((r) => r.json())
+        .then((res) => {
+          if (sheetsScriptCode && res.appsScriptCode) {
+            sheetsScriptCode.value = res.appsScriptCode;
+          }
+        })
+        .catch(() => {});
     }
 
     // 3. Rotas & Chats
@@ -779,6 +797,20 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chave: 'somente_mercadolivre', valor: cfgSomenteMeli && cfgSomenteMeli.checked ? 'true' : 'false' })
       });
+      if (cfgSheetsWebhook) {
+        await fetch('/api/configs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chave: 'google_sheets_webhook_url', valor: cfgSheetsWebhook.value.trim() })
+        });
+      }
+      if (cfgSheetsAtivo) {
+        await fetch('/api/configs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chave: 'google_sheets_ativo', valor: cfgSheetsAtivo.checked ? 'true' : 'false' })
+        });
+      }
 
       updateMeliBadge(cfgMeliCookie ? cfgMeliCookie.value.trim() : '');
       configStatusMsg.textContent = 'Salvo com sucesso!';
@@ -858,6 +890,63 @@
         vitrineDetectFeedback.style.color = 'var(--accent-danger)';
       } finally {
         btnDetectarVitrine.disabled = false;
+      }
+    });
+  }
+
+  // Google Sheets: Teste de Disparo
+  if (btnTestarSheets) {
+    btnTestarSheets.addEventListener('click', async () => {
+      const webhookUrl = cfgSheetsWebhook ? cfgSheetsWebhook.value.trim() : '';
+      if (!webhookUrl) {
+        sheetsTestFeedback.textContent = '❌ Cole a URL do Webhook do Google Apps Script antes de testar.';
+        sheetsTestFeedback.style.color = 'var(--accent-danger)';
+        return;
+      }
+
+      btnTestarSheets.disabled = true;
+      const originalText = btnTestarSheets.textContent;
+      btnTestarSheets.textContent = '⏳ Testando...';
+      sheetsTestFeedback.textContent = 'Enviando linha de teste para a planilha...';
+      sheetsTestFeedback.style.color = 'var(--text-muted)';
+
+      try {
+        const res = await fetch('/api/sheets/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ webhookUrl })
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          sheetsTestFeedback.textContent = '✅ Sucesso! Linha adicionada na planilha com sucesso.';
+          sheetsTestFeedback.style.color = 'var(--accent-green)';
+          showToast('Linha de teste gravada no Google Planilhas! 📊✨');
+          playChime();
+        } else {
+          sheetsTestFeedback.textContent = `❌ ${data.error || 'Falha ao conectar com o Google.'}`;
+          sheetsTestFeedback.style.color = 'var(--accent-danger)';
+        }
+      } catch (err) {
+        sheetsTestFeedback.textContent = '❌ Erro de rede ao conectar ao Google.';
+        sheetsTestFeedback.style.color = 'var(--accent-danger)';
+      } finally {
+        btnTestarSheets.disabled = false;
+        btnTestarSheets.textContent = originalText;
+      }
+    });
+  }
+
+  // Google Sheets: Copiar Script do Apps Script
+  if (btnCopiarScript) {
+    btnCopiarScript.addEventListener('click', async () => {
+      if (!sheetsScriptCode || !sheetsScriptCode.value) return;
+      try {
+        await navigator.clipboard.writeText(sheetsScriptCode.value);
+        showToast('Código do Apps Script copiado! 📋');
+      } catch {
+        sheetsScriptCode.select();
+        document.execCommand('copy');
+        showToast('Código copiado! 📋');
       }
     });
   }

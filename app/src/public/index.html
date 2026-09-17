@@ -466,6 +466,57 @@
           </div>
         </div>
 
+        <!-- Integração Google Planilhas -->
+        <div class="card card-full" style="border: 1px solid rgba(16, 185, 129, 0.35); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.4rem;">📊</span>
+              <h3 style="margin: 0;">Google Planilhas — "produtos tcg valores"</h3>
+            </div>
+            <label class="switch" title="Ativar ou pausar sincronização automática com a planilha">
+              <input type="checkbox" id="cfg-sheets-ativo" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <p class="card-desc">
+            Registra automaticamente cada oferta enviada nos grupos em tempo real com <strong>Data / Hora</strong>, <strong>Nome do Produto</strong>, <strong>Valor Promocional (Por)</strong>, <strong>Valor Original (De)</strong>, <strong>Link</strong> e <strong>Grupo de Origem</strong>.
+          </p>
+
+          <div class="form-group">
+            <label for="cfg-sheets-webhook">URL do Webhook do Google Apps Script</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="text" id="cfg-sheets-webhook" class="input-field" placeholder="https://script.google.com/macros/s/AKfycbx.../exec" style="flex: 1;">
+              <button type="button" id="btn-testar-sheets" class="btn btn-secondary" style="white-space: nowrap;">🧪 Testar Planilha</button>
+            </div>
+            <span class="field-hint">Cole aqui a URL gerada na implantação do App da Web da sua planilha.</span>
+            <span id="sheets-test-feedback" class="action-feedback" style="display: block; margin-top: 6px;"></span>
+          </div>
+
+          <!-- Guia de Configuração Rápida -->
+          <details style="background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 12px; margin-top: 10px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <summary style="cursor: pointer; font-weight: 600; color: #f59e0b;">
+              📋 Instruções Rápidas: Como Ativar a Planilha em 1 Minuto
+            </summary>
+            <div style="margin-top: 10px; font-size: 0.9rem; line-height: 1.6; color: #cbd5e1;">
+              <ol style="margin-left: 20px; padding-left: 0;">
+                <li>Abra o seu Google Planilhas e crie uma nova planilha chamada <strong>produtos tcg valores</strong> (ou abra o arquivo já criado no seu <code>G:\Meu Drive\produtos tcg valores.csv</code>).</li>
+                <li>No menu superior da planilha, clique em <strong>Extensões &gt; Apps Script</strong>.</li>
+                <li>Apague o código existente e cole o script abaixo:</li>
+              </ol>
+              <div style="position: relative; margin: 10px 0;">
+                <textarea id="sheets-script-code" class="textarea-field" rows="7" readonly style="font-family: monospace; font-size: 0.82rem; background: #0b0f19; color: #a5f3fc;"></textarea>
+                <button type="button" id="btn-copiar-script" class="btn btn-secondary btn-sm" style="position: absolute; top: 8px; right: 8px;">📋 Copiar Script</button>
+              </div>
+              <ol start="4" style="margin-left: 20px; padding-left: 0;">
+                <li>No canto superior direito do Apps Script, clique em <strong>Implantar &gt; Nova implantação</strong>.</li>
+                <li>Selecione o tipo <strong>App da Web</strong>. Em <em>"Quem tem acesso"</em>, escolha <strong>Qualquer pessoa</strong>.</li>
+                <li>Clique em <strong>Implantar</strong>, autorize o acesso com sua conta Google e copie a <strong>URL do app da web</strong> gerada.</li>
+                <li>Cole a URL no campo acima, clique em <strong>Testar Planilha</strong> e depois em <strong>Salvar Todas as Configurações</strong>!</li>
+              </ol>
+            </div>
+          </details>
+        </div>
+
         <div class="card card-full">
           <h3>Limpeza de Marcas Concorrentes</h3>
           <p class="card-desc">Textos, @arrobas e #hashtags de terceiros que serão removidos do texto copiado (um por linha).</p>
