@@ -11,10 +11,16 @@ export interface OfertaPlanilha {
   grupo: string;
 }
 
-export const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
+export const APPS_SCRIPT_TEMPLATE = `function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Webhook Google Sheets ativo e pronto para receber ofertas!' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var data = JSON.parse(e.postData.contents);
+    var contents = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
+    var data = JSON.parse(contents);
 
     // Cria cabeçalho automático se a planilha estiver vazia
     if (sheet.getLastRow() === 0) {
@@ -26,13 +32,12 @@ export const APPS_SCRIPT_TEMPLATE = `function doPost(e) {
         'Link da Oferta',
         'Grupo de Origem'
       ]);
-      // Deixar cabeçalho em negrito
       sheet.getRange(1, 1, 1, 6).setFontWeight('bold');
     }
 
     sheet.appendRow([
       data.data || new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
-      data.produto || 'Produto TCG',
+      data.produto || 'Colecionável Pokémon TCG',
       data.valorPor || '',
       data.valorDe || '',
       data.link || '',
@@ -177,6 +182,7 @@ export async function registrarOfertaPlanilha(
   oferta: OfertaPlanilha,
   customWebhookUrl?: string
 ): Promise<{ ok: boolean; error?: string }> {
+  const isTest = Boolean(customWebhookUrl && customWebhookUrl.trim());
   const webhookUrl = (customWebhookUrl || getConfig('google_sheets_webhook_url', '')).trim();
   const ativo = getConfig('google_sheets_ativo', 'true') === 'true';
 
@@ -198,24 +204,41 @@ export async function registrarOfertaPlanilha(
       console.log(`[Google Sheets Local] Linha registrada com sucesso em: ${localCsvPath}`);
     }
   } catch (err: unknown) {
-    // Ignorar falha local silenciosamente para não interromper a esteira
     console.warn('[Google Sheets Local] Aviso ao gravar em G:\\Meu Drive:', err instanceof Error ? err.message : String(err));
   }
 
-  // 2. Se a integração em nuvem via Webhook não estiver ativa ou configurada
-  if (!ativo || !webhookUrl) {
-    return { ok: false, error: 'Webhook do Google Sheets não configurado ou integração desativada.' };
+  // 2. Validação de ativação e URL
+  if (!webhookUrl) {
+    return { ok: false, error: 'Cole a URL do Webhook do Google Apps Script antes de testar ou salvar.' };
+  }
+
+  if (!isTest && !ativo) {
+    return { ok: false, error: 'Sincronização com o Google Planilhas está desativada no painel.' };
+  }
+
+  if (webhookUrl.includes('docs.google.com/spreadsheets')) {
+    return {
+      ok: false,
+      error: 'Você colou o link da planilha no navegador! O Webhook deve ser a URL gerada no Apps Script em "Implantar > Nova implantação > App da Web" (que termina com /exec).'
+    };
+  }
+
+  if (webhookUrl.includes('script.google.com') && !webhookUrl.includes('/exec')) {
+    return {
+      ok: false,
+      error: 'A URL do Webhook precisa terminar com "/exec". Verifique se você copiou o link da implantação (App da Web) e não do editor de código.'
+    };
   }
 
   // 3. Disparo HTTP POST para o Webhook do Google Apps Script
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000); // 12s para Google Script responder
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s resiliente
 
     const res = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'text/plain;charset=utf-8'
       },
       body: JSON.stringify(oferta),
       redirect: 'follow',
@@ -229,12 +252,21 @@ export async function registrarOfertaPlanilha(
       return { ok: true };
     } else {
       const errorText = await res.text().catch(() => '');
-      console.warn(`[Google Sheets Nuvem] Google retornou status ${res.status}: ${errorText.slice(0, 100)}`);
-      return { ok: false, error: `Google retornou status HTTP ${res.status}` };
+      let detalhe = `Status HTTP ${res.status}`;
+      if (res.status === 401 || res.status === 403 || errorText.includes('accounts.google.com')) {
+        detalhe = 'Permissão negada pelo Google. Ao implantar no Apps Script, certifique-se de configurar "Quem tem acesso" como "Qualquer pessoa" (Anyone).';
+      } else if (errorText.includes('Script function not found')) {
+        detalhe = 'Função não encontrada no script. Atualize o código do Apps Script com o modelo do painel e crie uma nova versão de implantação.';
+      } else if (errorText) {
+        detalhe += `: ${errorText.slice(0, 100)}`;
+      }
+      return { ok: false, error: detalhe };
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error('[Google Sheets Nuvem] Erro ao enviar linha para o Google Sheets:', msg);
-    return { ok: false, error: msg };
+    if (msg.toLowerCase().includes('abort')) {
+      return { ok: false, error: 'Tempo limite esgotado (timeout de 15s). Verifique se o script foi implantado como App da Web.' };
+    }
+    return { ok: false, error: `Falha de rede ao conectar com o Google: ${msg}` };
   }
 }

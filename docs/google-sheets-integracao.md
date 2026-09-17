@@ -30,10 +30,16 @@ A planilha registra 6 colunas para cada oferta disparada:
 2. Apague qualquer código existente no editor e cole o código abaixo:
 
 ```javascript
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Webhook ativo!' }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function doPost(e) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var data = JSON.parse(e.postData.contents);
+    var contents = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
+    var data = JSON.parse(contents);
 
     // Cria o cabeçalho automaticamente se a planilha estiver vazia
     if (sheet.getLastRow() === 0) {
