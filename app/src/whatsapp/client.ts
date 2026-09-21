@@ -18,10 +18,19 @@ import {
   insertLog,
   getPostsLastHour,
   updateChatCache,
-  getChatName
+  getChatName,
+  registrarProdutoReplicado,
+  consultarCooldownProduto,
+  db
 } from '../db/database.js';
 import { processMessageText, downloadProductImage } from '../core/affiliate.js';
 import { extrairDadosOferta, registrarOfertaPlanilha } from '../core/sheets.js';
+import {
+  isProdutoTCG,
+  detectarGatilhoUrgencia,
+  detectarMensagemCupom,
+  formatarMensagemReplicada
+} from '../core/anuncio.js';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr';
 
@@ -42,6 +51,7 @@ export class WhatsAppManager {
   private onMessageProcessedListeners: ((log: any) => void)[] = [];
   private reconnectAttempts = 0;
   private lastSyncTime = 0;
+  private lastDispatchTime = 0;
   private watchdogInterval: NodeJS.Timeout | null = null;
 
   private startWatchdog(): void {
@@ -504,18 +514,25 @@ export class WhatsAppManager {
     const frasesRemover = getConfig('frases_remover', '');
     const linkVitrineCurto = getConfig('link_vitrine_curto', 'https://mercadolivre.com/sec/2rM6RPm');
 
-    const { novoTexto, linksConvertidos, hashConteudo, contemMercadoLivre, productImageUrl, resolvedProductUrl } =
-      await processMessageText(
-        rawText,
-        remoteJid,
-        mattWord,
-        mattTool,
-        frasesRemover,
-        meliCookie,
-        meliTag,
-        linkVitrineCurto,
-        linkPreviewTitle || ''
-      );
+    const {
+      novoTexto,
+      linksConvertidos,
+      hashConteudo,
+      contemMercadoLivre,
+      productImageUrl,
+      resolvedProductUrl,
+      canonicalProductId
+    } = await processMessageText(
+      rawText,
+      remoteJid,
+      mattWord,
+      mattTool,
+      frasesRemover,
+      meliCookie,
+      meliTag,
+      linkVitrineCurto,
+      linkPreviewTitle || ''
+    );
 
     // REGRA DE NEGÓCIO: Apenas postar publicações do Mercado Livre
     // Mensagens sem link ML ou de outros marketplaces (Amazon, Shopee, etc.) são ignoradas
@@ -538,7 +555,65 @@ export class WhatsAppManager {
       return;
     }
 
-    // 5. Obtenção da imagem do produto:
+    // 5. Extração de dados da oferta (título, preço De/Por, cupom)
+    const dadosOferta = extrairDadosOferta(novoTexto, resolvedProductUrl, origemNome);
+
+    // 6. Guardião de Nicho TCG (Filtro Inteligente de Jogos de Cartas)
+    const filtroApenasTcg = getConfig('filtro_apenas_tcg', 'true') === 'true';
+    const slugParaFiltro = resolvedProductUrl ? resolvedProductUrl.split('/').pop() || '' : '';
+    const eTCG = isProdutoTCG(rawText, dadosOferta.produto, slugParaFiltro);
+
+    if (filtroApenasTcg && !eTCG) {
+      console.log(`[Guardião Nicho TCG] Mensagem ignorada: produto "${dadosOferta.produto}" fora do nicho TCG/Card Games.`);
+      const log = {
+        origem_chat_id: remoteJid,
+        origem_nome: origemNome,
+        destino_chat_id: '',
+        hash_conteudo: hashConteudo,
+        texto_original: rawText,
+        texto_publicado: '',
+        tem_foto: Boolean(messageHasImage),
+        links_convertidos: linksConvertidos,
+        status: 'ignorado' as const,
+        motivo: 'fora_nicho_tcg'
+      };
+      insertLog(log);
+      this.notifyMessage(log);
+      return;
+    }
+
+    // 7. Desduplicação Global Cross-Group por Produto Canônico (MLB ID + 5 min Cooldown)
+    const precoPorNum = parseFloat(
+      (dadosOferta.valorPor || '').replace(/R\$/gi, '').replace(/\s+/g, '').replace(/\./g, '').replace(',', '.')
+    ) || 0;
+
+    if (canonicalProductId) {
+      const cooldownMinutos = parseInt(getConfig('cooldown_duplicidade_minutos', '5'), 10) || 5;
+      const cooldownCheck = consultarCooldownProduto(canonicalProductId, precoPorNum, cooldownMinutos);
+
+      if (cooldownCheck.emCooldown) {
+        console.log(
+          `[Cross-Group Cooldown] Produto ${canonicalProductId} já postado há ${cooldownCheck.tempoAtrasSegundos}s por "${cooldownCheck.postadoPor}". Descartando duplicação.`
+        );
+        const log = {
+          origem_chat_id: remoteJid,
+          origem_nome: origemNome,
+          destino_chat_id: '',
+          hash_conteudo: hashConteudo,
+          texto_original: rawText,
+          texto_publicado: '',
+          tem_foto: Boolean(messageHasImage),
+          links_convertidos: linksConvertidos,
+          status: 'ignorado' as const,
+          motivo: `duplicata_produto_cooldown_${cooldownCheck.postadoPor}`
+        };
+        insertLog(log);
+        this.notifyMessage(log);
+        return;
+      }
+    }
+
+    // 8. Obtenção da imagem do produto:
     // A) Se veio foto anexada no WhatsApp, baixa o buffer pelo Baileys
     if (messageHasImage && imageMessageObj && this.sock) {
       try {
@@ -595,44 +670,77 @@ export class WhatsAppManager {
       console.log(`[Imagem Preview Fallback] Usando miniatura do link preview do WhatsApp (${Math.round(imageBuffer.length / 1024)} KB).`);
     }
 
-    // 6. Testar Deduplicação no Banco
+    // 9. Determinar Texto Final para Envio (Modo Template de Marca vs Modo Fiel)
+    const templateModo = getConfig('template_modo', 'padrao');
+    let textoFinalPublicar = novoTexto;
+
+    if (templateModo === 'padrao') {
+      const isCupom = detectarMensagemCupom(rawText);
+      const isUrgencia = detectarGatilhoUrgencia(rawText);
+
+      let tipoMensagem: 'oferta' | 'urgencia' | 'cupom' = 'oferta';
+      if (isCupom) {
+        tipoMensagem = 'cupom';
+      } else if (isUrgencia) {
+        tipoMensagem = 'urgencia';
+      }
+
+      // Extrair cupom se houver no texto original
+      let cupomExtraido = '';
+      const cupomMatch = rawText.match(/cupom[:\s\*]*([a-z0-9_-]{3,20})/i);
+      if (cupomMatch && cupomMatch[1]) {
+        cupomExtraido = cupomMatch[1].trim().toUpperCase();
+      }
+
+      const linkMatches = novoTexto.match(/https?:\/\/[^\s]+/gi);
+      const linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
+
+      textoFinalPublicar = formatarMensagemReplicada({
+        tipo: tipoMensagem,
+        titulo: dadosOferta.produto || 'Colecionável Pokémon TCG',
+        precoDe: dadosOferta.valorDe,
+        precoPor: dadosOferta.valorPor,
+        cupom: cupomExtraido,
+        detalhesCupom: isCupom ? 'Desconto especial no app para colecionáveis' : undefined,
+        linkAfiliado: linkAfiliadoFinal,
+        linkVitrineCurto
+      });
+    }
+
+    // 10. Testar Deduplicação Prévia de Hash no Banco
     const destinoIds = rotasCorrespondentes.flatMap((r) => r.destinos).filter((d) => d && d !== remoteJid);
     const destinoChatId = destinoIds.join(', ');
 
-    const inserted = insertLog({
-      origem_chat_id: remoteJid,
-      origem_nome: origemNome,
-      destino_chat_id: destinoChatId,
-      hash_conteudo: hashConteudo,
-      texto_original: rawText,
-      texto_publicado: novoTexto,
-      tem_foto: Boolean(imageBuffer && imageBuffer.length > 0),
-      links_convertidos: linksConvertidos,
-      status: 'enviado',
-      motivo: contemMercadoLivre ? 'copia_com_afiliado' : 'copia_sem_afiliado'
-    });
-
-    if (!inserted) {
-      console.log(`Mensagem descartada por duplicidade (hash: ${hashConteudo.slice(0, 10)})`);
+    const rowExistingHash = db.prepare('SELECT id FROM logs WHERE hash_conteudo = ?').get(hashConteudo);
+    if (rowExistingHash) {
+      console.log(`Mensagem descartada por duplicidade de hash (${hashConteudo.slice(0, 10)})`);
       return;
     }
 
-    // 7. Aplicar Delay configurado
+    // 11. Aplicar Delay configurado + Pacing de cadência anti-rajada
     const delaySegundos = parseInt(getConfig('delay_segundos', '5'), 10);
     if (delaySegundos > 0) {
       await new Promise((resolve) => setTimeout(resolve, delaySegundos * 1000));
     }
 
-    // 8. Enviar para todos os destinos configurados com isolamento de falhas
+    const agoraPacing = Date.now();
+    const minPacingMs = 8000; // Pacing mínimo de 8s entre envios para manter o grupo agradável
+    const decorridoPacing = agoraPacing - this.lastDispatchTime;
+    if (this.lastDispatchTime > 0 && decorridoPacing < minPacingMs) {
+      await new Promise((resolve) => setTimeout(resolve, minPacingMs - decorridoPacing));
+    }
+    this.lastDispatchTime = Date.now();
+
+    // 12. Enviar para todos os destinos configurados com isolamento de falhas
+    let enviosSucesso = 0;
+    let enviosFalha = 0;
+
     if (this.sock) {
       let safeImageBuffer: Buffer | null = imageBuffer;
       if (safeImageBuffer && safeImageBuffer.length > 8 * 1024 * 1024) {
-        console.warn(`[Mídia Segura] Imagem excede 8MB (${Math.round(safeImageBuffer.length / 1024)} KB). Enviando apenas texto para evitar travamento.`);
+        console.warn(`[Mídia Segura] Imagem excede 8MB (${Math.round(safeImageBuffer.length / 1024)} KB). Enviando apenas texto.`);
         safeImageBuffer = null;
       }
-
-      let enviosSucesso = 0;
-      let enviosFalha = 0;
 
       for (const destino of destinoIds) {
         if (!destino || (!destino.endsWith('@g.us') && !destino.endsWith('@s.whatsapp.net'))) {
@@ -644,11 +752,11 @@ export class WhatsAppManager {
           if (safeImageBuffer && safeImageBuffer.length > 0) {
             await this.sock.sendMessage(destino, {
               image: safeImageBuffer,
-              caption: novoTexto
+              caption: textoFinalPublicar
             });
           } else {
             await this.sock.sendMessage(destino, {
-              text: novoTexto
+              text: textoFinalPublicar
             });
           }
           enviosSucesso++;
@@ -662,11 +770,15 @@ export class WhatsAppManager {
 
       console.log(`[REPLICA RESULTADO] Broadcast finalizado: ${enviosSucesso} enviados com sucesso, ${enviosFalha} falhas.`);
 
-      // 9. Registrar oferta no Google Sheets (assíncrono em background)
+      // 13. Registro Atômico do Produto e no Google Sheets (apenas se houve sucesso real)
       if (enviosSucesso > 0) {
+        if (canonicalProductId) {
+          registrarProdutoReplicado(canonicalProductId, remoteJid, origemNome, precoPorNum);
+        }
+
         try {
-          const dadosOferta = extrairDadosOferta(novoTexto, resolvedProductUrl, origemNome);
-          registrarOfertaPlanilha(dadosOferta).catch((e: unknown) => {
+          const dadosParaPlanilha = extrairDadosOferta(textoFinalPublicar, resolvedProductUrl, origemNome);
+          registrarOfertaPlanilha(dadosParaPlanilha).catch((e: unknown) => {
             console.warn('[Google Sheets] Erro em background ao registrar oferta:', e);
           });
         } catch (errSheets: unknown) {
@@ -675,20 +787,28 @@ export class WhatsAppManager {
       }
     }
 
-    // Notificar painel via WebSocket
-    this.notifyMessage({
+    // 14. Inserir Log Atômico com Status Real
+    const statusFinal: 'enviado' | 'erro' = enviosSucesso > 0 ? 'enviado' : 'erro';
+    const motivoFinal = enviosSucesso > 0
+      ? (contemMercadoLivre ? 'copia_com_afiliado' : 'copia_sem_afiliado')
+      : 'falha_envio_whatsapp';
+
+    const log = insertLog({
       origem_chat_id: remoteJid,
       origem_nome: origemNome,
       destino_chat_id: destinoChatId,
       hash_conteudo: hashConteudo,
       texto_original: rawText,
-      texto_publicado: novoTexto,
+      texto_publicado: textoFinalPublicar,
       tem_foto: Boolean(imageBuffer && imageBuffer.length > 0),
       links_convertidos: linksConvertidos,
-      status: 'enviado',
-      motivo: contemMercadoLivre ? 'copia_com_afiliado' : 'copia_sem_afiliado',
-      criado_em: new Date().toISOString()
+      status: statusFinal,
+      motivo: motivoFinal
     });
+
+    if (log) {
+      this.notifyMessage(log);
+    }
   }
 }
 

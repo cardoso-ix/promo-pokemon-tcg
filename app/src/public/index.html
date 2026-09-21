@@ -75,6 +75,12 @@
           <span id="wa-status-text">Desconectado</span>
         </div>
 
+        <!-- Disparador Pro Quick Link -->
+        <a id="btn-switch-disparador" class="btn btn-secondary btn-sm" href="http://localhost:3333" target="_blank" title="Acessar Cockpit do Bot Disparador & Atendimento IA" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+          <span>🚀</span>
+          <span>Disparador Pro</span>
+        </a>
+
         <!-- Sound Alert Toggle -->
         <button id="btn-sound-toggle" class="btn-sound" title="Alternar som de novas postagens">
           <span id="sound-icon">🔔</span>
@@ -441,6 +447,49 @@
                 <span class="slider round"></span>
               </label>
             </div>
+          </div>
+        </div>
+
+        <!-- Suíte de Réplica Pro (Opção C) -->
+        <div class="card card-full" style="border: 1px solid rgba(0, 229, 255, 0.35); box-shadow: 0 4px 20px rgba(0, 229, 255, 0.08);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.4rem;">⚡</span>
+              <h3 style="margin: 0;">Suíte de Réplica Pro (Templates & Anti-Duplicidade Global)</h3>
+            </div>
+            <span class="badge badge-meli">OPÇÃO C ATIVA</span>
+          </div>
+          <p class="card-desc">Padronização de layout de marca, desduplicação canônica entre múltiplos grupos de origem e guardião de nicho TCG.</p>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 14px;">
+            <!-- Modo de Postagem -->
+            <div class="form-group">
+              <label for="cfg-template-modo" style="font-weight: 700; color: var(--accent-gold);">Padrão Visual de Postagem</label>
+              <select id="cfg-template-modo" class="input-field" style="background: rgba(11,13,23,0.8);">
+                <option value="padrao">⚡ Template Padronizado de Marca (Recomendado)</option>
+                <option value="fiel">📄 Modo Fiel (Preserva texto do concorrente)</option>
+              </select>
+              <span class="field-hint">No modo padronizado, reescreve a oferta com visual profissional VIP, De/Por, % OFF, Cupons e link oficial.</span>
+            </div>
+
+            <!-- Cooldown Cross-Group -->
+            <div class="form-group">
+              <label for="cfg-cooldown-duplicidade" style="font-weight: 700; color: var(--accent-gold);">Janela Anti-Duplicidade Cross-Group (minutos)</label>
+              <input type="number" id="cfg-cooldown-duplicidade" class="input-field" min="1" max="1440" value="5">
+              <span class="field-hint">Tempo que um produto fica bloqueado para não repetir, mesmo se 3+ grupos monitorados postarem a mesma oferta.</span>
+            </div>
+          </div>
+
+          <!-- Switch Guardião de Nicho TCG -->
+          <div class="form-group" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-line); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <label for="cfg-filtro-apenas-tcg" style="font-weight: 700; color: var(--accent-gold);">Guardião de Nicho TCG (Filtro Inteligente de Card Games)</label>
+              <p class="field-hint" style="margin-top: 2px;">Bloqueia automaticamente ofertas fora do nicho (panelas, roupas, celulares). Permite Pokémon, Yu-Gi-Oh!, Magic, One Piece e afins de TCG.</p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="cfg-filtro-apenas-tcg" checked>
+              <span class="slider round"></span>
+            </label>
           </div>
         </div>
 

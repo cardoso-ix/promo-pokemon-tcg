@@ -49,13 +49,29 @@ Toda mensagem que chega aos grupos de WhatsApp em que o chip participa é avalia
 
 ---
 
-## 3. Limpeza de Texto e Preservação de Formatação
+## 3. Suíte de Réplica Pro (Opção C)
 
-O algoritmo de higienização de texto (`cleanSpamLines`) atua com precisão cirúrgica:
+### 3.1. Guardião de Nicho TCG (Filtro Inteligente de Card Games)
+- A esteira analisa o título, texto e slug do produto contra uma lista inteligente de termos do ecossistema TCG.
+- **Categorias e Franquias Aceitas**: Pokémon TCG, Magic: The Gathering (MTG), Yu-Gi-Oh!, One Piece Card Game, Lorcana, Digimon, Dragon Ball Super Card Game, Copag, Konami, Wizards of the Coast, Bandai.
+- **Produtos Aceitos**: Booster, Booster Box, ETB (Treinador Avançado), Blister, Tripack, Fichário, Sleeves/Shields, Decks, Playmat, Latas Colecionáveis e Cartas Avulsas.
+- **Produtos Rejeitados**: Itens fora do nicho postados por concorrentes (como panelas, eletrônicos, vestuário geral ou cosméticos) são ignorados automaticamente (`status: 'ignorado'`, `motivo: 'fora_nicho_tcg'`).
 
-1. **Preservação de Parágrafos**: Quebras de linha normais entre o título do produto, preço e detalhes (`\n\n`) são preservadas, mantendo o aspecto humano e agradável do post original.
-2. **Remoção de Concorrentes**: Linhas ou menções configuradas em `frases_remover` (como `@rasgabooster.tcg`, `#rasgaboot`, links de convite de grupos de terceiros) são eliminadas.
-3. **Preço sem Cashtags**: Garante que menções monetárias como `R$ 150,00` não sejam transformadas em cashtags verdes indesejadas pelo aplicativo do WhatsApp.
+### 3.2. Desduplicação Global Cross-Group por ID Canônico (MLB ID + 5 min Cooldown)
+- Permite monitorar **dezenas de grupos simultâneos** sem reenviar a mesma oferta repetida aos membros.
+- Quando o primeiro grupo posta um produto MLB, o sistema armazena seu ID único na tabela `produtos_replicados`.
+- Se outros grupos postarem o mesmo produto dentro da janela configurada (padrão: 5 minutos), as réplicas subsequentes são bloqueadas com `motivo: 'duplicata_produto_cooldown'`.
+- **Exceção de Queda de Preço**: Caso um grupo posterior poste o mesmo produto com um desconto ainda maior (> 5% de queda), o bot quebra o cooldown e republica destacando o novo menor preço.
+
+### 3.3. Templates Padronizados de Marca
+Em vez de herdar o estilo e formatação dos concorrentes, o bot classifica a mensagem e formata no layout oficial da sua marca:
+1. **Template 1: Oferta Regular TCG**: Título destacado, De/Por, cálculo automático de `% OFF` e valor economizado em reais, badges de confiança e link `meli.la`.
+2. **Template 2: Alerta de Urgência & Escassez**: Disparado automaticamente ao identificar termos como *"últimas unidades"*, *"corre"*, *"vai acabar"* ou *"estoque acabando"*, com destaque visual forte de oferta relâmpago.
+3. **Template 3: Cupons de Desconto & Vitrine Oficial**: Identifica códigos promocionais do Mercado Livre e direciona os clientes para a sua lista/vitrine oficial (`link_vitrine_curto`).
+
+### 3.4. Fila com Cadência Elegante (Pacing Anti-Spam)
+- Intervalo mínimo de 8 a 10 segundos entre envios sucessivos ao mesmo destino.
+- Evita rajadas de mensagens no WhatsApp caso múltiplos grupos concorrentes postem simultaneamente.
 
 ---
 

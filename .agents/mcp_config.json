@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mercadolibre-mcp-server": {
+      "serverUrl": "https://mcp.mercadolibre.com/mcp"
+    },
+    "firecrawl": {
+      "serverUrl": "https://mcp.firecrawl.dev/v2/mcp"
+    }
+  }
+}

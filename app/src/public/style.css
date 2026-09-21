@@ -252,6 +252,27 @@ body {
   animation: pulse 1.5s infinite;
 }
 
+.badge-purple {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.badge-purple .indicator-dot {
+  background: #a855f7;
+  box-shadow: 0 0 8px #a855f7;
+}
+
+.badge-neutral {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.badge-neutral .indicator-dot {
+  background: #64748b;
+}
+
 /* Switch */
 .master-control {
   display: flex;

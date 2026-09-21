@@ -14,12 +14,12 @@ O ecossistema roda de forma desvinculada de qualquer máquina local, dividido em
 
 | Módulo | Tecnologia | Ambiente / Status | Descrição |
 | --- | --- | --- | --- |
-| **Replicador de Ofertas** | TypeScript + Baileys + Fastify | 🟢 **Online 24/7 (Railway)** | Monitora grupos de ofertas, intercepta links concorrentes, encurta para `meli.la` oficial e replica com fotos 2X. Watchdog Baileys e esteira resiliente com isolamento por grupo. |
+| **Replicador de Ofertas** | TypeScript + Baileys + Fastify | 🟢 **Online 24/7 (Suíte Pro C)** | Monitora grupos de ofertas, intercepta links concorrentes, encurta para `meli.la` oficial e replica com fotos 2X. Inclui **Opção C**: 3 templates de marca, Guardião de Nicho TCG, Desduplicação Global Cross-Group Canônica (MLB ID) e Pacing anti-burst. |
 | **Bot Disparador & Leads** | TypeScript + Baileys + Spintax | 🟢 **Online 24/7 (Railway)** | Extração de membros de grupos em 1 clique, disparador anti-ban com Spintax dinâmico e simulador ao vivo |
 | **Atendimento IA Privado** | DeepSeek V4 (OpenCode Gateway) | 🟢 **Online 24/7 (Railway)** | Responde clientes no privado imitando especialista amigável de Pokémon TCG com digitação humanizada |
 | **Encurtador de Afiliados** | API Oficial Mercado Livre | 🟢 **Ativo (Sentinel 45m)** | Monitorado pelo Cookie Sentinel em tempo real, encurtador oficial `https://meli.la/xxxxxx` e fallback resiliente |
-| **Bancos de Dados SQLite** | Better-SQLite3 (WAL Mode) | 🟢 **Ativo (Volumes Persistentes)** | `replica.db` e `disparador.db` salvos com segurança em `/app/data` |
-| **Cockpits Web & Segurança** | Fastify + WebSockets + UI TCG | 🟢 **Online (Ultra Ball & Holo Foil)** | Interface temática Pokémon TCG com efeito Rare Holo Foil, badges de energia, barra de HP da sessão e balões WhatsApp Dark autênticos |
+| **Bancos de Dados SQLite** | Better-SQLite3 (WAL Mode) | 🟢 **Ativo (Volumes Persistentes)** | `replica.db` e `disparador.db` salvos com segurança em `/app/data` (com tabela `produtos_replicados`) |
+| **Cockpits Web & Segurança** | Fastify + WebSockets + UI TCG | 🟢 **Online (Ultra Ball & Holo Foil)** | Interface temática Pokémon TCG com efeito Rare Holo Foil, badges de energia, barra de HP da sessão e balões WhatsApp Dark autênticos. Integração direta entre replicador e disparador. |
 | **Google Planilhas ("produtos tcg valores")** | Webhook Apps Script + Dual-Write Local | 🟢 **Ativo (Sincronização Contínua)** | Registra automaticamente cada oferta enviada nos grupos com Data/Hora, Nome do Produto, Valor Promocional (Por), Preço Original (De) e Link Afiliado. |
 
 ---

@@ -2,6 +2,9 @@
   "mcpServers": {
     "mercadolibre-mcp-server": {
       "url": "https://mcp.mercadolibre.com/mcp"
+    },
+    "firecrawl": {
+      "url": "https://mcp.firecrawl.dev/v2/mcp"
     }
   }
 }

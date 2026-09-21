@@ -57,9 +57,19 @@ export function initDatabase() {
       atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS produtos_replicados (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      produto_id TEXT NOT NULL,
+      origem_chat_id TEXT NOT NULL,
+      origem_nome TEXT,
+      preco_por REAL,
+      criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_logs_hash ON logs(hash_conteudo);
     CREATE INDEX IF NOT EXISTS idx_logs_criado ON logs(criado_em);
     CREATE INDEX IF NOT EXISTS idx_logs_status ON logs(status);
+    CREATE INDEX IF NOT EXISTS idx_prod_rec ON produtos_replicados(produto_id, criado_em);
   `);
 
   // Semear valores padrão se não existirem
@@ -75,6 +85,9 @@ export function initDatabase() {
     link_vitrine_curto: 'https://mercadolivre.com/sec/2rM6RPm',
     frases_remover: '@rasgabooster.tcg\n#rasgaboot\n@rasgabooster',
     somente_mercadolivre: 'true',
+    template_modo: 'padrao',
+    cooldown_duplicidade_minutos: '5',
+    filtro_apenas_tcg: 'true',
     google_sheets_webhook_url: '',
     google_sheets_ativo: 'true'
   };
@@ -270,3 +283,68 @@ export function getChatName(chatId: string): string {
   const row = db.prepare('SELECT nome FROM chats_cache WHERE chat_id = ?').get(chatId) as { nome: string } | undefined;
   return row ? row.nome : chatId;
 }
+
+// Helpers para Controle de Produtos Replicados & Cooldown Cross-Group
+export interface CooldownCheckResult {
+  emCooldown: boolean;
+  motivo?: string;
+  postadoPor?: string;
+  tempoAtrasSegundos?: number;
+  precoAnterior?: number;
+}
+
+export function registrarProdutoReplicado(
+  produtoId: string,
+  origemChatId: string,
+  origemNome: string,
+  precoPor: number = 0
+): void {
+  if (!produtoId) return;
+  db.prepare(`
+    INSERT INTO produtos_replicados (produto_id, origem_chat_id, origem_nome, preco_por, criado_em)
+    VALUES (?, ?, ?, ?, datetime('now'))
+  `).run(produtoId, origemChatId, origemNome, precoPor);
+}
+
+export function consultarCooldownProduto(
+  produtoId: string,
+  precoPorAtual: number = 0,
+  cooldownMinutos: number = 5
+): CooldownCheckResult {
+  if (!produtoId) return { emCooldown: false };
+
+  const row = db.prepare(`
+    SELECT produto_id, origem_chat_id, origem_nome, preco_por, criado_em,
+           CAST((strftime('%s', 'now') - strftime('%s', criado_em)) AS INTEGER) as segundos_atras
+    FROM produtos_replicados
+    WHERE produto_id = ?
+      AND criado_em >= datetime('now', '-' || ? || ' minutes')
+    ORDER BY id DESC
+    LIMIT 1
+  `).get(produtoId, cooldownMinutos) as any;
+
+  if (!row) {
+    return { emCooldown: false };
+  }
+
+  // Se o preço atual for significativamente menor (> 5% de desconto em relação ao preço anterior)
+  // Exceção de Queda de Preço: permite republicar!
+  if (row.preco_por > 0 && precoPorAtual > 0 && precoPorAtual < row.preco_por * 0.95) {
+    return {
+      emCooldown: false,
+      motivo: 'queda_de_preco',
+      postadoPor: row.origem_nome,
+      tempoAtrasSegundos: row.segundos_atras,
+      precoAnterior: row.preco_por
+    };
+  }
+
+  return {
+    emCooldown: true,
+    motivo: 'em_cooldown',
+    postadoPor: row.origem_nome,
+    tempoAtrasSegundos: row.segundos_atras,
+    precoAnterior: row.preco_por
+  };
+}
+

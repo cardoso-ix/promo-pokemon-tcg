@@ -60,10 +60,30 @@ cd bot-disparador && npm test
 
 ---
 
+---
+
+## 🔌 Model Context Protocol (MCP) & Extensões de IA
+
+O repositório conta com integração nativa de servidores MCP (Model Context Protocol) para alimentar agentes inteligentes (Antigravity IDE e Cursor) com ferramentas externas:
+
+* **🔥 Firecrawl MCP Server (`firecrawl`):**
+  - **Endpoint:** `https://mcp.firecrawl.dev/v2/mcp`
+  - **Função:** Web scraping avançado com headless browser, extração de dados estruturados em Markdown, pesquisa na web (`firecrawl_search`), scraping de páginas dinâmicas (`firecrawl_scrape`) e crawling profundo de catálogos e sitemaps.
+  - **Autenticação:** Opera em modo *keyless* por padrão (com cotas diárias gratuitas) ou via token Bearer (`Authorization: Bearer <FIRECRAWL_API_KEY>`) para cotas de equipe e ferramentas completas.
+* **🛍️ Mercado Livre MCP Server (`mercadolibre-mcp-server`):**
+  - **Endpoint:** `https://mcp.mercadolibre.com/mcp`
+  - **Função:** Consulta direta a produtos, itens e informações do ecossistema Mercado Livre.
+
+As configurações estão centralizadas em `.cursor/mcp.json` e `.agents/mcp_config.json`.
+
+---
+
 ## 📁 Estrutura do Repositório
 
 ```text
 promo-pokemon-tcg/
+├── .agents/                    # Configurações nativas do Antigravity (regras e mcp_config.json)
+├── .cursor/                    # Configurações do Cursor IDE (mcp.json, hooks, rules)
 ├── app/                        # Módulo Replicador de Ofertas (Porta 3000)
 ├── bot-disparador/             # Módulo Disparador, Extração de Leads e IA (Porta 3333)
 ├── docs/                       # Documentação técnica e operacional

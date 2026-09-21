@@ -106,6 +106,206 @@ export function gerarCopyPromocional(params: {
 }
 
 /**
+ * Guardião de Nicho TCG: Aceita Pokémon TCG, Yu-Gi-Oh!, Magic: The Gathering e todo o ecossistema TCG
+ */
+export function isProdutoTCG(texto?: string, titulo?: string, slug?: string): boolean {
+  const combined = `${texto || ''} ${titulo || ''} ${slug || ''}`
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const termosAceitos = [
+    // Franquias e Fabricantes Principais
+    'pokemon', 'copag', 'pikachu', 'charizard', 'mewtwo', 'eevee',
+    'yu-gi-oh', 'yugioh', 'konami',
+    'magic the gathering', 'magic: the gathering', 'mtg', 'wizards of the coast',
+    'one piece card game', 'one piece tcg', 'bandai',
+    'lorcana', 'disney lorcana',
+    'digimon card game',
+    'dragon ball super card', 'dbs card',
+    'star wars unlimited',
+    // Termos de Produtos de Card Games
+    'tcg', 'card game', 'card games', 'trading card',
+    'booster', 'boosters', 'booster box',
+    'etb', 'elite trainer box', 'treinador avancado',
+    'blister', 'tripack', 'triple pack', 'quadpack',
+    'fichario', 'pasta para cartas', 'portfolio',
+    'sleeve', 'sleeves', 'shield', 'dragon shield', 'ultra pro',
+    'deck', 'decks', 'deckbox', 'deck box',
+    'playmat', 'play mat', 'tapete para cartas',
+    'lata colecionavel', 'lata pokemon',
+    'cartas colecionaveis', 'carta avulsa', 'cartas pokemon'
+  ];
+
+  return termosAceitos.some((termo) => combined.includes(termo));
+}
+
+export interface CalculoDesconto {
+  percentualOff: number;
+  economiaReais: string;
+  economiaValor: number;
+  tagDesconto: string;
+}
+
+/**
+ * Extrai valor numérico de strings de moeda brasileira (ex: "R$ 389,90" -> 389.9)
+ */
+function parseValorMoeda(valorStr?: string): number {
+  if (!valorStr) return 0;
+  const limpo = valorStr
+    .replace(/R\$/gi, '')
+    .replace(/\s+/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.');
+  const num = parseFloat(limpo);
+  return isNaN(num) ? 0 : num;
+}
+
+/**
+ * Calcula porcentagem de desconto (% OFF) e valor economizado em reais
+ */
+export function calcularDesconto(precoDeStr?: string, precoPorStr?: string): CalculoDesconto | null {
+  const de = parseValorMoeda(precoDeStr);
+  const por = parseValorMoeda(precoPorStr);
+
+  if (de <= 0 || por <= 0 || de <= por) {
+    return null;
+  }
+
+  const percentualOff = Math.round(((de - por) / de) * 100);
+  const economiaValor = de - por;
+  const economiaReais = `R$ ${economiaValor.toFixed(2).replace('.', ',')}`;
+  const tagDesconto = ` (${percentualOff}% OFF · Economia de ${economiaReais})`;
+
+  return {
+    percentualOff,
+    economiaReais,
+    economiaValor,
+    tagDesconto
+  };
+}
+
+/**
+ * Detecta se a mensagem traz gatilhos de urgência ou escassez de estoque
+ */
+export function detectarGatilhoUrgencia(texto: string): boolean {
+  if (!texto) return false;
+  const regex = /(?:últimas|ultimas|poucas)\s+unidades|última\s+unidade|ultima\s+unidade|vai\s+acabar|corre(?:\s+que|\s+antes|!|\.|\s|$)|estoque\s+acabando|acabando\s+(?:o\s+)?estoque|oferta\s+muito\s+boa|oferta\s+rel[aâ]mpago|menor\s+pre[çc]o\s+hist[oó]rico|n[aã]o\s+perca/i;
+  return regex.test(texto);
+}
+
+/**
+ * Detecta se a mensagem tem foco principal em divulgação de cupom ou lista de ofertas
+ */
+export function detectarMensagemCupom(texto: string): boolean {
+  if (!texto) return false;
+  const regex = /(?:novo\s+)?cupom(?:\s+no\s+app|\s+do\s+mercado|\s+de\s+desconto|\s+liberado)?|use\s+(?:o\s+)?cupom|cupom\s+de\s+r\$|cupom\s+válido|cupom:\s*\*[a-z0-9]+\*/i;
+  return regex.test(texto);
+}
+
+export interface FormatarReplicadaParams {
+  tipo: 'oferta' | 'urgencia' | 'cupom';
+  titulo: string;
+  precoDe?: string;
+  precoPor?: string;
+  cupom?: string;
+  detalhesCupom?: string;
+  linkAfiliado?: string;
+  linkVitrineCurto?: string;
+}
+
+/**
+ * Formata a mensagem final replicada aplicando o Template Premium de Marca
+ */
+export function formatarMensagemReplicada(params: FormatarReplicadaParams): string {
+  const { tipo, titulo, precoDe, precoPor, cupom, detalhesCupom, linkAfiliado, linkVitrineCurto } = params;
+  const link = (linkAfiliado || linkVitrineCurto || '').trim();
+
+  // Template 3: Cupons & Vitrine Oficial
+  if (tipo === 'cupom') {
+    const codCupom = (cupom || 'CUPOM NO APP').trim().toUpperCase();
+    const vitrine = (linkVitrineCurto || linkAfiliado || '').trim();
+
+    const linhas: string[] = [
+      '🎟️ *NOVO CUPOM DO MERCADO LIVRE LIBERADO!* 🎟️',
+      '',
+      `🏷️ Cupom: *${codCupom}*`
+    ];
+
+    if (detalhesCupom && detalhesCupom.trim()) {
+      linhas.push(`⚡ ${detalhesCupom.trim()}`);
+    }
+
+    linhas.push('');
+    linhas.push('🛒 *Aproveite na vitrine oficial de Pokémon TCG:*');
+    linhas.push(`👉 ${vitrine}`);
+    return linhas.join('\n');
+  }
+
+  // Preço e Desconto
+  const de = (precoDe || '').trim();
+  const por = (precoPor || '').trim();
+  const calculo = calcularDesconto(de, por);
+  const tagDesconto = calculo ? calculo.tagDesconto : '';
+
+  let linhaPrecoDe = '';
+  if (de) {
+    const valorDe = de.startsWith('R$') ? de : `R$ ${de}`;
+    linhaPrecoDe = `❌ ~De: ${valorDe}~`;
+  }
+
+  let linhaPrecoPor = '';
+  if (por) {
+    const valorPor = por.startsWith('R$') ? por : `R$ ${por}`;
+    linhaPrecoPor = `🔥 *Por apenas: ${valorPor}*${tagDesconto}`;
+  }
+
+  let linhaCupom = '';
+  if (cupom && cupom.trim()) {
+    linhaCupom = `🎟️ Cupom: *${cupom.trim().toUpperCase()}*`;
+  }
+
+  // Template 2: Alerta de Urgência & Escassez
+  if (tipo === 'urgencia') {
+    const linhas: string[] = [
+      '🚨 *ATENÇÃO: ÚLTIMAS UNIDADES EM ESTOQUE!* 🚨',
+      '',
+      `📦 *${titulo.trim()}*`,
+      ''
+    ];
+
+    if (linhaPrecoDe) linhas.push(linhaPrecoDe);
+    if (linhaPrecoPor) linhas.push(linhaPrecoPor);
+    if (linhaCupom) linhas.push(linhaCupom);
+
+    linhas.push('');
+    linhas.push('⚡ *Corre antes que acabe o estoque!*');
+    linhas.push('🛒 *Aproveite a oferta relâmpago aqui:*');
+    linhas.push(`👉 ${link}`);
+    return linhas.join('\n');
+  }
+
+  // Template 1: Oferta Regular TCG (Padrão)
+  const linhas: string[] = [
+    '⚡ *OFERTA EXCLUSIVA TCG* ⚡',
+    '',
+    `📦 *${titulo.trim()}*`,
+    ''
+  ];
+
+  if (linhaPrecoDe) linhas.push(linhaPrecoDe);
+  if (linhaPrecoPor) linhas.push(linhaPrecoPor);
+  if (linhaCupom) linhas.push(linhaCupom);
+
+  linhas.push('');
+  linhas.push('🛡️ Compra 100% Protegida · Envio Rápido');
+  linhas.push('🛒 *Garanta o seu com desconto aqui:*');
+  linhas.push(`👉 ${link}`);
+
+  return linhas.join('\n');
+}
+
+/**
  * Extrai dados completos do anúncio a partir da URL colada pelo usuário
  */
 export async function extrairDadosAnuncio(

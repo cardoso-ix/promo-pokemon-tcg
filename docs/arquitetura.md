@@ -64,6 +64,17 @@ O sistema divide-se em dois grandes serviços desacoplados:
   - Integração via OpenCode Gateway (`https://opencode.ai/zen/go/v1`).
   - Modelo `deepseek-v4-flash` / `deepseek-v4-pro`.
   - Simula digitação humana no WhatsApp (delay de 3 a 6 segundos) e responde como especialista amigável de Pokémon TCG.
+### 3.3. Servidores MCP (Model Context Protocol) & Ferramentas de IA
+Para potencializar o desenvolvimento assistido por IA e a automação de inteligência de mercado:
+- **Firecrawl MCP (`https://mcp.firecrawl.dev/v2/mcp`)**:
+  - Web scraping avançado e renderização de sites de e-commerce concorrentes com headless browser na nuvem.
+  - Pesquisa web em tempo real (`firecrawl_search`) e extração de catálogo de cards/boxes em Markdown limpo (`firecrawl_scrape`).
+  - Opera via transporte Streamable HTTP (Keyless ou Bearer Token) garantindo zero sobrecarga de hardware local.
+- **Mercado Livre MCP (`https://mcp.mercadolibre.com/mcp`)**:
+  - Acesso direto a metadados, catálogo e itens da plataforma Mercado Livre.
+- **Arquivos de Configuração**:
+  - `.cursor/mcp.json` (Cursor IDE)
+  - `.agents/mcp_config.json` (Google Antigravity IDE)
 
 ---
 

@@ -9,6 +9,7 @@ export interface ConversionResult {
   contemMercadoLivre: boolean;
   productImageUrl?: string;
   resolvedProductUrl?: string;
+  canonicalProductId?: string;
 }
 
 const BROWSER_HEADERS = {
@@ -51,6 +52,33 @@ export function pontuarSlug(slug: string, palavras: string[]): number {
     }
   }
   return pts;
+}
+
+/**
+ * Extrai o ID canônico único do produto ou anúncio do Mercado Livre
+ */
+export function extractCanonicalProductId(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+
+  // 1. Padrão de catálogo /p/MLB12345678
+  const catalogMatch = url.match(/\/p\/(MLB\d+)/i);
+  if (catalogMatch) {
+    return catalogMatch[1].toUpperCase();
+  }
+
+  // 2. Padrão /up/MLBU12345678
+  const upMatch = url.match(/\/up\/(MLBU\d+)/i);
+  if (upMatch) {
+    return upMatch[1].toUpperCase();
+  }
+
+  // 3. Padrão anúncio direto MLB-123456789 ou MLB123456789
+  const directMatch = url.match(/(?:item\/|produto\.mercadolivre\.com\.br\/|mercadolivre\.com\.br\/[^\/]+\/)?(MLB-?\d{6,14})/i);
+  if (directMatch) {
+    return directMatch[1].replace('-', '').toUpperCase();
+  }
+
+  return null;
 }
 
 /**
@@ -573,6 +601,7 @@ export async function processMessageText(
   }
 
   const hashConteudo = generateContentHash(chatId, cleanedText);
+  const canonicalProductId = extractCanonicalProductId(resolvedProductUrl || '') || undefined;
 
   return {
     novoTexto,
@@ -580,6 +609,7 @@ export async function processMessageText(
     hashConteudo,
     contemMercadoLivre,
     productImageUrl,
-    resolvedProductUrl
+    resolvedProductUrl,
+    canonicalProductId
   };
 }

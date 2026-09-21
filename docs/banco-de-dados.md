@@ -18,7 +18,15 @@ A plataforma opera com dois bancos de dados independentes, salvos no volume pers
 ## 2. Esquema do Banco do Replicador (`replica.db`)
 
 ### 2.1. `configs`
-Armazena parâmetros operacionais no modelo Chave-Valor (`ativo`, `delay_segundos`, `teto_hora`, `affiliate_matt_word`, `meli_cookie`, etc.).
+Armazena parâmetros operacionais no modelo Chave-Valor:
+- `ativo`: Flag global de replicação (`true`/`false`).
+- `delay_segundos`: Intervalo mínimo entre despachos (pacing de 8-10s).
+- `teto_hora`: Limite máximo de mensagens enviadas por hora.
+- `affiliate_matt_word`: Identificador de afiliado Mercado Livre (`matt_word`).
+- `meli_cookie`: Sessão autenticada no Mercado Livre para resolução de URLs `meli.la`.
+- `template_modo`: Modo de formatação de mensagens (`padrao`, `urgencia`, `cupom`, `original`).
+- `cooldown_duplicidade_minutos`: Janela de desduplicação cross-group canônica (padrão 5 min).
+- `filtro_apenas_tcg`: Guardião de nicho TCG (`true`/`false`).
 
 ### 2.2. `rotas`
 Cadastro das rotas de replicação de ofertas criadas pelo operador (`id`, `nome`, `ativa`, `criada_em`).
@@ -26,10 +34,20 @@ Cadastro das rotas de replicação de ofertas criadas pelo operador (`id`, `nome
 ### 2.3. `rota_origens` e `rota_destinos`
 Associa os grupos de origem monitorados e os grupos de destino receptores para cada rota.
 
-### 2.4. `logs`
-Diário de bordo de todas as mensagens tratadas, contendo hash SHA-256 para desduplicação, status (`enviado`, `ignorado`), links convertidos e se continha mídia.
+### 2.4. `produtos_replicados`
+Tabela da **Opção C (Desduplicação Global Cross-Group por Produto Canônico)**:
+- `canonical_id` (TEXT): ID canônico extraído da URL do Mercado Livre (ex: `MLB5424578130`).
+- `titulo` (TEXT): Título do produto replicado.
+- `preco_por` (REAL): Preço promocional registrado no último envio.
+- `grupo_origem_jid` (TEXT): Grupo de onde a oferta foi capturada.
+- `enviado_em` (TEXT): Timestamp ISO da última replicação.
+- *Índice*: `idx_prod_rec (canonical_id, enviado_em DESC)` para consultas ultra-rápidas.
+- *Regra de Exceção*: Quedas de preço superiores a 5% quebram o cooldown automaticamente para entregar o melhor valor.
 
-### 2.5. `chats_cache`
+### 2.5. `logs`
+Diário de bordo de todas as mensagens tratadas, contendo hash SHA-256 para desduplicação, status (`enviado`, `ignorado`, `descartado`, `erro`), links convertidos e se continha mídia.
+
+### 2.6. `chats_cache`
 Cache dos grupos de WhatsApp em que o chip do replicador participa.
 
 ---

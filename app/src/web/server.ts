@@ -24,7 +24,13 @@ import {
   downloadProductImage,
   fetchSocialShortLink
 } from '../core/affiliate.js';
-import { extrairDadosAnuncio } from '../core/anuncio.js';
+import {
+  extrairDadosAnuncio,
+  isProdutoTCG,
+  detectarGatilhoUrgencia,
+  detectarMensagemCupom,
+  formatarMensagemReplicada
+} from '../core/anuncio.js';
 import {
   extrairDadosOferta,
   registrarOfertaPlanilha,
@@ -425,13 +431,48 @@ export async function createServer() {
 
       const isMeliActive = Boolean(meliCookie && meliCookie.trim().length > 10);
 
+      const dadosOferta = extrairDadosOferta(result.novoTexto, result.resolvedProductUrl);
+      const slugParaFiltro = result.resolvedProductUrl ? result.resolvedProductUrl.split('/').pop() || '' : '';
+      const isTCG = isProdutoTCG(text, dadosOferta.produto, slugParaFiltro);
+      const isCupom = detectarMensagemCupom(text);
+      const isUrgencia = detectarGatilhoUrgencia(text);
+      const tipoDetectado: 'cupom' | 'urgencia' | 'oferta' = isCupom ? 'cupom' : (isUrgencia ? 'urgencia' : 'oferta');
+
+      let cupomExtraido = '';
+      const cupomMatch = text.match(/cupom[:\s\*]*([a-z0-9_-]{3,20})/i);
+      if (cupomMatch && cupomMatch[1]) {
+        cupomExtraido = cupomMatch[1].trim().toUpperCase();
+      }
+
+      const linkMatches = result.novoTexto.match(/https?:\/\/[^\s]+/gi);
+      const linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
+
+      const templateTexto = formatarMensagemReplicada({
+        tipo: tipoDetectado,
+        titulo: dadosOferta.produto || 'Colecionável Pokémon TCG',
+        precoDe: dadosOferta.valorDe,
+        precoPor: dadosOferta.valorPor,
+        cupom: cupomExtraido,
+        detalhesCupom: isCupom ? 'Desconto especial no app para colecionáveis' : undefined,
+        linkAfiliado: linkAfiliadoFinal,
+        linkVitrineCurto
+      });
+
+      const templateModo = getConfig('template_modo', 'padrao');
+
       return {
         ok: true,
         originalText: text,
-        novoTexto: result.novoTexto,
+        novoTexto: templateModo === 'padrao' ? templateTexto : result.novoTexto,
+        textoOriginalHigienizado: result.novoTexto,
+        templateTexto,
+        tipoDetectado,
+        isTCG,
+        canonicalProductId: result.canonicalProductId,
         linksConvertidos: result.linksConvertidos,
         contemMercadoLivre: result.contemMercadoLivre,
         imagePreviewUrl,
+        templateModo,
         shortenerMode: isMeliActive ? 'meli.la (Encurtador Oficial)' : 'Parâmetros Diretos (Fallback matt_word)'
       };
     } catch (err: any) {
