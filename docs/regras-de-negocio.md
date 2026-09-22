@@ -79,6 +79,12 @@ Em vez de herdar o estilo e formatação dos concorrentes, o bot classifica a me
 - Intervalo mínimo de 8 a 10 segundos entre envios sucessivos ao mesmo destino.
 - Evita rajadas de mensagens no WhatsApp caso múltiplos grupos concorrentes postem simultaneamente.
 
+### 3.6. Extração Robusta de Preços e Prevenção de Truncamento
+- **Barreira Anti-Backtracking `(?!\d)`:** Expressões regulares blindadas contra truncamento de dígitos na leitura de preços (ex: impede que `R$ 88` seja capturado como `R$ 8` ou `R$ 120` como `R$ 12` quando acompanhados de termos como `no pix`, `reais`, `à vista`, `cada`, etc.).
+- **Filtro Estrito de Não-Preços:** Rejeita explicitamente porcentagens de desconto (`15%`, `20% OFF`) e contadores de parcelamento (`10x`, `12x`) como valores monetários, evitando capturas inválidas como `R$ 1`.
+- **Desambiguação de Parcelas:** Em mensagens com ofertas mistas (ex: `R$ 88 ou em até 10x de R$ 8,80`), a parcela é isolada e direcionada exclusivamente para a linha de parcelamento, garantindo que o preço principal publicado seja sempre o valor à vista (`R$ 88`).
+- **Suporte a Múltiplos Formatos Monetários:** Normalização transparente para inteiros (`88`), moeda com vírgula (`88,00`), separadores de milhar (`1.240,00`) e notação decimal com ponto (`88.00`).
+
 ---
 
 ## 4. Manipulação de Mídia e Imagens

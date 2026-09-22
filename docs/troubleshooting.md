@@ -58,8 +58,12 @@ Verifique os seguintes pontos no feed de **Atividades (Logs)** do painel:
 
 **Causa: Cookie do Mercado Livre expirado ou inválido**
 - Quando o cookie expira, o encurtador aciona o **fallback de segurança** para garantir que a comissão não seja perdida, gerando um link parametrizado com `matt_word` e `matt_tool`.
-- **Solução**:
-  1. Faça login na sua conta de afiliado do Mercado Livre.
-  2. Cole o cookie atualizado na aba **Configurações** do painel.
-  3. Clique no botão **Testar Cookie** para validar.
-  4. Uma vez aprovado, os próximos posts voltarão a usar `meli.la`.
+- **Solução**: Obtenha um cookie atualizado seguindo as instruções em **Configurações > Cookie Mercado Livre**.
+
+---
+
+## T6 — Preço publicado com dígito cortado (ex: R$ 8 em vez de R$ 88) ou parcelas no lugar do valor à vista
+
+**Causa: Backtracking em regex ou ambiguidade entre parcela e preço total**
+- Ocorria quando a postagem original continha termos promocionais como `Por: R$ 88 reais`, `Por: R$ 88 no pix`, `Por: R$ 88 cada` ou `De R$ 120 por R$ 88`. O regex anterior fazia backtracking cortando o último dígito (`88` virava `8`, `120` virava `12`).
+- **Solução Implementada**: Implementação de barreira numérica atômica `(?!\d)`, bloqueio estrito de `%` e `x`, e isolamento de parcelas (`10x de R$ 8,80`). Qualquer valor digitado em grupos de origem ou no gerador manual preserva integralmente todos os seus dígitos.

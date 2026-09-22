@@ -158,15 +158,28 @@ export interface CalculoDesconto {
 }
 
 /**
- * Extrai valor numérico de strings de moeda brasileira (ex: "R$ 389,90" -> 389.9)
+ * Extrai valor numérico de strings de moeda brasileira (ex: "R$ 389,90" -> 389.9, "120.00" -> 120, "88" -> 88)
  */
-function parseValorMoeda(valorStr?: string): number {
+export function parseValorMoeda(valorStr?: string): number {
   if (!valorStr) return 0;
-  const limpo = valorStr
-    .replace(/R\$/gi, '')
-    .replace(/\s+/g, '')
-    .replace(/\./g, '')
-    .replace(',', '.');
+  let limpo = valorStr.replace(/R\$/gi, '').replace(/\s+/g, '').trim();
+  if (!limpo) return 0;
+
+  // Se contém vírgula, assume formato brasileiro clássico (pontos = milhares, vírgula = decimal)
+  if (limpo.includes(',')) {
+    limpo = limpo.replace(/\./g, '').replace(',', '.');
+  } else if (limpo.includes('.')) {
+    // Se não tem vírgula mas tem ponto:
+    // Se tem apenas um ponto seguido de 1 ou 2 dígitos decimais (ex: 88.00 ou 88.5), preserva como decimal
+    const partes = limpo.split('.');
+    if (partes.length === 2 && partes[1].length <= 2) {
+      // É decimal no padrão float (ex: 88.00 ou 88.50)
+    } else {
+      // É separador de milhar (ex: 1.200 ou 1.200.000)
+      limpo = limpo.replace(/\./g, '');
+    }
+  }
+
   const num = parseFloat(limpo);
   return isNaN(num) ? 0 : num;
 }

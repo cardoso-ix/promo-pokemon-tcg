@@ -137,30 +137,59 @@ export function extrairDadosOferta(
   let valorPor = '';
   let valorDe = '';
 
-  // Procurar padrão "Por:" ou "Por apenas:" (ignorando percentuais como "por 15%")
-  const porMatch = texto.match(/(?:👉🏼?|👉)?\s*\*?(?:por\s*apenas|por)[:\s\*👉🏼✅]*R?\$?\s*([\d\.,]+)(?!\s*[%a-zA-Z])/i);
+  // Regex Por com barreira anti-backtracking de dígitos (?!\d) e bloqueio estrito de % e parcelas (x/vezes)
+  // Aceita perfeitamente sufixos promocionais normais: "reais", "no pix", "a vista", "cada", "com cupom", etc.
+  const porMatch = texto.match(
+    /(?:👉🏼?|👉)?\s*\*?(?:por\s*apenas|por)[:\s\*👉🏼✅]*R?\$?\s*(\d+(?:[.,]\d+)*)(?!\d)(?!\s*[%xX]|\s*vezes)/i
+  );
   if (porMatch && porMatch[1]) {
     valorPor = normalizarMoeda(porMatch[1]);
   }
 
-  // Procurar padrão "De:" (garante que não seja percentual como "de 15%" ou contexto de cupom)
-  const deMatch = texto.match(/(?:❌|~|\*)?\s*(?:de)[:\s\*~❌]*R?\$?\s*([\d\.,]+)(?!\s*[%a-zA-Z])/i);
+  // Regex De com barreira anti-backtracking de dígitos (?!\d)
+  // Garante que não seja contexto de cupom ("cupom de R$ 20") nem de parcelas ("10x de R$ 8,80")
+  const deMatch = texto.match(
+    /(?:❌|~|\*)?\s*(?:de)[:\s\*~❌]*R?\$?\s*(\d+(?:[.,]\d+)*)(?!\d)(?!\s*[%xX]|\s*vezes)/i
+  );
   if (deMatch && deMatch[1]) {
     const idx = deMatch.index || 0;
-    const trechoAntes = texto.slice(Math.max(0, idx - 15), idx).toLowerCase();
-    if (!trechoAntes.includes('cupom')) {
+    const trechoAntes = texto.slice(Math.max(0, idx - 20), idx).toLowerCase();
+    const isCupom = trechoAntes.includes('cupom');
+    const isParcela = /\d+\s*(?:x|vezes)\s*$/.test(trechoAntes);
+
+    if (!isCupom && !isParcela) {
       valorDe = normalizarMoeda(deMatch[1]);
     }
   }
 
   // Se não encontrou pelo prefixo De/Por, busca valores monetários no texto
+  // Ignora parcelas ("10x de R$...") e cupons ("cupom de R$...")
   if (!valorPor) {
-    const allPrices = Array.from(texto.matchAll(/R\$\s*([\d\.,]+)/gi));
-    if (allPrices.length >= 2) {
-      valorDe = normalizarMoeda(allPrices[0][1]);
-      valorPor = normalizarMoeda(allPrices[1][1]);
-    } else if (allPrices.length === 1) {
-      valorPor = normalizarMoeda(allPrices[0][1]);
+    const allMatches = Array.from(texto.matchAll(/R\$\s*(\d+(?:[.,]\d+)*)(?!\d)/gi));
+    const precosCandidatos: string[] = [];
+
+    for (const m of allMatches) {
+      const idx = m.index || 0;
+      const trechoAntes = texto.slice(Math.max(0, idx - 25), idx).toLowerCase();
+      const trechoDepois = texto.slice(idx, idx + 25).toLowerCase();
+
+      // Ignora se for parcela (ex: "10x de R$...", "10x R$...")
+      const isParcela = /\d+\s*(?:x|vezes)\s*(?:de\s*)?$/i.test(trechoAntes);
+      // Ignora se for cupom (ex: "cupom de R$...")
+      const isCupom = /cupom\s*(?:de\s*)?$/i.test(trechoAntes);
+      // Ignora se for percentual
+      const isPorcento = /^R\$\s*\d+%/i.test(trechoDepois);
+
+      if (!isParcela && !isCupom && !isPorcento) {
+        precosCandidatos.push(m[1].trim());
+      }
+    }
+
+    if (precosCandidatos.length >= 2) {
+      if (!valorDe) valorDe = normalizarMoeda(precosCandidatos[0]);
+      valorPor = normalizarMoeda(precosCandidatos[1]);
+    } else if (precosCandidatos.length === 1) {
+      valorPor = normalizarMoeda(precosCandidatos[0]);
     }
   }
 
