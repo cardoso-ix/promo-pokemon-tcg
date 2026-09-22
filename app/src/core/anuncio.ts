@@ -360,8 +360,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
     linhas.push('');
     linhas.push('⚡ *Corre antes que acabe o estoque!*');
-    linhas.push('🛒 *Aproveite a oferta relâmpago aqui:*');
-    linhas.push(`👉 ${link}`);
+    linhas.push(`🛒 ${link}`);
     return linhas.join('\n');
   }
 
@@ -378,8 +377,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
   if (linhaCupom) linhas.push(linhaCupom);
 
   linhas.push('');
-  linhas.push('🛒 *Garanta o seu com desconto aqui:*');
-  linhas.push(`👉 ${link}`);
+  linhas.push(`🛒 ${link}`);
 
   return linhas.join('\n');
 }

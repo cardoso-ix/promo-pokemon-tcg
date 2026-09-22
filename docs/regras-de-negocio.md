@@ -67,8 +67,8 @@ Toda mensagem que chega aos grupos de WhatsApp em que o chip participa é avalia
 
 ### 3.3. Templates Padronizados de Marca
 Em vez de herdar o estilo e formatação dos concorrentes, o bot classifica a mensagem e formata no layout oficial da sua marca com a assinatura `@pokemon_tcg_promo` no início:
-1. **Template 1: Oferta Regular TCG**: Inicia com `@pokemon_tcg_promo`, título destacado em negrito, De/Por, cálculo automático de `% OFF` e valor economizado em reais, cupom (se houver) e link direto `meli.la`.
-2. **Template 2: Alerta de Urgência & Escassez**: Disparado automaticamente ao identificar termos como *"últimas unidades"*, *"corre"*, *"vai acabar"* ou *"estoque acabando"*, com assinatura `@pokemon_tcg_promo` e destaque visual forte de oferta relâmpago.
+1. **Template 1: Oferta Regular TCG**: Inicia com `@pokemon_tcg_promo`, título destacado em negrito, De/Por, cálculo automático de `% OFF` e valor economizado em reais, cupom (se houver) e link direto direto no carrinho (`🛒 <link>`).
+2. **Template 2: Alerta de Urgência & Escassez**: Disparado automaticamente ao identificar termos como *"últimas unidades"*, *"corre"*, *"vai acabar"* ou *"estoque acabando"*, com assinatura `@pokemon_tcg_promo`, destaque de urgência e link direto (`🛒 <link>`).
 3. **Template 3: Cupons de Desconto & Vitrine Oficial**: Identifica códigos promocionais do Mercado Livre com a assinatura `@pokemon_tcg_promo` e direciona os clientes para a sua lista/vitrine oficial (`link_vitrine_curto`).
 
 ### 3.4. Fila com Cadência Elegante (Pacing Anti-Spam)
