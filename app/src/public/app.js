@@ -192,19 +192,167 @@
     }, duration);
   }
 
-  // Tabs
-  const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
+  // Tabs & Sidebar Navigation
+  const tabBtns = document.querySelectorAll('.tab-btn, .nav-item[data-tab]');
+  const tabContents = document.querySelectorAll('.tab-content, .tab-pane');
+  const pageTitle = document.getElementById('page-title');
+  const pageDesc = document.getElementById('page-desc');
+
+  const tabMeta = {
+    feed: {
+      title: 'Visão Geral & Feed',
+      desc: 'Monitore ofertas replicadas, fluxo de mensagens e status do chip em tempo real.'
+    },
+    rotas: {
+      title: 'Rotas de Transmissão',
+      desc: 'Defina de quais grupos o robô copia e para quais grupos ele republica com seu link.'
+    },
+    anuncio: {
+      title: 'Gerador de Anúncios por Link',
+      desc: 'Cole o link de afiliado ou produto do Mercado Livre, puxe a foto 2X HD e publique.'
+    },
+    conectar: {
+      title: 'Conectar WhatsApp',
+      desc: 'Escaneie o QR Code abaixo com seu smartphone para ativar as réplicas automáticas.'
+    },
+    config: {
+      title: 'Configurações & Afiliado',
+      desc: 'Ajustes de encurtamento meli.la, cookies do Mercado Livre, planilhas e mensagem diária.'
+    }
+  };
 
   tabBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
-      tabBtns.forEach((b) => b.classList.remove('active'));
-      tabContents.forEach((c) => c.classList.remove('active'));
-      btn.classList.add('active');
-      const tabTarget = document.getElementById(`tab-${btn.dataset.tab}`);
-      if (tabTarget) tabTarget.classList.add('active');
+      const tabId = btn.dataset.tab;
+      if (!tabId) return;
+
+      tabBtns.forEach((b) => {
+        if (b.dataset.tab === tabId) {
+          b.classList.add('active');
+        } else {
+          b.classList.remove('active');
+        }
+      });
+
+      tabContents.forEach((c) => {
+        if (c.id === `tab-${tabId}`) {
+          c.classList.add('active');
+        } else {
+          c.classList.remove('active');
+        }
+      });
+
+      if (tabMeta[tabId]) {
+        if (pageTitle) pageTitle.textContent = tabMeta[tabId].title;
+        if (pageDesc) pageDesc.textContent = tabMeta[tabId].desc;
+      }
     });
   });
+
+  // Motor Gráfico de Gotículas & Bolhas de Água (Canvas 60fps)
+  function initWaterParticles() {
+    const canvas = document.getElementById('ambient-fx');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const count = 42;
+    const particles = [];
+
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: Math.random() * 3.5 + 1.2,
+        speedY: -(Math.random() * 0.7 + 0.3),
+        speedX: (Math.random() - 0.5) * 0.3,
+        wobbleSpeed: Math.random() * 0.03 + 0.01,
+        wobbleAmp: Math.random() * 1.5 + 0.5,
+        wobbleAngle: Math.random() * Math.PI * 2,
+        alpha: Math.random() * 0.45 + 0.2,
+        isDrop: Math.random() > 0.65
+      });
+    }
+
+    let animId = null;
+    let isRunning = true;
+
+    function render() {
+      if (!isRunning) return;
+      ctx.clearRect(0, 0, width, height);
+
+      for (let i = 0; i < count; i++) {
+        const p = particles[i];
+
+        p.wobbleAngle += p.wobbleSpeed;
+        const currentSpeedX = p.speedX + Math.sin(p.wobbleAngle) * p.wobbleAmp * 0.1;
+        p.x += currentSpeedX;
+
+        if (p.isDrop) {
+          p.y += Math.abs(p.speedY) * 1.3;
+          if (p.y > height + 10) {
+            p.y = -10;
+            p.x = Math.random() * width;
+          }
+        } else {
+          p.y += p.speedY;
+          if (p.y < -10) {
+            p.y = height + 10;
+            p.x = Math.random() * width;
+          }
+        }
+
+        if (p.x < -10) p.x = width + 10;
+        if (p.x > width + 10) p.x = -10;
+
+        const grad = ctx.createRadialGradient(
+          p.x - p.r * 0.3,
+          p.y - p.r * 0.3,
+          p.r * 0.1,
+          p.x,
+          p.y,
+          p.r
+        );
+        grad.addColorStop(0, `rgba(255, 255, 255, ${p.alpha * 1.3})`);
+        grad.addColorStop(0.4, `rgba(56, 189, 248, ${p.alpha})`);
+        grad.addColorStop(1, `rgba(2, 132, 199, ${p.alpha * 0.3})`);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = `rgba(0, 229, 255, ${p.alpha * 0.35})`;
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+      }
+
+      animId = requestAnimationFrame(render);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        isRunning = false;
+        if (animId) cancelAnimationFrame(animId);
+      } else {
+        isRunning = true;
+        animId = requestAnimationFrame(render);
+      }
+    });
+
+    animId = requestAnimationFrame(render);
+  }
+
+  // Iniciar partículas de água imediatamente
+  initWaterParticles();
 
   // Conexão WebSocket
   function connectWebSocket() {
@@ -407,6 +555,9 @@
     if (!state) return;
 
     waStatusBadge.className = 'badge';
+    const sidebarDot = document.getElementById('sidebar-wa-dot');
+    const sidebarTitle = document.getElementById('sidebar-wa-title');
+    const sidebarSub = document.getElementById('sidebar-wa-sub');
 
     if (state.status === 'connected') {
       waStatusBadge.classList.add('badge-connected');
@@ -414,6 +565,10 @@
       kpiWa.textContent = 'CONECTADO';
       kpiWa.className = 'kpi-value text-green';
       kpiPhoneSub.textContent = `Aparelho: ${state.userPhone || 'Ativo'}`;
+
+      if (sidebarDot) sidebarDot.className = 'status-dot connected';
+      if (sidebarTitle) sidebarTitle.textContent = 'Conectado';
+      if (sidebarSub) sidebarSub.textContent = state.userPhone || 'Chip ativo';
 
       qrBox.style.display = 'none';
       waConnectedBox.style.display = 'block';
@@ -426,6 +581,10 @@
       kpiWa.className = 'kpi-value text-gold';
       kpiPhoneSub.textContent = 'Abra a aba Conectar para escanear';
 
+      if (sidebarDot) sidebarDot.className = 'status-dot connecting';
+      if (sidebarTitle) sidebarTitle.textContent = 'Aguardando QR';
+      if (sidebarSub) sidebarSub.textContent = 'Escaneie no celular';
+
       qrBox.style.display = 'inline-block';
       waConnectedBox.style.display = 'none';
       qrBox.innerHTML = `<img src="${state.qrDataUrl}" alt="QR Code WhatsApp">`;
@@ -436,6 +595,10 @@
       kpiWa.textContent = state.status === 'connecting' ? 'CONECTANDO' : 'DESCONECTADO';
       kpiWa.className = 'kpi-value text-danger';
       kpiPhoneSub.textContent = state.status === 'connecting' ? 'Preparando conexão' : 'Conexão inativa';
+
+      if (sidebarDot) sidebarDot.className = 'status-dot disconnected';
+      if (sidebarTitle) sidebarTitle.textContent = state.status === 'connecting' ? 'Conectando...' : 'Desconectado';
+      if (sidebarSub) sidebarSub.textContent = state.status === 'connecting' ? 'Iniciando Baileys' : 'Aguardando conexão';
 
       qrBox.style.display = 'inline-block';
       waConnectedBox.style.display = 'none';

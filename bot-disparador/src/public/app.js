@@ -2207,7 +2207,113 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Motor Gráfico de Brasas & Fagulhas de Fogo (Canvas 60fps GPU)
+  function initFireParticles() {
+    const canvas = document.getElementById('ambient-fx');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = (canvas.width = window.innerWidth);
+    let height = (canvas.height = window.innerHeight);
+
+    window.addEventListener('resize', () => {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    });
+
+    const count = 45;
+    const particles = [];
+
+    function createParticle(initial = false) {
+      return {
+        x: Math.random() * width,
+        y: initial ? Math.random() * height : height + Math.random() * 20,
+        r: Math.random() * 2.8 + 1.0,
+        baseR: Math.random() * 2.8 + 1.0,
+        speedY: -(Math.random() * 1.2 + 0.6),
+        speedX: (Math.random() - 0.5) * 0.5,
+        wobbleSpeed: Math.random() * 0.04 + 0.02,
+        wobbleAmp: Math.random() * 1.2 + 0.4,
+        wobbleAngle: Math.random() * Math.PI * 2,
+        alpha: Math.random() * 0.6 + 0.3,
+        maxLife: Math.random() * 120 + 80,
+        life: 0,
+        hue: Math.random() > 0.4 ? 15 : 35 // tons de laranja-fogo e ouro
+      };
+    }
+
+    for (let i = 0; i < count; i++) {
+      particles.push(createParticle(true));
+    }
+
+    let animId = null;
+    let isRunning = true;
+
+    function render() {
+      if (!isRunning) return;
+      ctx.clearRect(0, 0, width, height);
+
+      for (let i = 0; i < count; i++) {
+        const p = particles[i];
+        p.life++;
+
+        p.wobbleAngle += p.wobbleSpeed;
+        p.x += p.speedX + Math.sin(p.wobbleAngle) * p.wobbleAmp * 0.15;
+        p.y += p.speedY;
+
+        // Fagulha encolhe e dissipa com o tempo
+        const lifeFraction = p.life / p.maxLife;
+        p.r = Math.max(0.2, p.baseR * (1 - lifeFraction * 0.7));
+        const currentAlpha = Math.max(0, p.alpha * (1 - lifeFraction));
+
+        // Reaparece no fundo quando apagar ou sair do topo
+        if (p.life >= p.maxLife || p.y < -10) {
+          particles[i] = createParticle(false);
+          continue;
+        }
+
+        if (p.x < -10) p.x = width + 10;
+        if (p.x > width + 10) p.x = -10;
+
+        // Desenhar brasa incandescente com gradiente radial
+        const grad = ctx.createRadialGradient(
+          p.x,
+          p.y,
+          0,
+          p.x,
+          p.y,
+          p.r * 1.8
+        );
+        grad.addColorStop(0, `rgba(255, 255, 220, ${currentAlpha})`);
+        grad.addColorStop(0.3, `rgba(249, 115, 22, ${currentAlpha * 0.85})`);
+        grad.addColorStop(0.7, `rgba(239, 68, 68, ${currentAlpha * 0.5})`);
+        grad.addColorStop(1, `rgba(153, 27, 27, 0)`);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r * 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      animId = requestAnimationFrame(render);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        isRunning = false;
+        if (animId) cancelAnimationFrame(animId);
+      } else {
+        isRunning = true;
+        animId = requestAnimationFrame(render);
+      }
+    });
+
+    animId = requestAnimationFrame(render);
+  }
+
   // Inicialização
+  initFireParticles();
   loadStatus();
   loadPastasLeads();
   initSSE();
