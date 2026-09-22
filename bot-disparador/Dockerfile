@@ -23,13 +23,15 @@ RUN npm run build
 RUN npm prune --omit=dev && npm cache clean --force
 
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=3333
 ENV HOST=0.0.0.0
 ENV DATA_DIR=/app/data
 
 RUN mkdir -p /app/data
 
-EXPOSE 3000
 EXPOSE 3333
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD curl -f http://localhost:3333/health || exit 1
 
 CMD ["npm", "start"]

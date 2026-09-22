@@ -100,6 +100,23 @@ db.exec(`
     exemplo_variaveis TEXT,
     sincronizado_em TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS ofertas_recebidas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    titulo TEXT NOT NULL,
+    link_afiliado TEXT NOT NULL,
+    link_original TEXT,
+    preco_de REAL,
+    preco_por REAL,
+    desconto REAL,
+    cupom TEXT,
+    parcelamento TEXT,
+    imagem_url TEXT,
+    mensagem_formatada TEXT,
+    origem TEXT DEFAULT 'replicador',
+    status TEXT DEFAULT 'nova',
+    criado_em TEXT NOT NULL
+  );
 `);
 
 // Migração suave de colunas na tabela campanhas
@@ -709,6 +726,67 @@ export function getMetricasDashboard() {
     respostasIaHoje,
     warmup
   };
+}
+
+// ==========================================
+// OFERTAS RECEBIDAS (Ponte Interna com Replicador)
+// ==========================================
+
+export interface OfertaRecebidaInput {
+  titulo: string;
+  linkAfiliado: string;
+  linkOriginal?: string;
+  precoDe?: number;
+  precoPor?: number;
+  desconto?: number;
+  cupom?: string;
+  parcelamento?: string;
+  imagemUrl?: string;
+  mensagemFormatada?: string;
+  origem?: string;
+}
+
+export function salvarOfertaRecebida(oferta: OfertaRecebidaInput): number {
+  const agora = new Date().toISOString();
+  const stmt = db.prepare(`
+    INSERT INTO ofertas_recebidas (
+      titulo, link_afiliado, link_original, preco_de, preco_por,
+      desconto, cupom, parcelamento, imagem_url, mensagem_formatada,
+      origem, status, criado_em
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'nova', ?)
+  `);
+
+  const info = stmt.run(
+    oferta.titulo,
+    oferta.linkAfiliado,
+    oferta.linkOriginal || null,
+    oferta.precoDe ?? null,
+    oferta.precoPor ?? null,
+    oferta.desconto ?? null,
+    oferta.cupom || null,
+    oferta.parcelamento || null,
+    oferta.imagemUrl || null,
+    oferta.mensagemFormatada || null,
+    oferta.origem || 'replicador',
+    agora
+  );
+
+  return Number(info.lastInsertRowid);
+}
+
+export function getOfertasRecebidas(limit = 50, status?: string): any[] {
+  if (status) {
+    return db.prepare('SELECT * FROM ofertas_recebidas WHERE status = ? ORDER BY id DESC LIMIT ?').all(status, limit);
+  }
+  return db.prepare('SELECT * FROM ofertas_recebidas ORDER BY id DESC LIMIT ?').all(limit);
+}
+
+export function marcarOfertaStatus(id: number, status: string): void {
+  db.prepare('UPDATE ofertas_recebidas SET status = ? WHERE id = ?').run(status, id);
+}
+
+export function deleteOfertaRecebida(id: number): void {
+  db.prepare('DELETE FROM ofertas_recebidas WHERE id = ?').run(id);
 }
 
 export { db };

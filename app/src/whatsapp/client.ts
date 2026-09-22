@@ -33,8 +33,10 @@ import {
   formatarMensagemReplicada,
   extrairCupom,
   extrairParcelamento,
-  determinarTipoMensagem
+  determinarTipoMensagem,
+  calcularDesconto
 } from '../core/anuncio.js';
+import { notificarDisparadorOferta } from '../core/internal-sync.js';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr';
 
@@ -913,6 +915,34 @@ export class WhatsAppManager {
         } catch (errSheets: unknown) {
           console.warn('[Google Sheets] Falha ao extrair dados da oferta para a planilha:', errSheets);
         }
+
+        // 13.1. Notificar Bot Disparador via rede interna Docker/Coolify
+        try {
+          const dadosParaSync = extrairDadosOferta(textoFinalPublicar, resolvedProductUrl, origemNome);
+          const precoDeNum = parseFloat(
+            (dadosParaSync.valorDe || '').replace(/R\$/gi, '').replace(/\s+/g, '').replace(/\./g, '').replace(',', '.')
+          ) || undefined;
+          const precoPorNumSync = parseFloat(
+            (dadosParaSync.valorPor || '').replace(/R\$/gi, '').replace(/\s+/g, '').replace(/\./g, '').replace(',', '.')
+          ) || undefined;
+
+          const descCalculado = calcularDesconto(dadosParaSync.valorDe, dadosParaSync.valorPor);
+          const parcelamentoExtraido = extrairParcelamento(textoFinalPublicar) || undefined;
+
+          notificarDisparadorOferta({
+            titulo: dadosParaSync.produto || dadosOferta.produto || 'Oferta Pokémon TCG',
+            linkAfiliado: resolvedProductUrl || '',
+            linkOriginal: '',
+            precoDe: precoDeNum,
+            precoPor: precoPorNumSync,
+            desconto: descCalculado ? descCalculado.percentualOff : undefined,
+            cupom: cupomExtraido || undefined,
+            parcelamento: parcelamentoExtraido,
+            imagemUrl: productImageUrl || undefined,
+            mensagemFormatada: textoFinalPublicar,
+            origem: `replicador:${origemNome}`
+          }).catch(() => {});
+        } catch {}
       }
     }
 

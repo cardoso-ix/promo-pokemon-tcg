@@ -83,3 +83,26 @@ Para potencializar o desenvolvimento assistido por IA e a automação de intelig
 Ambos os serviços utilizam volumes NVMe montados em `/app/data`:
 1. **Sessões do WhatsApp**: As chaves criptográficas (`creds.json`, app-state) permanecem salvas, evitando a necessidade de ler QR Code após novos deploys ou reinicializações.
 2. **Bancos SQLite**: Operam com journaling em WAL (`PRAGMA journal_mode = WAL`), garantindo que leituras e escritas concorrentes não causem locks e que nenhuma alteração se perca.
+
+---
+
+## 5. Orquestração em VPS Própria com Coolify
+
+A plataforma conta com arquitetura de produção via `docker-compose.coolify.yml`:
+- **Traefik Reverse Proxy Integrado**: Gerencia certificados SSL Let's Encrypt automaticamente para `promo.seudominio.com` e `disparador.seudominio.com`.
+- **Named Volumes Blindados**:
+  - `promo_replica_data` ➔ `/app/data` (Replicador)
+  - `bot_disparador_data` ➔ `/app/data` (Disparador)
+  - Protege 100% as sessões do WhatsApp contra reinicializações e rebuilds de imagem.
+- **Limites de Recursos (Anti-OOM)**: Cada container possui limite de 512MB de memória para garantir estabilidade contínua em VPS compactas (2GB ou 4GB de RAM).
+- **Healthchecks Automáticos**: Ambos os serviços contam com verificação periódica na rota `/health` a cada 30 segundos, permitindo que o Coolify reinicie contêineres em caso de travamento do Baileys.
+
+---
+
+## 6. Ponte de Comunicação Interna (Rede Docker)
+
+Os dois contêineres operam na rede compartilhada `promo_network`:
+1. Quando o Replicador valida e posta uma oferta nos grupos VIP, aciona a rota interna `POST http://bot-disparador:3333/api/internal/oferta`.
+2. A requisição utiliza cabeçalho de autenticação mútua `X-Internal-Token` configurado via `INTERNAL_API_KEY`.
+3. O Disparador registra a oferta na tabela `ofertas_recebidas` e emite evento em tempo real via Server-Sent Events (SSE).
+4. No painel do Disparador, o usuário pode transformar instantaneamente qualquer promoção capturada em uma nova campanha de mensagens frias ou disponibilizá-la no catálogo da IA.

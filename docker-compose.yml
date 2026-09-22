@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   promo-replica:
     build:
@@ -14,8 +12,19 @@ services:
       - HOST=0.0.0.0
       - DATA_DIR=/app/data
       - NODE_ENV=production
+      - DISPARADOR_URL=http://bot-disparador:3333
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-promo-internal-key-2026}
+      - SYNC_DISPARADOR=${SYNC_DISPARADOR:-true}
     volumes:
       - ./data:/app/data
+    networks:
+      - promo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   bot-disparador:
     build:
@@ -30,5 +39,18 @@ services:
       - HOST=0.0.0.0
       - DATA_DIR=/app/data
       - NODE_ENV=production
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-promo-internal-key-2026}
     volumes:
       - ./bot-disparador/data:/app/data
+    networks:
+      - promo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3333/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+networks:
+  promo-network:
+    driver: bridge

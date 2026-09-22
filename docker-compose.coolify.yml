@@ -1,0 +1,99 @@
+services:
+  promo-replica:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: promo-replica-bot
+    restart: unless-stopped
+    ports:
+      - "${PROMO_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - DATA_DIR=/app/data
+      - ADMIN_USER=${ADMIN_USER:-eduardo}
+      - ADMIN_PASS=${ADMIN_PASS:-04052001}
+      - SESSION_SECRET=${SESSION_SECRET:-promo-secret-super-seguro-vps-2026}
+      - MATT_WORD=${MATT_WORD:-caed1312314}
+      - MATT_TOOL=${MATT_TOOL:-96097202}
+      - DISPARADOR_URL=http://bot-disparador:3333
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-promo-internal-key-2026}
+      - SYNC_DISPARADOR=${SYNC_DISPARADOR:-true}
+    volumes:
+      - replica_data:/app/data
+    networks:
+      - promo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "coolify.managed=true"
+      - "traefik.enable=true"
+      - "traefik.http.routers.promo-replica.rule=Host(`${PROMO_DOMAIN:-promo.localhost}`)"
+      - "traefik.http.routers.promo-replica.entrypoints=websecure"
+      - "traefik.http.routers.promo-replica.tls.certresolver=letsencrypt"
+      - "traefik.http.services.promo-replica.loadbalancer.server.port=3000"
+
+  bot-disparador:
+    build:
+      context: ./bot-disparador
+      dockerfile: Dockerfile
+    container_name: bot-disparador-ia
+    restart: unless-stopped
+    ports:
+      - "${DISPARADOR_PORT:-3333}:3333"
+    environment:
+      - NODE_ENV=production
+      - PORT=3333
+      - HOST=0.0.0.0
+      - DATA_DIR=/app/data
+      - ADMIN_USER=${ADMIN_USER:-eduardo}
+      - ADMIN_PASS=${ADMIN_PASS:-04052001}
+      - SESSION_SECRET=${SESSION_SECRET:-promo-secret-super-seguro-vps-2026}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-promo-internal-key-2026}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://opencode.ai/zen/go/v1}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-flash}
+      - META_ACCESS_TOKEN=${META_ACCESS_TOKEN:-}
+      - META_PHONE_NUMBER_ID=${META_PHONE_NUMBER_ID:-}
+      - META_WABA_ID=${META_WABA_ID:-}
+    volumes:
+      - disparador_data:/app/data
+    networks:
+      - promo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3333/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "coolify.managed=true"
+      - "traefik.enable=true"
+      - "traefik.http.routers.bot-disparador.rule=Host(`${DISPARADOR_DOMAIN:-disparador.localhost}`)"
+      - "traefik.http.routers.bot-disparador.entrypoints=websecure"
+      - "traefik.http.routers.bot-disparador.tls.certresolver=letsencrypt"
+      - "traefik.http.services.bot-disparador.loadbalancer.server.port=3333"
+
+volumes:
+  replica_data:
+    name: promo_replica_data
+  disparador_data:
+    name: bot_disparador_data
+
+networks:
+  promo-network:
+    name: promo_network
+    driver: bridge

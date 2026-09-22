@@ -31,5 +31,8 @@ export const CONFIG = {
   defaultDelaySeconds: 5,
   defaultHourlyCap: 40,
   defaultMaxDelaySeconds: 600, // 10 minutos
-  dashboardSecret: process.env.DASHBOARD_SECRET || 'promo-secret-2026'
+  dashboardSecret: process.env.DASHBOARD_SECRET || 'promo-secret-2026',
+  disparadorUrl: process.env.DISPARADOR_URL || 'http://bot-disparador:3333',
+  internalApiKey: process.env.INTERNAL_API_KEY || 'promo-internal-key-2026',
+  syncDisparadorAtivo: process.env.SYNC_DISPARADOR !== 'false'
 };

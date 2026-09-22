@@ -30,6 +30,10 @@ import {
   getMetaTemplateByNome,
   saveMetaTemplate,
   deleteMetaTemplateFromDb,
+  salvarOfertaRecebida,
+  getOfertasRecebidas,
+  marcarOfertaStatus,
+  deleteOfertaRecebida,
   db
 } from '../db/database.js';
 import { whatsapp, WhatsAppState } from '../whatsapp/client.js';
@@ -89,6 +93,16 @@ export async function createServer() {
         if (token && verifySessionToken(token).valid) {
           return reply.redirect('/', 302);
         }
+      }
+      return;
+    }
+
+    // Rotas internas entre serviços (protegidas por token X-Internal-Token)
+    if (pathname.startsWith('/api/internal/')) {
+      const internalToken = req.headers['x-internal-token'];
+      const expectedToken = process.env.INTERNAL_API_KEY || getConfig('internal_api_key', 'promo-internal-key-2026');
+      if (!internalToken || internalToken !== expectedToken) {
+        return reply.status(401).send({ ok: false, error: 'Acesso interno não autorizado. Token inválido.' });
       }
       return;
     }
@@ -740,6 +754,42 @@ export async function createServer() {
   app.get('/api/logs', async (req: any) => {
     const limit = parseInt(req.query.limit || '100', 10);
     return { logs: getLogsSistema(limit) };
+  });
+
+  // ==========================================
+  // PONTE INTERNA COM REPLICADOR DE OFERTAS
+  // ==========================================
+  app.post('/api/internal/oferta', async (req: any, reply) => {
+    const oferta = req.body;
+    if (!oferta || !oferta.titulo || !oferta.linkAfiliado) {
+      return reply.status(400).send({ ok: false, error: 'Campos titulo e linkAfiliado são obrigatórios.' });
+    }
+
+    const id = salvarOfertaRecebida(oferta);
+    logSistema('info', 'ponte_interna', `Oferta de Pokémon TCG sincronizada via rede interna: "${oferta.titulo}" (ID: ${id})`);
+    broadcastEvent('nova_oferta', { id, ...oferta });
+
+    return { ok: true, id, message: 'Oferta registrada com sucesso no disparador.' };
+  });
+
+  app.get('/api/ofertas-recebidas', async (req: any) => {
+    const limit = parseInt(req.query.limit || '50', 10);
+    const status = req.query.status || undefined;
+    return { ok: true, ofertas: getOfertasRecebidas(limit, status) };
+  });
+
+  app.patch('/api/ofertas-recebidas/:id/status', async (req: any) => {
+    const id = parseInt(req.params.id, 10);
+    const { status } = req.body || {};
+    if (!status) throw new Error('Status é obrigatório.');
+    marcarOfertaStatus(id, status);
+    return { ok: true, id, status };
+  });
+
+  app.delete('/api/ofertas-recebidas/:id', async (req: any) => {
+    const id = parseInt(req.params.id, 10);
+    deleteOfertaRecebida(id);
+    return { ok: true, id };
   });
 
   return app;

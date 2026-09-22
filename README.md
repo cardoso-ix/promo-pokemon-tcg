@@ -24,13 +24,20 @@ A plataforma opera **100% online na nuvem (Railway)** com persistência contínu
 
 ---
 
-## ☁️ Arquitetura em Nuvem & Deploy Contínuo
+## ☁️ Arquitetura em Nuvem, VPS & Deploy Contínuo
 
-Ambos os serviços rodam em contêineres Docker independentes no **Railway** com volumes NVMe persistentes montados em `/app/data`:
-- Mantém as **sessões ativas do WhatsApp** conectadas mesmo durante atualizações de código.
+Ambos os serviços rodam em contêineres Docker independentes com persistência NVMe montada em `/app/data`:
+- Mantém as **sessões ativas do WhatsApp (Baileys)** conectadas mesmo durante atualizações de código.
 - Bancos SQLite (`replica.db` e `disparador.db`) salvos com total segurança e modo WAL.
-- Atualização contínua: todo `git push origin main` gera deploy automático em menos de 2 minutos.
-- Consulte o guia completo em [`docs/deploy-nuvem.md`](docs/deploy-nuvem.md).
+- **Ponte Interna Docker:** O Replicador notifica automaticamente o Disparador quando identifica ofertas imperdíveis de Pokémon TCG.
+- Atualização contínua: todo `git push origin main` gera deploy automático em menos de 2 minutos via Webhook.
+
+### Opções de Hospedagem 24/7:
+1. **🚀 VPS Própria com Coolify (Recomendado - Custo Fixo e Performance Máxima):**
+   - Roda via `docker-compose.coolify.yml` com Named Volumes, SSL automático Let's Encrypt e rede interna.
+   - Consulte o guia completo em [`docs/deploy-coolify.md`](docs/deploy-coolify.md).
+2. **🚂 Nuvem Gerenciada (Railway e Render):**
+   - Consulte o guia em [`docs/deploy-nuvem.md`](docs/deploy-nuvem.md).
 
 ---
 
@@ -90,13 +97,16 @@ promo-pokemon-tcg/
 ├── docs/                       # Documentação técnica e operacional
 │   ├── arquitetura.md          # Arquitetura dos serviços em nuvem
 │   ├── banco-de-dados.md       # Esquema dos bancos SQLite (replica.db e disparador.db)
+│   ├── deploy-coolify.md       # Guia oficial de deploy na VPS com Coolify
 │   ├── deploy-nuvem.md         # Manual de deploy 24/7 (Railway / Render / VPS)
 │   ├── estado-atual.md         # Status atual da plataforma
 │   ├── historico-de-decisoes.md# Decisões técnicas e stack adotada
 │   ├── regras-de-negocio.md    # Regras de conversão de links e mídia
 │   ├── runbook.md              # Manual de operação dos painéis online
 │   └── troubleshooting.md      # Resolução de problemas e diagnósticos
+├── .env.example                # Modelo oficial de variáveis de ambiente para produção
 ├── docker-compose.yml          # Orquestração local dos dois serviços
+├── docker-compose.coolify.yml  # Orquestração de produção VPS/Coolify com Traefik e Named Volumes
 ├── Dockerfile                  # Container Docker do Replicador
 ├── railway.json                # Deploy Railway
 └── render.yaml                 # Blueprint Render com discos persistentes
