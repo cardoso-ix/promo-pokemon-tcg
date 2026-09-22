@@ -26,6 +26,10 @@ import {
   getWarmupStatus,
   resetWarmupStartDate,
   logSistema,
+  getMetaTemplates,
+  getMetaTemplateByNome,
+  saveMetaTemplate,
+  deleteMetaTemplateFromDb,
   db
 } from '../db/database.js';
 import { whatsapp, WhatsAppState } from '../whatsapp/client.js';
@@ -33,6 +37,15 @@ import { dispatchEngine } from '../core/engine.js';
 import { renderMessageTemplate } from '../core/spintax.js';
 import { generateDeepSeekResponse, optimizeTemplateWithDeepSeek } from '../ai/deepseek.js';
 import { validateMetaTemplate } from '../core/meta-validator.js';
+import {
+  testMetaConnection,
+  submitMetaTemplate,
+  syncMetaTemplates,
+  deleteMetaTemplate,
+  optimizeTemplateForUtility,
+  validateUtilitySafety,
+  PRESET_UTILITY_TEMPLATES
+} from '../core/meta-cloud.js';
 import {
   verifyCredentials,
   createSessionToken,
@@ -369,20 +382,208 @@ export async function createServer() {
     }
   });
 
+  // --- ENDPOINTS META BUSINESS CLOUD API (OFICIAL) ---
+
+  // Status e Configurações da Meta Cloud
+  app.get('/api/meta/status', async () => {
+    const ativo = getConfig('meta_cloud_ativo', 'false') === 'true';
+    const token = getConfig('meta_cloud_token', '');
+    const wabaId = getConfig('meta_waba_id', '');
+    const phoneNumberId = getConfig('meta_phone_number_id', '');
+    const apiVersion = getConfig('meta_api_version', 'v21.0');
+
+    const templates = getMetaTemplates();
+    const aprovados = templates.filter((t) => t.status === 'APPROVED').length;
+    const pendentes = templates.filter((t) => t.status === 'PENDING').length;
+    const rejeitados = templates.filter((t) => t.status === 'REJECTED').length;
+
+    return {
+      ativo,
+      configured: Boolean(token && phoneNumberId && wabaId),
+      wabaId,
+      phoneNumberId,
+      apiVersion,
+      hasToken: Boolean(token),
+      templatesCount: {
+        total: templates.length,
+        aprovados,
+        pendentes,
+        rejeitados
+      }
+    };
+  });
+
+  app.post('/api/meta/config', async (req: any) => {
+    const { ativo, token, wabaId, phoneNumberId, apiVersion } = req.body || {};
+    if (ativo !== undefined) setConfig('meta_cloud_ativo', String(ativo));
+    if (token !== undefined) setConfig('meta_cloud_token', String(token).trim());
+    if (wabaId !== undefined) setConfig('meta_waba_id', String(wabaId).trim());
+    if (phoneNumberId !== undefined) setConfig('meta_phone_number_id', String(phoneNumberId).trim());
+    if (apiVersion !== undefined) setConfig('meta_api_version', String(apiVersion).trim() || 'v21.0');
+
+    logSistema('info', 'config', 'Configurações da Meta Cloud API atualizadas.');
+    return { ok: true };
+  });
+
+  app.post('/api/meta/test-connection', async (req: any, reply) => {
+    const { token, phoneNumberId, apiVersion } = req.body || {};
+    const finalToken = token || getConfig('meta_cloud_token', '');
+    const finalPhoneId = phoneNumberId || getConfig('meta_phone_number_id', '');
+    const finalVersion = apiVersion || getConfig('meta_api_version', 'v21.0');
+
+    const result = await testMetaConnection(finalToken, finalPhoneId, finalVersion);
+    if (!result.ok) {
+      return reply.status(400).send(result);
+    }
+    return result;
+  });
+
+  // Templates Oficiais
+  app.get('/api/meta/templates', async () => {
+    const templates = getMetaTemplates();
+    return {
+      templates,
+      presets: PRESET_UTILITY_TEMPLATES
+    };
+  });
+
+  app.post('/api/meta/templates/sync', async (req: any, reply) => {
+    const token = getConfig('meta_cloud_token', '');
+    const wabaId = getConfig('meta_waba_id', '');
+    const apiVersion = getConfig('meta_api_version', 'v21.0');
+
+    if (!token || !wabaId) {
+      return reply.status(400).send({ ok: false, error: 'Configure o Token e o WABA ID da Meta antes de sincronizar.' });
+    }
+
+    const result = await syncMetaTemplates(token, wabaId, apiVersion);
+    if (!result.ok) {
+      return reply.status(500).send(result);
+    }
+
+    const templates = getMetaTemplates();
+    return { ok: true, totalSincronizados: result.totalSincronizados, templates };
+  });
+
+  app.post('/api/meta/templates', async (req: any, reply) => {
+    const { name, category, bodyText, exampleVariables } = req.body || {};
+
+    if (!name || !bodyText) {
+      return reply.status(400).send({ ok: false, error: 'Nome e Corpo do texto do template são obrigatórios.' });
+    }
+
+    const token = getConfig('meta_cloud_token', '');
+    const wabaId = getConfig('meta_waba_id', '');
+    const apiVersion = getConfig('meta_api_version', 'v21.0');
+
+    if (!token || !wabaId) {
+      return reply.status(400).send({ ok: false, error: 'Configure o Token e o WABA ID nas configurações da Meta.' });
+    }
+
+    const finalCategory = (category === 'MARKETING' ? 'MARKETING' : 'UTILITY') as 'UTILITY' | 'MARKETING';
+    const utilityAudit = validateUtilitySafety(bodyText);
+
+    const result = await submitMetaTemplate({
+      token,
+      wabaId,
+      name,
+      category: finalCategory,
+      bodyText,
+      exampleVariables
+    }, apiVersion);
+
+    if (!result.ok) {
+      return reply.status(400).send({
+        ok: false,
+        error: result.error,
+        utilityAudit
+      });
+    }
+
+    logSistema('info', 'meta_cloud', `Template "${name}" submetido com sucesso para a Meta (${finalCategory}).`);
+    return { ok: true, templateId: result.templateId, status: result.status, utilityAudit };
+  });
+
+  app.delete('/api/meta/templates/:name', async (req: any, reply) => {
+    const { name } = req.params;
+    const token = getConfig('meta_cloud_token', '');
+    const wabaId = getConfig('meta_waba_id', '');
+    const apiVersion = getConfig('meta_api_version', 'v21.0');
+
+    const result = await deleteMetaTemplate(token, wabaId, name, apiVersion);
+    if (!result.ok) {
+      return reply.status(400).send(result);
+    }
+
+    logSistema('info', 'meta_cloud', `Template "${name}" excluído da Meta e do banco local.`);
+    return { ok: true };
+  });
+
+  app.post('/api/meta/templates/optimize-utility', async (req: any, reply) => {
+    const { text } = req.body || {};
+    if (!text || !text.trim()) {
+      return reply.status(400).send({ ok: false, error: 'Informe um texto para otimizar.' });
+    }
+
+    const deepseekKey = getConfig('deepseek_api_key', '');
+    const deepseekBaseUrl = getConfig('deepseek_base_url', 'https://opencode.ai/zen/go/v1');
+    const deepseekModel = getConfig('deepseek_model', 'deepseek-v4-flash');
+
+    const optimized = await optimizeTemplateForUtility(text, deepseekKey, deepseekBaseUrl, deepseekModel);
+    const safety = validateUtilitySafety(optimized);
+
+    return {
+      ok: true,
+      originalText: text,
+      optimizedText: optimized,
+      safety
+    };
+  });
+
   app.post('/api/campanhas', async (req: any, reply) => {
-    const { nome, mensagemTemplate, targetType, targetGroupJid, targetPastaNome, mediaPath, forceRiskApproval } = req.body || {};
+    const {
+      nome,
+      mensagemTemplate,
+      targetType,
+      targetGroupJid,
+      targetPastaNome,
+      mediaPath,
+      forceRiskApproval,
+      canalEnvio,
+      metaTemplateNome
+    } = req.body || {};
+
     if (!nome || !mensagemTemplate) {
       return reply.status(400).send({ ok: false, error: 'Nome e Template de Mensagem são obrigatórios.' });
     }
 
-    // Auditoria Meta Shield antes do disparo
-    const metaValidation = validateMetaTemplate(mensagemTemplate, { isColdContact: true });
-    if (metaValidation.nivelRisco === 'alto_risco' && !forceRiskApproval) {
-      return reply.status(400).send({
-        ok: false,
-        error: 'Template com Alto Risco de Banimento detectado pelo Meta Shield. Corrija os gatilhos de risco ou confirme o envio forçado.',
-        metaValidation
-      });
+    const canalFinal = canalEnvio === 'meta_cloud' ? 'meta_cloud' : 'baileys';
+
+    if (canalFinal === 'meta_cloud') {
+      const metaToken = getConfig('meta_cloud_token', '');
+      const metaPhoneId = getConfig('meta_phone_number_id', '');
+      if (!metaToken || !metaPhoneId) {
+        return reply.status(400).send({
+          ok: false,
+          error: 'Credenciais da Meta Cloud API não configuradas. Acesse a aba Meta Cloud para cadastrar Token e ID do Número.'
+        });
+      }
+      if (!metaTemplateNome) {
+        return reply.status(400).send({
+          ok: false,
+          error: 'Para envios via WhatsApp Oficial (Meta Cloud), é obrigatório selecionar um Template Homologado na Meta.'
+        });
+      }
+    } else {
+      // Auditoria Meta Shield antes do disparo no chip tradicional
+      const metaValidation = validateMetaTemplate(mensagemTemplate, { isColdContact: true });
+      if (metaValidation.nivelRisco === 'alto_risco' && !forceRiskApproval) {
+        return reply.status(400).send({
+          ok: false,
+          error: 'Template com Alto Risco de Banimento detectado pelo Meta Shield. Corrija os gatilhos de risco ou confirme o envio forçado.',
+          metaValidation
+        });
+      }
     }
 
     // Selecionar destinatários
@@ -408,7 +609,9 @@ export async function createServer() {
       mensagem_template: mensagemTemplate,
       midia_tipo: mediaPath ? 'imagem' : undefined,
       midia_path: mediaPath || undefined,
-      total_destinatarios: contatosAlvo.length
+      total_destinatarios: contatosAlvo.length,
+      canal_envio: canalFinal,
+      meta_template_nome: metaTemplateNome || undefined
     });
 
     // Gerar fila com mensagens personalizadas e Spintax único para cada contato
@@ -422,9 +625,9 @@ export async function createServer() {
 
     addItensFila(itensFila);
 
-    logSistema('info', 'campanha', `Campanha "${nome}" criada com ${itensFila.length} destinatários.`);
+    logSistema('info', 'campanha', `Campanha "${nome}" criada via ${canalFinal === 'meta_cloud' ? 'Meta Cloud (Oficial)' : 'Chip Baileys'} com ${itensFila.length} destinatários.`);
     broadcastEvent('campanhas_update', {});
-    return { ok: true, campanhaId, totalDestinatarios: itensFila.length };
+    return { ok: true, campanhaId, totalDestinatarios: itensFila.length, canalEnvio: canalFinal };
   });
 
   app.post('/api/campanhas/:id/start', async (req: any) => {

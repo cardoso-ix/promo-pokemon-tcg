@@ -1806,5 +1806,220 @@ small {
   border-top: 1px dashed rgba(255, 255, 255, 0.07);
 }
 
+/* ==========================================================================
+   Meta Cloud API & Otimizador de Utilidade (Economia 50%)
+   ========================================================================== */
+
+.meta-economy-card {
+  background: linear-gradient(135deg, rgba(129, 201, 149, 0.12) 0%, rgba(138, 180, 248, 0.08) 100%);
+  border: 1px solid rgba(129, 201, 149, 0.35);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.meta-economy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.meta-economy-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #121212;
+  background: var(--google-green);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meta-economy-body {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 28px;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .meta-economy-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.meta-economy-text h3 {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.meta-economy-text p {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.meta-price-comparison {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(11, 13, 17, 0.6);
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+}
+
+.price-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 130px;
+}
+
+.price-box.utility .price-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--google-green);
+}
+
+.price-box.utility .price-val {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--google-green);
+  margin: 2px 0;
+}
+
+.price-box.marketing .price-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.price-box.marketing .price-val {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-decoration: line-through;
+  opacity: 0.75;
+  margin: 2px 0;
+}
+
+.price-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.price-vs {
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+
+/* Channel Toggle Grid (Baileys vs Meta Cloud) */
+.channel-toggle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+@media (max-width: 600px) {
+  .channel-toggle-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.channel-card {
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.channel-card:hover {
+  background: var(--bg-hover);
+  border-color: rgba(138, 180, 248, 0.4);
+}
+
+.channel-card.active {
+  background: rgba(138, 180, 248, 0.08);
+  border-color: var(--google-blue);
+  box-shadow: 0 0 0 1px var(--google-blue);
+}
+
+.channel-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.channel-icon {
+  font-size: 20px;
+}
+
+.channel-card strong {
+  font-size: 13.5px;
+  color: #fff;
+}
+
+.channel-card p {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Badges para Meta Templates */
+.badge-utility {
+  background: rgba(129, 201, 149, 0.15) !important;
+  color: var(--google-green) !important;
+  border: 1px solid rgba(129, 201, 149, 0.3) !important;
+  font-weight: 600;
+}
+
+.badge-marketing {
+  background: rgba(192, 132, 252, 0.15) !important;
+  color: var(--gemini-purple) !important;
+  border: 1px solid rgba(192, 132, 252, 0.3) !important;
+  font-weight: 600;
+}
+
+.badge-approved {
+  background: rgba(129, 201, 149, 0.18) !important;
+  color: var(--google-green) !important;
+  font-weight: 700;
+}
+
+.badge-pending {
+  background: rgba(253, 214, 99, 0.15) !important;
+  color: var(--google-amber) !important;
+  font-weight: 700;
+}
+
+.badge-rejected {
+  background: rgba(242, 139, 130, 0.15) !important;
+  color: var(--google-red) !important;
+  font-weight: 700;
+}
+
+
 
 

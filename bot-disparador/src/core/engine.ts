@@ -10,6 +10,7 @@ import {
   db
 } from '../db/database.js';
 import { whatsapp } from '../whatsapp/client.js';
+import { sendMetaTemplateMessage } from './meta-cloud.js';
 
 export function calculateDynamicDelay(minSec = 15, maxSec = 45): number {
   let min = Math.max(5, minSec);
@@ -208,21 +209,51 @@ class DispatchEngine {
     updateItemFilaStatus(item.id!, 'enviando');
 
     try {
-      await whatsapp.sendDirectMessage(
-        item.destinatario_jid,
-        item.mensagem_gerada,
-        campanha.midia_path || undefined
-      );
+      if (campanha.canal_envio === 'meta_cloud' && campanha.meta_template_nome) {
+        const metaToken = getConfig('meta_cloud_token', '');
+        const metaPhoneId = getConfig('meta_phone_number_id', '');
+        const recipientName = item.destinatario_nome || 'Treinador';
+        const defaultLink = 'https://chat.whatsapp.com/IFxkHX9ADT29EIUHRkCHVo';
 
-      updateItemFilaStatus(item.id!, 'enviado');
-      incrementCampanhaCounter(item.campanha_id, 'enviados');
-      this.consecutiveSends++;
+        const sendResult = await sendMetaTemplateMessage({
+          token: metaToken,
+          phoneNumberId: metaPhoneId,
+          to: item.destinatario_jid,
+          templateName: campanha.meta_template_nome,
+          languageCode: 'pt_BR',
+          bodyParameters: [recipientName, defaultLink]
+        });
 
-      logSistema(
-        'disparo',
-        'disparo',
-        `[ENVIADO] Mensagem entregue para ${item.destinatario_nome || item.destinatario_jid.split('@')[0]}`
-      );
+        if (!sendResult.ok) {
+          throw new Error(sendResult.error || 'Falha no envio via Meta Cloud API');
+        }
+
+        updateItemFilaStatus(item.id!, 'enviado');
+        incrementCampanhaCounter(item.campanha_id, 'enviados');
+        this.consecutiveSends++;
+
+        logSistema(
+          'disparo',
+          'disparo',
+          `[ENVIADO VIA META CLOUD] Template "${campanha.meta_template_nome}" entregue para ${recipientName} (${item.destinatario_jid.split('@')[0]})`
+        );
+      } else {
+        await whatsapp.sendDirectMessage(
+          item.destinatario_jid,
+          item.mensagem_gerada,
+          campanha.midia_path || undefined
+        );
+
+        updateItemFilaStatus(item.id!, 'enviado');
+        incrementCampanhaCounter(item.campanha_id, 'enviados');
+        this.consecutiveSends++;
+
+        logSistema(
+          'disparo',
+          'disparo',
+          `[ENVIADO VIA CHIP] Mensagem entregue para ${item.destinatario_nome || item.destinatario_jid.split('@')[0]}`
+        );
+      }
     } catch (err: any) {
       const erroMsg = err?.message || String(err);
       updateItemFilaStatus(item.id!, 'falha', erroMsg);

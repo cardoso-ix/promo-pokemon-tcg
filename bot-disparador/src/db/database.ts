@@ -87,7 +87,34 @@ db.exec(`
     mensagem TEXT NOT NULL,
     criado_em TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS meta_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meta_id TEXT UNIQUE,
+    nome TEXT NOT NULL,
+    categoria TEXT NOT NULL, -- UTILITY, MARKETING
+    idioma TEXT DEFAULT 'pt_BR',
+    status TEXT NOT NULL, -- APPROVED, PENDING, REJECTED, PAUSED
+    motivo_rejeicao TEXT,
+    corpo_texto TEXT NOT NULL,
+    exemplo_variaveis TEXT,
+    sincronizado_em TEXT NOT NULL
+  );
 `);
+
+// Migração suave de colunas na tabela campanhas
+try {
+  const pragmaCampanhas = db.prepare("PRAGMA table_info('campanhas')").all() as { name: string }[];
+  const colNames = pragmaCampanhas.map((c) => c.name);
+  if (!colNames.includes('canal_envio')) {
+    db.exec("ALTER TABLE campanhas ADD COLUMN canal_envio TEXT DEFAULT 'baileys'");
+  }
+  if (!colNames.includes('meta_template_nome')) {
+    db.exec('ALTER TABLE campanhas ADD COLUMN meta_template_nome TEXT');
+  }
+} catch (errCol: any) {
+  console.warn('Aviso de migração de colunas em campanhas:', errCol?.message || errCol);
+}
 
 // Configurações padrão
 const DEFAULTS: Record<string, string> = {
@@ -127,7 +154,12 @@ Explique que o grupo é feito de fã para fãs, sem spam, só com a galera reuni
   aquecimento_data_inicio: new Date().toISOString().split('T')[0],
   disparo_horario_inicio: '08:00',
   disparo_horario_fim: '21:30',
-  disparo_limite_diario: '100'
+  disparo_limite_diario: '100',
+  meta_cloud_ativo: 'false',
+  meta_cloud_token: '',
+  meta_waba_id: '',
+  meta_phone_number_id: '',
+  meta_api_version: 'v21.0'
 };
 
 const insertConfigStmt = db.prepare(`
@@ -362,6 +394,8 @@ export interface Campanha {
   total_destinatarios?: number;
   enviados?: number;
   falhas?: number;
+  canal_envio?: 'baileys' | 'meta_cloud';
+  meta_template_nome?: string;
   criado_em?: string;
   iniciado_em?: string;
   concluido_em?: string;
@@ -369,15 +403,17 @@ export interface Campanha {
 
 export function createCampanha(campanha: Campanha): number {
   const result = db.prepare(`
-    INSERT INTO campanhas (nome, mensagem_template, midia_tipo, midia_url, midia_path, status, total_destinatarios, criado_em)
-    VALUES (?, ?, ?, ?, ?, 'criada', ?, datetime('now', 'localtime'))
+    INSERT INTO campanhas (nome, mensagem_template, midia_tipo, midia_url, midia_path, status, total_destinatarios, canal_envio, meta_template_nome, criado_em)
+    VALUES (?, ?, ?, ?, ?, 'criada', ?, ?, ?, datetime('now', 'localtime'))
   `).run(
     campanha.nome,
     campanha.mensagem_template,
     campanha.midia_tipo || null,
     campanha.midia_url || null,
     campanha.midia_path || null,
-    campanha.total_destinatarios || 0
+    campanha.total_destinatarios || 0,
+    campanha.canal_envio || 'baileys',
+    campanha.meta_template_nome || null
   );
   return Number(result.lastInsertRowid);
 }
@@ -407,6 +443,82 @@ export function incrementCampanhaCounter(id: number, field: 'enviados' | 'falhas
 export function deleteCampanha(id: number): void {
   db.prepare('DELETE FROM fila_envios WHERE campanha_id = ?').run(id);
   db.prepare('DELETE FROM campanhas WHERE id = ?').run(id);
+}
+
+// Funções de Templates Oficiais da Meta (Cloud API)
+export interface MetaTemplate {
+  id?: number;
+  meta_id?: string;
+  nome: string;
+  categoria: 'UTILITY' | 'MARKETING';
+  idioma: string;
+  status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'PAUSED';
+  motivo_rejeicao?: string;
+  corpo_texto: string;
+  exemplo_variaveis?: string;
+  sincronizado_em: string;
+}
+
+export function getMetaTemplates(): MetaTemplate[] {
+  return db.prepare('SELECT * FROM meta_templates ORDER BY id DESC').all() as MetaTemplate[];
+}
+
+export function getMetaTemplateByNome(nome: string): MetaTemplate | undefined {
+  return db.prepare('SELECT * FROM meta_templates WHERE nome = ?').get(nome) as MetaTemplate | undefined;
+}
+
+export function saveMetaTemplate(tpl: Omit<MetaTemplate, 'id'>): void {
+  const existing = tpl.meta_id
+    ? (db.prepare('SELECT id FROM meta_templates WHERE meta_id = ?').get(tpl.meta_id) as any)
+    : (db.prepare('SELECT id FROM meta_templates WHERE nome = ?').get(tpl.nome) as any);
+
+  const sincronizadoEm = tpl.sincronizado_em || new Date().toISOString();
+
+  if (existing) {
+    db.prepare(`
+      UPDATE meta_templates SET
+        meta_id = COALESCE(?, meta_id),
+        nome = ?,
+        categoria = ?,
+        idioma = ?,
+        status = ?,
+        motivo_rejeicao = ?,
+        corpo_texto = ?,
+        exemplo_variaveis = ?,
+        sincronizado_em = ?
+      WHERE id = ?
+    `).run(
+      tpl.meta_id || null,
+      tpl.nome,
+      tpl.categoria,
+      tpl.idioma || 'pt_BR',
+      tpl.status,
+      tpl.motivo_rejeicao || null,
+      tpl.corpo_texto,
+      tpl.exemplo_variaveis || null,
+      sincronizadoEm,
+      existing.id
+    );
+  } else {
+    db.prepare(`
+      INSERT INTO meta_templates (meta_id, nome, categoria, idioma, status, motivo_rejeicao, corpo_texto, exemplo_variaveis, sincronizado_em)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      tpl.meta_id || null,
+      tpl.nome,
+      tpl.categoria,
+      tpl.idioma || 'pt_BR',
+      tpl.status,
+      tpl.motivo_rejeicao || null,
+      tpl.corpo_texto,
+      tpl.exemplo_variaveis || null,
+      sincronizadoEm
+    );
+  }
+}
+
+export function deleteMetaTemplateFromDb(nome: string): void {
+  db.prepare('DELETE FROM meta_templates WHERE nome = ?').run(nome);
 }
 
 // Funções da Fila de Envios

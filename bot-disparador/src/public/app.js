@@ -8,7 +8,10 @@ const state = {
   pastas: [],
   currentPasta: 'todos',
   campanhas: [],
-  configs: {}
+  configs: {},
+  metaStatus: { ativo: false, configured: false, tokenConfigured: false, phoneNumberId: null, wabaId: null, apiVersion: 'v21.0' },
+  metaTemplates: [],
+  metaPresets: []
 };
 
 // Toast de Notificação
@@ -141,6 +144,7 @@ const tabTitles = {
   grupos: { title: 'Captação de Grupos', desc: 'Selecione um grupo para extrair instantaneamente os participantes e criar listas de leads.' },
   contatos: { title: 'Base de Leads', desc: 'Contatos captados automaticamente de grupos ou importados manualmente.' },
   campanhas: { title: 'Disparador em Massa', desc: 'Crie e gerencie filas de envios em massa com Spintax inteligente e anti-ban.' },
+  'meta-cloud': { title: 'Meta Cloud API Oficial', desc: 'Disparos oficiais autenticados pela Meta com zero risco de banimento e otimização de custos.' },
   deepseek: { title: 'Atendimento IA (DeepSeek V4)', desc: 'Configure a inteligência artificial para responder clientes no privado imitando a sua voz.' },
   configuracoes: { title: 'Anti-Ban & Parâmetros', desc: 'Regule os intervalos de envio, limites de aquecimento de chip e horários de operação.' },
   logs: { title: 'Logs ao Vivo', desc: 'Registro cronológico de disparos, respostas da IA e eventos do WhatsApp.' }
@@ -167,6 +171,7 @@ function switchTab(tabId) {
     loadContatos();
   }
   if (tabId === 'campanhas') loadCampanhas();
+  if (tabId === 'meta-cloud') loadMetaCloudData();
   if (tabId === 'deepseek' || tabId === 'configuracoes') loadConfigs();
   if (tabId === 'logs') loadLogs();
 }
@@ -924,6 +929,201 @@ async function saveConfigs(updates) {
   }
 }
 
+// ==========================================
+// Meta Cloud API Oficial & Templates
+// ==========================================
+async function loadMetaCloudData() {
+  try {
+    const [resStatus, resTemplates] = await Promise.all([
+      fetch('/api/meta/status').then(r => r.json()).catch(() => ({ ativo: false })),
+      fetch('/api/meta/templates').then(r => r.json()).catch(() => ({ templates: [], presets: [] }))
+    ]);
+
+    state.metaStatus = resStatus;
+    state.metaTemplates = resTemplates.templates || [];
+    state.metaPresets = resTemplates.presets || [];
+
+    // Preencher campos
+    const toggleAtivo = document.getElementById('meta-cloud-ativo-toggle');
+    if (toggleAtivo) toggleAtivo.checked = !!resStatus.ativo;
+
+    const inputWaba = document.getElementById('meta-waba-id-input');
+    if (inputWaba && resStatus.wabaId) inputWaba.value = resStatus.wabaId;
+
+    const inputPhone = document.getElementById('meta-phone-id-input');
+    if (inputPhone && resStatus.phoneNumberId) inputPhone.value = resStatus.phoneNumberId;
+
+    const inputVer = document.getElementById('meta-api-version-input');
+    if (inputVer && resStatus.apiVersion) inputVer.value = resStatus.apiVersion;
+
+    const inputToken = document.getElementById('meta-token-input');
+    if (inputToken && resStatus.tokenConfigured && !inputToken.value) {
+      inputToken.placeholder = '•••••••••••••••••••••••• (Token já salvo com segurança)';
+    }
+
+    // Badge de status
+    const badge = document.getElementById('meta-connection-badge');
+    if (badge) {
+      if (resStatus.configured) {
+        badge.className = 'badge badge-approved';
+        badge.innerText = '🟢 Credenciais Salvas';
+      } else {
+        badge.className = 'badge badge-pending';
+        badge.innerText = '⚪ Não Configurado';
+      }
+    }
+
+    renderMetaTemplatesTable();
+  } catch (err) {
+    console.warn('Erro ao carregar Meta Cloud data:', err);
+  }
+}
+
+function renderMetaTemplatesTable() {
+  const tbody = document.getElementById('meta-templates-tbody');
+  if (!tbody) return;
+
+  const list = state.metaTemplates || [];
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
+          Nenhum template cadastrado localmente. Clique em <strong>"Sincronizar com a Meta"</strong> para importar templates existentes ou <strong>"Submeter Novo Template"</strong>.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = list.map(t => {
+    const isUtility = (t.categoria || '').toUpperCase() === 'UTILITY';
+    const catBadge = isUtility
+      ? `<span class="badge badge-utility">UTILIDADE (~R$ 0,18)</span>`
+      : `<span class="badge badge-marketing">MARKETING (~R$ 0,38)</span>`;
+
+    let statusBadge = `<span class="badge badge-pending">🟡 ${t.status || 'PENDING'}</span>`;
+    if (t.status === 'APPROVED') {
+      statusBadge = `<span class="badge badge-approved">🟢 APROVADO</span>`;
+    } else if (t.status === 'REJECTED') {
+      statusBadge = `<span class="badge badge-rejected" title="${escapeHtml(t.motivo_rejeicao || '')}">🔴 REJEITADO</span>`;
+    }
+
+    return `
+      <tr>
+        <td><code>${escapeHtml(t.nome)}</code></td>
+        <td>${catBadge}</td>
+        <td><code>${escapeHtml(t.idioma || 'pt_BR')}</code></td>
+        <td>${statusBadge}</td>
+        <td><small style="color: var(--text-secondary); max-width: 280px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(t.corpo_texto || '')}</small></td>
+        <td style="text-align: right; white-space: nowrap;">
+          ${t.status === 'APPROVED' ? `
+            <button class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 4px 8px; margin-right: 4px;" onclick="useMetaTemplateInCampanha('${escapeHtml(t.nome)}')">
+              🚀 Usar em Campanha
+            </button>
+          ` : ''}
+          <button class="btn-trash" style="padding: 4px 8px;" onclick="deleteMetaTemplate('${escapeHtml(t.nome)}')">
+            🗑️
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+window.useMetaTemplateInCampanha = async function(nome) {
+  switchTab('campanhas');
+  await openNovaCampanhaModal('todos');
+  const metaRadio = document.querySelector('input[name="camp-canal-envio"][value="meta_cloud"]');
+  if (metaRadio) {
+    metaRadio.checked = true;
+    handleChannelToggle('meta_cloud');
+    const select = document.getElementById('camp-meta-template-select');
+    if (select) {
+      select.value = nome;
+      handleMetaTemplateSelectionChange();
+    }
+  }
+};
+
+window.deleteMetaTemplate = async function(nome) {
+  if (confirm(`Deseja excluir o template "${nome}" do banco local e solicitar remoção na Meta?`)) {
+    try {
+      const res = await fetch(`/api/meta/templates/${encodeURIComponent(nome)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Template "${nome}" removido!`, 'success');
+        loadMetaCloudData();
+      } else {
+        showToast(data.message || 'Erro ao remover template.', 'error');
+      }
+    } catch (err) {
+      showToast(`Erro: ${err.message}`, 'error');
+    }
+  }
+};
+
+function auditUtilitySafetyLive(text) {
+  const auditBox = document.getElementById('meta-utility-safety-audit');
+  if (!auditBox) return;
+
+  if (!text || !text.trim()) {
+    auditBox.style.display = 'none';
+    return;
+  }
+
+  const lower = text.toLowerCase();
+  const commercialTriggers = [
+    { word: 'compre', reason: 'Apelo direto de compra força reclassificação para MARKETING.' },
+    { word: 'desconto', reason: 'Menção a descontos financeiros aciona filtro de MARKETING.' },
+    { word: 'promoção', reason: 'Termos de promoção acionam custo de MARKETING (~R$ 0,38).' },
+    { word: 'cupom', reason: 'Cupons são estritamente classificados como MARKETING pela Meta.' },
+    { word: 'oferta', reason: 'Palavra "oferta" tem alto risco de reclassificação pela Meta.' },
+    { word: 'r$', reason: 'Valores explícitos em moeda (R$) indicam venda comercial.' },
+    { word: '% off', reason: 'Percentuais de desconto acionam reclassificação imediata.' }
+  ];
+
+  const found = commercialTriggers.filter(t => lower.includes(t.word));
+
+  auditBox.style.display = 'block';
+  if (found.length > 0) {
+    auditBox.style.background = 'rgba(245, 158, 11, 0.12)';
+    auditBox.style.border = '1px solid #f59e0b';
+    auditBox.style.color = '#fde68a';
+    auditBox.innerHTML = `
+      <strong style="color: #f59e0b; display: block; margin-bottom: 4px;">⚠️ ALERTA DE RECLASSIFICAÇÃO META (Risco de Custo Alto):</strong>
+      <p style="margin: 0 0 6px;">Foram detectados gatilhos comerciais no texto: <strong>${found.map(f => f.word).join(', ')}</strong>.</p>
+      <small style="color: var(--text-secondary); display: block; line-height: 1.4;">A Meta pode reprovar a categoria <strong>UTILIDADE</strong> e forçar para <strong>MARKETING (~R$ 0,38)</strong>. Clique em <strong>"✨ Converter para Utilidade com IA"</strong> acima para transformar em alerta/status aceito.</small>
+    `;
+  } else {
+    auditBox.style.background = 'rgba(129, 201, 149, 0.12)';
+    auditBox.style.border = '1px solid rgba(129, 201, 149, 0.4)';
+    auditBox.style.color = '#a7f3d0';
+    auditBox.innerHTML = `
+      <strong style="color: var(--google-green); display: block; margin-bottom: 2px;">🟢 Formato Seguro para UTILIDADE (~R$ 0,18):</strong>
+      <small style="color: var(--text-secondary);">O texto está estruturado como notificação/alerta de serviço. Excelente probabilidade de aprovação com tarifa reduzida!</small>
+    `;
+  }
+}
+
+function updateMetaTemplatePreview() {
+  const bodyInput = document.getElementById('meta-tpl-body');
+  const previewText = document.getElementById('wa-meta-preview-text');
+  if (!bodyInput || !previewText) return;
+
+  const raw = bodyInput.value || '';
+  if (!raw.trim()) {
+    previewText.innerHTML = '<span style="color: rgba(233,237,239,0.45); font-style: italic;">Digite o texto ao lado para visualizar a formatação do template oficial...</span>';
+    return;
+  }
+
+  let rendered = raw
+    .replace(/\{\{1\}\}/g, 'Carlos')
+    .replace(/\{\{2\}\}/g, 'https://chat.whatsapp.com/IFxkHX9ADT29EIUHRkCHVo')
+    .replace(/\{\{3\}\}/g, 'Copag / Pokémon TCG');
+
+  previewText.innerHTML = formatWhatsAppMarkdown(rendered);
+}
+
 // Logs
 async function loadLogs(refetch = true) {
   const terminal = document.getElementById('terminal-logs');
@@ -1119,14 +1319,101 @@ document.addEventListener('DOMContentLoaded', () => {
   // Nova Campanha Modal & Simulador WhatsApp Live
   const modalCampanha = document.getElementById('modal-campanha');
 
+  function handleChannelToggle(canal) {
+    const labelBaileys = document.getElementById('label-canal-baileys');
+    const labelMeta = document.getElementById('label-canal-meta');
+    const groupBaileys = document.getElementById('group-baileys-template-editor');
+    const presetsContainer = document.getElementById('presets-container-campanha');
+    const groupMeta = document.getElementById('group-meta-template-selection');
+
+    if (canal === 'meta_cloud') {
+      if (labelMeta) labelMeta.classList.add('active');
+      if (labelBaileys) labelBaileys.classList.remove('active');
+      if (groupBaileys) groupBaileys.style.display = 'none';
+      if (presetsContainer) presetsContainer.style.display = 'none';
+      if (groupMeta) groupMeta.style.display = 'block';
+
+      handleMetaTemplateSelectionChange();
+    } else {
+      if (labelBaileys) labelBaileys.classList.add('active');
+      if (labelMeta) labelMeta.classList.remove('active');
+      if (groupBaileys) groupBaileys.style.display = 'block';
+      if (presetsContainer) presetsContainer.style.display = 'block';
+      if (groupMeta) groupMeta.style.display = 'none';
+
+      updateWhatsAppPreview();
+      updateMetaShieldAudit();
+    }
+  }
+
+  function handleMetaTemplateSelectionChange() {
+    const select = document.getElementById('camp-meta-template-select');
+    const detailsBox = document.getElementById('camp-meta-template-details');
+    const textElem = document.getElementById('wa-preview-text');
+    if (!select) return;
+
+    const selectedName = select.value;
+    if (!selectedName) {
+      if (detailsBox) detailsBox.style.display = 'none';
+      if (textElem) textElem.innerHTML = '<span style="color: rgba(233,237,239,0.45); font-style: italic;">Selecione um template aprovado na Meta para ver a prévia...</span>';
+      return;
+    }
+
+    const tpl = state.metaTemplates.find(t => t.nome === selectedName);
+    if (!tpl) return;
+
+    const isUtil = (tpl.categoria || '').toUpperCase() === 'UTILITY';
+    if (detailsBox) {
+      detailsBox.style.display = 'block';
+      detailsBox.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span class="badge ${isUtil ? 'badge-utility' : 'badge-marketing'}">${isUtil ? 'UTILIDADE (~R$ 0,18)' : 'MARKETING (~R$ 0,38)'}</span>
+          <span style="color: var(--google-green); font-weight: 600;">🟢 Aprovado pela Meta</span>
+        </div>
+        <div style="color: var(--text-secondary); line-height: 1.4;">${escapeHtml(tpl.corpo_texto)}</div>
+      `;
+    }
+
+    if (textElem) {
+      let rendered = (tpl.corpo_texto || '')
+        .replace(/\{\{1\}\}/g, 'Carlos')
+        .replace(/\{\{2\}\}/g, 'https://chat.whatsapp.com/IFxkHX9ADT29EIUHRkCHVo')
+        .replace(/\{\{3\}\}/g, 'Copag / Pokémon TCG');
+      textElem.innerHTML = formatWhatsAppMarkdown(rendered);
+    }
+  }
+
+  // Listeners de alternância de canal
+  document.querySelectorAll('input[name="camp-canal-envio"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      handleChannelToggle(e.target.value);
+    });
+  });
+  document.getElementById('label-canal-baileys')?.addEventListener('click', () => {
+    const radio = document.querySelector('input[name="camp-canal-envio"][value="baileys"]');
+    if (radio) {
+      radio.checked = true;
+      handleChannelToggle('baileys');
+    }
+  });
+  document.getElementById('label-canal-meta')?.addEventListener('click', () => {
+    const radio = document.querySelector('input[name="camp-canal-envio"][value="meta_cloud"]');
+    if (radio) {
+      radio.checked = true;
+      handleChannelToggle('meta_cloud');
+    }
+  });
+  document.getElementById('camp-meta-template-select')?.addEventListener('change', handleMetaTemplateSelectionChange);
+
   window.openNovaCampanhaModal = async function(selectedTarget = 'todos') {
     const select = document.getElementById('camp-target');
     select.innerHTML = '<option value="todos">Todos os Contatos da Base Geral</option>';
 
     try {
-      const [resPastas, resGrupos] = await Promise.all([
+      const [resPastas, resGrupos, resMeta] = await Promise.all([
         fetch('/api/contatos/pastas').then(r => r.json()).catch(() => ({ pastas: [] })),
-        fetch('/api/grupos').then(r => r.json()).catch(() => ({ grupos: [] }))
+        fetch('/api/grupos').then(r => r.json()).catch(() => ({ grupos: [] })),
+        fetch('/api/meta/templates').then(r => r.json()).catch(() => ({ templates: [] }))
       ]);
 
       if (resPastas && resPastas.pastas && resPastas.pastas.length > 0) {
@@ -1146,13 +1433,38 @@ document.addEventListener('DOMContentLoaded', () => {
         optgroup += '</optgroup>';
         select.innerHTML += optgroup;
       }
+
+      // Preencher seletor de templates Meta aprovados
+      state.metaTemplates = resMeta.templates || [];
+      const approved = state.metaTemplates.filter(t => t.status === 'APPROVED');
+      const selectMeta = document.getElementById('camp-meta-template-select');
+      if (selectMeta) {
+        if (approved.length === 0) {
+          selectMeta.innerHTML = '<option value="">⚠️ Nenhum template aprovado na Meta ainda (acesse a aba Meta Cloud)</option>';
+        } else {
+          selectMeta.innerHTML = '<option value="">-- Selecione um template aprovado na Meta --</option>' +
+            approved.map(t => {
+              const isUtil = (t.categoria || '').toUpperCase() === 'UTILITY';
+              const label = isUtil ? `[UTILIDADE ~R$ 0,18] ${t.nome}` : `[MARKETING ~R$ 0,38] ${t.nome}`;
+              return `<option value="${escapeHtml(t.nome)}">${escapeHtml(label)}</option>`;
+            }).join('');
+        }
+      }
     } catch (e) {
-      console.warn('Erro ao carregar alvos de campanha:', e);
+      console.warn('Erro ao carregar dados para campanha:', e);
     }
 
     if (selectedTarget) {
       select.value = selectedTarget;
     }
+
+    // Default para canal Baileys
+    const radioBaileys = document.querySelector('input[name="camp-canal-envio"][value="baileys"]');
+    if (radioBaileys) {
+      radioBaileys.checked = true;
+      handleChannelToggle('baileys');
+    }
+
     updateWhatsAppPreview();
     updateMetaShieldAudit();
     modalCampanha.style.display = 'flex';
@@ -1458,23 +1770,39 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-save-campanha').addEventListener('click', async () => {
     const nome = document.getElementById('camp-nome').value.trim();
     const targetVal = document.getElementById('camp-target').value;
-    const template = document.getElementById('camp-template').value.trim();
     const media = document.getElementById('camp-media').value.trim();
+    const canalEnvio = document.querySelector('input[name="camp-canal-envio"]:checked')?.value || 'baileys';
 
-    if (!nome || !template) return alert('Preencha o nome e o modelo da mensagem.');
+    if (!nome) return alert('Por favor, informe o nome da campanha.');
 
-    // Trava do Meta Shield contra banimento
+    let template = '';
+    let metaTemplateNome = undefined;
     let forceRiskApproval = false;
-    if (lastMetaAuditResult && lastMetaAuditResult.nivelRisco === 'alto_risco') {
-      const confirmForce = confirm(
-        '⚠️ ALERTA DO META SHIELD ANTI-BAN:\n\n' +
-        `Este template foi classificado como ALTO RISCO DE BANIMENTO (Score: ${lastMetaAuditResult.score}%).\n\n` +
-        'Ele contém violações graves (como gatilhos de spam ou ausência de Spintax) que podem derrubar seu chip no WhatsApp.\n\n' +
-        'Recomendamos clicar em "✨ Otimizar com IA" para blindar o texto.\n\n' +
-        'Deseja forçar o envio mesmo assim por sua conta e risco?'
-      );
-      if (!confirmForce) return;
-      forceRiskApproval = true;
+
+    if (canalEnvio === 'meta_cloud') {
+      const selectMeta = document.getElementById('camp-meta-template-select');
+      metaTemplateNome = selectMeta?.value;
+      if (!metaTemplateNome) {
+        return alert('Por favor, selecione um template aprovado na Meta para criar campanha via WhatsApp Oficial.');
+      }
+      const tpl = state.metaTemplates.find(t => t.nome === metaTemplateNome);
+      template = tpl?.corpo_texto || metaTemplateNome;
+    } else {
+      template = document.getElementById('camp-template').value.trim();
+      if (!template) return alert('Por favor, informe o modelo da mensagem com Spintax.');
+
+      // Trava do Meta Shield contra banimento no chip
+      if (lastMetaAuditResult && lastMetaAuditResult.nivelRisco === 'alto_risco') {
+        const confirmForce = confirm(
+          '⚠️ ALERTA DO META SHIELD ANTI-BAN:\n\n' +
+          `Este template foi classificado como ALTO RISCO DE BANIMENTO (Score: ${lastMetaAuditResult.score}%).\n\n` +
+          'Ele contém violações graves (como gatilhos de spam ou ausência de Spintax) que podem derrubar seu chip no WhatsApp.\n\n' +
+          'Recomendamos clicar em "✨ Otimizar com IA" para blindar o texto.\n\n' +
+          'Deseja forçar o envio mesmo assim por sua conta e risco?'
+        );
+        if (!confirmForce) return;
+        forceRiskApproval = true;
+      }
     }
 
     let targetType = 'todos';
@@ -1496,6 +1824,8 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify({
           nome,
           mensagemTemplate: template,
+          canalEnvio,
+          metaTemplateNome,
           targetType,
           targetGroupJid,
           targetPastaNome,
@@ -1505,7 +1835,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       const data = await res.json();
       if (data.ok) {
-        showToast(`Campanha criada com ${data.totalDestinatarios} mensagens!`, 'success');
+        showToast(`Campanha criada com ${data.totalDestinatarios} mensagens! Canal: ${canalEnvio === 'meta_cloud' ? 'Meta Cloud Oficial ⚡' : 'Chip Baileys 📱'}`, 'success');
         modalCampanha.style.display = 'none';
         document.getElementById('camp-nome').value = '';
         document.getElementById('camp-template').value = '';
@@ -1646,6 +1976,236 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // ==========================================
+  // Eventos Meta Cloud API Oficial & Templates
+  // ==========================================
+  const modalMetaTemplate = document.getElementById('modal-meta-template');
+
+  function openMetaTemplateModal() {
+    if (modalMetaTemplate) {
+      modalMetaTemplate.style.display = 'flex';
+      const nameInput = document.getElementById('meta-tpl-name');
+      const catSelect = document.getElementById('meta-tpl-category');
+      const bodyText = document.getElementById('meta-tpl-body');
+      const exInput = document.getElementById('meta-tpl-example');
+      const presetSelect = document.getElementById('meta-preset-selector');
+
+      if (nameInput) nameInput.value = '';
+      if (catSelect) catSelect.value = 'UTILITY';
+      if (bodyText) bodyText.value = '';
+      if (exInput) exInput.value = '';
+      if (presetSelect) presetSelect.value = '';
+
+      updateMetaTemplatePreview();
+      auditUtilitySafetyLive('');
+    }
+  }
+
+  function closeMetaTemplateModal() {
+    if (modalMetaTemplate) modalMetaTemplate.style.display = 'none';
+  }
+
+  document.getElementById('btn-open-meta-template-modal')?.addEventListener('click', openMetaTemplateModal);
+  document.getElementById('btn-close-meta-template-modal')?.addEventListener('click', closeMetaTemplateModal);
+  document.getElementById('btn-cancel-meta-template')?.addEventListener('click', closeMetaTemplateModal);
+  modalMetaTemplate?.addEventListener('click', (e) => {
+    if (e.target === modalMetaTemplate) closeMetaTemplateModal();
+  });
+
+  // Salvar Credenciais Meta
+  document.getElementById('btn-save-meta-config')?.addEventListener('click', async () => {
+    const ativo = document.getElementById('meta-cloud-ativo-toggle')?.checked || false;
+    const token = document.getElementById('meta-token-input')?.value.trim();
+    const wabaId = document.getElementById('meta-waba-id-input')?.value.trim();
+    const phoneNumberId = document.getElementById('meta-phone-id-input')?.value.trim();
+    const apiVersion = document.getElementById('meta-api-version-input')?.value.trim() || 'v21.0';
+
+    try {
+      const res = await fetch('/api/meta/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ativo, token, wabaId, phoneNumberId, apiVersion })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast('Credenciais da Meta Cloud API salvas com sucesso!', 'success');
+        loadMetaCloudData();
+      } else {
+        showToast(data.message || 'Erro ao salvar credenciais.', 'error');
+      }
+    } catch (err) {
+      showToast(`Erro: ${err.message}`, 'error');
+    }
+  });
+
+  // Testar Conexão Oficial Meta
+  document.getElementById('btn-test-meta-connection')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btn-test-meta-connection');
+    const token = document.getElementById('meta-token-input')?.value.trim();
+    const phoneNumberId = document.getElementById('meta-phone-id-input')?.value.trim();
+    const apiVersion = document.getElementById('meta-api-version-input')?.value.trim() || 'v21.0';
+
+    btn.disabled = true;
+    btn.innerText = '⚡ Testando...';
+
+    try {
+      const res = await fetch('/api/meta/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, phoneNumberId, apiVersion })
+      });
+      const data = await res.json();
+      const badge = document.getElementById('meta-connection-badge');
+      if (data.ok) {
+        showToast(`Conexão Oficial com a Meta bem-sucedida! Número verificado: ${data.data?.display_phone_number || ''}`, 'success');
+        if (badge) {
+          badge.className = 'badge badge-approved';
+          badge.innerText = '🟢 Conectado Oficial';
+        }
+      } else {
+        showToast(data.message || 'Falha na conexão com a Meta.', 'error');
+        if (badge) {
+          badge.className = 'badge badge-rejected';
+          badge.innerText = '🔴 Erro de Conexão';
+        }
+      }
+    } catch (err) {
+      showToast(`Erro ao testar: ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerText = '⚡ Testar Conexão Oficial';
+    }
+  });
+
+  // Sincronizar Templates com a Meta
+  document.getElementById('btn-sync-meta-templates')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btn-sync-meta-templates');
+    btn.disabled = true;
+    btn.innerText = '🔄 Sincronizando...';
+
+    try {
+      const res = await fetch('/api/meta/templates/sync', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Sucesso! ${data.count} templates sincronizados da Meta!`, 'success');
+        await loadMetaCloudData();
+      } else {
+        showToast(data.message || 'Erro ao sincronizar templates com a Meta.', 'error');
+      }
+    } catch (err) {
+      showToast(`Erro na sincronização: ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerText = '🔄 Sincronizar com a Meta';
+    }
+  });
+
+  // Listener Preset de Template
+  document.getElementById('meta-preset-selector')?.addEventListener('change', (e) => {
+    const key = e.target.value;
+    if (!key) return;
+    const preset = state.metaPresets.find(p => p.name === key);
+    if (preset) {
+      document.getElementById('meta-tpl-name').value = preset.name;
+      document.getElementById('meta-tpl-category').value = preset.category;
+      document.getElementById('meta-tpl-body').value = preset.body;
+      document.getElementById('meta-tpl-example').value = preset.exampleValues.join(', ');
+      updateMetaTemplatePreview();
+      auditUtilitySafetyLive(preset.body);
+      showToast(`Preset "${preset.name}" carregado!`, 'info');
+    }
+  });
+
+  // Listener Digitação Corpo do Template
+  document.getElementById('meta-tpl-body')?.addEventListener('input', (e) => {
+    updateMetaTemplatePreview();
+    auditUtilitySafetyLive(e.target.value);
+  });
+
+  // Sanitização automática do nome do template (letras minúsculas e underline)
+  document.getElementById('meta-tpl-name')?.addEventListener('input', (e) => {
+    e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/_+/g, '_');
+  });
+
+  // Botão Converter para Utilidade com IA
+  document.getElementById('btn-meta-optimize-utility')?.addEventListener('click', async () => {
+    const bodyInput = document.getElementById('meta-tpl-body');
+    const text = bodyInput?.value.trim();
+    if (!text) {
+      return alert('Digite ou cole uma mensagem comercial antes para a IA otimizar.');
+    }
+
+    const btn = document.getElementById('btn-meta-optimize-utility');
+    btn.disabled = true;
+    btn.innerText = '✨ Otimizando com IA...';
+
+    try {
+      const res = await fetch('/api/meta/templates/optimize-utility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      const data = await res.json();
+      if (data.ok && data.optimizedText) {
+        bodyInput.value = data.optimizedText;
+        updateMetaTemplatePreview();
+        auditUtilitySafetyLive(data.optimizedText);
+        showToast('Template otimizado como Notificação de Utilidade oficial!', 'success');
+      } else {
+        showToast(data.message || 'Falha ao otimizar template.', 'error');
+      }
+    } catch (err) {
+      showToast(`Erro na IA: ${err.message}`, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerText = '✨ Converter para Utilidade com IA';
+    }
+  });
+
+  // Botão Submeter para a Meta
+  document.getElementById('btn-submit-meta-template')?.addEventListener('click', async () => {
+    const name = document.getElementById('meta-tpl-name')?.value.trim();
+    const category = document.getElementById('meta-tpl-category')?.value;
+    const bodyText = document.getElementById('meta-tpl-body')?.value.trim();
+    const exampleInput = document.getElementById('meta-tpl-example')?.value.trim();
+
+    if (!name || !bodyText) {
+      return alert('Preencha o nome do template e o corpo do texto.');
+    }
+
+    const exampleValues = exampleInput ? exampleInput.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const btn = document.getElementById('btn-submit-meta-template');
+    btn.disabled = true;
+    btn.innerText = '🚀 Submetendo à Meta...';
+
+    try {
+      const res = await fetch('/api/meta/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          category,
+          language: 'pt_BR',
+          bodyText,
+          exampleValues
+        })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        showToast(`Template "${name}" submetido com sucesso! Status inicial: ${data.data?.status || 'PENDING'}`, 'success');
+        closeMetaTemplateModal();
+        loadMetaCloudData();
+      } else {
+        alert(`Erro na validação da Meta:\n\n${data.message || 'Falha ao submeter template.'}`);
+      }
+    } catch (err) {
+      alert(`Erro de conexão com o servidor: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = '🚀 Submeter para a Meta';
+    }
+  });
 
   // Inicialização
   loadStatus();

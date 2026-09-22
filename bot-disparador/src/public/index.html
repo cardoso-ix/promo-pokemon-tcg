@@ -42,6 +42,10 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
           <span>Disparador em Massa</span>
         </button>
+        <button class="nav-item" data-tab="meta-cloud">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+          <span>Meta Cloud (Oficial)</span>
+        </button>
         <button class="nav-item" data-tab="deepseek">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 2a10 10 0 0 1 10 10h-10V2z"></path><path d="M12 12l8 8"></path></svg>
           <span>Atendimento IA</span>
@@ -689,6 +693,132 @@
           </div>
         </div>
       </section>
+
+      <!-- TAB 8: META CLOUD (OFICIAL) -->
+      <section class="tab-pane" id="pane-meta-cloud">
+        <!-- Banner de Economia e Otimizador de Utilidade -->
+        <div class="meta-economy-card">
+          <div class="meta-economy-header">
+            <span class="meta-economy-badge">💡 METADE DO PREÇO POR DISPARO</span>
+            <span class="badge" style="background: rgba(129, 201, 149, 0.15); color: var(--google-green);">Tarifa Reduzida Meta Brasil</span>
+          </div>
+          <div class="meta-economy-body">
+            <div class="meta-economy-text">
+              <h3>Economize até 50% por envio com Templates de Utilidade (UTILITY)</h3>
+              <p>
+                Pela tabela oficial da Meta (WhatsApp Business Cloud API), mensagens na categoria <strong>UTILIDADE</strong> custam cerca de <strong>~R$ 0,18</strong> por conversa, enquanto mensagens de <strong>MARKETING</strong> custam <strong>~R$ 0,38</strong>.
+                Utilize nossos <strong>4 modelos pré-aprovados de Pokémon TCG</strong> ou nosso <strong>✨ Otimizador com IA</strong> para adequar seu texto como alerta/notificação de serviço, evitando que o algoritmo da Meta reclassifique seu disparo para a tarifa cara de marketing.
+              </p>
+            </div>
+            <div class="meta-price-comparison">
+              <div class="price-box utility">
+                <span class="price-title">UTILIDADE (UTILITY)</span>
+                <span class="price-val">~R$ 0,18</span>
+                <span class="price-desc">Notificações, status e alertas solicitados</span>
+              </div>
+              <div class="price-vs">VS</div>
+              <div class="price-box marketing">
+                <span class="price-title">MARKETING</span>
+                <span class="price-val">~R$ 0,38</span>
+                <span class="price-desc">Promoções e vendas diretas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Credenciais & Conexão Oficial Meta -->
+        <div class="glass-card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <h3>🔑 Credenciais da Meta Cloud API (WhatsApp Business Oficial)</h3>
+              <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">Conecte sua conta do WhatsApp Business através do Meta for Developers (Graph API).</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="badge" id="meta-connection-badge" style="background: rgba(154, 160, 166, 0.15); color: var(--text-secondary);">⚪ Não Verificado</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-test-meta-connection">⚡ Testar Conexão Oficial</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-save-meta-config">💾 Salvar Credenciais</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div style="margin-bottom: 16px;">
+              <label class="toggle-switch-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="meta-cloud-ativo-toggle">
+                  <span class="toggle-slider"></span>
+                </label>
+                <strong>Habilitar Envio via Meta Cloud API Oficial no Sistema</strong>
+              </label>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 14px;">
+              <div class="form-group flex-1">
+                <label for="meta-token-input">Token de Acesso Permanente (System User Access Token):</label>
+                <input type="password" id="meta-token-input" class="input-field" placeholder="EAAB... (Cole aqui o token de sistema)">
+                <small>Gerado no Meta Business Manager &gt; Contas &gt; Usuários do Sistema com permissão <code>whatsapp_business_messaging</code>.</small>
+              </div>
+              <div class="form-group flex-1">
+                <label for="meta-waba-id-input">WhatsApp Business Account ID (WABA ID):</label>
+                <input type="text" id="meta-waba-id-input" class="input-field" placeholder="Ex: 104857291049281">
+                <small>Identificador da sua Conta do WhatsApp Business no painel Meta.</small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="meta-phone-id-input">Phone Number ID (ID do Número de Telefone):</label>
+                <input type="text" id="meta-phone-id-input" class="input-field" placeholder="Ex: 109283746501928">
+                <small>ID do telefone atribuído pela Meta na aba API Setup (diferente do número de telefone celular).</small>
+              </div>
+              <div class="form-group flex-1">
+                <label for="meta-api-version-input">Versão da Graph API:</label>
+                <input type="text" id="meta-api-version-input" class="input-field" placeholder="v21.0" value="v21.0">
+                <small>Versão estável recomendada: <code>v21.0</code>.</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela de Templates Meta -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <h3>📋 Templates de Mensagem Cadastrados na Meta</h3>
+              <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">Templates aprovados pela Meta podem ser disparados em massa com zero risco de bloqueio ou banimento.</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-meta-templates">
+                🔄 Sincronizar com a Meta
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-open-meta-template-modal">
+                ➕ Submeter Novo Template
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" id="meta-templates-table">
+                <thead>
+                  <tr>
+                    <th>Nome do Template</th>
+                    <th>Categoria</th>
+                    <th>Idioma</th>
+                    <th>Status Meta</th>
+                    <th>Corpo do Template</th>
+                    <th style="text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="meta-templates-tbody">
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                      Clique em "Sincronizar com a Meta" para carregar os templates cadastrados.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -717,7 +847,44 @@
             </select>
           </div>
 
+          <!-- Seletor de Canal de Envio: Baileys vs Meta Cloud -->
           <div class="form-group">
+            <label>Canal de Envio:</label>
+            <div class="channel-toggle-grid">
+              <label class="channel-card active" id="label-canal-baileys">
+                <input type="radio" name="camp-canal-envio" value="baileys" checked style="display: none;">
+                <div class="channel-card-top">
+                  <span class="channel-icon">📱</span>
+                  <span class="badge" style="background: rgba(138, 180, 248, 0.15); color: var(--google-blue);">Emulação Orgânica</span>
+                </div>
+                <strong>Chip Tradicional (Baileys)</strong>
+                <p>Envio humanizado com ritmo variável, simulação de digitação e warm up gradual.</p>
+              </label>
+
+              <label class="channel-card" id="label-canal-meta">
+                <input type="radio" name="camp-canal-envio" value="meta_cloud" style="display: none;">
+                <div class="channel-card-top">
+                  <span class="channel-icon">⚡</span>
+                  <span class="badge" style="background: rgba(129, 201, 149, 0.15); color: var(--google-green);">Zero Risco Ban</span>
+                </div>
+                <strong>Meta Cloud Oficial</strong>
+                <p>Disparos autenticados pelo WhatsApp Business da Meta com templates pré-validados.</p>
+              </label>
+            </div>
+          </div>
+
+          <!-- Bloco Exclusivo: Seleção de Template Meta Cloud -->
+          <div class="form-group" id="group-meta-template-selection" style="display: none;">
+            <label for="camp-meta-template-select">Selecione o Template Aprovado na Meta:</label>
+            <select id="camp-meta-template-select" class="input-field" style="border-color: rgba(129, 201, 149, 0.5);">
+              <option value="">-- Carregando templates aprovados... --</option>
+            </select>
+            <div id="camp-meta-template-details" style="margin-top: 8px; padding: 10px 14px; background: rgba(129, 201, 149, 0.08); border: 1px solid rgba(129, 201, 149, 0.25); border-radius: 8px; font-size: 12.5px; display: none;">
+            </div>
+          </div>
+
+          <!-- Bloco Exclusivo Chip Baileys: Spintax & Tags -->
+          <div class="form-group" id="group-baileys-template-editor">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <label for="camp-template" style="margin-bottom: 0;">Mensagem com Spintax & Tags:</label>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-random-warmup" style="font-size: 11.5px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px; border-color: rgba(251, 146, 60, 0.4); color: #fb923c;">
@@ -770,7 +937,7 @@
           </div>
 
           <!-- Modelos Prontos de Alta Conversão Pokémon TCG -->
-          <div class="presets-container">
+          <div class="presets-container" id="presets-container-campanha">
             <div class="preset-category-tabs">
               <button type="button" class="preset-tab-btn active tab-aquecimento" id="tab-presets-aquecimento">
                 🔥 Aquecimento Seguro (5 De Fã para Fãs)
@@ -994,6 +1161,119 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" id="btn-cancel-import">Cancelar</button>
         <button class="btn btn-primary" id="btn-confirm-import">Importar e Criar Pasta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Submeter Template para Meta Cloud API -->
+  <div class="modal-overlay" id="modal-meta-template" style="display: none;">
+    <div class="modal-dialog modal-dialog-large">
+      <div class="modal-header">
+        <div>
+          <h3>Submeter Template para Validação na Meta</h3>
+          <p class="modal-subtitle">Envie seu template para aprovação oficial da Meta. Após aprovado, você pode disparar sem risco de banimento.</p>
+        </div>
+        <button class="btn-close" id="btn-close-meta-template-modal">&times;</button>
+      </div>
+      <div class="modal-body modal-split">
+        <!-- Coluna Esquerda: Formulário -->
+        <div class="modal-col form-col">
+          <!-- Seletor de Presets Prontos -->
+          <div class="form-group">
+            <label style="color: var(--google-blue); font-weight: 600;">⚡ Modelos Prontos de Utilidade (Pokémon TCG - 50% Mais Barato):</label>
+            <select id="meta-preset-selector" class="input-field" style="border-color: rgba(138, 180, 248, 0.4);">
+              <option value="">-- Selecione um modelo pronto para carregar --</option>
+              <option value="alerta_notificacao_estoque">1. Alerta de Notificação / Monitoramento de Estoque (UTILITY)</option>
+              <option value="atualizacao_comunidade_vip">2. Atualização de Acesso à Comunidade VIP (UTILITY)</option>
+              <option value="confirmacao_solicitacao_link">3. Confirmação de Solicitação de Link Solicitado (UTILITY)</option>
+              <option value="alerta_oportunidade_pokemon">4. Alerta de Oportunidade e Disponibilidade (UTILITY)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="meta-tpl-name">Nome do Template (apenas letras minúsculas e _):</label>
+              <input type="text" id="meta-tpl-name" class="input-field" placeholder="ex: notificacao_estoque_pokemon">
+              <small>Apenas letras minúsculas, números e underline.</small>
+            </div>
+            <div class="form-group flex-1">
+              <label for="meta-tpl-category">Categoria Meta:</label>
+              <select id="meta-tpl-category" class="input-field">
+                <option value="UTILITY" selected>UTILIDADE (UTILITY) — ~R$ 0,18 (Recomendado)</option>
+                <option value="MARKETING">MARKETING — ~R$ 0,38 (Comercial)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label for="meta-tpl-body" style="margin-bottom: 0;">Corpo da Mensagem (Texto do Template):</label>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-meta-optimize-utility" style="font-size: 11.5px; padding: 4px 10px; color: var(--google-blue); border-color: rgba(138, 180, 248, 0.4);">
+                ✨ Converter para Utilidade com IA
+              </button>
+            </div>
+            <textarea id="meta-tpl-body" rows="6" class="input-field textarea-field" placeholder="Olá {{1}}, aviso informativo da Comunidade Pokémon TCG: a disponibilidade dos itens monitorados foi atualizada no link oficial: {{2}}"></textarea>
+            <div class="tags-hint">
+              <span>Variáveis oficiais da Meta:</span>
+              <code title="Nome do destinatário">{{1}}</code>
+              <code title="Link ou informação extra">{{2}}</code>
+              <small>A Meta exige formato numérico duplo: <code>{{1}}</code>, <code>{{2}}</code></small>
+            </div>
+
+            <!-- Caixa de Auditoria de Utilidade em Tempo Real -->
+            <div id="meta-utility-safety-audit" style="margin-top: 10px; padding: 12px 14px; border-radius: 8px; font-size: 12px; display: none;"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="meta-tpl-example">Exemplo de Valores das Variáveis (Exigido pela Meta para aprovação):</label>
+            <input type="text" id="meta-tpl-example" class="input-field" placeholder="Carlos, https://chat.whatsapp.com/exemplo">
+            <small>Separe por vírgula se houver mais de uma variável: ex. <code>Carlos, https://link.com</code></small>
+          </div>
+        </div>
+
+        <!-- Coluna Direita: Preview WhatsApp Oficial -->
+        <div class="modal-col preview-col">
+          <div class="preview-header-bar">
+            <span class="preview-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+              Prévia do Template Oficial Meta
+            </span>
+          </div>
+
+          <div class="whatsapp-phone-frame">
+            <div class="wa-header">
+              <div class="wa-header-left">
+                <span class="wa-back-btn">‹</span>
+                <div class="wa-avatar"><span>🏢</span></div>
+                <div class="wa-contact-info">
+                  <span class="wa-name">Pokémon TCG Oficial</span>
+                  <span class="wa-status" style="color: var(--google-blue);">Conta Comercial Oficial ✓</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="wa-chat-body">
+              <div class="wa-date-pill">HOJE</div>
+              <div class="wa-bubble-sent" id="wa-meta-preview-bubble">
+                <div class="wa-message-text" id="wa-meta-preview-text">
+                  Digite o texto ao lado para visualizar a formatação do template oficial...
+                </div>
+                <div class="wa-message-meta">
+                  <span class="wa-time">12:00</span>
+                  <span class="wa-ticks">✓✓</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="wa-bottom-bar">
+              <span class="wa-input-mock">Mensagem</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-meta-template">Cancelar</button>
+        <button class="btn btn-primary" id="btn-submit-meta-template">🚀 Submeter para a Meta</button>
       </div>
     </div>
   </div>
