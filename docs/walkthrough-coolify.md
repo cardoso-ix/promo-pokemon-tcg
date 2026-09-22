@@ -51,13 +51,14 @@ Executamos as suítes de testes de ponta a ponta:
 
 ---
 
-## 📋 Como Subir Agora na sua VPS com Coolify
+## 🌐 Status Atual em Produção na VPS HostGator (108.174.145.77)
 
-1. **Instale o Coolify na VPS:**
-   ```bash
-   curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
-   ```
-2. **Acesse `http://SEU_IP:8000`** e crie um novo recurso selecionando **Docker Compose**.
-3. **Aponte para o arquivo:** `docker-compose.coolify.yml`.
-4. **Preencha as variáveis de ambiente** com base no [`.env.example`](file:///.env.example).
-5. **Clique em Deploy!**
+O deploy foi executado com sucesso diretamente pelo Coolify via API:
+- **Status dos Contêineres:** 🟢 `running:healthy`
+- **Painel 1 (Replicador de Ofertas):** 👉 **`http://108.174.145.77:3000`**
+- **Painel 2 (Bot Disparador & IA):** 👉 **`http://108.174.145.77:3333`**
+- **Painel Administrativo Coolify:** 👉 **`http://108.174.145.77:8000`**
+
+### Credenciais Padrão de Acesso:
+- **Usuário:** `admin` (ou `eduardo`)
+- **Senha:** `promo2026` (ou a senha customizada que você definir no `.env`)
