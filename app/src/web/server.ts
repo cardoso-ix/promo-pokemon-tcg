@@ -438,16 +438,27 @@ export async function createServer() {
       const isTCG = isProdutoTCG(text, dadosOferta.produto, slugParaFiltro);
 
       const cupomExtraido = extrairCupom(text) || '';
+      const isCupom = Boolean(cupomExtraido || detectarMensagemCupom(text) || /\bcupo(?:m|ns)\b/i.test(text));
 
-      const hasPreco = Boolean(
-        (dadosOferta.valorPor && dadosOferta.valorPor !== 'Consultar') ||
-        (dadosOferta.valorDe && dadosOferta.valorDe !== 'Consultar')
+      const hasCanonicalProduct = Boolean(
+        result.canonicalProductId &&
+        !result.canonicalProductId.startsWith('CUPOM_')
       );
+      const hasPrecoValido = Boolean(
+        (dadosOferta.valorPor && dadosOferta.valorPor !== 'Consultar' && dadosOferta.valorPor !== 'R$ 0') ||
+        (dadosOferta.valorDe && dadosOferta.valorDe !== 'Consultar' && dadosOferta.valorDe !== 'R$ 0')
+      );
+      const isTituloProduto = Boolean(
+        dadosOferta.produto &&
+        dadosOferta.produto !== 'Colecionável Pokémon TCG' &&
+        !dadosOferta.produto.toLowerCase().includes('cupom') &&
+        !dadosOferta.produto.toLowerCase().includes('desconto')
+      );
+
       const hasProdutoEspecifico = Boolean(
-        result.canonicalProductId ||
-        hasPreco ||
-        (dadosOferta.produto && dadosOferta.produto !== 'Colecionável Pokémon TCG' && !dadosOferta.produto.toLowerCase().startsWith('cupom')) ||
-        Boolean(imagePreviewUrl)
+        hasCanonicalProduct ||
+        (!isCupom && hasPrecoValido && isTituloProduto) ||
+        (Boolean(imagePreviewUrl) && !isCupom)
       );
 
       const tipoDetectado = determinarTipoMensagem({

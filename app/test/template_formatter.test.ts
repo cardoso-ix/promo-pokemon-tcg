@@ -204,3 +204,27 @@ test('formatarMensagemReplicada - Oferta sem preço informado omite linhas de pr
   assert.strictEqual(msg.includes('Compra 100% Protegida'), false);
   assert.strictEqual(msg.includes('Garanta o seu com desconto'), false);
 });
+
+test('formatarMensagemReplicada - Comunicado de Cupom 15% preserva texto e anexa vitrine sem fingir ser produto', () => {
+  const textoConcorrente = `🚨 *CUPOM DE 15% DE DESCONTO!*
+
+Todos os produtos enviados estão com *preços excelentes*! 🔥
+Não perca tempo e garanta o seu *antes que esgote!* 🛒 ⚡
+@all`;
+
+  const msg = formatarMensagemReplicada({
+    tipo: 'cupom',
+    titulo: 'CUPOM DE 15% DE DESCONTO!',
+    linkVitrineCurto: 'https://mercadolivre.com/sec/2rM6RPm',
+    textoOriginalHigienizado: textoConcorrente
+  });
+
+  assert.strictEqual(msg.startsWith('@pokemon_tcg_promo\n\n🚨 *CUPOM DE 15% DE DESCONTO!*'), true);
+  assert.strictEqual(msg.includes('Todos os produtos enviados estão com *preços excelentes*!'), true);
+  assert.strictEqual(msg.includes('Não perca tempo e garanta o seu *antes que esgote!*'), true);
+  // Não deve inventar "De: R$ 15" ou "Últimas unidades em estoque"
+  assert.strictEqual(msg.includes('De: R$ 15'), false);
+  assert.strictEqual(msg.includes('ÚLTIMAS UNIDADES EM ESTOQUE'), false);
+  // Deve anexar o link da vitrine ao final
+  assert.strictEqual(msg.includes('🛒 https://mercadolivre.com/sec/2rM6RPm'), true);
+});

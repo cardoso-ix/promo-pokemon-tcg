@@ -519,6 +519,7 @@ export function cleanSpamLines(text: string, phrasesToRemove: string[]): string 
     return '';
   });
   result = result.replace(/[ \t]+$/gm, '');
+  result = result.replace(/^@(?:all|everyone)\b/gim, '');
   result = result.replace(/\n{3,}/g, '\n\n');
   return result.trim();
 }

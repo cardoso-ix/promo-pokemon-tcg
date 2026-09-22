@@ -753,15 +753,25 @@ export class WhatsAppManager {
     let textoFinalPublicar = novoTexto;
 
     if (templateModo === 'padrao' && !isComunicadoSemLink) {
-      // Verifica se a mensagem traz um produto específico (preço, ID canônico, foto de produto ou título real)
-      const hasPreco = Boolean(
-        (dadosOferta.valorPor && dadosOferta.valorPor !== 'Consultar') ||
-        (dadosOferta.valorDe && dadosOferta.valorDe !== 'Consultar')
+      // Verifica se a mensagem traz um produto específico (ID canônico MLB real, ou preço válido sem ser cupom)
+      const hasCanonicalProduct = Boolean(
+        canonicalProductId &&
+        !canonicalProductId.startsWith('CUPOM_')
       );
+      const hasPrecoValido = Boolean(
+        (dadosOferta.valorPor && dadosOferta.valorPor !== 'Consultar' && dadosOferta.valorPor !== 'R$ 0') ||
+        (dadosOferta.valorDe && dadosOferta.valorDe !== 'Consultar' && dadosOferta.valorDe !== 'R$ 0')
+      );
+      const isTituloProduto = Boolean(
+        dadosOferta.produto &&
+        dadosOferta.produto !== 'Colecionável Pokémon TCG' &&
+        !dadosOferta.produto.toLowerCase().includes('cupom') &&
+        !dadosOferta.produto.toLowerCase().includes('desconto')
+      );
+
       const hasProdutoEspecifico = Boolean(
-        canonicalProductId ||
-        hasPreco ||
-        (dadosOferta.produto && dadosOferta.produto !== 'Colecionável Pokémon TCG' && !dadosOferta.produto.toLowerCase().startsWith('cupom')) ||
+        hasCanonicalProduct ||
+        (!isCupom && hasPrecoValido && isTituloProduto) ||
         (Boolean(messageHasImage) && !isCupom)
       );
 

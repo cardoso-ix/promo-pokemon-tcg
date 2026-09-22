@@ -137,16 +137,20 @@ export function extrairDadosOferta(
   let valorPor = '';
   let valorDe = '';
 
-  // Procurar padrão "Por:" ou "Por apenas:"
-  const porMatch = texto.match(/(?:👉🏼?|👉)?\s*\*?(?:por\s*apenas|por)[:\s\*👉🏼✅]*R?\$?\s*([\d\.,]+)/i);
+  // Procurar padrão "Por:" ou "Por apenas:" (ignorando percentuais como "por 15%")
+  const porMatch = texto.match(/(?:👉🏼?|👉)?\s*\*?(?:por\s*apenas|por)[:\s\*👉🏼✅]*R?\$?\s*([\d\.,]+)(?!\s*[%a-zA-Z])/i);
   if (porMatch && porMatch[1]) {
     valorPor = normalizarMoeda(porMatch[1]);
   }
 
-  // Procurar padrão "De:"
-  const deMatch = texto.match(/(?:❌|~|\*)?\s*(?:de)[:\s\*~❌]*R?\$?\s*([\d\.,]+)/i);
+  // Procurar padrão "De:" (garante que não seja percentual como "de 15%" ou contexto de cupom)
+  const deMatch = texto.match(/(?:❌|~|\*)?\s*(?:de)[:\s\*~❌]*R?\$?\s*([\d\.,]+)(?!\s*[%a-zA-Z])/i);
   if (deMatch && deMatch[1]) {
-    valorDe = normalizarMoeda(deMatch[1]);
+    const idx = deMatch.index || 0;
+    const trechoAntes = texto.slice(Math.max(0, idx - 15), idx).toLowerCase();
+    if (!trechoAntes.includes('cupom')) {
+      valorDe = normalizarMoeda(deMatch[1]);
+    }
   }
 
   // Se não encontrou pelo prefixo De/Por, busca valores monetários no texto

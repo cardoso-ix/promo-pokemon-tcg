@@ -72,3 +72,16 @@ https://meli.la/12345`;
   assert.ok(oferta.produto.includes('Pokémon') || oferta.produto.includes('Mewtwo') || oferta.produto.includes('Copag'));
   assert.strictEqual(oferta.valorPor, 'R$ 89,90');
 });
+
+test('extrairDadosOferta NÃO deve extrair porcentagem de cupom como preço De', () => {
+  const mensagem = `🚨 *CUPOM DE 15% DE DESCONTO!*
+
+Todos os produtos enviados estão com *preços excelentes*! 🔥
+Não perca tempo e garanta o seu *antes que esgote!* 🛒 ⚡
+@all`;
+
+  const oferta = extrairDadosOferta(mensagem, undefined, 'Grupo Concorrente');
+
+  assert.strictEqual(oferta.valorDe, '');
+  assert.strictEqual(oferta.valorPor, 'Consultar');
+});
