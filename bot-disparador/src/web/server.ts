@@ -31,7 +31,8 @@ import {
 import { whatsapp, WhatsAppState } from '../whatsapp/client.js';
 import { dispatchEngine } from '../core/engine.js';
 import { renderMessageTemplate } from '../core/spintax.js';
-import { generateDeepSeekResponse } from '../ai/deepseek.js';
+import { generateDeepSeekResponse, optimizeTemplateWithDeepSeek } from '../ai/deepseek.js';
+import { validateMetaTemplate } from '../core/meta-validator.js';
 import {
   verifyCredentials,
   createSessionToken,
@@ -344,10 +345,44 @@ export async function createServer() {
     return { campanhas: getCampanhas() };
   });
 
-  app.post('/api/campanhas', async (req: any) => {
-    const { nome, mensagemTemplate, targetType, targetGroupJid, targetPastaNome, mediaPath } = req.body || {};
+  // Endpoints de Validação e Otimização de Templates Meta Shield
+  app.post('/api/templates/validate', async (req: any) => {
+    const { template, isColdContact } = req.body || {};
+    const result = validateMetaTemplate(template || '', {
+      isColdContact: isColdContact !== false
+    });
+    return result;
+  });
+
+  app.post('/api/templates/optimize-ai', async (req: any, reply) => {
+    const { template } = req.body || {};
+    if (!template || !template.trim()) {
+      return reply.status(400).send({ ok: false, error: 'Digite ou cole uma mensagem para otimizar.' });
+    }
+
+    try {
+      const optimizedTemplate = await optimizeTemplateWithDeepSeek(template);
+      const validation = validateMetaTemplate(optimizedTemplate, { isColdContact: true });
+      return { ok: true, optimizedTemplate, validation };
+    } catch (err: any) {
+      return reply.status(500).send({ ok: false, error: err?.message || 'Falha ao otimizar template.' });
+    }
+  });
+
+  app.post('/api/campanhas', async (req: any, reply) => {
+    const { nome, mensagemTemplate, targetType, targetGroupJid, targetPastaNome, mediaPath, forceRiskApproval } = req.body || {};
     if (!nome || !mensagemTemplate) {
-      throw new Error('Nome e Template de Mensagem são obrigatórios.');
+      return reply.status(400).send({ ok: false, error: 'Nome e Template de Mensagem são obrigatórios.' });
+    }
+
+    // Auditoria Meta Shield antes do disparo
+    const metaValidation = validateMetaTemplate(mensagemTemplate, { isColdContact: true });
+    if (metaValidation.nivelRisco === 'alto_risco' && !forceRiskApproval) {
+      return reply.status(400).send({
+        ok: false,
+        error: 'Template com Alto Risco de Banimento detectado pelo Meta Shield. Corrija os gatilhos de risco ou confirme o envio forçado.',
+        metaValidation
+      });
     }
 
     // Selecionar destinatários
@@ -365,7 +400,7 @@ export async function createServer() {
     }
 
     if (contatosAlvo.length === 0) {
-      throw new Error('Nenhum contato encontrado para o público-alvo selecionado.');
+      return reply.status(400).send({ ok: false, error: 'Nenhum contato encontrado para o público-alvo selecionado.' });
     }
 
     const campanhaId = createCampanha({

@@ -1154,6 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
       select.value = selectedTarget;
     }
     updateWhatsAppPreview();
+    updateMetaShieldAudit();
     modalCampanha.style.display = 'flex';
   };
 
@@ -1210,12 +1211,138 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Listeners de digitação para o preview ao vivo do WhatsApp
-  document.getElementById('camp-template')?.addEventListener('input', updateWhatsAppPreview);
+  // Auditoria e Validação de Diretrizes Meta Shield (Anti-Ban)
+  let lastMetaAuditResult = null;
+  let metaAuditDebounceTimer = null;
+
+  function updateMetaShieldAudit() {
+    const templateInput = document.getElementById('camp-template');
+    if (!templateInput) return;
+    const template = templateInput.value || '';
+
+    // Contagem rápida de variações Spintax no navegador
+    const spintaxRegex = /\{([^{}]*?\|[^{}]*?)\}/g;
+    let variations = 1;
+    let hasSpintax = false;
+    let match;
+    while ((match = spintaxRegex.exec(template)) !== null) {
+      hasSpintax = true;
+      const count = match[1].split('|').length;
+      if (count > 0) variations *= count;
+    }
+    const varElem = document.getElementById('meta-variations-count');
+    if (varElem) {
+      varElem.innerText = `🎲 ${hasSpintax ? variations : 1} variaç${(hasSpintax ? variations : 1) === 1 ? 'ão' : 'ões'}`;
+    }
+
+    // Debounce da validação completa no backend
+    clearTimeout(metaAuditDebounceTimer);
+    metaAuditDebounceTimer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/templates/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template, isColdContact: true })
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        lastMetaAuditResult = data;
+        renderMetaShieldUI(data);
+      } catch (e) {
+        console.warn('Falha na validação do Meta Shield:', e);
+      }
+    }, 200);
+  }
+
+  function renderMetaShieldUI(result) {
+    const badge = document.getElementById('meta-shield-badge');
+    const bar = document.getElementById('meta-score-bar');
+    const infracoesList = document.getElementById('meta-infracoes-list');
+    const dicaBox = document.getElementById('meta-dica-text');
+
+    if (!badge || !bar) return;
+
+    // Atualizar Score e Nível de Risco
+    bar.style.width = `${result.score}%`;
+    bar.className = 'meta-score-fill ' + (result.score >= 80 ? 'score-high' : result.score >= 60 ? 'score-medium' : 'score-low');
+
+    badge.className = 'meta-shield-badge ' + (result.nivelRisco === 'seguro' ? 'badge-seguro' : result.nivelRisco === 'moderado' ? 'badge-moderado' : 'badge-alto_risco');
+    badge.innerText = result.nivelRisco === 'seguro'
+      ? `🟢 Seguro (${result.score}%)`
+      : result.nivelRisco === 'moderado'
+      ? `🟡 Atenção (${result.score}%)`
+      : `🔴 Alto Risco (${result.score}%)`;
+
+    // Renderizar Infrações Detectadas
+    if (infracoesList) {
+      if (result.infracoes && result.infracoes.length > 0) {
+        infracoesList.style.display = 'flex';
+        infracoesList.innerHTML = result.infracoes.map(i => `
+          <div class="meta-infracao-item infracao-${i.severidade}">
+            <strong>${i.severidade === 'critico' ? '⛔' : i.severidade === 'alerta' ? '⚠️' : 'ℹ️'} ${escapeHtml(i.titulo)}</strong>
+            <small>${escapeHtml(i.descricao)}</small>
+            <small style="margin-top: 2px; color: rgba(255,255,255,0.9); font-weight: 500;">👉 ${escapeHtml(i.sugestao)}</small>
+          </div>
+        `).join('');
+      } else {
+        infracoesList.style.display = 'none';
+        infracoesList.innerHTML = '';
+      }
+    }
+
+    // Dica Contextual
+    if (dicaBox) {
+      dicaBox.innerText = (result.dicas && result.dicas[0]) || '💡 Dica Pro: Mensagens que parecem conversas naturais entre amigos possuem taxa de banimento próxima de zero.';
+    }
+  }
+
+  // Listeners de digitação para o preview ao vivo do WhatsApp e Meta Shield
+  document.getElementById('camp-template')?.addEventListener('input', () => {
+    updateWhatsAppPreview();
+    updateMetaShieldAudit();
+  });
   document.getElementById('camp-media')?.addEventListener('input', updateWhatsAppPreview);
   document.getElementById('btn-shuffle-spintax')?.addEventListener('click', () => {
     updateWhatsAppPreview();
+    updateMetaShieldAudit();
   });
+
+  // Botão Otimizar com IA (DeepSeek Meta Shield)
+  const btnOptimizeMetaAi = document.getElementById('btn-optimize-meta-ai');
+  if (btnOptimizeMetaAi) {
+    btnOptimizeMetaAi.addEventListener('click', async () => {
+      const templateInput = document.getElementById('camp-template');
+      const text = templateInput ? templateInput.value.trim() : '';
+      if (!text) {
+        return alert('Digite ou escolha uma mensagem primeiro para a IA otimizar.');
+      }
+
+      btnOptimizeMetaAi.disabled = true;
+      btnOptimizeMetaAi.innerText = '✨ Otimizando...';
+
+      try {
+        const res = await fetch('/api/templates/optimize-ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template: text })
+        });
+        const data = await res.json();
+        if (data.ok && data.optimizedTemplate) {
+          templateInput.value = data.optimizedTemplate;
+          updateWhatsAppPreview();
+          updateMetaShieldAudit();
+          showToast('Template blindado com sucesso pelas diretrizes da Meta!', 'success');
+        } else {
+          alert(data.error || 'Falha ao otimizar template com IA.');
+        }
+      } catch (err) {
+        alert(`Erro ao conectar com a IA: ${err.message}`);
+      } finally {
+        btnOptimizeMetaAi.disabled = false;
+        btnOptimizeMetaAi.innerText = '✨ Otimizar com IA';
+      }
+    });
+  }
 
   // Modelos Prontos Pokémon TCG de Alta Conversão
   const PRESET_TEMPLATES = {
@@ -1288,11 +1415,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         document.getElementById('camp-media').value = '';
         updateWhatsAppPreview();
+        updateMetaShieldAudit();
         showToast(`🎲 Sorteado: "${preset.nome}"`, 'info');
       }
     });
   }
-
 
   // Click nos cards de modelos prontos
   document.querySelectorAll('.preset-card').forEach(card => {
@@ -1312,6 +1439,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (mediaInput) mediaInput.value = preset.media || '';
 
       updateWhatsAppPreview();
+      updateMetaShieldAudit();
       showToast(`Modelo "${preset.nome}" aplicado!`, 'info');
     });
   });
@@ -1323,6 +1451,7 @@ document.addEventListener('DOMContentLoaded', () => {
       textarea.value += code.innerText;
       textarea.focus();
       updateWhatsAppPreview();
+      updateMetaShieldAudit();
     });
   });
 
@@ -1333,6 +1462,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const media = document.getElementById('camp-media').value.trim();
 
     if (!nome || !template) return alert('Preencha o nome e o modelo da mensagem.');
+
+    // Trava do Meta Shield contra banimento
+    let forceRiskApproval = false;
+    if (lastMetaAuditResult && lastMetaAuditResult.nivelRisco === 'alto_risco') {
+      const confirmForce = confirm(
+        '⚠️ ALERTA DO META SHIELD ANTI-BAN:\n\n' +
+        `Este template foi classificado como ALTO RISCO DE BANIMENTO (Score: ${lastMetaAuditResult.score}%).\n\n` +
+        'Ele contém violações graves (como gatilhos de spam ou ausência de Spintax) que podem derrubar seu chip no WhatsApp.\n\n' +
+        'Recomendamos clicar em "✨ Otimizar com IA" para blindar o texto.\n\n' +
+        'Deseja forçar o envio mesmo assim por sua conta e risco?'
+      );
+      if (!confirmForce) return;
+      forceRiskApproval = true;
+    }
 
     let targetType = 'todos';
     let targetGroupJid = null;
@@ -1356,7 +1499,8 @@ document.addEventListener('DOMContentLoaded', () => {
           targetType,
           targetGroupJid,
           targetPastaNome,
-          mediaPath: media || undefined
+          mediaPath: media || undefined,
+          forceRiskApproval
         })
       });
       const data = await res.json();
@@ -1368,7 +1512,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('camp-media').value = '';
         loadCampanhas(true);
       } else {
-        alert(data.message || 'Erro ao criar campanha.');
+        alert(data.error || data.message || 'Erro ao criar campanha.');
       }
     } catch (err) {
       alert(`Erro: ${err.message}`);

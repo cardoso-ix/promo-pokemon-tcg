@@ -28,8 +28,9 @@ test('Atendimento IA - Resposta com OpenCode e envio do link do grupo WhatsApp',
   setConfig('deepseek_model', 'deepseek-flash');
   setConfig('deepseek_ativo', 'true');
 
+  const testJid = `5511${Date.now()}@s.whatsapp.net`;
   const resposta = await generateDeepSeekResponse(
-    '5511888888888@s.whatsapp.net',
+    testJid,
     'Opa Eduardo, tudo bem? Pode me mandar o link do grupo sim, quero entrar e conferir as cartas!',
     'Rodrigo'
   );

@@ -157,3 +157,85 @@ export async function generateDeepSeekResponse(
     return null;
   }
 }
+
+/**
+ * Otimiza um template com IA para adequação total às diretrizes do Meta Shield e Anti-Ban
+ */
+export async function optimizeTemplateWithDeepSeek(rawTemplate: string): Promise<string> {
+  const apiKey = getConfig('deepseek_api_key', '').trim();
+  const rawBaseUrl = getConfig('deepseek_base_url', 'https://opencode.ai/zen/go/v1').trim();
+  let model = getConfig('deepseek_model', 'deepseek-flash').trim();
+
+  const promptSistema = `Você é um especialista em WhatsApp Anti-Ban e Copywriting Humanizado da Meta.
+Sua missão é reescrever a mensagem fornecida tornando-a 100% segura contra bloqueios no WhatsApp.
+
+Diretrizes Obrigatórias:
+1. Comece com uma saudação amigável e a tag {nome} (ex: "{Fala|E aí|Oi} {nome}!").
+2. Utilize Spintax em várias partes no formato {Opção A|Opção B|Opção C} para gerar dezenas de variações únicas.
+3. NUNCA use palavras de spam agressivas (ex: "compre já", "urgente", "clique aqui", "renda extra").
+4. Remova links diretos no primeiro contato: transforme em uma pergunta amigável pedindo permissão para enviar o link (ex: "{posso te mandar o link do grupo|quer que eu te envie o acesso}?").
+5. Finalize sempre com uma pergunta calorosa para estimular o cliente a responder.
+6. Mantenha o tom de Eduardo, colecionador fã de Pokémon TCG que fala de fã para fãs.
+7. Retorne APENAS o texto reescrito com {nome} e Spintax {A|B}, sem aspas ou introduções.`;
+
+  if (apiKey) {
+    let endpoint = rawBaseUrl.replace(/\/+$/, '');
+    if (!endpoint.endsWith('/chat/completions')) {
+      endpoint = `${endpoint}/chat/completions`;
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'x-opencode-session': `optimize-${Date.now()}`
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: promptSistema },
+            { role: 'user', content: `Reescreva este template aplicando Spintax e blindagem contra banimento da Meta:\n\n${rawTemplate}` }
+          ],
+          temperature: 0.7,
+          max_tokens: 500
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        let reply = data?.choices?.[0]?.message?.content?.trim() || data?.choices?.[0]?.message?.reasoning_content?.trim();
+        if (reply) {
+          reply = reply.replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/i, '').trim();
+          return reply;
+        }
+      }
+    } catch (err) {
+      console.warn('[Meta Optimizer] Falha ao consultar DeepSeek, usando otimizador heurístico:', err);
+    }
+  }
+
+  // Fallback Heurístico se a IA estiver offline ou sem chave de API
+  let clean = rawTemplate;
+  clean = clean.replace(/https?:\/\/[^\s]+/gi, '').replace(/\s{2,}/g, ' ').trim();
+  clean = clean.replace(/\bcompre\s+j[aá]\b/gi, '{dá uma olhada|dá uma conferida}');
+  clean = clean.replace(/\bclique\s+aqui\b/gi, '{me avisa se quiser ver|se fizer sentido te mando}');
+  clean = clean.replace(/\bpromo[cç][aã]o\s+imperd[ií]vel\b/gi, '{oportunidade bacana|achado bem legal}');
+
+  if (!clean.includes('{nome}')) {
+    clean = `{Fala|E aí|Oi} {nome}! {Tudo bem|Tudo certo|Como vai}?\n\n` + clean;
+  }
+
+  if (!clean.includes('?')) {
+    clean += `\n\n{Posso te mandar o link certinho por aqui|Quer que eu te envie o acesso}?`;
+  }
+
+  return clean;
+}
+
