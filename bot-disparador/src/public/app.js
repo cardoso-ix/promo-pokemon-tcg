@@ -1409,6 +1409,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('camp-target');
     select.innerHTML = '<option value="todos">Todos os Contatos da Base Geral</option>';
 
+    const searchInput = document.getElementById('camp-target-search');
+    const counterSpan = document.getElementById('camp-target-counter');
+    if (searchInput) searchInput.value = '';
+    if (counterSpan) counterSpan.textContent = '';
+
     try {
       const [resPastas, resGrupos, resMeta] = await Promise.all([
         fetch('/api/contatos/pastas').then(r => r.json()).catch(() => ({ pastas: [] })),
@@ -2312,8 +2317,69 @@ document.addEventListener('DOMContentLoaded', () => {
     animId = requestAnimationFrame(render);
   }
 
+  // Filtro de Busca Instantânea para Público-Alvo / Grupos na Criação de Campanhas
+  const campTargetSearch = document.getElementById('camp-target-search');
+  if (campTargetSearch) {
+    campTargetSearch.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const select = document.getElementById('camp-target');
+      if (!select) return;
+
+      let visibleCount = 0;
+      const optgroups = select.querySelectorAll('optgroup');
+      optgroups.forEach((group) => {
+        let groupHasMatch = false;
+        const options = group.querySelectorAll('option');
+        options.forEach((opt) => {
+          const match = opt.textContent.toLowerCase().includes(q);
+          opt.style.display = match ? '' : 'none';
+          if (match) {
+            groupHasMatch = true;
+            visibleCount++;
+          }
+        });
+        group.style.display = groupHasMatch ? '' : 'none';
+      });
+
+      const firstOpt = select.querySelector('option[value="todos"]');
+      if (firstOpt) {
+        const matchTodos = 'todos os contatos da base geral'.includes(q) || !q;
+        firstOpt.style.display = matchTodos ? '' : 'none';
+        if (matchTodos) visibleCount++;
+      }
+
+      const counterSpan = document.getElementById('camp-target-counter');
+      if (counterSpan) {
+        counterSpan.textContent = q ? `${visibleCount} opções encontradas` : '';
+      }
+    });
+  }
+
+  // Configuração Dinâmica dos Links de Alternância de Cockpits (Replicador Água)
+  function setupCockpitSwitchers() {
+    const proto = window.location.protocol;
+    const hostname = window.location.hostname;
+    const targetUrl = `${proto}//${hostname}:3000`;
+
+    const topBtn = document.getElementById('btn-switch-replica');
+    const sidebarBtn = document.getElementById('sidebar-switch-replica');
+
+    [topBtn, sidebarBtn].forEach((btn) => {
+      if (btn) {
+        btn.href = targetUrl;
+        btn.target = '_blank';
+        btn.rel = 'noopener noreferrer';
+        btn.onclick = (e) => {
+          e.preventDefault();
+          window.open(targetUrl, '_blank');
+        };
+      }
+    });
+  }
+
   // Inicialização
   initFireParticles();
+  setupCockpitSwitchers();
   loadStatus();
   loadPastasLeads();
   initSSE();

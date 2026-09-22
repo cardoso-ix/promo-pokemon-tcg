@@ -881,6 +881,11 @@
     rotaEditId.value = rota ? rota.id : '';
     rotaNome.value = rota ? rota.nome : '';
 
+    const origensSearch = document.getElementById('origens-search');
+    const destinosSearch = document.getElementById('destinos-search');
+    if (origensSearch) origensSearch.value = '';
+    if (destinosSearch) destinosSearch.value = '';
+
     renderChatSelectors(rota ? rota.origens : [], rota ? rota.destinos : []);
     modalRota.style.display = 'flex';
   }
@@ -915,6 +920,54 @@
       destinosSelector.appendChild(labelDestino);
     });
   }
+
+  // Filtros de busca de grupos de Origem e Destino no modal de Rotas
+  const origensSearchInput = document.getElementById('origens-search');
+  if (origensSearchInput) {
+    origensSearchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const options = origensSelector.querySelectorAll('.chat-option');
+      options.forEach((opt) => {
+        const text = opt.textContent.toLowerCase();
+        opt.style.display = text.includes(q) ? 'flex' : 'none';
+      });
+    });
+  }
+
+  const destinosSearchInput = document.getElementById('destinos-search');
+  if (destinosSearchInput) {
+    destinosSearchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const options = destinosSelector.querySelectorAll('.chat-option');
+      options.forEach((opt) => {
+        const text = opt.textContent.toLowerCase();
+        opt.style.display = text.includes(q) ? 'flex' : 'none';
+      });
+    });
+  }
+
+  // Configuração Dinâmica dos Links de Alternância de Cockpits
+  function setupCockpitSwitchers() {
+    const proto = window.location.protocol;
+    const hostname = window.location.hostname;
+    const targetUrl = `${proto}//${hostname}:3333`;
+
+    const topBtn = document.getElementById('btn-switch-disparador');
+    const sidebarBtn = document.getElementById('sidebar-switch-disparador');
+
+    [topBtn, sidebarBtn].forEach((btn) => {
+      if (btn) {
+        btn.href = targetUrl;
+        btn.target = '_blank';
+        btn.rel = 'noopener noreferrer';
+        btn.onclick = (e) => {
+          e.preventDefault();
+          window.open(targetUrl, '_blank');
+        };
+      }
+    });
+  }
+  setupCockpitSwitchers();
 
   // Sincronizar Grupos Instantaneamente
   if (btnSyncChats) {
@@ -1399,6 +1452,28 @@ Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
         ${isRouteDest ? '<span class="badge badge-meli" style="margin-left: auto; font-size: 0.7rem; padding: 2px 6px;">Destino Rota</span>' : ''}
       `;
       anuncioDestinosList.appendChild(item);
+    });
+
+    // Se houver busca prévia no campo, reaplicar
+    const searchInput = document.getElementById('anuncio-destinos-search');
+    if (searchInput && searchInput.value.trim()) {
+      const q = searchInput.value.toLowerCase().trim();
+      anuncioDestinosList.querySelectorAll('.destino-item').forEach((item) => {
+        item.style.display = item.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
+      });
+    }
+  }
+
+  // Listener para busca instantânea de grupos no Gerador de Anúncios
+  const anuncioDestinosSearch = document.getElementById('anuncio-destinos-search');
+  if (anuncioDestinosSearch) {
+    anuncioDestinosSearch.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const items = anuncioDestinosList.querySelectorAll('.destino-item');
+      items.forEach((item) => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(q) ? 'flex' : 'none';
+      });
     });
   }
 

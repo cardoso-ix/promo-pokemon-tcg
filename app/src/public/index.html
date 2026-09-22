@@ -73,6 +73,10 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           <span>Configurações & Afiliado</span>
         </button>
+        <a id="sidebar-switch-disparador" class="nav-item btn-external-switch" href="http://108.174.145.77:3333" target="_blank" title="Acessar Cockpit do Bot Disparador (Fogo 🔥)" style="color: #f87171; border-top: 1px solid var(--border-subtle); margin-top: auto; padding-top: 12px; text-decoration: none;">
+          <span style="font-size: 16px;">🔥</span>
+          <span>Disparador Pro (Fogo)</span>
+        </a>
       </nav>
 
       <div class="sidebar-footer">
@@ -344,6 +348,7 @@
                   <label class="form-label">Grupos de Destino:</label>
                   <button type="button" id="btn-select-all-destinos" class="btn-link">Marcar Todos os Destinos de Rotas</button>
                 </div>
+                <input type="text" id="anuncio-destinos-search" class="input-field" placeholder="🔍 Filtrar grupos de destino..." style="margin-bottom: 8px; padding: 7px 12px; font-size: 12.5px;">
                 <div id="anuncio-destinos-list" class="anuncio-destinos-list">
                   <span class="text-muted">Carregando grupos disponíveis...</span>
                 </div>
@@ -664,12 +669,14 @@
 
         <div class="form-group">
           <label>Grupos de Origem (De onde copiar)</label>
+          <input type="text" id="origens-search" class="input-field" placeholder="🔍 Filtrar grupos de origem..." style="margin-bottom: 6px; padding: 7px 12px; font-size: 12.5px;">
           <p class="field-hint">Selecione um ou mais grupos que enviam ofertas.</p>
           <div id="origens-selector" class="chat-selector-box"></div>
         </div>
 
         <div class="form-group">
           <label>Grupo de Destino (Onde postar)</label>
+          <input type="text" id="destinos-search" class="input-field" placeholder="🔍 Filtrar grupos de destino..." style="margin-bottom: 6px; padding: 7px 12px; font-size: 12.5px;">
           <p class="field-hint">Selecione o seu grupo do WhatsApp que receberá a oferta.</p>
           <div id="destinos-selector" class="chat-selector-box"></div>
         </div>

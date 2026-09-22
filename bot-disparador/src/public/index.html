@@ -84,6 +84,10 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
           <span>Logs ao Vivo</span>
         </button>
+        <a id="sidebar-switch-replica" class="nav-item btn-external-switch" href="http://108.174.145.77:3000" target="_blank" title="Acessar Cockpit do Replicador de Ofertas (Água 💧)" style="color: #38bdf8; border-top: 1px solid var(--border-subtle); margin-top: auto; padding-top: 12px; text-decoration: none;">
+          <span style="font-size: 16px;">💧</span>
+          <span>Replicador Pro (Água)</span>
+        </a>
       </nav>
 
       <div class="sidebar-footer">
@@ -871,7 +875,11 @@
           </div>
 
           <div class="form-group">
-            <label for="camp-target">Público-Alvo (Destinatários):</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label for="camp-target" style="margin-bottom: 0;">Público-Alvo / Grupos:</label>
+              <span id="camp-target-counter" class="field-hint" style="margin: 0; font-size: 11.5px;"></span>
+            </div>
+            <input type="text" id="camp-target-search" class="input-field" placeholder="🔍 Pesquisar grupo ou pasta de leads..." style="margin-bottom: 8px; padding: 7px 12px; font-size: 12.5px;">
             <select id="camp-target" class="input-field">
               <option value="todos">Todos os Contatos da Base</option>
             </select>
