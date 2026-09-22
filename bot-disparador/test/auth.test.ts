@@ -9,9 +9,9 @@ import {
 } from '../src/web/auth.js';
 
 test('Autenticação Bot Disparador - Credenciais do usuário', () => {
-  assert.strictEqual(verifyCredentials('eduardo', '04052001'), true);
-  assert.strictEqual(verifyCredentials('eduardo', 'senhaerrada'), false);
-  assert.strictEqual(verifyCredentials('admin', '04052001'), false);
+  assert.strictEqual(verifyCredentials('admin', 'promo2026'), true);
+  assert.strictEqual(verifyCredentials('admin', 'senhaerrada'), false);
+  assert.strictEqual(verifyCredentials('usuarioerrado', 'promo2026'), false);
   assert.strictEqual(verifyCredentials('', ''), false);
 });
 

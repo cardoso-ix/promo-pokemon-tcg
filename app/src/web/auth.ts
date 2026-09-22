@@ -1,8 +1,8 @@
 import crypto from 'node:crypto';
 import type { FastifyRequest } from 'fastify';
 
-const ADMIN_USER = process.env.ADMIN_USER || 'eduardo';
-const ADMIN_PASS = process.env.ADMIN_PASS || '04052001';
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'promo2026';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'promo-pokemon-tcg-secret-key-2026-secure';
 const COOKIE_NAME = 'promo_session';
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 dias

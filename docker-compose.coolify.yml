@@ -12,8 +12,8 @@ services:
       - PORT=3000
       - HOST=0.0.0.0
       - DATA_DIR=/app/data
-      - ADMIN_USER=${ADMIN_USER:-eduardo}
-      - ADMIN_PASS=${ADMIN_PASS:-04052001}
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASS=${ADMIN_PASS:-promo2026}
       - SESSION_SECRET=${SESSION_SECRET:-promo-secret-super-seguro-vps-2026}
       - MATT_WORD=${MATT_WORD:-caed1312314}
       - MATT_TOOL=${MATT_TOOL:-96097202}
@@ -55,8 +55,8 @@ services:
       - PORT=3333
       - HOST=0.0.0.0
       - DATA_DIR=/app/data
-      - ADMIN_USER=${ADMIN_USER:-eduardo}
-      - ADMIN_PASS=${ADMIN_PASS:-04052001}
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASS=${ADMIN_PASS:-promo2026}
       - SESSION_SECRET=${SESSION_SECRET:-promo-secret-super-seguro-vps-2026}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY:-promo-internal-key-2026}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}

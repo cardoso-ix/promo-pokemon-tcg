@@ -2,7 +2,10 @@ async function main() {
   const loginRes = await fetch('https://bot-disparador-ia-production.up.railway.app/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'eduardo', password: '04052001' })
+    body: JSON.stringify({
+      username: process.env.ADMIN_USER || 'admin',
+      password: process.env.ADMIN_PASS || 'promo2026'
+    })
   });
   const cookie = loginRes.headers.get('set-cookie');
 

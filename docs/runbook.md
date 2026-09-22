@@ -21,8 +21,8 @@ Tanto o **Replicador de Ofertas** quanto o **Bot Disparador & Atendimento IA** r
 
 ### 1.3. Credenciais de Acesso (Login & Senha)
 Ambos os painéis utilizam controle de acesso por credenciais seguras e tokens assinados digitalmente com HMAC-SHA256:
-- **Usuário padrão**: `eduardo`
-- **Senha padrão**: `04052001`
+- **Usuário padrão**: `admin`
+- **Senha padrão**: `promo2026`
 - **Duração da Sessão**: 30 dias em cookie seguro (`HttpOnly; SameSite=Lax`).
 - **Botão Sair**: Disponível na barra superior de ambos os painéis para encerramento imediato de sessão.
 - **Personalização de Credenciais (Opcional)**: Caso queira alterar no Railway, basta configurar as variáveis no painel do Railway:
