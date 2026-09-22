@@ -14,8 +14,8 @@ O ecossistema roda de forma desvinculada de qualquer máquina local ou nuvem pag
 
 | Módulo | Tecnologia | Ambiente / Status | Descrição |
 | --- | --- | --- | --- |
-| **Replicador de Ofertas** | TypeScript + Baileys + Fastify | 🟢 **Online 24/7 (VPS HostGator)** | Monitora grupos de ofertas, intercepta links concorrentes, encurta para `meli.la` oficial e replica com fotos 2X. Inclui 3 templates de marca, Guardião de Nicho TCG, Desduplicação Global Cross-Group Canônica (MLB ID) e Pacing anti-burst. |
-| **Bot Disparador & Leads** | TypeScript + Baileys + Spintax | 🟢 **Online 24/7 (VPS HostGator)** | Extração de membros de grupos em 1 clique, disparador anti-ban com Spintax dinâmico e simulador ao vivo. |
+| **Replicador de Ofertas** | TypeScript + Baileys + Fastify | 🟢 **Online 24/7 (Tema Água 💧)** | Layout moderno com Sidebar, cor azul ciano oceano e motor de partículas com gotículas e bolhas d'água em 60fps. Monitora grupos, intercepta concorrentes, encurta para `meli.la` e replica com foto 2X HD. |
+| **Bot Disparador & Leads** | TypeScript + Baileys + Spintax | 🟢 **Online 24/7 (Tema Fogo 🔥)** | Layout moderno com Sidebar, cor vermelho rubi/âmbar e motor de partículas com brasas e fagulhas incandescentes em 60fps. Extração de leads, disparos anti-ban e atendimento IA com DeepSeek. |
 | **Atendimento IA Privado** | DeepSeek V4 (OpenCode Gateway) | 🟢 **Online 24/7 (VPS HostGator)** | Responde clientes no privado imitando especialista amigável de Pokémon TCG com digitação humanizada. |
 | **Encurtador de Afiliados** | API Oficial Mercado Livre | 🟢 **Ativo (Sentinel 45m)** | Monitorado pelo Cookie Sentinel em tempo real, encurtador oficial `https://meli.la/xxxxxx` e fallback resiliente. |
 | **Bancos de Dados SQLite** | Better-SQLite3 (WAL Mode) | 🟢 **Ativo (Named Volumes)** | `replica.db` e `disparador.db` salvos com segurança em `/app/data` via volumes Docker `promo_replica_data` e `bot_disparador_data`. |
