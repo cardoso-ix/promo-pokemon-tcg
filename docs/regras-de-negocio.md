@@ -36,16 +36,18 @@ Toda mensagem que chega aos grupos de WhatsApp em que o chip participa é avalia
   {url_produto}?matt_word={affiliate_matt_word}&matt_tool={affiliate_matt_tool}&forceInApp=true
   ```
 
-### 2.3. Exclusividade Mercado Livre (Regra Operacional)
-- A esteira foi configurada para operar **exclusivamente com o programa de afiliados do Mercado Livre**.
-- Postagens de outros marketplaces (como Amazon, Shopee, Magalu) ou mensagens de conversas sem links do Mercado Livre são **automaticamente ignoradas** pelo filtro (`status: 'ignorado'`, `motivo: 'sem_link_mercadolivre'`).
-- Isso garante que 100% das ofertas enviadas aos seus grupos de destino gerem comissões oficiais no seu painel de afiliado.
-- Esta opção pode ser ajustada a qualquer momento na aba Configurações (*"Postar Apenas Mercado Livre"*).
+### 2.3. Exclusividade Mercado Livre e Bloqueio de Concorrentes
+- A esteira protege seus grupos contra vazamento de tráfego para outros marketplaces:
+  - Links de marketplaces concorrentes (Amazon, Shopee, Magalu, AliExpress) são **automaticamente ignorados** pelo filtro (`status: 'ignorado'`, `motivo: 'marketplace_concorrente'`).
+  - Links de convite para grupos de WhatsApp de concorrentes (`chat.whatsapp.com`) são **automaticamente removidos** de todas as mensagens replicadas.
 
-### 2.4. Cupons e Listas de Compras (`link_vitrine_curto`)
-- Mensagens de tutoriais e cupons de desconto que não contêm um anúncio MLB específico apontam para a vitrine do afiliado.
-- Como a API de criação de links rejeita rotas `/social/`, o sistema substitui automaticamente links de concorrentes pelo **link curto oficial da sua lista de compras** (`link_vitrine_curto`, ex: `https://mercadolivre.com/sec/2rM6RPm`).
-- O operador pode editar ou autodetectar esse link oficial a qualquer momento na aba Configurações.
+### 2.4. Telas de Cupom e Digitações Avulsas (Comunicados)
+- **Telas de Cupom (Prints de Cupons)**:
+  - Se um grupo monitorado postar um print do app ou texto anunciando cupom (mesmo sem link no original), o sistema aceita o alerta e anexa automaticamente o **link curto oficial da sua vitrine do Mercado Livre** (`link_vitrine_curto`, ex: `https://mercadolivre.com/sec/2rM6RPm`).
+  - O Guardião de Nicho TCG aceita cupons automaticamente, pois são de interesse direto de todos os colecionadores.
+- **Digitações Avulsas e Comunicados**:
+  - Mensagens informativas de texto puro ou fotos sem link de compra (ex: comunicados de envios da Copag, regras do grupo ou avisos do admin) podem ser replicadas diretamente caso a opção *"Replicar Comunicados & Telas de Cupom (Sem Link)"* esteja ativada (`replicar_comunicados_texto: 'true'`).
+  - Assinaturas e @arrobas de concorrentes continuam sendo limpos automaticamente antes do envio.
 
 ---
 

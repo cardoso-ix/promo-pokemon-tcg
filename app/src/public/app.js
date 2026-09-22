@@ -97,6 +97,7 @@
   const btnDetectarVitrine = document.getElementById('btn-detectar-vitrine');
   const vitrineDetectFeedback = document.getElementById('vitrine-detect-feedback');
   const cfgSomenteMeli = document.getElementById('cfg-somente-meli');
+  const cfgReplicarComunicados = document.getElementById('cfg-replicar-comunicados');
   const cfgTemplateModo = document.getElementById('cfg-template-modo');
   const cfgCooldownDuplicidade = document.getElementById('cfg-cooldown-duplicidade');
   const cfgFiltroApenasTcg = document.getElementById('cfg-filtro-apenas-tcg');
@@ -347,6 +348,7 @@
       if (cfgMeliTag) cfgMeliTag.value = data.configs.meli_tag || '';
       if (cfgLinkVitrineCurto) cfgLinkVitrineCurto.value = data.configs.link_vitrine_curto || 'https://mercadolivre.com/sec/2rM6RPm';
       if (cfgSomenteMeli) cfgSomenteMeli.checked = data.configs.somente_mercadolivre !== 'false';
+      if (cfgReplicarComunicados) cfgReplicarComunicados.checked = data.configs.replicar_comunicados_texto !== 'false';
       if (cfgTemplateModo) cfgTemplateModo.value = data.configs.template_modo || 'padrao';
       if (cfgCooldownDuplicidade) cfgCooldownDuplicidade.value = data.configs.cooldown_duplicidade_minutos || '5';
       if (cfgFiltroApenasTcg) cfgFiltroApenasTcg.checked = data.configs.filtro_apenas_tcg !== 'false';
@@ -528,13 +530,21 @@
     const isEnviado = log.status === 'enviado';
     let statusBadge = '';
     if (isEnviado) {
-      statusBadge = '<span class="badge badge-connected"><span class="indicator-dot"></span>⚡ Enviado</span>';
+      if (log.motivo === 'comunicado_replicado') {
+        statusBadge = '<span class="badge badge-meli" title="Comunicado ou aviso de texto replicado"><span class="indicator-dot"></span>📢 Comunicado</span>';
+      } else {
+        statusBadge = '<span class="badge badge-connected"><span class="indicator-dot"></span>⚡ Enviado</span>';
+      }
     } else if (log.status === 'ignorado') {
       const motivo = log.motivo || '';
       if (motivo.includes('cooldown')) {
         statusBadge = `<span class="badge badge-purple" title="Bloqueado pelo Anti-Flood Multi-Grupo (já postado recentemente)"><span class="indicator-dot"></span>⏱️ Anti-Dup Multi-Grupo</span>`;
       } else if (motivo === 'fora_nicho_tcg') {
         statusBadge = `<span class="badge badge-neutral" title="Ignorado pelo Guardião de Nicho: produto fora do universo TCG"><span class="indicator-dot"></span>🚫 Fora do Nicho TCG</span>`;
+      } else if (motivo === 'marketplace_concorrente') {
+        statusBadge = `<span class="badge badge-neutral" title="Ignorado: link de marketplace concorrente (Amazon, Shopee, etc.)"><span class="indicator-dot"></span>🚫 Marketplace Concorrente</span>`;
+      } else if (motivo === 'comunicado_desativado') {
+        statusBadge = `<span class="badge badge-neutral" title="Ignorado: comunicados e mensagens de texto desativados"><span class="indicator-dot"></span>🔇 Comunicado Desativado</span>`;
       } else if (motivo === 'sem_link_mercadolivre') {
         statusBadge = `<span class="badge badge-neutral" title="Ignorado: sem link do Mercado Livre"><span class="indicator-dot"></span>🛍️ Sem Link ML</span>`;
       } else {
@@ -822,6 +832,13 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chave: 'somente_mercadolivre', valor: cfgSomenteMeli && cfgSomenteMeli.checked ? 'true' : 'false' })
       });
+      if (cfgReplicarComunicados) {
+        await fetch('/api/configs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chave: 'replicar_comunicados_texto', valor: cfgReplicarComunicados.checked ? 'true' : 'false' })
+        });
+      }
       if (cfgTemplateModo) {
         await fetch('/api/configs', {
           method: 'POST',

@@ -114,6 +114,16 @@ export function isProdutoTCG(texto?: string, titulo?: string, slug?: string): bo
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
+  // Cupons e alertas promocionais do Mercado Livre são de interesse direto da comunidade TCG
+  if (
+    combined.includes('cupom') ||
+    combined.includes('desconto no app') ||
+    detectarMensagemCupom(texto || '') ||
+    extrairCupom(texto || '') !== null
+  ) {
+    return true;
+  }
+
   const termosAceitos = [
     // Franquias e Fabricantes Principais
     'pokemon', 'copag', 'pikachu', 'charizard', 'mewtwo', 'eevee',

@@ -24,3 +24,10 @@ test('Guardião de Nicho TCG - Rejeita produtos de outros nichos e produtos gen�
   assert.strictEqual(isProdutoTCG('Panela de Pressão Tramontina Solar Inox 6L', 'Panela Tramontina'), false);
   assert.strictEqual(isProdutoTCG('Perfume Feminino La Vie Est Belle 100ml Eau de Parfum', 'Perfume'), false);
 });
+
+test('Guardião de Nicho TCG - Aceita alertas e telas de cupom do Mercado Livre', () => {
+  assert.strictEqual(isProdutoTCG('🎟️ NOVO CUPOM NO APP DO MERCADO LIVRE! Use MELIKIDS para R$ 15 OFF', 'Novo Cupom'), true);
+  assert.strictEqual(isProdutoTCG('Cupom de desconto liberado no app do ML', 'Cupom de Desconto'), true);
+  assert.strictEqual(isProdutoTCG('Aproveite o cupom 20OFF para economizar', 'Cupom 20OFF'), true);
+});
+

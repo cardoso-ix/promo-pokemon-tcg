@@ -27,6 +27,7 @@ Armazena parâmetros operacionais no modelo Chave-Valor:
 - `template_modo`: Modo de formatação de mensagens (`padrao`, `urgencia`, `cupom`, `original`).
 - `cooldown_duplicidade_minutos`: Janela de desduplicação cross-group canônica (padrão 5 min).
 - `filtro_apenas_tcg`: Guardião de nicho TCG (`true`/`false`).
+- `replicar_comunicados_texto`: Replicar comunicados informativos e telas de cupom sem link (`true`/`false`).
 
 ### 2.2. `rotas`
 Cadastro das rotas de replicação de ofertas criadas pelo operador (`id`, `nome`, `ativa`, `criada_em`).

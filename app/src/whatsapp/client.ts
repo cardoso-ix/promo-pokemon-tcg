@@ -516,7 +516,7 @@ export class WhatsAppManager {
     const frasesRemover = getConfig('frases_remover', '');
     const linkVitrineCurto = getConfig('link_vitrine_curto', 'https://mercadolivre.com/sec/2rM6RPm');
 
-    const {
+    let {
       novoTexto,
       linksConvertidos,
       hashConteudo,
@@ -536,25 +536,90 @@ export class WhatsAppManager {
       linkPreviewTitle || ''
     );
 
-    // REGRA DE NEGÓCIO: Apenas postar publicações do Mercado Livre
-    // Mensagens sem link ML ou de outros marketplaces (Amazon, Shopee, etc.) são ignoradas
+    // Identificação de conteúdo especial:
+    // A) Cupom de Desconto (tela/print de cupom ou mensagem de código)
+    const cupomExtraido = extrairCupom(rawText) || '';
+    const isCupom = Boolean(cupomExtraido || detectarMensagemCupom(rawText) || /cupom/i.test(rawText));
+
+    // B) Links de Marketplaces concorrentes (Amazon, Shopee, Magalu, AliExpress, etc.)
+    const contemMarketplaceConcorrente = /(?:amazon\.com|amzn\.to|shopee\.com|shope\.ee|magazineluiza\.com|aliexpress\.com)/i.test(rawText);
+
+    // C) Digitação avulsa / Comunicado informativo sem link de marketplace
+    const replicarComunicados = getConfig('replicar_comunicados_texto', 'true') === 'true';
+    const isComunicadoSemLink = linksConvertidos === 0 && !contemMarketplaceConcorrente && !isCupom;
+
+    // Se for uma TELA DE CUPOM (print ou texto de cupom) sem link prévio:
+    // Aceita e vincula automaticamente o link oficial da sua vitrine do Mercado Livre
+    if (isCupom && (!contemMercadoLivre || linksConvertidos === 0)) {
+      contemMercadoLivre = true;
+      linksConvertidos = 1;
+      resolvedProductUrl = linkVitrineCurto;
+    }
+
+    // REGRA DE NEGÓCIO: Filtragem de Marketplaces Concorrentes e Links
     const somenteMercadoLivre = getConfig('somente_mercadolivre', 'true') === 'true';
-    if (somenteMercadoLivre && (!contemMercadoLivre || linksConvertidos === 0)) {
-      console.log(`[Filtro Mercado Livre] Mensagem ignorada: não contém links válidos do Mercado Livre.`);
-      const log = insertLog({
-        origem_chat_id: remoteJid,
-        origem_nome: origemNome,
-        destino_chat_id: '',
-        hash_conteudo: hashConteudo,
-        texto_original: rawText,
-        texto_publicado: novoTexto,
-        tem_foto: Boolean(messageHasImage),
-        links_convertidos: linksConvertidos,
-        status: 'ignorado',
-        motivo: 'sem_link_mercadolivre'
-      });
-      this.notifyMessage(log);
-      return;
+    if (somenteMercadoLivre) {
+      if (contemMarketplaceConcorrente) {
+        console.log(`[Filtro Mercado Livre] Mensagem ignorada: contém link de marketplace concorrente.`);
+        const log = insertLog({
+          origem_chat_id: remoteJid,
+          origem_nome: origemNome,
+          destino_chat_id: '',
+          hash_conteudo: hashConteudo,
+          texto_original: rawText,
+          texto_publicado: novoTexto,
+          tem_foto: Boolean(messageHasImage),
+          links_convertidos: linksConvertidos,
+          status: 'ignorado',
+          motivo: 'marketplace_concorrente'
+        });
+        this.notifyMessage(log);
+        return;
+      }
+
+      if (!contemMercadoLivre && !isComunicadoSemLink) {
+        console.log(`[Filtro Mercado Livre] Mensagem ignorada: não contém links válidos do Mercado Livre.`);
+        const log = insertLog({
+          origem_chat_id: remoteJid,
+          origem_nome: origemNome,
+          destino_chat_id: '',
+          hash_conteudo: hashConteudo,
+          texto_original: rawText,
+          texto_publicado: novoTexto,
+          tem_foto: Boolean(messageHasImage),
+          links_convertidos: linksConvertidos,
+          status: 'ignorado',
+          motivo: 'sem_link_mercadolivre'
+        });
+        this.notifyMessage(log);
+        return;
+      }
+
+      if (isComunicadoSemLink && !replicarComunicados) {
+        console.log(`[Filtro Mercado Livre] Digitação avulsa ignorada (replicar_comunicados_texto desativado).`);
+        const log = insertLog({
+          origem_chat_id: remoteJid,
+          origem_nome: origemNome,
+          destino_chat_id: '',
+          hash_conteudo: hashConteudo,
+          texto_original: rawText,
+          texto_publicado: novoTexto,
+          tem_foto: Boolean(messageHasImage),
+          links_convertidos: linksConvertidos,
+          status: 'ignorado',
+          motivo: 'comunicado_desativado'
+        });
+        this.notifyMessage(log);
+        return;
+      }
+    }
+
+    // Se for comunicado sem link, higieniza links de convite para grupos de WhatsApp de concorrentes
+    if (isComunicadoSemLink) {
+      novoTexto = novoTexto.replace(/https?:\/\/chat\.whatsapp\.com\/[^\s]+/gi, '').trim();
+      if (!novoTexto && !messageHasImage) {
+        return;
+      }
     }
 
     // 5. Extração de dados da oferta (título, preço De/Por, cupom)
@@ -565,7 +630,10 @@ export class WhatsAppManager {
     const slugParaFiltro = resolvedProductUrl ? resolvedProductUrl.split('/').pop() || '' : '';
     const eTCG = isProdutoTCG(rawText, dadosOferta.produto, slugParaFiltro);
 
-    if (filtroApenasTcg && !eTCG) {
+    // Cupons e comunicados de grupos monitorados são permitidos
+    const liberadoPeloGuardião = eTCG || isCupom || isComunicadoSemLink;
+
+    if (filtroApenasTcg && !liberadoPeloGuardião) {
       console.log(`[Guardião Nicho TCG] Mensagem ignorada: produto "${dadosOferta.produto}" fora do nicho TCG/Card Games.`);
       const log = {
         origem_chat_id: remoteJid,
@@ -676,10 +744,8 @@ export class WhatsAppManager {
     const templateModo = getConfig('template_modo', 'padrao');
     let textoFinalPublicar = novoTexto;
 
-    if (templateModo === 'padrao') {
-      const cupomExtraido = extrairCupom(rawText) || '';
-
-      // Verifica se a mensagem traz um produto específico (preço, ID canônico, foto ou título real)
+    if (templateModo === 'padrao' && !isComunicadoSemLink) {
+      // Verifica se a mensagem traz um produto específico (preço, ID canônico, foto de produto ou título real)
       const hasPreco = Boolean(
         (dadosOferta.valorPor && dadosOferta.valorPor !== 'Consultar') ||
         (dadosOferta.valorDe && dadosOferta.valorDe !== 'Consultar')
@@ -688,7 +754,7 @@ export class WhatsAppManager {
         canonicalProductId ||
         hasPreco ||
         (dadosOferta.produto && dadosOferta.produto !== 'Colecionável Pokémon TCG' && !dadosOferta.produto.toLowerCase().startsWith('cupom')) ||
-        Boolean(messageHasImage)
+        (Boolean(messageHasImage) && !isCupom)
       );
 
       const tipoMensagem = determinarTipoMensagem({
