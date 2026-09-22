@@ -127,12 +127,56 @@ https://meli.la/268XAbz
   assert.strictEqual(msg.includes('https://meli.la/268XAbz'), true);
 });
 
-test('extrairCupom extrai código de cupom com precisão', () => {
+test('extrairCupom extrai código de cupom com precisão e suporta negrito/itálico do WhatsApp', () => {
   assert.strictEqual(extrairCupom('Tripack Pokémon Escuridão Absoluta Cupom: MELIKIDS'), 'MELIKIDS');
   assert.strictEqual(extrairCupom('Preço no app com cupom: *MELIKIDS*'), 'MELIKIDS');
   assert.strictEqual(extrairCupom('Use o cupom MELIKIDS para desconto'), 'MELIKIDS');
   assert.strictEqual(extrairCupom('Aplique o cupom POKEDAY20 no carrinho'), 'POKEDAY20');
+  assert.strictEqual(extrairCupom('*CUPOM:* *POKEMON10*'), 'POKEMON10');
+  assert.strictEqual(extrairCupom('*CUPOM:* POKEMON10'), 'POKEMON10');
+  assert.strictEqual(extrairCupom('🎟️ CUPOM: *DESCONTO15*'), 'DESCONTO15');
+  assert.strictEqual(extrairCupom('⚠️ *cupom: OFFMELI*'), 'OFFMELI');
+  assert.strictEqual(extrairCupom('Cupom no app: *15OFF*'), '15OFF');
+  assert.strictEqual(extrairCupom('Cupom do app: 10OFF'), '10OFF');
+  assert.strictEqual(extrairCupom('Cupom exclusivo: *PROMO10*'), 'PROMO10');
+  assert.strictEqual(extrairCupom('Cupom ativo: *POKE10*'), 'POKE10');
+  assert.strictEqual(extrairCupom('Aplicar cupom *MEGA20*'), 'MEGA20');
+  assert.strictEqual(extrairCupom('Cupom de 10% no app: *DEZOFF*'), 'DEZOFF');
+  assert.strictEqual(extrairCupom('Cupom de R$ 20: *VINTE*'), 'VINTE');
+  assert.strictEqual(extrairCupom('🎟️ *CUPOM DE 10% OFF:* POKEMON10'), 'POKEMON10');
+  assert.strictEqual(extrairCupom('Cupom: *10OFF* no carrinho'), '10OFF');
   assert.strictEqual(extrairCupom('Sem cupom nenhum neste post'), null);
+});
+
+test('extrairCupom extrai condição descritiva quando não há código alfanumérico explícito', () => {
+  const desc1 = extrairCupom('comprando 4 + usando o cupom de 10% no app');
+  assert.ok(desc1);
+  assert.strictEqual(desc1.includes('10% OFF NO APP'), true);
+
+  const desc2 = extrairCupom('pegue o cupom de R$ 20 no app');
+  assert.ok(desc2);
+  assert.strictEqual(desc2.includes('R$ 20 NO APP'), true);
+
+  const desc3 = extrairCupom('Box Pokémon com cupom no app');
+  assert.ok(desc3);
+  assert.strictEqual(desc3.includes('DISPONÍVEL NO APP'), true);
+
+  const desc4 = extrairCupom('Ative o cupom no anúncio para garantir o menor preço');
+  assert.ok(desc4);
+  assert.strictEqual(desc4.includes('DISPONÍVEL NO ANÚNCIO'), true);
+});
+
+test('formatarMensagemReplicada inclui linha de cupom para cupom descritivo e preserva caixa natural', () => {
+  const msgDescritiva = formatarMensagemReplicada({
+    tipo: 'oferta',
+    titulo: 'Box Coleção Pokémon',
+    precoDe: 'R$ 250,00',
+    precoPor: 'R$ 199,00',
+    cupom: '10% OFF NO APP (Ative na página do produto)',
+    linkAfiliado: 'https://meli.la/box'
+  });
+
+  assert.strictEqual(msgDescritiva.includes('🎟️ Cupom: *10% OFF NO APP (Ative na página do produto)*'), true);
 });
 
 test('determinarTipoMensagem prioriza oferta de produto sobre alerta genérico de cupom', () => {

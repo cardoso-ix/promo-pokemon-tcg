@@ -53,7 +53,7 @@ export function initDatabase() {
       origem_chat_id TEXT,
       origem_nome TEXT,
       destino_chat_id TEXT,
-      hash_conteudo TEXT UNIQUE,
+      hash_conteudo TEXT,
       texto_original TEXT,
       texto_publicado TEXT,
       tem_foto INTEGER DEFAULT 0,
@@ -124,6 +124,44 @@ export function initDatabase() {
   // Garantir que a réplica de mensagens avulsas (sem link/cupom) fique desativada
   // evitando que mensagens aleatórias cruzem entre múltiplos grupos monitorados
   db.prepare("UPDATE configs SET valor = 'false' WHERE chave = 'replicar_comunicados_texto' AND valor = 'true'").run();
+
+  // Migração: Remover restrição UNIQUE legada de hash_conteudo na tabela logs para permitir histórico contínuo
+  try {
+    const autoIndex = db.prepare(`
+      SELECT name FROM sqlite_master 
+      WHERE type = 'index' AND tbl_name = 'logs' AND name LIKE 'sqlite_autoindex_logs_%'
+    `).get();
+
+    if (autoIndex) {
+      db.transaction(() => {
+        db.exec(`
+          CREATE TABLE logs_temp (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            origem_chat_id TEXT,
+            origem_nome TEXT,
+            destino_chat_id TEXT,
+            hash_conteudo TEXT,
+            texto_original TEXT,
+            texto_publicado TEXT,
+            tem_foto INTEGER DEFAULT 0,
+            links_convertidos INTEGER DEFAULT 0,
+            status TEXT NOT NULL,
+            motivo TEXT,
+            criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+          );
+          INSERT INTO logs_temp (id, origem_chat_id, origem_nome, destino_chat_id, hash_conteudo, texto_original, texto_publicado, tem_foto, links_convertidos, status, motivo, criado_em)
+          SELECT id, origem_chat_id, origem_nome, destino_chat_id, hash_conteudo, texto_original, texto_publicado, tem_foto, links_convertidos, status, motivo, criado_em FROM logs;
+          DROP TABLE logs;
+          ALTER TABLE logs_temp RENAME TO logs;
+          CREATE INDEX IF NOT EXISTS idx_logs_hash ON logs(hash_conteudo);
+          CREATE INDEX IF NOT EXISTS idx_logs_criado ON logs(criado_em);
+          CREATE INDEX IF NOT EXISTS idx_logs_status ON logs(status);
+        `);
+      })();
+    }
+  } catch (errMig: any) {
+    console.warn('[Database Migration] Aviso ao verificar restrição UNIQUE de logs:', errMig?.message || errMig);
+  }
 }
 
 // Helpers para ler e gravar configs

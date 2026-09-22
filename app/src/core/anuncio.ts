@@ -227,34 +227,69 @@ export function detectarMensagemCupom(texto: string): boolean {
 }
 
 /**
- * Extrai o código do cupom mencionado no texto da oferta com alta precisão
+ * Extrai o código ou condição do cupom mencionado no texto da oferta com alta precisão e resiliência
  */
 export function extrairCupom(texto: string): string | null {
   if (!texto) return null;
 
-  const blacklist = [
-    'DE', 'NO', 'DO', 'DA', 'PARA', 'COM', 'DESCONTO', 'APP', 'MERCADO', 'LIVRE',
-    'TCG', 'POKEMON', 'NENHUM', 'NOVO', 'VALIDO', 'ATIVO', 'DISPONIVEL', 'LIBERADO',
-    'ESPECIAL', 'HOJE', 'AGORA', 'AQUI', 'TODO', 'SITE', 'ITEM', 'ITEMS', 'PRODUTO',
-    'PRODUTOS', 'CLIENTE', 'PRIMEIRA', 'COMPRA', 'APENAS', 'TODOS'
+  const blacklist = new Set([
+    'DE', 'NO', 'DO', 'DA', 'EM', 'NA', 'PARA', 'COM', 'SEM', 'POR', 'QUE', 'SEU', 'SUA',
+    'DESCONTO', 'APP', 'APLICATIVO', 'MERCADO', 'LIVRE', 'TCG', 'POKEMON', 'NENHUM', 'NOVO',
+    'NOVOS', 'VALIDO', 'VALIDOS', 'ATIVO', 'ATIVOS', 'DISPONIVEL', 'DISPONIVEIS', 'LIBERADO',
+    'LIBERADOS', 'ESPECIAL', 'HOJE', 'AGORA', 'AQUI', 'TODO', 'TODOS', 'SITE', 'ITEM', 'ITEMS',
+    'PRODUTO', 'PRODUTOS', 'CLIENTE', 'PRIMEIRA', 'COMPRA', 'APENAS', 'EXCLUSIVO', 'DIRETO',
+    'CARRINHO', 'PAGINA', 'ANUNCIO', 'FINALIZAR', 'PAGAMENTO', 'COMPRANDO', 'USANDO', 'RESGATE',
+    'RESGATAR', 'PEGUE', 'ATIVE', 'APLIQUE', 'USE', 'INSIRA', 'COLOQUE', 'DIGITE', 'OFF'
+  ]);
+
+  // A) Expressões regulares para encontrar CÓDIGO de cupom alfanumérico
+  const regexesCodigo = [
+    // cupom (com possíveis adjetivos/local: ativo, válido, exclusivo, liberado, no app, de 10% off, etc.)
+    // seguido de separadores como colons, asteriscos, espaços ou hífens e o código
+    /cupo(?:m|ns)(?:\s+(?:ativo|v[aá]lido|exclusivo|liberado|especial|novo|do\s+app|no\s+app|no\s+carrinho|direto\s+no\s+app|na\s+p[aá]gina|no\s+an[uú]ncio|de\s+[^\n:]+))?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
+    // (use | usando | com | aplique | aplicar | ative | ativar | insira | inserir | coloque | colocar | digite | digitar | resgate | resgatar) [o] cupom [:] [*]CODE[*]
+    /(?:use|usando|com|aplique|aplicar|ative|ativar|insira|inserir|coloque|colocar|digite|digitar|resgate|resgatar)\s+(?:o\s+)?cupo(?:m|ns)[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
+    // cupom [de] 10% [off] [:] CODE
+    /cupo(?:m|ns)(?:\s+de)?\s+\d+%\s*(?:off)?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
+    // cupom [CODE] ou cupom (CODE) ou cupom "CODE"
+    /cupo(?:m|ns)[\s:]+[\[\("]([a-z0-9_\-]{3,25})[\]\)"]/i,
+    // cupom CODE destacado (ex: Cupom MELIKIDS, Cupom 20OFF)
+    /cupo(?:m|ns)\s+([A-Z0-9_\-]{3,25})/
   ];
 
-  const regexes = [
-    /cupom\s*:\s*\*?([a-z0-9_\-]{3,25})\*?/i,
-    /(?:use|com|aplique)\s+(?:o\s+)?cupom[:\s\*]+([a-z0-9_\-]{3,25})/i,
-    /cupom\s+de\s+[^\n:]+:\s*\*?([a-z0-9_\-]{3,25})\*?/i,
-    /\*cupom:\s*([a-z0-9_\-]{3,25})\*/i,
-    // Cupom destacado em maiúsculas ou com dígitos (ex: "Cupom MELIKIDS", "Cupom 20OFF")
-    /cupom\s+([A-Z0-9_\-]{3,25})/
-  ];
-
-  for (const regex of regexes) {
+  for (const regex of regexesCodigo) {
     const match = texto.match(regex);
     if (match && match[1]) {
-      const code = match[1].trim().replace(/[\*_~]/g, '').toUpperCase();
-      if (!blacklist.includes(code)) {
+      const code = match[1].trim().replace(/[\*_~\[\]\(\)\"\']/g, '').toUpperCase();
+      // Não pode estar na blacklist, não pode ser apenas números e deve ter pelo menos 3 caracteres
+      if (!blacklist.has(code) && !/^\d+$/.test(code) && code.length >= 3) {
         return code;
       }
+    }
+  }
+
+  // B) Fallback inteligente: se não há código textual, mas o post avisa sobre cupom no app ou no anúncio
+  // Ex: 'comprando 4 + usando o cupom de 10% no app', 'cupom de R$ 20 no app', 'com cupom no app'
+  const descPatterns = [
+    /cupo(?:m|ns)\s+de\s+(?:r\$\s*)?(\d+[\d\.,]*%?)\s*(?:off)?(?:\s+(?:no\s+app|direto\s+no\s+app|no\s+an[uú]ncio|na\s+p[aá]gina))?/i,
+    /(?:use|usando|com|ative|pegue)\s+(?:o\s+)?cupo(?:m|ns)\s+(?:de\s+)?(?:r\$\s*)?(\d+[\d\.,]*%?)\s*(?:no\s+app|no\s+an[uú]ncio)?/i,
+    /cupo(?:m|ns)\s+(?:direto\s+)?no\s+app/i,
+    /cupo(?:m|ns)\s+na\s+p[aá]gina(?:\s+do\s+produto)?/i,
+    /cupo(?:m|ns)\s+no\s+an[uú]ncio/i
+  ];
+
+  for (const regex of descPatterns) {
+    const match = texto.match(regex);
+    if (match) {
+      if (match[1]) {
+        const val = match[1].toUpperCase();
+        const tag = /%/.test(val) ? `${val} OFF NO APP` : `R$ ${val.replace(/^R\$\s*/i, '')} NO APP`;
+        return `${tag} (Ative na página do produto)`;
+      }
+      if (/an[uú]ncio|p[aá]gina/i.test(match[0])) {
+        return 'DISPONÍVEL NO ANÚNCIO (Ative na página do produto)';
+      }
+      return 'DISPONÍVEL NO APP (Ative no app do Mercado Livre)';
     }
   }
 
@@ -399,7 +434,12 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
   let linhaCupom = '';
   if (cupom && cupom.trim()) {
-    linhaCupom = `🎟️ Cupom: *${cupom.trim().toUpperCase()}*`;
+    const limpo = cupom.trim();
+    if (/^[a-z0-9_\-]+$/i.test(limpo)) {
+      linhaCupom = `🎟️ Cupom: *${limpo.toUpperCase()}*`;
+    } else {
+      linhaCupom = `🎟️ Cupom: *${limpo}*`;
+    }
   }
 
   // Template 2: Alerta de Urgência & Escassez

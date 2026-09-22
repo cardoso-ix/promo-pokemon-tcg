@@ -814,13 +814,35 @@ export class WhatsAppManager {
       });
     }
 
-    // 10. Testar Deduplicação Prévia de Hash no Banco
+    // 10. Testar Deduplicação Prévia de Hash no Banco dentro da janela de cooldown
     const destinoIds = rotasCorrespondentes.flatMap((r) => r.destinos).filter((d) => d && d !== remoteJid);
     const destinoChatId = destinoIds.join(', ');
 
-    const rowExistingHash = db.prepare('SELECT id FROM logs WHERE hash_conteudo = ?').get(hashConteudo);
+    const cooldownMinutos = parseInt(getConfig('cooldown_duplicidade_minutos', '30'), 10) || 30;
+    const rowExistingHash = db.prepare(`
+      SELECT id FROM logs
+      WHERE hash_conteudo = ?
+        AND status = 'enviado'
+        AND criado_em >= datetime('now', '-' || ? || ' minutes')
+    `).get(hashConteudo, cooldownMinutos);
+
     if (rowExistingHash) {
-      console.log(`Mensagem descartada por duplicidade de hash (${hashConteudo.slice(0, 10)})`);
+      console.log(`[Deduplicação de Hash] Mensagem já enviada nos últimos ${cooldownMinutos}min (${hashConteudo.slice(0, 10)}). Descartando.`);
+      const log = insertLog({
+        origem_chat_id: remoteJid,
+        origem_nome: origemNome,
+        destino_chat_id: destinoChatId,
+        hash_conteudo: `hash_dup_${Date.now()}_${Math.random()}`,
+        texto_original: rawText,
+        texto_publicado: '',
+        tem_foto: Boolean(messageHasImage),
+        links_convertidos: linksConvertidos,
+        status: 'ignorado',
+        motivo: `duplicata_hash_${cooldownMinutos}min`
+      });
+      if (log) {
+        this.notifyMessage(log);
+      }
       return;
     }
 
