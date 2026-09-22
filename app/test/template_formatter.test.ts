@@ -4,7 +4,9 @@ import {
   detectarGatilhoUrgencia,
   detectarMensagemCupom,
   calcularDesconto,
-  formatarMensagemReplicada
+  formatarMensagemReplicada,
+  extrairCupom,
+  determinarTipoMensagem
 } from '../src/core/anuncio.js';
 
 test('detectarGatilhoUrgencia identifica termos de escassez e ofertas relâmpago', () => {
@@ -81,4 +83,75 @@ test('formatarMensagemReplicada - Template 3: Cupons & Vitrine Oficial', () => {
   assert.strictEqual(msg.includes('🏷️ Cupom: *POKEDAY20*'), true);
   assert.strictEqual(msg.includes('R$ 20 OFF acima de R$ 100'), true);
   assert.strictEqual(msg.includes('👉 https://mercadolivre.com/sec/2rM6RPm'), true);
+});
+
+test('extrairCupom extrai código de cupom com precisão', () => {
+  assert.strictEqual(extrairCupom('Tripack Pokémon Escuridão Absoluta Cupom: MELIKIDS'), 'MELIKIDS');
+  assert.strictEqual(extrairCupom('Preço no app com cupom: *MELIKIDS*'), 'MELIKIDS');
+  assert.strictEqual(extrairCupom('Use o cupom MELIKIDS para desconto'), 'MELIKIDS');
+  assert.strictEqual(extrairCupom('Aplique o cupom POKEDAY20 no carrinho'), 'POKEDAY20');
+  assert.strictEqual(extrairCupom('Sem cupom nenhum neste post'), null);
+});
+
+test('determinarTipoMensagem prioriza oferta de produto sobre alerta genérico de cupom', () => {
+  // Caso que causou o bug no teste do usuário: produto com cupom
+  const tipoComProduto = determinarTipoMensagem({
+    texto: 'Tripack Pokémon Escuridão Absoluta por R$ 44,90 cupom MELIKIDS',
+    hasProdutoEspecifico: true
+  });
+  assert.strictEqual(tipoComProduto, 'oferta');
+
+  // Alerta de urgência em produto com cupom
+  const tipoUrgenciaComProduto = determinarTipoMensagem({
+    texto: '🚨 CORRE! Últimas unidades do Tripack com cupom MELIKIDS',
+    hasProdutoEspecifico: true
+  });
+  assert.strictEqual(tipoUrgenciaComProduto, 'urgencia');
+
+  // Apenas cupom geral sem produto específico (direciona para vitrine)
+  const tipoApenasCupom = determinarTipoMensagem({
+    texto: '🎟️ NOVO CUPOM NO APP DO MERCADO LIVRE! Use MELIKIDS para R$ 15 OFF',
+    hasProdutoEspecifico: false
+  });
+  assert.strictEqual(tipoApenasCupom, 'cupom');
+});
+
+test('formatarMensagemReplicada - Oferta de Produto COM Cupom preserva produto e link afiliado', () => {
+  const msg = formatarMensagemReplicada({
+    tipo: 'oferta',
+    titulo: 'Tripack Pokémon Escuridão Absoluta Copag',
+    precoDe: 'R$ 59,90',
+    precoPor: 'R$ 44,90',
+    cupom: 'MELIKIDS',
+    linkAfiliado: 'https://meli.la/tripack123'
+  });
+
+  // NÃO deve conter o cabeçalho genérico de cupom
+  assert.strictEqual(msg.includes('NOVO CUPOM DO MERCADO LIVRE LIBERADO'), false);
+  // DEVE conter o título do produto
+  assert.strictEqual(msg.includes('📦 *Tripack Pokémon Escuridão Absoluta Copag*'), true);
+  // DEVE conter os preços
+  assert.strictEqual(msg.includes('❌ ~De: R$ 59,90~'), true);
+  assert.strictEqual(msg.includes('🔥 *Por apenas: R$ 44,90*'), true);
+  // DEVE conter o cupom destacado
+  assert.strictEqual(msg.includes('🎟️ Cupom: *MELIKIDS*'), true);
+  // DEVE conter o link do produto, e NÃO a vitrine geral
+  assert.strictEqual(msg.includes('👉 https://meli.la/tripack123'), true);
+});
+
+test('formatarMensagemReplicada - Oferta sem preço informado omite linhas de preço limpas', () => {
+  const msg = formatarMensagemReplicada({
+    tipo: 'oferta',
+    titulo: 'Tripack Pokémon Escuridão Absoluta Copag',
+    precoPor: 'Consultar',
+    cupom: 'MELIKIDS',
+    linkAfiliado: 'https://meli.la/tripack123'
+  });
+
+  // NÃO deve imprimir "Por apenas: R$ Consultar"
+  assert.strictEqual(msg.includes('Consultar'), false);
+  assert.strictEqual(msg.includes('Por apenas'), false);
+  assert.strictEqual(msg.includes('📦 *Tripack Pokémon Escuridão Absoluta Copag*'), true);
+  assert.strictEqual(msg.includes('🎟️ Cupom: *MELIKIDS*'), true);
+  assert.strictEqual(msg.includes('👉 https://meli.la/tripack123'), true);
 });

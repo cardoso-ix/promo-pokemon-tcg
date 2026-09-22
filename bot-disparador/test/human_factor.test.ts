@@ -64,8 +64,10 @@ test('Fator Humano - Regra 3: Volume Gradual e Aquecimento do Chip (Warm Up)', (
     assert.strictEqual(dia1.limiteHoje, 20);
     assert.strictEqual(dia1.concluido, false);
 
-    // 2. Simular Dia 5 (início há 4 dias)
-    const quatroDiasAtras = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    // 2. Simular Dia 5 (início há 4 dias no calendário local)
+    const d4 = new Date();
+    d4.setDate(d4.getDate() - 4);
+    const quatroDiasAtras = `${d4.getFullYear()}-${String(d4.getMonth() + 1).padStart(2, '0')}-${String(d4.getDate()).padStart(2, '0')}`;
     setConfig('aquecimento_data_inicio', quatroDiasAtras);
     const dia5 = getWarmupStatus();
     assert.strictEqual(dia5.diaAtual, 5);
@@ -73,7 +75,9 @@ test('Fator Humano - Regra 3: Volume Gradual e Aquecimento do Chip (Warm Up)', (
     assert.strictEqual(dia5.limiteHoje, 40);
 
     // 3. Simular conclusão do aquecimento (início há 25 dias)
-    const vinteCincoDiasAtras = new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const d25 = new Date();
+    d25.setDate(d25.getDate() - 25);
+    const vinteCincoDiasAtras = `${d25.getFullYear()}-${String(d25.getMonth() + 1).padStart(2, '0')}-${String(d25.getDate()).padStart(2, '0')}`;
     setConfig('aquecimento_data_inicio', vinteCincoDiasAtras);
     const dia26 = getWarmupStatus();
     assert.strictEqual(dia26.diaAtual, 26);

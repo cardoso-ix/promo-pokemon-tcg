@@ -203,6 +203,70 @@ export function detectarMensagemCupom(texto: string): boolean {
   return regex.test(texto);
 }
 
+/**
+ * Extrai o código do cupom mencionado no texto da oferta com alta precisão
+ */
+export function extrairCupom(texto: string): string | null {
+  if (!texto) return null;
+
+  const blacklist = [
+    'DE', 'NO', 'DO', 'DA', 'PARA', 'COM', 'DESCONTO', 'APP', 'MERCADO', 'LIVRE',
+    'TCG', 'POKEMON', 'NENHUM', 'NOVO', 'VALIDO', 'ATIVO', 'DISPONIVEL', 'LIBERADO',
+    'ESPECIAL', 'HOJE', 'AGORA', 'AQUI', 'TODO', 'SITE', 'ITEM', 'ITEMS', 'PRODUTO',
+    'PRODUTOS', 'CLIENTE', 'PRIMEIRA', 'COMPRA', 'APENAS', 'TODOS'
+  ];
+
+  const regexes = [
+    /cupom\s*:\s*\*?([a-z0-9_\-]{3,25})\*?/i,
+    /(?:use|com|aplique)\s+(?:o\s+)?cupom[:\s\*]+([a-z0-9_\-]{3,25})/i,
+    /cupom\s+de\s+[^\n:]+:\s*\*?([a-z0-9_\-]{3,25})\*?/i,
+    /\*cupom:\s*([a-z0-9_\-]{3,25})\*/i,
+    // Cupom destacado em maiúsculas ou com dígitos (ex: "Cupom MELIKIDS", "Cupom 20OFF")
+    /cupom\s+([A-Z0-9_\-]{3,25})/
+  ];
+
+  for (const regex of regexes) {
+    const match = texto.match(regex);
+    if (match && match[1]) {
+      const code = match[1].trim().replace(/[\*_~]/g, '').toUpperCase();
+      if (!blacklist.includes(code)) {
+        return code;
+      }
+    }
+  }
+
+  return null;
+}
+
+export interface DeterminarTipoParams {
+  texto: string;
+  hasProdutoEspecifico: boolean;
+}
+
+/**
+ * Determina o tipo de template correto a aplicar.
+ * Se houver produto específico identificado, a postagem NUNCA é classificada
+ * como mero alerta de cupom avulso, garantindo que o produto e link sejam replicados.
+ */
+export function determinarTipoMensagem(params: DeterminarTipoParams): 'oferta' | 'urgencia' | 'cupom' {
+  const { texto, hasProdutoEspecifico } = params;
+  const isUrgencia = detectarGatilhoUrgencia(texto);
+
+  // Se há um produto específico sendo ofertado, é sempre OFERTA (ou URGÊNCIA)
+  // O cupom será adicionado como um detalhe de desconto dentro da própria oferta
+  if (hasProdutoEspecifico) {
+    return isUrgencia ? 'urgencia' : 'oferta';
+  }
+
+  // Se NÃO há produto específico, verifica se é divulgação de cupom geral / vitrine
+  const isCupom = detectarMensagemCupom(texto);
+  if (isCupom) {
+    return 'cupom';
+  }
+
+  return isUrgencia ? 'urgencia' : 'oferta';
+}
+
 export interface FormatarReplicadaParams {
   tipo: 'oferta' | 'urgencia' | 'cupom';
   titulo: string;
@@ -242,20 +306,22 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
     return linhas.join('\n');
   }
 
-  // Preço e Desconto
+  // Preço e Desconto (com proteção contra 'Consultar' ou valores nulos)
   const de = (precoDe || '').trim();
   const por = (precoPor || '').trim();
-  const calculo = calcularDesconto(de, por);
+  const isPorValido = por && por.toLowerCase() !== 'consultar' && por !== '0' && por !== 'R$ 0';
+  const isDeValido = de && de.toLowerCase() !== 'consultar' && de !== '0' && de !== 'R$ 0';
+  const calculo = isPorValido && isDeValido ? calcularDesconto(de, por) : null;
   const tagDesconto = calculo ? calculo.tagDesconto : '';
 
   let linhaPrecoDe = '';
-  if (de) {
+  if (isDeValido) {
     const valorDe = de.startsWith('R$') ? de : `R$ ${de}`;
     linhaPrecoDe = `❌ ~De: ${valorDe}~`;
   }
 
   let linhaPrecoPor = '';
-  if (por) {
+  if (isPorValido) {
     const valorPor = por.startsWith('R$') ? por : `R$ ${por}`;
     linhaPrecoPor = `🔥 *Por apenas: ${valorPor}*${tagDesconto}`;
   }

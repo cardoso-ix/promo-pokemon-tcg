@@ -105,6 +105,10 @@ export function extrairDadosOferta(
         !lower.includes('aproveite') &&
         !lower.includes('compre aqui') &&
         !lower.includes('loja verificada') &&
+        !lower.startsWith('cupom') &&
+        !lower.includes('cupom:') &&
+        !lower.includes('novo cupom') &&
+        !lower.includes('liberado') &&
         !/^de:?|^por:?|^apenas:?|^https?:/i.test(l) &&
         !/R\$\s*[\d\.,]+/i.test(l) &&
         !l.startsWith('🔗') &&

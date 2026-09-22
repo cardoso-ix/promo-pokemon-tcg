@@ -29,7 +29,9 @@ import {
   isProdutoTCG,
   detectarGatilhoUrgencia,
   detectarMensagemCupom,
-  formatarMensagemReplicada
+  formatarMensagemReplicada,
+  extrairCupom,
+  determinarTipoMensagem
 } from '../core/anuncio.js';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr';
@@ -675,22 +677,24 @@ export class WhatsAppManager {
     let textoFinalPublicar = novoTexto;
 
     if (templateModo === 'padrao') {
-      const isCupom = detectarMensagemCupom(rawText);
-      const isUrgencia = detectarGatilhoUrgencia(rawText);
+      const cupomExtraido = extrairCupom(rawText) || '';
 
-      let tipoMensagem: 'oferta' | 'urgencia' | 'cupom' = 'oferta';
-      if (isCupom) {
-        tipoMensagem = 'cupom';
-      } else if (isUrgencia) {
-        tipoMensagem = 'urgencia';
-      }
+      // Verifica se a mensagem traz um produto específico (preço, ID canônico, foto ou título real)
+      const hasPreco = Boolean(
+        (dadosOferta.valorPor && dadosOferta.valorPor !== 'Consultar') ||
+        (dadosOferta.valorDe && dadosOferta.valorDe !== 'Consultar')
+      );
+      const hasProdutoEspecifico = Boolean(
+        canonicalProductId ||
+        hasPreco ||
+        (dadosOferta.produto && dadosOferta.produto !== 'Colecionável Pokémon TCG' && !dadosOferta.produto.toLowerCase().startsWith('cupom')) ||
+        Boolean(messageHasImage)
+      );
 
-      // Extrair cupom se houver no texto original
-      let cupomExtraido = '';
-      const cupomMatch = rawText.match(/cupom[:\s\*]*([a-z0-9_-]{3,20})/i);
-      if (cupomMatch && cupomMatch[1]) {
-        cupomExtraido = cupomMatch[1].trim().toUpperCase();
-      }
+      const tipoMensagem = determinarTipoMensagem({
+        texto: rawText,
+        hasProdutoEspecifico
+      });
 
       const linkMatches = novoTexto.match(/https?:\/\/[^\s]+/gi);
       const linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
@@ -701,7 +705,7 @@ export class WhatsAppManager {
         precoDe: dadosOferta.valorDe,
         precoPor: dadosOferta.valorPor,
         cupom: cupomExtraido,
-        detalhesCupom: isCupom ? 'Desconto especial no app para colecionáveis' : undefined,
+        detalhesCupom: tipoMensagem === 'cupom' ? 'Desconto especial no app para colecionáveis' : undefined,
         linkAfiliado: linkAfiliadoFinal,
         linkVitrineCurto
       });
