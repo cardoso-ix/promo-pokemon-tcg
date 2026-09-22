@@ -2,35 +2,38 @@
 
 ## 1. Visão Geral
 
-A plataforma é um ecossistema de alto rendimento desenvolvido em **Node.js 22 LTS e TypeScript**, operando em **produção contínua na nuvem (Railway)** através de contêineres Docker independentes com armazenamento persistente NVMe.
+A plataforma é um ecossistema de alto rendimento desenvolvido em **Node.js 22 LTS e TypeScript**, operando em **produção contínua na nuvem (VPS HostGator)** através de contêineres Docker independentes orquestrados pelo **Coolify** com armazenamento persistente NVMe.
 
 O sistema divide-se em dois grandes serviços desacoplados:
-1. **Replicador de Ofertas (`app/`):** Escuta promoções de Pokémon TCG em grupos de monitoramento, higieniza mensagens, encurta links via API oficial do Mercado Livre (`meli.la`) com fallback de afiliado, desembrulha mídias/fotos em 2X e replica nos grupos VIP.
-2. **Bot Disparador & Atendimento IA (`bot-disparador/`):** Plataforma de prospecção e conversão contínua. Extrai contatos de grupos com 1 clique, dispara mensagens em massa anti-ban com Spintax `{Opção 1|Opção 2}` e variáveis dinâmicas, inclui simulador WhatsApp ao vivo no cockpit web e atendimento privado humanizado com **DeepSeek V4 via OpenCode Gateway**.
+1. **Replicador de Ofertas (`app/` — Porta 3000):** Escuta promoções de Pokémon TCG em grupos de monitoramento, higieniza mensagens, encurta links via API oficial do Mercado Livre (`meli.la`) com fallback de afiliado, desembrulha mídias/fotos em 2X e replica nos grupos VIP.
+2. **Bot Disparador & Atendimento IA (`bot-disparador/` — Porta 3333):** Plataforma de prospecção e conversão contínua. Extrai contatos de grupos com 1 clique, dispara mensagens em massa anti-ban com Spintax `{Opção 1|Opção 2}` e variáveis dinâmicas, inclui simulador WhatsApp ao vivo no cockpit web e atendimento privado humanizado com **DeepSeek V4 via OpenCode Gateway**.
 
 ---
 
-## 2. Diagrama de Arquitetura em Nuvem (Railway)
+## 2. Diagrama de Arquitetura em Nuvem (VPS HostGator + Coolify)
 
 ```text
-                                  NUVEM RAILWAY (PRODUÇÃO 24/7)
+                           VPS HOSTGATOR (IP: 108.174.145.77 — PRODUÇÃO 24/7)
  ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
  │                                                                                                  │
  │  ┌──────────────────────────────────────────────┐  ┌───────────────────────────────────────────┐ │
  │  │        SERVIÇO 1: REPLICADOR DE OFERTAS      │  │        SERVIÇO 2: BOT DISPARADOR & IA     │ │
  │  │                  (Porta 3000)                │  │                  (Porta 3333)             │ │
+ │  │            [Tema Água 💧 Inter/Outfit]        │  │            [Tema Fogo 🔥 Inter/Outfit]        │ │
  │  │                                              │  │                                           │ │
  │  │  • WhatsApp Baileys (Chip Replicador)        │  │  • WhatsApp Baileys (Chip de Disparos)     │ │
  │  │  • Encurtador Oficial API Mercado Livre      │  │  • Extrator Automático de Grupos/Leads     │ │
  │  │  • Scraper ML Imagens Oficiais 2X            │  │  • Fila Anti-Ban + Motor Spintax          │ │
  │  │  • SQLite Embarcado: replica.db              │  │  • SQLite Embarcado: disparador.db        │ │
- │  │  • Cockpit Web Fastify + WebSockets          │  │  • Cockpit Web Fastify + Simulador Live   │ │
- │  │                                              │  │  • Atendimento IA DeepSeek V4 (OpenCode)  │ │
+ │  │  • Webhook Google Sheets ("produtos tcg")    │  │  • Atendimento IA DeepSeek V4 (OpenCode)  │ │
+ │  │  • Agendador Matinal 07:00 AM (Brasília)     │  │  • Meta Shield (Auditor Heurístico)        │ │
+ │  │  • Top Header Switcher (:3000 ➔ :3333)       │  │  • Top Header Switcher (:3333 ➔ :3000)     │ │
  │  └──────────────────────┬───────────────────────┘  └─────────────────────┬─────────────────────┘ │
  │                         │                                                │                       │
  │                         ▼                                                ▼                       │
  │  ┌──────────────────────────────────────────────┐  ┌───────────────────────────────────────────┐ │
- │  │      VOLUME PERSISTENTE 1 (/app/data)        │  │      VOLUME PERSISTENTE 2 (/app/data)     │ │
+ │  │       NAMED VOLUME: promo_replica_data       │  │      NAMED VOLUME: bot_disparador_data    │ │
+ │  │               (/app/data)                    │  │               (/app/data)                 │ │
  │  │  • auth_baileys/ (Sessão Replicador)         │  │  • auth/ (Sessão Disparador)              │ │
  │  │  • replica.db (Rotas, Configs, Logs)         │  │  • disparador.db (Leads, Fila, Histórico) │ │
  │  └──────────────────────────────────────────────┘  └───────────────────────────────────────────┘ │
@@ -38,7 +41,7 @@ O sistema divide-se em dois grandes serviços desacoplados:
  └──────────────────────────────────────────────────────────────────────────────────────────────────┘
                  │                                                    │
                  ▼                                                    ▼
-      Domínio Público HTTPS Replicador                     Domínio Público HTTPS Disparador
+      http://108.174.145.77:3000                           http://108.174.145.77:3333
 ```
 
 ---
@@ -64,17 +67,6 @@ O sistema divide-se em dois grandes serviços desacoplados:
   - Integração via OpenCode Gateway (`https://opencode.ai/zen/go/v1`).
   - Modelo `deepseek-v4-flash` / `deepseek-v4-pro`.
   - Simula digitação humana no WhatsApp (delay de 3 a 6 segundos) e responde como especialista amigável de Pokémon TCG.
-### 3.3. Servidores MCP (Model Context Protocol) & Ferramentas de IA
-Para potencializar o desenvolvimento assistido por IA e a automação de inteligência de mercado:
-- **Firecrawl MCP (`https://mcp.firecrawl.dev/v2/mcp`)**:
-  - Web scraping avançado e renderização de sites de e-commerce concorrentes com headless browser na nuvem.
-  - Pesquisa web em tempo real (`firecrawl_search`) e extração de catálogo de cards/boxes em Markdown limpo (`firecrawl_scrape`).
-  - Opera via transporte Streamable HTTP (Keyless ou Bearer Token) garantindo zero sobrecarga de hardware local.
-- **Mercado Livre MCP (`https://mcp.mercadolibre.com/mcp`)**:
-  - Acesso direto a metadados, catálogo e itens da plataforma Mercado Livre.
-- **Arquivos de Configuração**:
-  - `.cursor/mcp.json` (Cursor IDE)
-  - `.agents/mcp_config.json` (Google Antigravity IDE)
 
 ---
 
@@ -89,20 +81,8 @@ Ambos os serviços utilizam volumes NVMe montados em `/app/data`:
 ## 5. Orquestração em VPS Própria com Coolify
 
 A plataforma conta com arquitetura de produção via `docker-compose.coolify.yml`:
-- **Traefik Reverse Proxy Integrado**: Gerencia certificados SSL Let's Encrypt automaticamente para `promo.seudominio.com` e `disparador.seudominio.com`.
 - **Named Volumes Blindados**:
   - `promo_replica_data` ➔ `/app/data` (Replicador)
   - `bot_disparador_data` ➔ `/app/data` (Disparador)
   - Protege 100% as sessões do WhatsApp contra reinicializações e rebuilds de imagem.
-- **Limites de Recursos (Anti-OOM)**: Cada container possui limite de 512MB de memória para garantir estabilidade contínua em VPS compactas (2GB ou 4GB de RAM).
 - **Healthchecks Automáticos**: Ambos os serviços contam com verificação periódica na rota `/health` a cada 30 segundos, permitindo que o Coolify reinicie contêineres em caso de travamento do Baileys.
-
----
-
-## 6. Ponte de Comunicação Interna (Rede Docker)
-
-Os dois contêineres operam na rede compartilhada `promo_network`:
-1. Quando o Replicador valida e posta uma oferta nos grupos VIP, aciona a rota interna `POST http://bot-disparador:3333/api/internal/oferta`.
-2. A requisição utiliza cabeçalho de autenticação mútua `X-Internal-Token` configurado via `INTERNAL_API_KEY`.
-3. O Disparador registra a oferta na tabela `ofertas_recebidas` e emite evento em tempo real via Server-Sent Events (SSE).
-4. No painel do Disparador, o usuário pode transformar instantaneamente qualquer promoção capturada em uma nova campanha de mensagens frias ou disponibilizá-la no catálogo da IA.

@@ -14,13 +14,14 @@ O ecossistema roda de forma desvinculada de qualquer máquina local ou nuvem pag
 
 | Módulo | Tecnologia | Ambiente / Status | Descrição |
 | --- | --- | --- | --- |
-| **Replicador de Ofertas** | TypeScript + Baileys + Fastify | 🟢 **Online 24/7 (Tema Água 💧)** | Layout moderno com Sidebar, cor azul ciano oceano e motor de partículas com gotículas e bolhas d'água em 60fps. Monitora grupos, intercepta concorrentes, encurta para `meli.la` e replica com foto 2X HD. |
-| **Bot Disparador & Leads** | TypeScript + Baileys + Spintax | 🟢 **Online 24/7 (Tema Fogo 🔥)** | Layout moderno com Sidebar, cor vermelho rubi/âmbar e motor de partículas com brasas e fagulhas incandescentes em 60fps. Extração de leads, disparos anti-ban e atendimento IA com DeepSeek. |
+| **Replicador de Ofertas** | TypeScript + Baileys + Fastify | 🟢 **Online 24/7 (Tema Água 💧)** | Layout moderno com Sidebar limpa, cor azul ciano oceano e motor de partículas com gotículas e bolhas d'água 3D em 60fps. Monitora grupos, intercepta concorrentes, encurta para `meli.la` e replica com foto 2X HD. |
+| **Bot Disparador & Leads** | TypeScript + Baileys + Spintax | 🟢 **Online 24/7 (Tema Fogo 🔥)** | Layout moderno com Sidebar limpa, cor vermelho rubi/âmbar e motor de partículas com brasas e fagulhas incandescentes 3D em 60fps. Extração de leads, disparos anti-ban e atendimento IA com DeepSeek. |
 | **Atendimento IA Privado** | DeepSeek V4 (OpenCode Gateway) | 🟢 **Online 24/7 (VPS HostGator)** | Responde clientes no privado imitando especialista amigável de Pokémon TCG com digitação humanizada. |
 | **Encurtador de Afiliados** | API Oficial Mercado Livre | 🟢 **Ativo (Sentinel 45m)** | Monitorado pelo Cookie Sentinel em tempo real, encurtador oficial `https://meli.la/xxxxxx` e fallback resiliente. |
 | **Bancos de Dados SQLite** | Better-SQLite3 (WAL Mode) | 🟢 **Ativo (Named Volumes)** | `replica.db` e `disparador.db` salvos com segurança em `/app/data` via volumes Docker `promo_replica_data` e `bot_disparador_data`. |
-| **Cockpits Web & Segurança** | Fastify + WebSockets + UI TCG | 🟢 **Online (Ultra Ball & Holo Foil)** | Interface temática Pokémon TCG com efeito Rare Holo Foil, badges de energia, barra de HP da sessão e balões WhatsApp Dark autênticos. Integração direta entre replicador e disparador. |
+| **Cockpits Web & Segurança** | Fastify + WebSockets + UI TCG | 🟢 **Online (Inter & Outfit)** | Interface temática com tipografia unificada `Inter` e `Outfit`, sem poluição, cards com `backdrop-filter: blur(16px)` e alternância rápida no Top Header. |
 | **Google Planilhas ("produtos tcg valores")** | Webhook Apps Script + Dual-Write Local | 🟢 **Ativo (Sincronização Contínua)** | Registra automaticamente cada oferta enviada nos grupos com Data/Hora, Nome do Produto, Valor Promocional (Por), Preço Original (De) e Link Afiliado. |
+| **Mensagem Diária de Abertura (07:00 AM)** | Scheduler Nativo (Fuso de Brasília) | 🟢 **Ativo (Anti-Duplicidade)** | Dispara automaticamente mensagem calorosa todas as manhãs às 07:00 AM com agradecimento e convite de amigos. |
 
 ---
 
@@ -38,4 +39,12 @@ Ambos os serviços operam 24/7 na VPS HostGator:
   👉 `https://github.com/cardoso-ix/promo-pokemon-tcg` (Branch: `main`)
 
 > [!NOTE]
-> O Railway foi completamente desativado, evitando cobranças e concorrência de sessão de WhatsApp. Toda a operação está consolidada e isolada na VPS.
+> Credenciais padrão de acesso a ambos os cockpits:  
+> Usuário: **`admin`** | Senha: **`promo2026`** (Sessão segura de 30 dias).
+
+---
+
+## 4. Cobertura de Testes Automatizados
+- **Total de Testes:** **88 testes unitários** (0 falhas).
+  - `app`: 60 testes aprovados.
+  - `bot-disparador`: 28 testes aprovados.

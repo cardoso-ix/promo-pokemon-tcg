@@ -1,50 +1,36 @@
-# Design System — Cockpit Réplica Promo
+# Design System — Cockpits Promo Pokémon TCG
 
-## Conceito Visual
+## 🎨 Conceito Visual Elemental
 
-Interface inspirada em cockpit de operações noturnas e arena de Pokémon TCG: fundo escuro profundo, cartões elevados com bordas sutis e acentos em amarelo elétrico (Foil) e ciano de energia. O foco é a máxima legibilidade das postagens replicadas e controle tátil de rotas tanto no desktop quanto em telas móveis.
+O design system da plataforma baseia-se nos elementos clássicos do universo **Pokémon TCG**, combinando alta tecnologia, interfaces dark modernas e efeitos visuais imersivos:
 
----
+1. **💧 Réplica Promo Cockpit (`:3000`):**
+   - **Tema:** Tipo Água (Water TCG).
+   - **Cores Predominantes:** Azul Oceano profundo (`#0284c7`), Azul Céu (`#38bdf8`), Cyan Elétrico (`#00e5ff`) e Fundo Abissal (`#050b14`).
+   - **Efeito Visual Dinâmico:** Motor Canvas 2D em 60fps acelerado por GPU com **Bolhas Cristalinas 3D** (borda luminosa cyan e highlight especular branco) e **Orbes de Orvalho** que flutuam organicamente.
+   - **Identidade:** Pokéball estilizada Tipo Água com aura luminosa.
 
-## Paleta de Cores e Tokens
-
-| Token | Valor Hex | Aplicação |
-| --- | --- | --- |
-| `--bg-base` | `#0b0914` | Fundo principal da aplicação |
-| `--bg-surface` | `#131022` | Cartões, painéis e contêineres |
-| `--bg-raised` | `#1c1833` | Modais, tabelas e cabeçalhos elevados |
-| `--border` | `#2d264f` | Linhas divisórias e contornos de inputs |
-| `--text-main` | `#f5f3ff` | Títulos e textos de alta ênfase |
-| `--text-muted` | `#968eb3` | Legendas, datas e informações secundárias |
-| `--accent-foil`| `#ffe033` | Botões primários, badges de destaque e alertas |
-| `--accent-cyan`| `#3de6ff` | Links, badges de canal e indicadores ativos |
-| `--status-ok`  | `#10b981` | Conexão WhatsApp ativa, posts enviados |
-| `--status-err` | `#ef4444` | Desconexão, erros de envio, exclusão |
+2. **🔥 Disparador Pro Cockpit (`:3333`):**
+   - **Tema:** Tipo Fogo (Fire TCG).
+   - **Cores Predominantes:** Vermelho Rubi (`#ef4444`), Laranja Brasa (`#f97316`), Dourado Incandescente (`#f59e0b`) e Fundo Forja (`#0c0505`).
+   - **Efeito Visual Dinâmico:** Motor Canvas 2D em 60fps acelerado por GPU com **Brasas Incandescentes 3D** (núcleo térmico dourado e halo carmesim) e **Micro-fagulhas Cintilantes** que sobem com convecção térmica senoidal.
+   - **Identidade:** Pokéball estilizada Tipo Fogo com aura incandescente.
 
 ---
 
-## Tipografia
+## 🔤 Tipografia Oficial Unificada
 
-- **Família Principal**: `Inter`, `-apple-system`, `BlinkMacSystemFont`, `Segoe UI`, `Roboto`, sans-serif.
-- **Códigos e Logs**: `Fira Code`, `SF Mono`, `Consolas`, monospace.
+Ambos os cockpits utilizam uma hierarquia tipográfica idêntica para garantir paridade e profissionalismo:
+- **Títulos e Headings:** `'Outfit', sans-serif` (pesos 400, 500, 600, 700) com proporções equilibradas e letter-spacing levemente condensado.
+- **Corpo de Texto, Dados e Formulários:** `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif` (pesos 300, 400, 500, 600, 700) para máxima clareza e legibilidade.
+- **Códigos e IDs:** `Fira Code, SF Mono, Consolas, monospace`.
 
 ---
 
-## Componentes do Cockpit
+## 🛡️ Glassmorphism & Proteção de Legibilidade
 
-1. **Header com Status em Tempo Real**:
-   - Badge dinâmico de conexão com WhatsApp (Pendente, Conectando, Conectado, Desconectado) com pulso luminoso.
-   - Alternador Geral da Esteira com feedback tátil e atualização instantânea.
-
-2. **Cartões de KPI**:
-   - Métricas em tempo real: "Posts na Última Hora", "Enviados Hoje", "Rotas Ativas".
-
-3. **Gerenciador de Rotas**:
-   - Cards visuais com origem ➔ destino, toggle de ativação individual e botão de exclusão.
-   - Seletor de grupos com busca inteligente e autocomplete pelos nomes reais dos grupos.
-
-4. **Feed de Atividades (Logs)**:
-   - Timeline de postagens com visualização do texto original, texto processado, links encurtados e thumbnail da mídia replicada.
-
-5. **Responsividade**:
-   - Layout fluido com suporte completo a celulares, tablets e monitores ultrawide.
+Para assegurar que os efeitos visuais não criem poluição visual e não prejudiquem o uso contínuo:
+1. **Camada de Fundo Isolada (`z-index: 0`):** O canvas de partículas opera estritamente no fundo com `pointer-events: none` e `mix-blend-mode: screen`.
+2. **Vidro Fosco Protetor (`backdrop-filter: blur(16px)`):** Cards, painéis, modais e o top-header possuem fundo semi-opaco com desfoque de vidro. Ao passarem por trás dos cards, as partículas são suavizadas, garantindo **contraste de 100% no texto e nos dados**.
+3. **Sidebar Limpa:** A barra lateral de ambos os módulos é dedicada exclusivamente à navegação interna de abas, sem links concorrentes.
+4. **Top Header Switcher Dinâmico:** Um botão compacto no cabeçalho superior direito (`[🔥 Disparador Pro]` ou `[💧 Replicador Pro]`) permite alternar entre os sistemas instantaneamente.

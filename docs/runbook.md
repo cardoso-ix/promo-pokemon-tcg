@@ -1,21 +1,23 @@
 # Runbook — Manual de Operação e Manutenção
 
-Guia prático para a operação diária, manutenção e gerenciamento das duas aplicações em produção na nuvem.
+Guia prático para a operação diária, manutenção e gerenciamento das duas aplicações em produção na nuvem (VPS HostGator + Coolify).
 
 ---
 
-## 1. Operação em Nuvem (Railway — 24/7)
+## 1. Operação em Produção (VPS HostGator — 24/7)
 
-Tanto o **Replicador de Ofertas** quanto o **Bot Disparador & Atendimento IA** rodam de forma autônoma e ininterrupta no Railway, acessíveis de qualquer navegador (computador, tablet ou celular), sem que você precise manter seu computador ligado.
+Tanto o **Replicador de Ofertas** quanto o **Bot Disparador & Atendimento IA** rodam de forma autônoma e ininterrupta na VPS HostGator (`108.174.145.77`), acessíveis de qualquer navegador (computador, tablet ou celular), sem que você precise manter seu computador ligado.
 
 ### 1.1. Painel do Replicador de Ofertas
-- **Acesso Online**: `https://promo-replica-bot-production.up.railway.app`
+- **Acesso Online**: 👉 **`http://108.174.145.77:3000`**
+- **Tema Visual**: 🌊 **Tipo Água Pokémon TCG** (Azul/Cyan, Gotículas 3D, Fundo Atmosférico).
 - **Função**: Controla a replicação de ofertas de grupos concorrentes para os seus grupos VIP, encurtamento oficial `meli.la` e fotos oficiais 2X do Mercado Livre.
 - **Autenticação**: Protegido por login e senha. Sessão criptografada persistente de 30 dias.
-- **Pareamento do WhatsApp**: Na aba **Pareamento**, escaneie o QR Code. Se precisar redefinir a conexão ou gerar um código novo a qualquer momento, clique no botão **🔄 Reiniciar Sessão / Gerar Novo QR Code**.
+- **Pareamento do WhatsApp**: Na aba **Conectar WhatsApp**, escaneie o QR Code. Se precisar redefinir a conexão a qualquer momento, clique no botão **🔄 Reiniciar Sessão / Gerar Novo QR Code**.
 
 ### 1.2. Painel do Bot Disparador & Atendimento IA
-- **Acesso Online**: `https://bot-disparador-ia-production.up.railway.app`
+- **Acesso Online**: 👉 **`http://108.174.145.77:3333`**
+- **Tema Visual**: 🔥 **Tipo Fogo Pokémon TCG** (Vermelho/Laranja, Brasas 3D, Fundo Atmosférico).
 - **Função**: Extração de leads de grupos com 1 clique, disparos automáticos em massa com proteção anti-ban (Spintax), simulador WhatsApp ao vivo e atendimento privado automático com DeepSeek V4.
 - **Autenticação**: Protegido por login e senha. Sessão criptografada persistente de 30 dias.
 
@@ -25,10 +27,6 @@ Ambos os painéis utilizam controle de acesso por credenciais seguras e tokens a
 - **Senha padrão**: `promo2026`
 - **Duração da Sessão**: 30 dias em cookie seguro (`HttpOnly; SameSite=Lax`).
 - **Botão Sair**: Disponível na barra superior de ambos os painéis para encerramento imediato de sessão.
-- **Personalização de Credenciais (Opcional)**: Caso queira alterar no Railway, basta configurar as variáveis no painel do Railway:
-  - `ADMIN_USER`: seu novo login
-  - `ADMIN_PASS`: sua nova senha
-  - `SESSION_SECRET`: chave secreta customizada (opcional)
 
 ### 1.4. Gerador Manual de Anúncios por Link (No Painel Replicador)
 - **Acesso**: Aba **⚡ Gerador de Anúncios** no Cockpit do Replicador.
@@ -36,69 +34,39 @@ Ambos os painéis utilizam controle de acesso por credenciais seguras e tokens a
   1. Cole o link de afiliado ou produto do Mercado Livre (aceita `https://mercadolivre.com/sec/...`, `meli.la` ou link direto).
   2. *(Opcional)* Preencha o campo de **Cupom de Desconto** (ex: `APP10`) e os campos de preço (De / Por).
   3. Clique em **⚡ Puxar Dados & Gerar Anúncio**: o sistema extrai a foto 2X HD do Mercado Livre e monta a copy persuasiva para Pokémon TCG.
-  4. Marque os grupos de destino desejados (ou use o botão "Marcar Todos os Destinos de Rotas").
+  4. Marque os grupos de destino desejados (com auxílio da barra de busca de grupos).
   5. Clique em **🚀 Publicar no WhatsApp** para disparar a foto com a legenda com 1 clique!
 
 ### 1.5. Protocolo de Reativação Rápida em 30s (Pelo Celular ou Computador)
 Se o WhatsApp desconectar ou se você trocar de aparelho, você pode restabelecer tudo em **menos de 30 segundos** diretamente pelo celular:
 1. Abra no navegador do seu smartphone:  
-   👉 **`https://promo-replica-bot-production.up.railway.app`**
+   👉 **`http://108.174.145.77:3000`** (ou `:3333` para o disparador).
 2. Se o status no topo indicar 🔴 **Desconectado** ou 🟡 **Aguardando QR**:
    * Toque na aba **📱 Conectar WhatsApp**.
    * Se o QR Code estiver visível, aponte a câmera do WhatsApp (**Aparelhos Conectados ➔ Conectar Aparelho**).
    * Se a sessão parecer travada ou o WhatsApp não conectar de primeira: toque no botão **🔄 Reiniciar Sessão / Gerar Novo QR Code**. O robô faz a limpeza das chaves no servidor e gera um QR novo em 2 segundos.
-3. Se por algum motivo externo a nuvem precisar de um reinício completo:
-   * Abra o dashboard do Railway no celular e clique em **Restart Service**. O volume persistente NVMe preserva seu banco e suas rotas intactos.
 
 ---
 
-## 2. Operação Diária do Bot Disparador na Nuvem
+## 2. Deploy Contínuo via Coolify (CI/CD)
 
-### 2.1. Conectando o Novo Chip no WhatsApp (Pelo Navegador)
-1. Acesse o **Painel Online do Bot Disparador** pelo celular ou computador.
-2. Na aba inicial, o painel exibirá o **QR Code** em tempo real gerado pelo Baileys.
-3. No celular onde o novo chip está ativado:
-   - Abra o WhatsApp ➔ **Aparelhos Conectados** ➔ **Conectar um aparelho**.
-   - Aponte a câmera para o QR Code no navegador (ou utilize o código de pareamento de 8 dígitos).
-4. O status mudará imediatamente para 🟢 **Conectado** e sincronizará os grupos do chip automaticamente.
-5. O volume persistente (`/app/data`) do Railway garante que você **não seja desconectado** mesmo após novos deploys ou reinicializações do container.
-
-### 2.2. Extração de Leads de Grupos Alvo
-1. No painel online do disparador, vá para a aba **Grupos**.
-2. Utilize a **barra de busca instantânea** para encontrar o grupo desejado (ex: grupos de Pokémon TCG, colecionadores, torneios).
-3. Clique em **Extrair Membros**.
-4. Todos os números de participantes serão salvos instantaneamente na base de dados com o grupo de origem.
-
-### 2.3. Criação e Disparo de Campanhas
-1. Vá na aba **Campanhas** ➔ clique em **Nova Campanha**.
-2. Clique em um dos **Modelos Prontos Pokémon TCG** (ex: *Convite Grupo VIP Pokémon TCG*).
-3. O **Simulador Oficial do WhatsApp Ao Vivo** ao lado exibirá exatamente como a mensagem chegará no WhatsApp do cliente, incluindo formatação, tags dinâmicas e horário.
-4. Ajuste o texto ou Spintax se desejar.
-5. Selecione o grupo ou lista de contatos e clique em **Criar e Iniciar Campanha**.
-6. Acompanhe o progresso da fila em tempo real pelo painel online.
-
-### 2.4. Atendimento Automático com IA (DeepSeek V4)
-- Quando qualquer destinatário responder no privado, o motor de IA assumirá o atendimento automaticamente.
-- A IA responde como um especialista amigável de Pokémon TCG, esclarece dúvidas, simula digitação humana (3 a 6 segundos) e direciona para o seu grupo VIP ou lista de ofertas.
-- Todas as conversas ficam registradas na aba de histórico do painel.
+- Repositório GitHub Oficial: `https://github.com/cardoso-ix/promo-pokemon-tcg` (Branch: `main`).
+- Após realizar `git push origin main`, acione o deploy instantâneo na VPS via Webhook:
+```bash
+curl -X POST "http://108.174.145.77:8000/api/v1/deploy?uuid=devvejts27nuuqhefh5gvwra" \
+  -H "Authorization: Bearer 1|mmJOTnEZkh8NikYsxDTj60AVgh9ZZ6j0tJ7X5PNk4c8fa5ed"
+```
+- O Coolify recompila as imagens Docker, aplica as novas alterações e reativa os serviços sem derrubar as sessões do WhatsApp.
 
 ---
 
-## 3. Gestão de Atualizações e Deploy Contínuo (CI/CD)
-
-- O Railway está conectado à branch `main` do GitHub: `https://github.com/cardoso-ix/promo-pokemon-tcg`.
-- Sempre que uma alteração for enviada para o repositório (`git push origin main`), o Railway recompila e atualiza os contêineres automaticamente em menos de 2 minutos.
-- Os volumes persistentes (`/app/data`) garantem que os bancos de dados (`replica.db` e `disparador.db`) e as sessões ativas do WhatsApp permaneçam intactos.
-
----
-
-## 4. Operação Local (Opcional / Ambiente de Testes)
+## 3. Operação Local no Notebook
 
 Caso queira realizar testes offline ou trabalhar em novas funcionalidades locais:
 
 | Ação | Comando / Script | Acesso Local |
 | --- | --- | --- |
-| **Iniciar Todos os Módulos** | Duplo clique em `iniciar-tudo.bat` | Portas 3000 e 3333 |
-| **Iniciar Replicador Local** | `iniciar.bat` (ou `cd app && npm start`) | `http://localhost:3000` |
-| **Iniciar Disparador Local** | `iniciar-disparador.bat` (ou `cd bot-disparador && npm start`) | `http://localhost:3333` |
-| **Parar Serviços Locais** | `parar.bat` | — |
+| Iniciar Ambos os Módulos | `iniciar-tudo.bat` | Portas 3000 e 3333 |
+| Iniciar Apenas Replicador | `cd app && npm run dev` | `http://localhost:3000` |
+| Iniciar Apenas Disparador | `cd bot-disparador && npm run dev` | `http://localhost:3333` |
+| Executar Testes Automatizados | `npm test --prefix app` e `npm test --prefix bot-disparador` | Terminal |
