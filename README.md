@@ -2,23 +2,23 @@
 
 Ecossistema profissional em **Node.js 22 LTS e TypeScript** para automação de vendas, promoções e captação de clientes de **Pokémon TCG** no WhatsApp.
 
-A plataforma opera **100% online na nuvem (Railway)** com persistência contínua, acessível de qualquer dispositivo (computador ou celular) sem depender de máquina local ligada.
+A plataforma opera **100% online na nuvem em VPS própria (HostGator) gerenciada pelo Coolify** com persistência contínua em Named Volumes, acessível de qualquer dispositivo (computador ou celular) sem depender de máquina local ligada.
 
 ---
 
 ## 📦 Módulos do Sistema em Produção
 
 ### 1. 🔄 Replicador de Ofertas (`app/`)
-- **Status:** 🟢 **Online 24/7 (Railway)**
-- **Painel em Produção:** 👉 **`https://promo-replica-bot-production.up.railway.app`**
+- **Status:** 🟢 **Online 24/7 (VPS HostGator + Coolify)**
+- **Painel em Produção:** 👉 **`http://108.174.145.77:3000`**
 - **Objetivo:** Monitora grupos de ofertas de Pokémon TCG 24/7, intercepta links concorrentes, substitui por links de afiliado oficiais do Mercado Livre com encurtamento `meli.la`, preserva/baixa fotos oficiais em 2X e replica nos seus grupos de destino.
 - **Interface & Resiliência:** Cockpit temático **Pokémon TCG (Ultra Ball & Rare Holo Foil)** com medidor animado de **HP da Sessão**, simulador autêntico de balões do WhatsApp Dark, **Watchdog Baileys** (heartbeat a cada 45s) e **Cookie Sentinel** automático para validação contínua da sessão do Mercado Livre.
 - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script e sincronização local no Google Drive. Consulte [`docs/google-sheets-integracao.md`](docs/google-sheets-integracao.md).
 - **🌅 Mensagem Diária de Abertura (07:00 AM):** Posta automaticamente todas as manhãs no horário oficial de Brasília uma mensagem de bom dia nos grupos de destino ativos, agradecendo aos membros, anunciando o rastreamento das melhores ofertas de Pokémon TCG e incentivando os membros a convidarem amigos para crescer a comunidade. Totalmente configurável no painel com botão de teste instantâneo.
 
 ### 2. 🚀 Bot Disparador, Prospecção & Atendimento IA (`bot-disparador/`)
-- **Status:** 🟢 **Online 24/7 (Railway)**
-- **Painel em Produção:** 👉 **Disponível no seu projeto Railway** *(com domínio público HTTPS e volume persistente)*
+- **Status:** 🟢 **Online 24/7 (VPS HostGator + Coolify)**
+- **Painel em Produção:** 👉 **`http://108.174.145.77:3333`**
 - **Objetivo:** Captação de membros de grupos em 1 clique, disparos em massa com proteção anti-ban e Spintax, simulador oficial do WhatsApp ao vivo lado a lado, modelos prontos de alta conversão de Pokémon TCG e atendimento privado automático com **Inteligência Artificial DeepSeek V4 (OpenCode Gateway)**.
 - **Documentação Completa:** Consulte [`bot-disparador/README.md`](bot-disparador/README.md).
 
@@ -26,18 +26,16 @@ A plataforma opera **100% online na nuvem (Railway)** com persistência contínu
 
 ## ☁️ Arquitetura em Nuvem, VPS & Deploy Contínuo
 
-Ambos os serviços rodam em contêineres Docker independentes com persistência NVMe montada em `/app/data`:
-- Mantém as **sessões ativas do WhatsApp (Baileys)** conectadas mesmo durante atualizações de código.
+Ambos os serviços rodam em contêineres Docker independentes com persistência NVMe montada em `/app/data` gerenciada pelo **Coolify**:
+- Mantém as **sessões ativas do WhatsApp (Baileys)** conectadas mesmo durante atualizações de código através de **Named Volumes** (`promo_replica_data` e `bot_disparador_data`).
 - Bancos SQLite (`replica.db` e `disparador.db`) salvos com total segurança e modo WAL.
-- **Ponte Interna Docker:** O Replicador notifica automaticamente o Disparador quando identifica ofertas imperdíveis de Pokémon TCG.
-- Atualização contínua: todo `git push origin main` gera deploy automático em menos de 2 minutos via Webhook.
+- **Ponte Interna Docker (`promo_network`):** O Replicador notifica diretamente o Bot Disparador quando identifica ofertas imperdíveis de Pokémon TCG.
+- Atualização contínua: todo `git push origin main` pode ser republicado diretamente no painel do Coolify (`http://108.174.145.77:8000`).
 
-### Opções de Hospedagem 24/7:
-1. **🚀 VPS Própria com Coolify (Recomendado - Custo Fixo e Performance Máxima):**
-   - Roda via `docker-compose.coolify.yml` com Named Volumes, SSL automático Let's Encrypt e rede interna.
-   - Consulte o guia completo em [`docs/deploy-coolify.md`](docs/deploy-coolify.md).
-2. **🚂 Nuvem Gerenciada (Railway e Render):**
-   - Consulte o guia em [`docs/deploy-nuvem.md`](docs/deploy-nuvem.md).
+### Hospedagem Oficial:
+- **🚀 VPS Própria HostGator com Coolify:**
+  - Orquestrado via `docker-compose.coolify.yml` com Named Volumes, healthcheck automático e rede interna.
+  - Consulte o guia completo em [`docs/deploy-coolify.md`](docs/deploy-coolify.md).
 
 ---
 
