@@ -2227,24 +2227,26 @@ document.addEventListener('DOMContentLoaded', () => {
       height = canvas.height = window.innerHeight;
     });
 
-    const count = 45;
+    const count = 55;
     const particles = [];
 
     function createParticle(initial = false) {
+      const isEmber = Math.random() > 0.35;
+      const r = isEmber ? (Math.random() * 2.8 + 1.8) : (Math.random() * 1.6 + 0.9);
       return {
         x: Math.random() * width,
         y: initial ? Math.random() * height : height + Math.random() * 20,
-        r: Math.random() * 2.8 + 1.0,
-        baseR: Math.random() * 2.8 + 1.0,
-        speedY: -(Math.random() * 1.2 + 0.6),
-        speedX: (Math.random() - 0.5) * 0.5,
-        wobbleSpeed: Math.random() * 0.04 + 0.02,
-        wobbleAmp: Math.random() * 1.2 + 0.4,
+        r: r,
+        baseR: r,
+        speedY: isEmber ? -(Math.random() * 1.1 + 0.55) : -(Math.random() * 1.6 + 0.8),
+        speedX: (Math.random() - 0.5) * 0.45,
+        wobbleSpeed: Math.random() * 0.04 + 0.015,
+        wobbleAmp: Math.random() * 1.5 + 0.5,
         wobbleAngle: Math.random() * Math.PI * 2,
-        alpha: Math.random() * 0.6 + 0.3,
-        maxLife: Math.random() * 120 + 80,
+        alpha: Math.random() * 0.4 + 0.45,
+        maxLife: Math.random() * 140 + 90,
         life: 0,
-        hue: Math.random() > 0.4 ? 15 : 35 // tons de laranja-fogo e ouro
+        isEmber: isEmber
       };
     }
 
@@ -2264,41 +2266,60 @@ document.addEventListener('DOMContentLoaded', () => {
         p.life++;
 
         p.wobbleAngle += p.wobbleSpeed;
-        p.x += p.speedX + Math.sin(p.wobbleAngle) * p.wobbleAmp * 0.15;
+        p.x += p.speedX + Math.sin(p.wobbleAngle) * p.wobbleAmp * 0.14;
         p.y += p.speedY;
 
-        // Fagulha encolhe e dissipa com o tempo
         const lifeFraction = p.life / p.maxLife;
-        p.r = Math.max(0.2, p.baseR * (1 - lifeFraction * 0.7));
+        p.r = Math.max(0.3, p.baseR * (1 - lifeFraction * 0.65));
         const currentAlpha = Math.max(0, p.alpha * (1 - lifeFraction));
 
-        // Reaparece no fundo quando apagar ou sair do topo
-        if (p.life >= p.maxLife || p.y < -10) {
+        // Reaparece suavemente no fundo ao expirar ou sair da tela
+        if (p.life >= p.maxLife || p.y < -15) {
           particles[i] = createParticle(false);
           continue;
         }
 
-        if (p.x < -10) p.x = width + 10;
-        if (p.x > width + 10) p.x = -10;
+        if (p.x < -15) p.x = width + 15;
+        if (p.x > width + 15) p.x = -15;
 
-        // Desenhar brasa incandescente com gradiente radial
-        const grad = ctx.createRadialGradient(
-          p.x,
-          p.y,
-          0,
-          p.x,
-          p.y,
-          p.r * 1.8
-        );
-        grad.addColorStop(0, `rgba(255, 255, 220, ${currentAlpha})`);
-        grad.addColorStop(0.3, `rgba(249, 115, 22, ${currentAlpha * 0.85})`);
-        grad.addColorStop(0.7, `rgba(239, 68, 68, ${currentAlpha * 0.5})`);
-        grad.addColorStop(1, `rgba(153, 27, 27, 0)`);
+        if (p.isEmber) {
+          // Brasa Incandescente com Núcleo Dourado e Halo Térmico Rubi/Âmbar
+          const grad = ctx.createRadialGradient(
+            p.x,
+            p.y,
+            0,
+            p.x,
+            p.y,
+            p.r * 2.2
+          );
+          grad.addColorStop(0, `rgba(255, 252, 230, ${currentAlpha * 0.95})`);
+          grad.addColorStop(0.3, `rgba(251, 146, 60, ${currentAlpha * 0.85})`);
+          grad.addColorStop(0.7, `rgba(239, 68, 68, ${currentAlpha * 0.45})`);
+          grad.addColorStop(1, 'rgba(185, 28, 28, 0)');
 
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r * 1.8, 0, Math.PI * 2);
-        ctx.fill();
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Fagulha Rápida / Sparkle
+          const sparkGrad = ctx.createRadialGradient(
+            p.x,
+            p.y,
+            0,
+            p.x,
+            p.y,
+            p.r * 1.5
+          );
+          sparkGrad.addColorStop(0, `rgba(255, 255, 255, ${currentAlpha})`);
+          sparkGrad.addColorStop(0.4, `rgba(253, 186, 116, ${currentAlpha * 0.8})`);
+          sparkGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+          ctx.fillStyle = sparkGrad;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
       animId = requestAnimationFrame(render);

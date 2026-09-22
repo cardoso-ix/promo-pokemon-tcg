@@ -249,7 +249,7 @@
     });
   });
 
-  // Motor Gráfico de Gotículas & Bolhas de Água (Canvas 60fps)
+  // Motor Gráfico de Gotículas & Bolhas de Água (Canvas 60fps GPU)
   function initWaterParticles() {
     const canvas = document.getElementById('ambient-fx');
     if (!canvas) return;
@@ -264,22 +264,29 @@
       height = canvas.height = window.innerHeight;
     });
 
-    const count = 42;
+    const count = 55;
     const particles = [];
 
-    for (let i = 0; i < count; i++) {
-      particles.push({
+    function createParticle(initial = false) {
+      const isBubble = Math.random() > 0.35;
+      const r = isBubble ? (Math.random() * 3.8 + 2.4) : (Math.random() * 2.2 + 1.2);
+      return {
         x: Math.random() * width,
-        y: Math.random() * height,
-        r: Math.random() * 3.5 + 1.2,
-        speedY: -(Math.random() * 0.7 + 0.3),
-        speedX: (Math.random() - 0.5) * 0.3,
-        wobbleSpeed: Math.random() * 0.03 + 0.01,
-        wobbleAmp: Math.random() * 1.5 + 0.5,
+        y: initial ? Math.random() * height : height + Math.random() * 20,
+        r: r,
+        speedY: isBubble ? -(Math.random() * 0.75 + 0.35) : (Math.random() * 0.85 + 0.45),
+        speedX: (Math.random() - 0.5) * 0.35,
+        wobbleSpeed: Math.random() * 0.035 + 0.015,
+        wobbleAmp: Math.random() * 1.8 + 0.6,
         wobbleAngle: Math.random() * Math.PI * 2,
-        alpha: Math.random() * 0.45 + 0.2,
-        isDrop: Math.random() > 0.65
-      });
+        alpha: Math.random() * 0.35 + 0.35,
+        isBubble: isBubble,
+        shimmer: Math.random() * Math.PI * 2
+      };
+    }
+
+    for (let i = 0; i < count; i++) {
+      particles.push(createParticle(true));
     }
 
     let animId = null;
@@ -291,48 +298,74 @@
 
       for (let i = 0; i < count; i++) {
         const p = particles[i];
-
         p.wobbleAngle += p.wobbleSpeed;
-        const currentSpeedX = p.speedX + Math.sin(p.wobbleAngle) * p.wobbleAmp * 0.1;
+        p.shimmer += 0.04;
+        const currentSpeedX = p.speedX + Math.sin(p.wobbleAngle) * p.wobbleAmp * 0.12;
         p.x += currentSpeedX;
+        p.y += p.speedY;
 
-        if (p.isDrop) {
-          p.y += Math.abs(p.speedY) * 1.3;
-          if (p.y > height + 10) {
-            p.y = -10;
-            p.x = Math.random() * width;
-          }
-        } else {
-          p.y += p.speedY;
-          if (p.y < -10) {
-            p.y = height + 10;
-            p.x = Math.random() * width;
-          }
+        // Reset ao sair da tela
+        if (p.y < -15 || p.y > height + 25) {
+          particles[i] = createParticle(false);
+          continue;
         }
+        if (p.x < -15) p.x = width + 15;
+        if (p.x > width + 15) p.x = -15;
 
-        if (p.x < -10) p.x = width + 10;
-        if (p.x > width + 10) p.x = -10;
+        const pulseAlpha = Math.min(1, Math.max(0.2, p.alpha + Math.sin(p.shimmer) * 0.12));
 
-        const grad = ctx.createRadialGradient(
-          p.x - p.r * 0.3,
-          p.y - p.r * 0.3,
-          p.r * 0.1,
-          p.x,
-          p.y,
-          p.r
-        );
-        grad.addColorStop(0, `rgba(255, 255, 255, ${p.alpha * 1.3})`);
-        grad.addColorStop(0.4, `rgba(56, 189, 248, ${p.alpha})`);
-        grad.addColorStop(1, `rgba(2, 132, 199, ${p.alpha * 0.3})`);
+        if (p.isBubble) {
+          // Bolha Cristalina com Borda Luminosa Cyan e Reflexo Especular
+          // 1. Halo difuso externo sutil
+          const haloGrad = ctx.createRadialGradient(p.x, p.y, p.r * 0.5, p.x, p.y, p.r * 1.7);
+          haloGrad.addColorStop(0, `rgba(56, 189, 248, ${pulseAlpha * 0.3})`);
+          haloGrad.addColorStop(1, 'rgba(2, 132, 199, 0)');
+          ctx.fillStyle = haloGrad;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 1.7, 0, Math.PI * 2);
+          ctx.fill();
 
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
+          // 2. Corpo da bolha translúcido (não bloqueia leitura de dados)
+          const bodyGrad = ctx.createRadialGradient(
+            p.x - p.r * 0.35,
+            p.y - p.r * 0.35,
+            p.r * 0.1,
+            p.x,
+            p.y,
+            p.r
+          );
+          bodyGrad.addColorStop(0, `rgba(255, 255, 255, ${pulseAlpha * 0.55})`);
+          bodyGrad.addColorStop(0.5, `rgba(56, 189, 248, ${pulseAlpha * 0.22})`);
+          bodyGrad.addColorStop(1, `rgba(0, 229, 255, ${pulseAlpha * 0.5})`);
 
-        ctx.strokeStyle = `rgba(0, 229, 255, ${p.alpha * 0.35})`;
-        ctx.lineWidth = 0.6;
-        ctx.stroke();
+          ctx.fillStyle = bodyGrad;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 3. Contorno refinado cristalino
+          ctx.strokeStyle = `rgba(186, 230, 253, ${pulseAlpha * 0.75})`;
+          ctx.lineWidth = 0.9;
+          ctx.stroke();
+
+          // 4. Reflexo especular 3D (highlight branco)
+          ctx.fillStyle = `rgba(255, 255, 255, ${pulseAlpha * 0.95})`;
+          ctx.beginPath();
+          ctx.arc(p.x - p.r * 0.35, p.y - p.r * 0.35, Math.max(0.6, p.r * 0.25), 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Micro-gota d'água / Orbe Luminescente
+          const dropGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 2);
+          dropGrad.addColorStop(0, `rgba(255, 255, 255, ${pulseAlpha * 0.85})`);
+          dropGrad.addColorStop(0.35, `rgba(56, 189, 248, ${pulseAlpha * 0.65})`);
+          dropGrad.addColorStop(0.8, `rgba(2, 132, 199, ${pulseAlpha * 0.25})`);
+          dropGrad.addColorStop(1, 'rgba(2, 132, 199, 0)');
+
+          ctx.fillStyle = dropGrad;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
       animId = requestAnimationFrame(render);
