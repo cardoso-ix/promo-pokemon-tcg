@@ -248,6 +248,33 @@ export function extrairCupom(texto: string): string | null {
   return null;
 }
 
+/**
+ * Extrai condições de parcelamento sem juros (ex: "(Até 10x s/Juros)", "10x sem juros", "4 vezes sem juros")
+ */
+export function extrairParcelamento(texto: string): string | null {
+  if (!texto) return null;
+
+  // 1. Padrão com valor da parcela: "10x de R$ 36,22 sem juros" ou "Até 10x de 36,22 s/ juros"
+  const regexComValor = /(?:em\s+)?(?:at[eé]\s+)?(\d{1,2})\s*(?:x|vezes)\s+de\s+(?:R\$\s*)?([\d\.,]+)\s*(?:s\/\s*juros?|sem\s+juros?)/i;
+  const matchComValor = texto.match(regexComValor);
+  if (matchComValor && matchComValor[1] && matchComValor[2]) {
+    const vezes = matchComValor[1];
+    let valor = matchComValor[2].trim().replace(/\.$/, '').replace(/,$/, '');
+    if (!valor.startsWith('R$')) valor = `R$ ${valor}`;
+    return `💳 Em até ${vezes}x de ${valor} sem juros`;
+  }
+
+  // 2. Padrão direto: "(Até 10x s/Juros)", "10x sem juros", "4 vezes sem juros", "em até 12x s/ juros"
+  const regexSimples = /(?:em\s+)?(?:at[eé]\s+)?(\d{1,2})\s*(?:x|vezes)\s*(?:s\/\s*juros?|sem\s+juros?)/i;
+  const matchSimples = texto.match(regexSimples);
+  if (matchSimples && matchSimples[1]) {
+    const vezes = matchSimples[1];
+    return `💳 Em até ${vezes}x sem juros`;
+  }
+
+  return null;
+}
+
 export interface DeterminarTipoParams {
   texto: string;
   hasProdutoEspecifico: boolean;
@@ -282,6 +309,7 @@ export interface FormatarReplicadaParams {
   titulo: string;
   precoDe?: string;
   precoPor?: string;
+  parcelamento?: string;
   cupom?: string;
   detalhesCupom?: string;
   linkAfiliado?: string;
@@ -293,7 +321,7 @@ export interface FormatarReplicadaParams {
  * Formata a mensagem final replicada aplicando o Template Premium de Marca
  */
 export function formatarMensagemReplicada(params: FormatarReplicadaParams): string {
-  const { tipo, titulo, precoDe, precoPor, cupom, detalhesCupom, linkAfiliado, linkVitrineCurto, textoOriginalHigienizado } = params;
+  const { tipo, titulo, precoDe, precoPor, parcelamento, cupom, detalhesCupom, linkAfiliado, linkVitrineCurto, textoOriginalHigienizado } = params;
   const link = (linkAfiliado || linkVitrineCurto || '').trim();
 
   // Template 3: Cupons & Campanhas Promocionais
@@ -351,6 +379,11 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
     linhaPrecoPor = `🔥 *Por apenas: ${valorPor}*${tagDesconto}`;
   }
 
+  let linhaParcelamento = '';
+  if (parcelamento && parcelamento.trim()) {
+    linhaParcelamento = parcelamento.trim();
+  }
+
   let linhaCupom = '';
   if (cupom && cupom.trim()) {
     linhaCupom = `🎟️ Cupom: *${cupom.trim().toUpperCase()}*`;
@@ -369,6 +402,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
     if (linhaPrecoDe) linhas.push(linhaPrecoDe);
     if (linhaPrecoPor) linhas.push(linhaPrecoPor);
+    if (linhaParcelamento) linhas.push(linhaParcelamento);
     if (linhaCupom) linhas.push(linhaCupom);
 
     linhas.push('');
@@ -387,6 +421,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
   if (linhaPrecoDe) linhas.push(linhaPrecoDe);
   if (linhaPrecoPor) linhas.push(linhaPrecoPor);
+  if (linhaParcelamento) linhas.push(linhaParcelamento);
   if (linhaCupom) linhas.push(linhaCupom);
 
   linhas.push('');

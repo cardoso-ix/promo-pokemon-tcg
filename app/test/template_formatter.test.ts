@@ -6,6 +6,7 @@ import {
   calcularDesconto,
   formatarMensagemReplicada,
   extrairCupom,
+  extrairParcelamento,
   determinarTipoMensagem
 } from '../src/core/anuncio.js';
 
@@ -227,4 +228,43 @@ Não perca tempo e garanta o seu *antes que esgote!* 🛒 ⚡
   assert.strictEqual(msg.includes('ÚLTIMAS UNIDADES EM ESTOQUE'), false);
   // Deve anexar o link da vitrine ao final
   assert.strictEqual(msg.includes('🛒 https://mercadolivre.com/sec/2rM6RPm'), true);
+});
+
+test('extrairParcelamento extrai condições de parcelamento sem juros com precisão', () => {
+  assert.strictEqual(extrairParcelamento('(Até 10x s/Juros)'), '💳 Em até 10x sem juros');
+  assert.strictEqual(extrairParcelamento('Até 10x s/ juros'), '💳 Em até 10x sem juros');
+  assert.strictEqual(extrairParcelamento('10x sem juros'), '💳 Em até 10x sem juros');
+  assert.strictEqual(extrairParcelamento('4 vezes sem juros'), '💳 Em até 4x sem juros');
+  assert.strictEqual(extrairParcelamento('10 vezes sem juros'), '💳 Em até 10x sem juros');
+  assert.strictEqual(extrairParcelamento('10x de R$ 36,22 sem juros'), '💳 Em até 10x de R$ 36,22 sem juros');
+  assert.strictEqual(extrairParcelamento('em até 12x s/ juro'), '💳 Em até 12x sem juros');
+  assert.strictEqual(extrairParcelamento('Sem parcelamento nenhum neste anúncio'), null);
+});
+
+test('formatarMensagemReplicada inclui linha de parcelamento apenas quando presente', () => {
+  // Cenário da imagem enviada pelo usuário:
+  const msgComParcelamento = formatarMensagemReplicada({
+    tipo: 'oferta',
+    titulo: 'Mega Evolution Pitch Black Eli',
+    precoDe: 'R$ 412,25',
+    precoPor: 'R$ 362,25',
+    parcelamento: '💳 Em até 10x sem juros',
+    cupom: 'MELIKIDS',
+    linkAfiliado: 'https://meli.la/2TH29Wq'
+  });
+
+  assert.strictEqual(msgComParcelamento.includes('💳 Em até 10x sem juros'), true);
+  assert.strictEqual(msgComParcelamento.includes('🎟️ Cupom: *MELIKIDS*'), true);
+  assert.strictEqual(msgComParcelamento.includes('🛒 https://meli.la/2TH29Wq'), true);
+
+  // Cenário sem parcelamento:
+  const msgSemParcelamento = formatarMensagemReplicada({
+    tipo: 'oferta',
+    titulo: 'Booster Box Pokémon',
+    precoPor: 'R$ 200,00',
+    linkAfiliado: 'https://meli.la/booster'
+  });
+
+  assert.strictEqual(msgSemParcelamento.includes('💳'), false);
+  assert.strictEqual(msgSemParcelamento.includes('sem juros'), false);
 });

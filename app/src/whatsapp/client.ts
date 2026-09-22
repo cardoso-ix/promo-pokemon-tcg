@@ -32,6 +32,7 @@ import {
   detectarMensagemCupom,
   formatarMensagemReplicada,
   extrairCupom,
+  extrairParcelamento,
   determinarTipoMensagem
 } from '../core/anuncio.js';
 
@@ -782,12 +783,14 @@ export class WhatsAppManager {
 
       const linkMatches = novoTexto.match(/https?:\/\/[^\s]+/gi);
       const linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
+      const parcelamentoExtraido = extrairParcelamento(rawText);
 
       textoFinalPublicar = formatarMensagemReplicada({
         tipo: tipoMensagem,
         titulo: dadosOferta.produto || 'Colecionável Pokémon TCG',
         precoDe: dadosOferta.valorDe,
         precoPor: dadosOferta.valorPor,
+        parcelamento: parcelamentoExtraido || undefined,
         cupom: cupomExtraido,
         detalhesCupom: tipoMensagem === 'cupom' ? 'Desconto especial no app para colecionáveis' : undefined,
         linkAfiliado: linkAfiliadoFinal,
