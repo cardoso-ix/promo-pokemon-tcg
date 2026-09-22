@@ -87,7 +87,7 @@ export function initDatabase() {
     somente_mercadolivre: 'true',
     replicar_comunicados_texto: 'false',
     template_modo: 'padrao',
-    cooldown_duplicidade_minutos: '5',
+    cooldown_duplicidade_minutos: '30',
     filtro_apenas_tcg: 'true',
     google_sheets_webhook_url: '',
     google_sheets_ativo: 'true'
@@ -100,6 +100,9 @@ export function initDatabase() {
   for (const [chave, valor] of Object.entries(defaultConfigs)) {
     insertConfig.run(chave, valor);
   }
+
+  // Migrar padrão antigo de 5 minutos para 30 minutos caso o banco já exista com valor legado
+  db.prepare("UPDATE configs SET valor = '30' WHERE chave = 'cooldown_duplicidade_minutos' AND valor = '5'").run();
 
   // Garantir que a réplica de mensagens avulsas (sem link/cupom) fique desativada
   // evitando que mensagens aleatórias cruzem entre múltiplos grupos monitorados
@@ -314,7 +317,7 @@ export function registrarProdutoReplicado(
 export function consultarCooldownProduto(
   produtoId: string,
   precoPorAtual: number = 0,
-  cooldownMinutos: number = 5
+  cooldownMinutos: number = 30
 ): CooldownCheckResult {
   if (!produtoId) return { emCooldown: false };
 

@@ -4,7 +4,9 @@ import { extractCanonicalProductId } from '../src/core/affiliate.js';
 import {
   initDatabase,
   registrarProdutoReplicado,
-  consultarCooldownProduto
+  consultarCooldownProduto,
+  getConfig,
+  setConfig
 } from '../src/db/database.js';
 
 test('extractCanonicalProductId extrai ID único do Mercado Livre', () => {
@@ -25,24 +27,38 @@ test('extractCanonicalProductId extrai ID único do Mercado Livre', () => {
   assert.strictEqual(extractCanonicalProductId(url4), null);
 });
 
-test('Cooldown Cross-Group - Bloqueia post repetido entre grupos diferentes em menos de 5 min', () => {
+test('Cooldown Cross-Group - Bloqueia post repetido da mesma oferta em menos de 30 min', () => {
   initDatabase();
 
   const prodId = `TEST_MLB_${Date.now()}`;
 
-  // Grupo A posta o produto às 14:00 por R$ 250
-  const cooldownAntes = consultarCooldownProduto(prodId, 250, 5);
+  // Grupo A posta o produto às 14:00 por R$ 250 (usando default de 30 min)
+  const cooldownAntes = consultarCooldownProduto(prodId, 250);
   assert.strictEqual(cooldownAntes.emCooldown, false);
 
   registrarProdutoReplicado(prodId, 'grupoA@g.us', 'Grupo A Monitorado', 250);
 
-  // Grupo B posta o MESMO produto 1 minuto depois pelo mesmo preço
-  const cooldownGrupoB = consultarCooldownProduto(prodId, 250, 5);
+  // Grupo B posta a MESMA oferta (mesmo produto e preço) logo em seguida -> Bloqueado pela janela de 30 min
+  const cooldownGrupoB = consultarCooldownProduto(prodId, 250, 30);
   assert.strictEqual(cooldownGrupoB.emCooldown, true);
   assert.strictEqual(cooldownGrupoB.postadoPor, 'Grupo A Monitorado');
 
-  // Grupo C posta o mesmo produto, mas com QUEDA DE PREÇO significativa (ex: R$ 190 vs R$ 250)
-  const cooldownQuedaPreco = consultarCooldownProduto(prodId, 190, 5);
+  // Grupo C posta a MESMA oferta com variação irrelevante (ex: R$ 245, < 5% de desconto) -> Continua bloqueado
+  const cooldownVariacaoMinima = consultarCooldownProduto(prodId, 245, 30);
+  assert.strictEqual(cooldownVariacaoMinima.emCooldown, true);
+
+  // Grupo D posta o mesmo produto, mas com QUEDA DE PREÇO significativa (ex: R$ 190 vs R$ 250) -> Permite republicação
+  const cooldownQuedaPreco = consultarCooldownProduto(prodId, 190, 30);
   assert.strictEqual(cooldownQuedaPreco.emCooldown, false);
   assert.strictEqual(cooldownQuedaPreco.motivo, 'queda_de_preco');
 });
+
+test('initDatabase migra automaticamente cooldown_duplicidade_minutos de 5 para 30 minutos', () => {
+  setConfig('cooldown_duplicidade_minutos', '5');
+  assert.strictEqual(getConfig('cooldown_duplicidade_minutos'), '5');
+
+  initDatabase();
+
+  assert.strictEqual(getConfig('cooldown_duplicidade_minutos'), '30');
+});
+

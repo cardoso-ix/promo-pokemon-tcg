@@ -350,7 +350,7 @@
       if (cfgSomenteMeli) cfgSomenteMeli.checked = data.configs.somente_mercadolivre !== 'false';
       if (cfgReplicarComunicados) cfgReplicarComunicados.checked = data.configs.replicar_comunicados_texto === 'true';
       if (cfgTemplateModo) cfgTemplateModo.value = data.configs.template_modo || 'padrao';
-      if (cfgCooldownDuplicidade) cfgCooldownDuplicidade.value = data.configs.cooldown_duplicidade_minutos || '5';
+      if (cfgCooldownDuplicidade) cfgCooldownDuplicidade.value = data.configs.cooldown_duplicidade_minutos || '30';
       if (cfgFiltroApenasTcg) cfgFiltroApenasTcg.checked = data.configs.filtro_apenas_tcg !== 'false';
       if (cfgSheetsWebhook) cfgSheetsWebhook.value = data.configs.google_sheets_webhook_url || '';
       if (cfgSheetsAtivo) cfgSheetsAtivo.checked = data.configs.google_sheets_ativo !== 'false';

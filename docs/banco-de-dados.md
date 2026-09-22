@@ -25,7 +25,7 @@ Armazena parâmetros operacionais no modelo Chave-Valor:
 - `affiliate_matt_word`: Identificador de afiliado Mercado Livre (`matt_word`).
 - `meli_cookie`: Sessão autenticada no Mercado Livre para resolução de URLs `meli.la`.
 - `template_modo`: Modo de formatação de mensagens (`padrao`, `urgencia`, `cupom`, `original`).
-- `cooldown_duplicidade_minutos`: Janela de desduplicação cross-group canônica (padrão 5 min).
+- `cooldown_duplicidade_minutos`: Janela de desduplicação cross-group canônica (padrão 30 min).
 - `filtro_apenas_tcg`: Guardião de nicho TCG (`true`/`false`).
 - `replicar_comunicados_texto`: Replicar comunicados informativos e telas de cupom sem link (`true`/`false`).
 

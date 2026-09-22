@@ -654,7 +654,7 @@ export class WhatsAppManager {
       return;
     }
 
-    // 7. Desduplicação Global Cross-Group por Produto Canônico (MLB ID ou Identificador de Cupom + 5 min Cooldown)
+    // 7. Desduplicação Global Cross-Group por Produto Canônico (MLB ID ou Identificador de Cupom + 30 min Cooldown)
     const precoPorNum = parseFloat(
       (dadosOferta.valorPor || '').replace(/R\$/gi, '').replace(/\s+/g, '').replace(/\./g, '').replace(',', '.')
     ) || 0;
@@ -667,7 +667,7 @@ export class WhatsAppManager {
     }
 
     if (canonicalProductId) {
-      const cooldownMinutos = parseInt(getConfig('cooldown_duplicidade_minutos', '5'), 10) || 5;
+      const cooldownMinutos = parseInt(getConfig('cooldown_duplicidade_minutos', '30'), 10) || 30;
       const cooldownCheck = consultarCooldownProduto(canonicalProductId, precoPorNum, cooldownMinutos);
 
       if (cooldownCheck.emCooldown) {

@@ -59,10 +59,10 @@ Toda mensagem que chega aos grupos de WhatsApp em que o chip participa é avalia
 - **Produtos Aceitos**: Booster, Booster Box, ETB (Treinador Avançado), Blister, Tripack, Fichário, Sleeves/Shields, Decks, Playmat, Latas Colecionáveis e Cartas Avulsas.
 - **Produtos Rejeitados**: Itens fora do nicho postados por concorrentes (como panelas, eletrônicos, vestuário geral ou cosméticos) são ignorados automaticamente (`status: 'ignorado'`, `motivo: 'fora_nicho_tcg'`).
 
-### 3.2. Desduplicação Global Cross-Group por ID Canônico (MLB ID ou Hash de Cupom + 5 min Cooldown)
+### 3.2. Desduplicação Global Cross-Group por ID Canônico (MLB ID ou Hash de Cupom + 30 min Cooldown)
 - Permite monitorar **dezenas de grupos simultâneos** sem reenviar a mesma oferta repetida aos membros.
 - Quando o primeiro grupo posta um produto MLB ou uma lista de cupons, o sistema armazena seu identificador único na tabela `produtos_replicados`.
-- Se outros grupos postarem o mesmo produto ou a mesma lista de cupons dentro da janela configurada (padrão: 5 minutos), as réplicas subsequentes são bloqueadas com `motivo: 'duplicata_produto_cooldown'`.
+- Se outros grupos postarem o mesmo produto ou a mesma lista de cupons dentro da janela configurada (padrão: 30 minutos), as réplicas subsequentes da mesma oferta são bloqueadas com `motivo: 'duplicata_produto_cooldown'`.
 - **Exceção de Queda de Preço**: Caso um grupo posterior poste o mesmo produto com um desconto ainda maior (> 5% de queda), o bot quebra o cooldown e republica destacando o novo menor preço.
 
 ### 3.3. Templates Padronizados de Marca
