@@ -209,7 +209,7 @@ export function detectarGatilhoUrgencia(texto: string): boolean {
  */
 export function detectarMensagemCupom(texto: string): boolean {
   if (!texto) return false;
-  const regex = /(?:novo\s+)?cupom(?:\s+no\s+app|\s+do\s+mercado|\s+de\s+desconto|\s+liberado)?|use\s+(?:o\s+)?cupom|cupom\s+de\s+r\$|cupom\s+válido|cupom:\s*\*[a-z0-9]+\*/i;
+  const regex = /(?:novos?\s+)?cupo(?:m|ns)(?:\s+no\s+app|\s+do\s+mercado|\s+de\s+desconto|\s+liberados?)?|use\s+(?:o\s+)?cupom|cupo(?:m|ns)\s+de\s+r\$|cupo(?:m|ns)\s+válidos?|cupom:\s*\*[a-z0-9]+\*|\bcupons\b/i;
   return regex.test(texto);
 }
 
@@ -286,17 +286,30 @@ export interface FormatarReplicadaParams {
   detalhesCupom?: string;
   linkAfiliado?: string;
   linkVitrineCurto?: string;
+  textoOriginalHigienizado?: string;
 }
 
 /**
  * Formata a mensagem final replicada aplicando o Template Premium de Marca
  */
 export function formatarMensagemReplicada(params: FormatarReplicadaParams): string {
-  const { tipo, titulo, precoDe, precoPor, cupom, detalhesCupom, linkAfiliado, linkVitrineCurto } = params;
+  const { tipo, titulo, precoDe, precoPor, cupom, detalhesCupom, linkAfiliado, linkVitrineCurto, textoOriginalHigienizado } = params;
   const link = (linkAfiliado || linkVitrineCurto || '').trim();
 
-  // Template 3: Cupons & Vitrine Oficial
+  // Template 3: Cupons & Campanhas Promocionais
+  // Quando o concorrente envia uma mensagem com lista de cupons, regras ou descontos:
+  // Replica fielmente o que eles forneceram (com links convertidos e assinatura @pokemon_tcg_promo)
   if (tipo === 'cupom') {
+    if (textoOriginalHigienizado && textoOriginalHigienizado.trim()) {
+      const textoLimpo = textoOriginalHigienizado.replace(/^@pokemon_tcg_promo\s*/i, '').trim();
+      const hasLink = /https?:\/\//i.test(textoLimpo);
+      const vitrine = (linkVitrineCurto || linkAfiliado || '').trim();
+      if (!hasLink && vitrine) {
+        return `@pokemon_tcg_promo\n\n${textoLimpo}\n\n🛒 ${vitrine}`;
+      }
+      return `@pokemon_tcg_promo\n\n${textoLimpo}`;
+    }
+
     const codCupom = (cupom || 'CUPOM NO APP').trim().toUpperCase();
     const vitrine = (linkVitrineCurto || linkAfiliado || '').trim();
 

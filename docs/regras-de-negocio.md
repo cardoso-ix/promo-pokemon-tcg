@@ -59,19 +59,23 @@ Toda mensagem que chega aos grupos de WhatsApp em que o chip participa é avalia
 - **Produtos Aceitos**: Booster, Booster Box, ETB (Treinador Avançado), Blister, Tripack, Fichário, Sleeves/Shields, Decks, Playmat, Latas Colecionáveis e Cartas Avulsas.
 - **Produtos Rejeitados**: Itens fora do nicho postados por concorrentes (como panelas, eletrônicos, vestuário geral ou cosméticos) são ignorados automaticamente (`status: 'ignorado'`, `motivo: 'fora_nicho_tcg'`).
 
-### 3.2. Desduplicação Global Cross-Group por ID Canônico (MLB ID + 5 min Cooldown)
+### 3.2. Desduplicação Global Cross-Group por ID Canônico (MLB ID ou Hash de Cupom + 5 min Cooldown)
 - Permite monitorar **dezenas de grupos simultâneos** sem reenviar a mesma oferta repetida aos membros.
-- Quando o primeiro grupo posta um produto MLB, o sistema armazena seu ID único na tabela `produtos_replicados`.
-- Se outros grupos postarem o mesmo produto dentro da janela configurada (padrão: 5 minutos), as réplicas subsequentes são bloqueadas com `motivo: 'duplicata_produto_cooldown'`.
+- Quando o primeiro grupo posta um produto MLB ou uma lista de cupons, o sistema armazena seu identificador único na tabela `produtos_replicados`.
+- Se outros grupos postarem o mesmo produto ou a mesma lista de cupons dentro da janela configurada (padrão: 5 minutos), as réplicas subsequentes são bloqueadas com `motivo: 'duplicata_produto_cooldown'`.
 - **Exceção de Queda de Preço**: Caso um grupo posterior poste o mesmo produto com um desconto ainda maior (> 5% de queda), o bot quebra o cooldown e republica destacando o novo menor preço.
 
 ### 3.3. Templates Padronizados de Marca
 Em vez de herdar o estilo e formatação dos concorrentes, o bot classifica a mensagem e formata no layout oficial da sua marca com a assinatura `@pokemon_tcg_promo` no início:
-1. **Template 1: Oferta Regular TCG**: Inicia com `@pokemon_tcg_promo`, título destacado em negrito, De/Por, cálculo automático de `% OFF` e valor economizado em reais, cupom (se houver) e link direto direto no carrinho (`🛒 <link>`).
+1. **Template 1: Oferta Regular TCG**: Inicia com `@pokemon_tcg_promo`, título destacado em negrito, De/Por, cálculo automático de `% OFF` e valor economizado em reais, cupom (se houver) e link direto no carrinho (`🛒 <link>`).
 2. **Template 2: Alerta de Urgência & Escassez**: Disparado automaticamente ao identificar termos como *"últimas unidades"*, *"corre"*, *"vai acabar"* ou *"estoque acabando"*, com assinatura `@pokemon_tcg_promo`, destaque de urgência e link direto (`🛒 <link>`).
-3. **Template 3: Cupons de Desconto & Vitrine Oficial**: Identifica códigos promocionais do Mercado Livre com a assinatura `@pokemon_tcg_promo` e direciona os clientes para a sua lista/vitrine oficial (`link_vitrine_curto`).
+3. **Template 3: Cupons de Desconto & Listas Promocionais**: Replica fielmente o que for fornecido no anúncio de cupom (incluindo listas com múltiplos cupons e regras de compra mínima), higienizando e convertendo links para o afiliado oficial e assinando `@pokemon_tcg_promo` no topo.
 
-### 3.4. Fila com Cadência Elegante (Pacing Anti-Spam)
+### 3.4. Mensagens Avulsas & Comunicados Desativados por Padrão
+- Mensagens de texto livre sem link de produto ou cupom são bloqueadas por padrão (`replicar_comunicados_texto: false`).
+- Evita que conversas, saudações ou mensagens avulsas de um grupo concorrente sejam replicadas ou cruzem com outros grupos monitorados.
+
+### 3.5. Fila com Cadência Elegante (Pacing Anti-Spam)
 - Intervalo mínimo de 8 a 10 segundos entre envios sucessivos ao mesmo destino.
 - Evita rajadas de mensagens no WhatsApp caso múltiplos grupos concorrentes postem simultaneamente.
 

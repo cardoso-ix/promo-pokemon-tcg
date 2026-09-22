@@ -85,7 +85,7 @@ export function initDatabase() {
     link_vitrine_curto: 'https://mercadolivre.com/sec/2rM6RPm',
     frases_remover: '@rasgabooster.tcg\n#rasgaboot\n@rasgabooster',
     somente_mercadolivre: 'true',
-    replicar_comunicados_texto: 'true',
+    replicar_comunicados_texto: 'false',
     template_modo: 'padrao',
     cooldown_duplicidade_minutos: '5',
     filtro_apenas_tcg: 'true',
@@ -100,6 +100,10 @@ export function initDatabase() {
   for (const [chave, valor] of Object.entries(defaultConfigs)) {
     insertConfig.run(chave, valor);
   }
+
+  // Garantir que a réplica de mensagens avulsas (sem link/cupom) fique desativada
+  // evitando que mensagens aleatórias cruzem entre múltiplos grupos monitorados
+  db.prepare("UPDATE configs SET valor = 'false' WHERE chave = 'replicar_comunicados_texto' AND valor = 'true'").run();
 }
 
 // Helpers para ler e gravar configs

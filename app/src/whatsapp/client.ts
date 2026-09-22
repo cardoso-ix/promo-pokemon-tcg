@@ -11,6 +11,7 @@ import QRCode from 'qrcode';
 import pino from 'pino';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { AUTH_DIR } from '../config.js';
 import {
   getConfig,
@@ -539,13 +540,13 @@ export class WhatsAppManager {
     // Identificação de conteúdo especial:
     // A) Cupom de Desconto (tela/print de cupom ou mensagem de código)
     const cupomExtraido = extrairCupom(rawText) || '';
-    const isCupom = Boolean(cupomExtraido || detectarMensagemCupom(rawText) || /cupom/i.test(rawText));
+    const isCupom = Boolean(cupomExtraido || detectarMensagemCupom(rawText) || /\bcupo(?:m|ns)\b/i.test(rawText));
 
     // B) Links de Marketplaces concorrentes (Amazon, Shopee, Magalu, AliExpress, etc.)
     const contemMarketplaceConcorrente = /(?:amazon\.com|amzn\.to|shopee\.com|shope\.ee|magazineluiza\.com|aliexpress\.com)/i.test(rawText);
 
     // C) Digitação avulsa / Comunicado informativo sem link de marketplace
-    const replicarComunicados = getConfig('replicar_comunicados_texto', 'true') === 'true';
+    const replicarComunicados = getConfig('replicar_comunicados_texto', 'false') === 'true';
     const isComunicadoSemLink = linksConvertidos === 0 && !contemMarketplaceConcorrente && !isCupom;
 
     // Se for uma TELA DE CUPOM (print ou texto de cupom) sem link prévio:
@@ -652,10 +653,17 @@ export class WhatsAppManager {
       return;
     }
 
-    // 7. Desduplicação Global Cross-Group por Produto Canônico (MLB ID + 5 min Cooldown)
+    // 7. Desduplicação Global Cross-Group por Produto Canônico (MLB ID ou Identificador de Cupom + 5 min Cooldown)
     const precoPorNum = parseFloat(
       (dadosOferta.valorPor || '').replace(/R\$/gi, '').replace(/\s+/g, '').replace(/\./g, '').replace(',', '.')
     ) || 0;
+
+    // Se for mensagem de cupom sem ID canônico de produto, gera identificador único de cupom para desduplicação cross-group
+    if (!canonicalProductId && isCupom) {
+      const textoSemLinks = rawText.replace(/https?:\/\/[^\s]+/gi, '').toLowerCase().replace(/\s+/g, '');
+      const hashCupom = crypto.createHash('md5').update(textoSemLinks).digest('hex').slice(0, 10);
+      canonicalProductId = `CUPOM_${cupomExtraido || hashCupom}`;
+    }
 
     if (canonicalProductId) {
       const cooldownMinutos = parseInt(getConfig('cooldown_duplicidade_minutos', '5'), 10) || 5;
@@ -773,7 +781,8 @@ export class WhatsAppManager {
         cupom: cupomExtraido,
         detalhesCupom: tipoMensagem === 'cupom' ? 'Desconto especial no app para colecionáveis' : undefined,
         linkAfiliado: linkAfiliadoFinal,
-        linkVitrineCurto
+        linkVitrineCurto,
+        textoOriginalHigienizado: novoTexto
       });
     }
 

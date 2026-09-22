@@ -466,7 +466,8 @@ export async function createServer() {
         cupom: cupomExtraido,
         detalhesCupom: tipoDetectado === 'cupom' ? 'Desconto especial no app para colecionáveis' : undefined,
         linkAfiliado: linkAfiliadoFinal,
-        linkVitrineCurto
+        linkVitrineCurto,
+        textoOriginalHigienizado: result.novoTexto
       });
 
       const templateModo = getConfig('template_modo', 'padrao');

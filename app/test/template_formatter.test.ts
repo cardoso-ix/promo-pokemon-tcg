@@ -20,6 +20,7 @@ test('detectarGatilhoUrgencia identifica termos de escassez e ofertas relâmpago
 test('detectarMensagemCupom identifica postagens focadas em cupons gerais ou vitrine', () => {
   assert.strictEqual(detectarMensagemCupom('🎟️ NOVO CUPOM NO APP! Use 20OFF em compras acima de R$ 150 na lista'), true);
   assert.strictEqual(detectarMensagemCupom('Cupom de R$ 50 liberado para colecionáveis do ML'), true);
+  assert.strictEqual(detectarMensagemCupom('NOVOS CUPONS NO MERCADO LIVRE\nRegra geral: 15% OFF'), true);
   assert.strictEqual(detectarMensagemCupom('Booster Box Pokémon com desconto direto no pix'), false);
 });
 
@@ -72,7 +73,7 @@ test('formatarMensagemReplicada - Template 2: Alerta de Urgência & Escassez', (
   assert.strictEqual(msg.includes('🛒 https://meli.la/urgente123'), true);
 });
 
-test('formatarMensagemReplicada - Template 3: Cupons & Vitrine Oficial', () => {
+test('formatarMensagemReplicada - Template 3: Cupons & Vitrine Oficial (Fallback sem texto)', () => {
   const msg = formatarMensagemReplicada({
     tipo: 'cupom',
     titulo: 'Cupom de Desconto Mercado Livre',
@@ -85,6 +86,44 @@ test('formatarMensagemReplicada - Template 3: Cupons & Vitrine Oficial', () => {
   assert.strictEqual(msg.includes('🏷️ Cupom: *POKEDAY20*'), true);
   assert.strictEqual(msg.includes('R$ 20 OFF acima de R$ 100'), true);
   assert.strictEqual(msg.includes('👉 https://mercadolivre.com/sec/2rM6RPm'), true);
+});
+
+test('formatarMensagemReplicada - Template 3: Cupons múltiplos replica fielmente o que eles mandaram com marca', () => {
+  const textoConcorrente = `NOVOS CUPONS NO MERCADO LIVRE
+
+📌 Regra geral: 15% OFF (compra mínima de R$ 39 e desconto máximo de R$ 40).
+
+https://meli.la/268XAbz
+
+🎟️ MELIMAXITOY
+🎟️ MELIATENTU
+🎟️ MELIBRASTOY
+🎟️ MELIBRINQUEI
+🎟️ MELIADORA
+🎟️ MELIWHALE
+🎟️ MELIGOODMOOD`;
+
+  const msg = formatarMensagemReplicada({
+    tipo: 'cupom',
+    titulo: 'Novos Cupons no Mercado Livre',
+    linkVitrineCurto: 'https://mercadolivre.com/sec/2rM6RPm',
+    textoOriginalHigienizado: textoConcorrente
+  });
+
+  // Assina @pokemon_tcg_promo no topo
+  assert.strictEqual(msg.startsWith('@pokemon_tcg_promo\n\nNOVOS CUPONS NO MERCADO LIVRE'), true);
+  // Preserva todas as regras
+  assert.strictEqual(msg.includes('Regra geral: 15% OFF'), true);
+  // Preserva todos os cupons da lista
+  assert.strictEqual(msg.includes('MELIMAXITOY'), true);
+  assert.strictEqual(msg.includes('MELIATENTU'), true);
+  assert.strictEqual(msg.includes('MELIBRASTOY'), true);
+  assert.strictEqual(msg.includes('MELIBRINQUEI'), true);
+  assert.strictEqual(msg.includes('MELIADORA'), true);
+  assert.strictEqual(msg.includes('MELIWHALE'), true);
+  assert.strictEqual(msg.includes('MELIGOODMOOD'), true);
+  // Mantém o link fornecido
+  assert.strictEqual(msg.includes('https://meli.la/268XAbz'), true);
 });
 
 test('extrairCupom extrai código de cupom com precisão', () => {
