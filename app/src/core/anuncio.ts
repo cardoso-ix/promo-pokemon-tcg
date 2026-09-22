@@ -353,8 +353,6 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
   // Template 1: Oferta Regular TCG (Padrão)
   const linhas: string[] = [
-    '⚡ *OFERTA EXCLUSIVA TCG* ⚡',
-    '',
     `📦 *${titulo.trim()}*`,
     ''
   ];

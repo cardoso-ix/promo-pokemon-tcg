@@ -49,8 +49,8 @@ test('formatarMensagemReplicada - Template 1: Oferta Regular TCG', () => {
     linkAfiliado: 'https://meli.la/abc1234'
   });
 
-  assert.strictEqual(msg.includes('⚡ *OFERTA EXCLUSIVA TCG* ⚡'), true);
-  assert.strictEqual(msg.includes('📦 *Box Treinador Avançado Escarlate e Violeta Copag*'), true);
+  assert.strictEqual(msg.includes('OFERTA EXCLUSIVA TCG'), false);
+  assert.strictEqual(msg.startsWith('📦 *Box Treinador Avançado Escarlate e Violeta Copag*'), true);
   assert.strictEqual(msg.includes('❌ ~De: R$ 389,90~'), true);
   assert.strictEqual(msg.includes('🔥 *Por apenas: R$ 249,90* (36% OFF · Economia de R$ 140,00)'), true);
   assert.strictEqual(msg.includes('👉 https://meli.la/abc1234'), true);
