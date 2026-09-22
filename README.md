@@ -14,6 +14,7 @@ A plataforma opera **100% online na nuvem (Railway)** com persistência contínu
 - **Objetivo:** Monitora grupos de ofertas de Pokémon TCG 24/7, intercepta links concorrentes, substitui por links de afiliado oficiais do Mercado Livre com encurtamento `meli.la`, preserva/baixa fotos oficiais em 2X e replica nos seus grupos de destino.
 - **Interface & Resiliência:** Cockpit temático **Pokémon TCG (Ultra Ball & Rare Holo Foil)** com medidor animado de **HP da Sessão**, simulador autêntico de balões do WhatsApp Dark, **Watchdog Baileys** (heartbeat a cada 45s) e **Cookie Sentinel** automático para validação contínua da sessão do Mercado Livre.
 - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script e sincronização local no Google Drive. Consulte [`docs/google-sheets-integracao.md`](docs/google-sheets-integracao.md).
+- **🌅 Mensagem Diária de Abertura (07:00 AM):** Posta automaticamente todas as manhãs no horário oficial de Brasília uma mensagem de bom dia nos grupos de destino ativos, agradecendo aos membros, anunciando o rastreamento das melhores ofertas de Pokémon TCG e incentivando os membros a convidarem amigos para crescer a comunidade. Totalmente configurável no painel com botão de teste instantâneo.
 
 ### 2. 🚀 Bot Disparador, Prospecção & Atendimento IA (`bot-disparador/`)
 - **Status:** 🟢 **Online 24/7 (Railway)**

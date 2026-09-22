@@ -111,6 +111,13 @@
   const sheetsTestFeedback = document.getElementById('sheets-test-feedback');
   const sheetsScriptCode = document.getElementById('sheets-script-code');
   const btnCopiarScript = document.getElementById('btn-copiar-script');
+  const cfgMsgAberturaAtivo = document.getElementById('cfg-msg-abertura-ativo');
+  const cfgMsgAberturaHorario = document.getElementById('cfg-msg-abertura-horario');
+  const cfgMsgAberturaTexto = document.getElementById('cfg-msg-abertura-texto');
+  const msgAberturaStatusBadge = document.getElementById('msg-abertura-status-badge');
+  const btnTestarMsgAbertura = document.getElementById('btn-testar-msg-abertura');
+  const btnRestaurarMsgAbertura = document.getElementById('btn-restaurar-msg-abertura');
+  const msgAberturaFeedback = document.getElementById('msg-abertura-feedback');
   const btnSalvarConfig = document.getElementById('btn-salvar-config');
   const configStatusMsg = document.getElementById('config-status-msg');
 
@@ -354,7 +361,12 @@
       if (cfgFiltroApenasTcg) cfgFiltroApenasTcg.checked = data.configs.filtro_apenas_tcg !== 'false';
       if (cfgSheetsWebhook) cfgSheetsWebhook.value = data.configs.google_sheets_webhook_url || '';
       if (cfgSheetsAtivo) cfgSheetsAtivo.checked = data.configs.google_sheets_ativo !== 'false';
+      if (cfgMsgAberturaAtivo) cfgMsgAberturaAtivo.checked = data.configs.msg_abertura_ativa !== 'false';
+      if (cfgMsgAberturaHorario) cfgMsgAberturaHorario.value = data.configs.msg_abertura_horario || '07:00';
+      if (cfgMsgAberturaTexto) cfgMsgAberturaTexto.value = data.configs.msg_abertura_texto || '';
       cfgFrases.value = data.configs.frases_remover || '';
+
+      carregarStatusAgendador();
 
       updateMasterSwitch(data.configs.ativo === 'true');
       updateMeliBadge(data.configs.meli_cookie);
@@ -874,6 +886,28 @@
           body: JSON.stringify({ chave: 'google_sheets_ativo', valor: cfgSheetsAtivo.checked ? 'true' : 'false' })
         });
       }
+      if (cfgMsgAberturaAtivo) {
+        await fetch('/api/configs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chave: 'msg_abertura_ativa', valor: cfgMsgAberturaAtivo.checked ? 'true' : 'false' })
+        });
+      }
+      if (cfgMsgAberturaHorario) {
+        await fetch('/api/configs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chave: 'msg_abertura_horario', valor: cfgMsgAberturaHorario.value.trim() })
+        });
+      }
+      if (cfgMsgAberturaTexto) {
+        await fetch('/api/configs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chave: 'msg_abertura_texto', valor: cfgMsgAberturaTexto.value.trim() })
+        });
+      }
+      carregarStatusAgendador();
 
       updateMeliBadge(cfgMeliCookie ? cfgMeliCookie.value.trim() : '');
       configStatusMsg.textContent = 'Salvo com sucesso!';
@@ -1010,6 +1044,82 @@
         sheetsScriptCode.select();
         document.execCommand('copy');
         showToast('Código copiado! 📋');
+      }
+    });
+  }
+
+  // Agendador: Texto padrão e ações da Mensagem Diária de Abertura
+  const DEFAULT_TEXTO_ABERTURA = `@pokemon_tcg_promo
+
+🌅 *BOM DIA, TREINADORES E COLECIONADORES!* ⚡
+O nosso grupo oficial de ofertas de Pokémon TCG está oficialmente *ABERTO* para o dia de hoje!
+
+Quero agradecer imensamente a cada um de vocês por fazer parte da nossa comunidade. É muito gratificante ver a nossa família de colecionadores crescendo todos os dias! 🙏✨
+
+🔎 Nossa equipe e nossos robôs já estão a postos monitorando os estoques, cupons relâmpago e promoções exclusivas em boosters, boxes, latas, ETBs e cartas lacradas para trazer os menores preços reais para vocês.
+
+👥 *Dica especial:* Se você tem amigos, conhecidos ou colecionadores que também amam Pokémon TCG e querem economizar de verdade sem pagar preços abusivos, fiquem 100% à vontade para adicioná-los ou mandar o link do grupo! Bora crescer a nossa comunidade juntos! 🚀
+
+Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
+
+  async function carregarStatusAgendador() {
+    try {
+      const res = await fetch('/api/agendador/status');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (cfgMsgAberturaAtivo) cfgMsgAberturaAtivo.checked = data.ativo;
+      if (cfgMsgAberturaHorario && data.horario) cfgMsgAberturaHorario.value = data.horario;
+      if (cfgMsgAberturaTexto && !cfgMsgAberturaTexto.value && data.texto) {
+        cfgMsgAberturaTexto.value = data.texto;
+      }
+
+      if (msgAberturaStatusBadge) {
+        if (data.ativo) {
+          const ultimo = data.ultimoEnvio ? ` • Último envio: ${data.ultimoEnvio}` : ' • Nenhum envio hoje ainda';
+          msgAberturaStatusBadge.innerHTML = `<span style="color: var(--accent-green); font-weight: 500;">🟢 Ativo às ${data.horario} BRT (Hora atual: ${data.horaAtualBrasilia}) • ${data.destinosCount} grupo(s) de destino${ultimo}</span>`;
+        } else {
+          msgAberturaStatusBadge.innerHTML = `<span style="color: var(--text-muted); font-weight: 500;">⏸️ Agendamento pausado no momento</span>`;
+        }
+      }
+    } catch {}
+  }
+
+  if (btnRestaurarMsgAbertura && cfgMsgAberturaTexto) {
+    btnRestaurarMsgAbertura.addEventListener('click', () => {
+      cfgMsgAberturaTexto.value = DEFAULT_TEXTO_ABERTURA;
+      showToast('Texto padrão restaurado! Clique em "Salvar Todas as Configurações" para aplicar.');
+    });
+  }
+
+  if (btnTestarMsgAbertura) {
+    btnTestarMsgAbertura.addEventListener('click', async () => {
+      btnTestarMsgAbertura.disabled = true;
+      msgAberturaFeedback.textContent = '⏳ Disparando mensagem nos grupos de destino...';
+      msgAberturaFeedback.className = 'action-feedback';
+
+      try {
+        const res = await fetch('/api/agendador/testar', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          msgAberturaFeedback.textContent = `✅ ${data.message}`;
+          msgAberturaFeedback.className = 'action-feedback success';
+          showToast(`Mensagem de abertura enviada com sucesso para ${data.totalEnviados} grupo(s)! 🚀`);
+          playChime();
+          carregarStatusAgendador();
+        } else {
+          msgAberturaFeedback.textContent = `❌ ${data.error || 'Falha ao enviar mensagem de abertura.'}`;
+          msgAberturaFeedback.className = 'action-feedback error';
+        }
+      } catch (err) {
+        msgAberturaFeedback.textContent = '❌ Erro de rede ao disparar teste.';
+        msgAberturaFeedback.className = 'action-feedback error';
+      } finally {
+        btnTestarMsgAbertura.disabled = false;
+        setTimeout(() => {
+          if (msgAberturaFeedback.className.includes('success')) {
+            msgAberturaFeedback.textContent = '';
+          }
+        }, 5000);
       }
     });
   }

@@ -2,6 +2,7 @@ import { CONFIG } from './config.js';
 import { initDatabase } from './db/database.js';
 import { createServer } from './web/server.js';
 import { whatsAppManager } from './whatsapp/client.js';
+import { iniciarAgendadorDiario, pararAgendadorDiario } from './core/agendador.js';
 
 async function main() {
   console.log('=== Iniciando Promo Réplica Autônoma ===');
@@ -23,9 +24,14 @@ async function main() {
     console.error('Falha ao iniciar WhatsApp:', err);
   });
 
+  // 4. Iniciar Agendador Diário (Mensagem de Abertura às 07:00)
+  console.log('4. Inicializando agendador diário de comunidade...');
+  iniciarAgendadorDiario(whatsAppManager);
+
   // Tratamento de encerramento gracioso
   const shutdown = async () => {
     console.log('\nEncerrando aplicação...');
+    pararAgendadorDiario();
     try {
       await app.close();
     } catch {}

@@ -577,6 +577,51 @@
           </details>
         </div>
 
+        <!-- Mensagem Diária de Abertura do Grupo (07:00 AM) -->
+        <div class="card card-full" style="border: 1px solid rgba(245, 158, 11, 0.35); box-shadow: 0 4px 20px rgba(245, 158, 11, 0.08);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.4rem;">🌅</span>
+              <h3 style="margin: 0;">Mensagem Diária de Abertura do Grupo</h3>
+            </div>
+            <label class="switch" title="Ativar ou pausar postagem diária automática de abertura">
+              <input type="checkbox" id="cfg-msg-abertura-ativo" checked>
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <p class="card-desc">
+            Posta automaticamente todos os dias no horário configurado uma mensagem oficial de bom dia em todos os <strong>grupos de destino ativos</strong>, anunciando que o grupo está aberto, agradecendo aos membros, informando que a equipe está buscando as melhores ofertas e convidando todos a adicionarem pessoas para crescer a comunidade.
+          </p>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="cfg-msg-abertura-horario">⏰ Horário de Envio (Horário de Brasília):</label>
+              <input type="time" id="cfg-msg-abertura-horario" class="input-field" value="07:00" style="font-size: 1.1rem; font-weight: 600;">
+              <span class="field-hint">Padrão: 07:00 da manhã.</span>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>Status do Agendador:</label>
+              <div id="msg-abertura-status-badge" style="padding: 0.6rem 0.8rem; background: rgba(15, 23, 42, 0.6); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.85rem; color: #94a3b8;">
+                Carregando status...
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="cfg-msg-abertura-texto">Texto da Mensagem Oficial:</label>
+            <textarea id="cfg-msg-abertura-texto" class="textarea-field" rows="9" style="font-family: inherit; line-height: 1.5;"></textarea>
+            <span class="field-hint">Dica: A tag <code>{dia_semana}</code> é substituída automaticamente pelo dia da semana atual (ex: Segunda-feira).</span>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button type="button" id="btn-testar-msg-abertura" class="btn btn-secondary">🚀 Testar Envio Agora no WhatsApp</button>
+              <button type="button" id="btn-restaurar-msg-abertura" class="btn btn-sm btn-secondary" title="Restaura o texto padrão">🔄 Restaurar Padrão</button>
+            </div>
+            <span id="msg-abertura-feedback" class="action-feedback"></span>
+          </div>
+        </div>
+
         <div class="card card-full">
           <h3>Limpeza de Marcas Concorrentes</h3>
           <p class="card-desc">Textos, @arrobas e #hashtags de terceiros que serão removidos do texto copiado (um por linha).</p>

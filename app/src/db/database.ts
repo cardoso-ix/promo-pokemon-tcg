@@ -1,6 +1,19 @@
 import Database from 'better-sqlite3';
 import { DB_PATH, CONFIG } from '../config.js';
 
+export const DEFAULT_MSG_ABERTURA = `@pokemon_tcg_promo
+
+🌅 *BOM DIA, TREINADORES E COLECIONADORES!* ⚡
+O nosso grupo oficial de ofertas de Pokémon TCG está oficialmente *ABERTO* para o dia de hoje!
+
+Quero agradecer imensamente a cada um de vocês por fazer parte da nossa comunidade. É muito gratificante ver a nossa família de colecionadores crescendo todos os dias! 🙏✨
+
+🔎 Nossa equipe e nossos robôs já estão a postos monitorando os estoques, cupons relâmpago e promoções exclusivas em boosters, boxes, latas, ETBs e cartas lacradas para trazer os menores preços reais para vocês.
+
+👥 *Dica especial:* Se você tem amigos, conhecidos ou colecionadores que também amam Pokémon TCG e querem economizar de verdade sem pagar preços abusivos, fiquem 100% à vontade para adicioná-los ou mandar o link do grupo! Bora crescer a nossa comunidade juntos! 🚀
+
+Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
+
 export const db = new Database(DB_PATH);
 
 // Ativar modo WAL para melhor concorrência e velocidade
@@ -90,7 +103,11 @@ export function initDatabase() {
     cooldown_duplicidade_minutos: '30',
     filtro_apenas_tcg: 'true',
     google_sheets_webhook_url: '',
-    google_sheets_ativo: 'true'
+    google_sheets_ativo: 'true',
+    msg_abertura_ativa: 'true',
+    msg_abertura_horario: '07:00',
+    msg_abertura_texto: DEFAULT_MSG_ABERTURA,
+    msg_abertura_ultimo_envio: ''
   };
 
   const insertConfig = db.prepare(`

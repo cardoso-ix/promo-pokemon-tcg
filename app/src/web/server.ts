@@ -15,8 +15,15 @@ import {
   getRecentLogs,
   getCachedChats,
   getPostsLastHour,
-  insertLog
+  insertLog,
+  DEFAULT_MSG_ABERTURA
 } from '../db/database.js';
+import {
+  dispararMensagemAbertura,
+  obterHoraBrasilia,
+  obterDestinosAtivos,
+  prepararTextoMensagemAbertura
+} from '../core/agendador.js';
 import { whatsAppManager, WhatsAppState } from '../whatsapp/client.js';
 import {
   shortenToMeli,
@@ -682,6 +689,64 @@ export async function createServer() {
         ok: false,
         error: resultado.error || 'Falha ao conectar com o Google Sheets Webhook.'
       });
+    }
+  });
+
+  // API REST: Agendador Diário - Obter Status e Configurações
+  app.get('/api/agendador/status', async () => {
+    const { horaFormatada, dataFormatada, diaSemana } = obterHoraBrasilia();
+    const destinos = obterDestinosAtivos();
+    const texto = getConfig('msg_abertura_texto', DEFAULT_MSG_ABERTURA);
+
+    return {
+      ativo: getConfig('msg_abertura_ativa', 'true') === 'true',
+      horario: getConfig('msg_abertura_horario', '07:00'),
+      texto,
+      previa: prepararTextoMensagemAbertura(texto, diaSemana),
+      ultimoEnvio: getConfig('msg_abertura_ultimo_envio', ''),
+      horaAtualBrasilia: horaFormatada,
+      dataFormatadaBrasilia: dataFormatada,
+      diaSemana,
+      destinosCount: destinos.length,
+      destinos
+    };
+  });
+
+  // API REST: Agendador Diário - Salvar Configurações
+  app.post<{ Body: { ativo?: boolean; horario?: string; texto?: string } }>(
+    '/api/agendador/config',
+    async (req) => {
+      const { ativo, horario, texto } = req.body || {};
+      if (ativo !== undefined) {
+        setConfig('msg_abertura_ativa', ativo ? 'true' : 'false');
+      }
+      if (horario !== undefined && /^\d{2}:\d{2}$/.test(horario.trim())) {
+        setConfig('msg_abertura_horario', horario.trim());
+      }
+      if (texto !== undefined && texto.trim()) {
+        setConfig('msg_abertura_texto', texto.trim());
+      }
+      return { ok: true, message: 'Configurações da mensagem de abertura salvas com sucesso!' };
+    }
+  );
+
+  // API REST: Agendador Diário - Testar Envio Imediato
+  app.post('/api/agendador/testar', async (req, reply) => {
+    const res = await dispararMensagemAbertura(whatsAppManager, true, 1500);
+    if (res.sucesso) {
+      return {
+        ok: true,
+        totalEnviados: res.totalEnviados,
+        message: `Mensagem de abertura enviada com sucesso para ${res.totalEnviados} grupo(s) de destino!`
+      };
+    } else {
+      let msg = 'Falha ao enviar mensagem de abertura.';
+      if (res.motivo === 'whatsapp_desconectado') {
+        msg = 'WhatsApp desconectado. Conecte o WhatsApp para realizar o envio.';
+      } else if (res.motivo === 'sem_destinos_ativos') {
+        msg = 'Nenhum grupo de destino ativo configurado nas rotas.';
+      }
+      return reply.status(400).send({ ok: false, motivo: res.motivo, error: msg });
     }
   });
 

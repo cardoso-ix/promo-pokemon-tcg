@@ -95,3 +95,24 @@ Em vez de herdar o estilo e formatação dos concorrentes, o bot classifica a me
 2. **Fallback de Scraper em Alta Definição (2X)**:
    - Se a postagem original for apenas texto, mas contiver um link de produto do Mercado Livre, o sistema faz uma requisição leve para coletar a imagem oficial do produto (`og:image`) em alta resolução (`2X`).
    - A imagem é baixada em memória e enviada junto com o texto como legenda (*caption*), garantindo que o grupo de destino sempre receba uma postagem visualmente atraente.
+
+---
+
+## 5. Mensagem Diária Automática de Abertura do Grupo (07:00 AM)
+
+O sistema conta com um agendador autônomo e de alta precisão para engajar e dar as boas-vindas aos membros da comunidade todas as manhãs:
+
+1. **Horário de Brasília (`America/Sao_Paulo`)**:
+   - Disparado pontualmente no horário configurado (padrão: `07:00` da manhã), independente de o servidor em nuvem (Railway) operar em UTC.
+2. **Conteúdo Estratégico e Caloroso**:
+   - Anuncia que o grupo oficial está aberto para o dia de hoje.
+   - Agradece a cada um dos membros pela presença e apoio.
+   - Informa que os robôs e a equipe já estão rastreando ativamente as melhores ofertas, cupons e quedas de preços em cartas, boxes e coleções de Pokémon TCG.
+   - Convida abertamente a adicionar amigos e compartilhar o grupo para expandir a comunidade colecionadora de forma orgânica.
+   - Assinatura oficial `@pokemon_tcg_promo`.
+3. **Persistência Anti-Duplicidade no SQLite**:
+   - A data do envio é persistida em banco (`msg_abertura_ultimo_envio`). Mesmo que o container reinicie ou o WhatsApp reconecte às 07:02, a mensagem nunca é enviada duas vezes no mesmo dia.
+4. **Pacing Seguro Multi-Grupo**:
+   - A mensagem é enviada automaticamente para todos os grupos de destino configurados nas rotas ativas (`rota_destinos`), com cadência humanizada de 3 segundos entre cada grupo para evitar qualquer risco à conexão do WhatsApp.
+5. **Customização Total no Painel Web**:
+   - O operador pode ativar/desativar o agendador, ajustar o horário de envio, personalizar o texto da mensagem com tags dinâmicas como `{dia_semana}`, restaurar o texto de fábrica e disparar um teste instantâneo pelo botão **"🚀 Testar Envio Agora no WhatsApp"**.

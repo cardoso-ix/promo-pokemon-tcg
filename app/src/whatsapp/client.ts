@@ -96,6 +96,21 @@ export class WhatsAppManager {
     return { ...this.state };
   }
 
+  public getSocket(): WASocket | null {
+    return this.sock;
+  }
+
+  public isConnected(): boolean {
+    return this.state.status === 'connected' && Boolean(this.sock);
+  }
+
+  public async enviarMensagemTexto(destino: string, texto: string): Promise<any> {
+    if (!this.sock) {
+      throw new Error('WhatsApp desconectado.');
+    }
+    return await this.sock.sendMessage(destino, { text: texto });
+  }
+
   public onStateChange(listener: (state: WhatsAppState) => void) {
     this.onStateChangeListeners.push(listener);
   }
