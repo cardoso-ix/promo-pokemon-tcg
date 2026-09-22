@@ -301,6 +301,8 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
     const vitrine = (linkVitrineCurto || linkAfiliado || '').trim();
 
     const linhas: string[] = [
+      '@pokemon_tcg_promo',
+      '',
       '🎟️ *NOVO CUPOM DO MERCADO LIVRE LIBERADO!* 🎟️',
       '',
       `🏷️ Cupom: *${codCupom}*`
@@ -344,6 +346,8 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
   // Template 2: Alerta de Urgência & Escassez
   if (tipo === 'urgencia') {
     const linhas: string[] = [
+      '@pokemon_tcg_promo',
+      '',
       '🚨 *ATENÇÃO: ÚLTIMAS UNIDADES EM ESTOQUE!* 🚨',
       '',
       `📦 *${titulo.trim()}*`,
@@ -363,6 +367,8 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
   // Template 1: Oferta Regular TCG (Padrão)
   const linhas: string[] = [
+    '@pokemon_tcg_promo',
+    '',
     `📦 *${titulo.trim()}*`,
     ''
   ];
@@ -372,7 +378,6 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
   if (linhaCupom) linhas.push(linhaCupom);
 
   linhas.push('');
-  linhas.push('🛡️ Compra 100% Protegida · Envio Rápido');
   linhas.push('🛒 *Garanta o seu com desconto aqui:*');
   linhas.push(`👉 ${link}`);
 

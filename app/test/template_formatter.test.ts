@@ -50,7 +50,8 @@ test('formatarMensagemReplicada - Template 1: Oferta Regular TCG', () => {
   });
 
   assert.strictEqual(msg.includes('OFERTA EXCLUSIVA TCG'), false);
-  assert.strictEqual(msg.startsWith('📦 *Box Treinador Avançado Escarlate e Violeta Copag*'), true);
+  assert.strictEqual(msg.includes('Compra 100% Protegida'), false);
+  assert.strictEqual(msg.startsWith('@pokemon_tcg_promo\n\n📦 *Box Treinador Avançado Escarlate e Violeta Copag*'), true);
   assert.strictEqual(msg.includes('❌ ~De: R$ 389,90~'), true);
   assert.strictEqual(msg.includes('🔥 *Por apenas: R$ 249,90* (36% OFF · Economia de R$ 140,00)'), true);
   assert.strictEqual(msg.includes('👉 https://meli.la/abc1234'), true);
@@ -65,7 +66,7 @@ test('formatarMensagemReplicada - Template 2: Alerta de Urgência & Escassez', (
     linkAfiliado: 'https://meli.la/urgente123'
   });
 
-  assert.strictEqual(msg.includes('🚨 *ATENÇÃO: ÚLTIMAS UNIDADES EM ESTOQUE!* 🚨'), true);
+  assert.strictEqual(msg.startsWith('@pokemon_tcg_promo\n\n🚨 *ATENÇÃO: ÚLTIMAS UNIDADES EM ESTOQUE!* 🚨'), true);
   assert.strictEqual(msg.includes('⚡ *Corre antes que acabe o estoque!*'), true);
   assert.strictEqual(msg.includes('👉 https://meli.la/urgente123'), true);
 });
@@ -79,7 +80,7 @@ test('formatarMensagemReplicada - Template 3: Cupons & Vitrine Oficial', () => {
     linkVitrineCurto: 'https://mercadolivre.com/sec/2rM6RPm'
   });
 
-  assert.strictEqual(msg.includes('🎟️ *NOVO CUPOM DO MERCADO LIVRE LIBERADO!* 🎟️'), true);
+  assert.strictEqual(msg.startsWith('@pokemon_tcg_promo\n\n🎟️ *NOVO CUPOM DO MERCADO LIVRE LIBERADO!* 🎟️'), true);
   assert.strictEqual(msg.includes('🏷️ Cupom: *POKEDAY20*'), true);
   assert.strictEqual(msg.includes('R$ 20 OFF acima de R$ 100'), true);
   assert.strictEqual(msg.includes('👉 https://mercadolivre.com/sec/2rM6RPm'), true);
@@ -126,6 +127,7 @@ test('formatarMensagemReplicada - Oferta de Produto COM Cupom preserva produto e
     linkAfiliado: 'https://meli.la/tripack123'
   });
 
+  assert.strictEqual(msg.startsWith('@pokemon_tcg_promo'), true);
   // NÃO deve conter o cabeçalho genérico de cupom
   assert.strictEqual(msg.includes('NOVO CUPOM DO MERCADO LIVRE LIBERADO'), false);
   // DEVE conter o título do produto
@@ -137,6 +139,8 @@ test('formatarMensagemReplicada - Oferta de Produto COM Cupom preserva produto e
   assert.strictEqual(msg.includes('🎟️ Cupom: *MELIKIDS*'), true);
   // DEVE conter o link do produto, e NÃO a vitrine geral
   assert.strictEqual(msg.includes('👉 https://meli.la/tripack123'), true);
+  // NÃO deve conter garantia/envio rápido
+  assert.strictEqual(msg.includes('Compra 100% Protegida'), false);
 });
 
 test('formatarMensagemReplicada - Oferta sem preço informado omite linhas de preço limpas', () => {
@@ -148,10 +152,13 @@ test('formatarMensagemReplicada - Oferta sem preço informado omite linhas de pr
     linkAfiliado: 'https://meli.la/tripack123'
   });
 
+  assert.strictEqual(msg.startsWith('@pokemon_tcg_promo'), true);
   // NÃO deve imprimir "Por apenas: R$ Consultar"
   assert.strictEqual(msg.includes('Consultar'), false);
   assert.strictEqual(msg.includes('Por apenas'), false);
   assert.strictEqual(msg.includes('📦 *Tripack Pokémon Escuridão Absoluta Copag*'), true);
   assert.strictEqual(msg.includes('🎟️ Cupom: *MELIKIDS*'), true);
   assert.strictEqual(msg.includes('👉 https://meli.la/tripack123'), true);
+  // NÃO deve conter garantia/envio rápido
+  assert.strictEqual(msg.includes('Compra 100% Protegida'), false);
 });
