@@ -31,11 +31,17 @@ Ambos os painéis utilizam controle de acesso por credenciais seguras e tokens a
 ### 1.4. Gerador Manual de Anúncios por Link (No Painel Replicador)
 - **Acesso**: Aba **⚡ Gerador de Anúncios** no Cockpit do Replicador.
 - **Como Usar**:
-  1. Cole o link de afiliado ou produto do Mercado Livre (aceita `https://mercadolivre.com/sec/...`, `meli.la` ou link direto).
-  2. *(Opcional)* Preencha o campo de **Cupom de Desconto** (ex: `APP10`) e os campos de preço (De / Por).
-  3. Clique em **⚡ Puxar Dados & Gerar Anúncio**: o sistema extrai a foto 2X HD do Mercado Livre e monta a copy persuasiva para Pokémon TCG.
-  4. Marque os grupos de destino desejados (com auxílio da barra de busca de grupos).
-  5. Clique em **🚀 Publicar no WhatsApp** para disparar a foto com a legenda com 1 clique!
+  1. Cole o link de afiliado ou produto do Mercado Livre (aceita `https://mercadolivre.com/sec/...`, `meli.la` ou link direto do anúncio).
+  2. Ao colar o link (ou clicar em **⚡ Puxar Dados & Gerar Anúncio**), o sistema extrai **automaticamente**:
+     - O **título limpo** do produto;
+     - A **foto oficial em 2X HD** do produto;
+     - O **Preço De (Original / Riscado)** e o **Preço Por (A Pagar)**;
+     - O **Cupom de Desconto** ativo e calcula o **Valor com Cupom** final;
+     - O parcelamento sem juros (se houver).
+  3. Todos os campos do formulário são pré-preenchidos para permitir ajustes manuais finos imediatos.
+  4. A copy é gerada de forma limpa e direta, iniciando imediatamente no nome do item (`📦 *[Título]*`), sem linhas repetitivas de cabeçalho.
+  5. Marque os grupos de destino desejados (com auxílio da barra de busca de grupos).
+  6. Clique em **🚀 Publicar no WhatsApp** para disparar a foto com a legenda com 1 clique!
 
 ### 1.5. Protocolo de Reativação Rápida em 30s (Pelo Celular ou Computador)
 Se o WhatsApp desconectar ou se você trocar de aparelho, você pode restabelecer tudo em **menos de 30 segundos** diretamente pelo celular:

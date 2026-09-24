@@ -1431,6 +1431,7 @@ Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
   const anuncioCupom = document.getElementById('anuncio-cupom');
   const anuncioPrecoDe = document.getElementById('anuncio-preco-de');
   const anuncioPrecoPor = document.getElementById('anuncio-preco-por');
+  const anuncioPrecoCupom = document.getElementById('anuncio-preco-cupom');
   const btnGerarAnuncio = document.getElementById('btn-gerar-anuncio');
   const btnGerarSpinner = document.getElementById('btn-gerar-spinner');
   const btnGerarLabel = document.getElementById('btn-gerar-label');
@@ -1531,6 +1532,7 @@ Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
       anuncioCupom.value = '';
       anuncioPrecoDe.value = '';
       anuncioPrecoPor.value = '';
+      if (anuncioPrecoCupom) anuncioPrecoCupom.value = '';
       anuncioFeedback.textContent = '';
       anuncioFeedback.className = 'action-feedback';
       anuncioTextoFinal.value = '';
@@ -1585,7 +1587,8 @@ Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
           url,
           cupom: (anuncioCupom.value || '').trim(),
           precoDe: (anuncioPrecoDe.value || '').trim(),
-          precoPor: (anuncioPrecoPor.value || '').trim()
+          precoPor: (anuncioPrecoPor.value || '').trim(),
+          valorComCupom: anuncioPrecoCupom ? (anuncioPrecoCupom.value || '').trim() : undefined
         };
 
         const res = await fetch('/api/anuncio/extrair', {
@@ -1600,6 +1603,12 @@ Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
         }
 
         currentAnuncioData = data;
+
+        // Auto-preencher campos com os dados extraídos do anúncio
+        if (data.precoDe) anuncioPrecoDe.value = data.precoDe;
+        if (data.precoPor) anuncioPrecoPor.value = data.precoPor;
+        if (data.cupom) anuncioCupom.value = data.cupom;
+        if (data.valorComCupom && anuncioPrecoCupom) anuncioPrecoCupom.value = data.valorComCupom;
 
         // Atualizar imagem
         if (data.imageUrl) {
@@ -1623,10 +1632,10 @@ Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
         anuncioStatusBadge.className = 'badge badge-connected';
         anuncioStatusBadge.textContent = 'Pronto para Postar';
 
-        anuncioFeedback.textContent = '✅ Anúncio e foto oficial 2X HD gerados com sucesso!';
+        anuncioFeedback.textContent = '✅ Anúncio, preços e foto oficial 2X HD gerados com sucesso!';
         anuncioFeedback.className = 'action-feedback success';
 
-        showToast('Anúncio e foto oficial 2X HD gerados com sucesso! ✨');
+        showToast('Dados e foto oficial 2X HD extraídos com sucesso! ✨');
         playChime();
       } catch (err) {
         console.error('Erro ao gerar anúncio:', err);
@@ -1639,6 +1648,18 @@ Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
         btnGerarLabel.textContent = '⚡ Puxar Dados & Gerar Anúncio';
       }
     });
+
+    // Auto-disparar ao colar o link no campo para máxima agilidade
+    if (anuncioUrl) {
+      anuncioUrl.addEventListener('paste', () => {
+        setTimeout(() => {
+          const val = (anuncioUrl.value || '').trim();
+          if (val.startsWith('http') && !btnGerarAnuncio.disabled) {
+            btnGerarAnuncio.click();
+          }
+        }, 150);
+      });
+    }
   }
 
   if (btnPublicarAnuncio) {

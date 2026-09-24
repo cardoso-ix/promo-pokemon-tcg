@@ -534,10 +534,10 @@ export async function createServer() {
   });
 
   // API REST: Gerador de Anúncios - Extrair Dados por Link
-  app.post<{ Body: { url: string; cupom?: string; precoDe?: string; precoPor?: string } }>(
+  app.post<{ Body: { url: string; cupom?: string; precoDe?: string; precoPor?: string; valorComCupom?: string; parcelamento?: string } }>(
     '/api/anuncio/extrair',
     async (req, reply) => {
-      const { url, cupom, precoDe, precoPor } = req.body || {};
+      const { url, cupom, precoDe, precoPor, valorComCupom, parcelamento } = req.body || {};
       if (!url || !url.trim()) {
         return reply.status(400).send({ ok: false, error: 'Cole o link do Mercado Livre para gerar o anúncio.' });
       }
@@ -549,7 +549,7 @@ export async function createServer() {
         const meliTag = getConfig('meli_tag', mattWord);
 
         const dados = await extrairDadosAnuncio(
-          { url, cupom, precoDe, precoPor },
+          { url, cupom, precoDe, precoPor, valorComCupom, parcelamento },
           { mattWord, mattTool, meliCookie, meliTag }
         );
 

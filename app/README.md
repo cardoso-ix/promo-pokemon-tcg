@@ -46,8 +46,9 @@ npm test
 2. **Guardião de Nicho Pokémon TCG:**
    - Filtro inteligente que aceita cartas, boosters, boxes, fichários, decks e sleeves (Pokémon, Magic, Yu-Gi-Oh!, One Piece) e descarta produtos fora do nicho colecionável.
 
-3. **Gerador de Anúncios Manual:**
-   - Permite colar qualquer link de produto ou cupom, puxar foto oficial 2X HD do Mercado Livre e disparar nos grupos com 1 clique.
+3. **Gerador de Anúncios Manual com Auto-Extração:**
+   - Ao colar o link (`meli.la`, `sec/...` ou produto), extrai automaticamente título, foto oficial 2X HD, preço original De, preço promocional Por, cupom ativo e valor final com cupom.
+   - Gera a copy promocional iniciando diretamente pelo nome do item, pré-preenchendo os campos do formulário para edição ágil e publicação no WhatsApp com 1 clique.
    - Inclui barra de pesquisa rápida para filtrar grupos de destino.
 
 4. **Sincronização com Google Planilhas ("produtos tcg valores"):**

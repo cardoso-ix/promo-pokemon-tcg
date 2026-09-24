@@ -151,7 +151,7 @@ export async function expandUrl(
   textHint = '',
   cookie = '',
   maxRedirects = 4
-): Promise<{ resolvedUrl: string; productImageUrl?: string }> {
+): Promise<{ resolvedUrl: string; productImageUrl?: string; rawHtml?: string }> {
   let currentUrl = shortUrl;
   let count = 0;
   let lastHtml = '';
@@ -259,8 +259,8 @@ export async function expandUrl(
 
     if (candidatos.length > 0) {
       candidatos.sort((a, b) => b.pontos - a.pontos);
-      // Exige pontuação relevante para assumir que é o mesmo produto
-      if (candidatos[0].pontos >= 2) {
+      // Exige pontuação relevante para assumir que é o mesmo produto, ou adota se for o único candidato
+      if (candidatos[0].pontos >= 2 || candidatos.length === 1) {
         currentUrl = candidatos[0].url;
         // Se ainda não temos a foto do produto, adota a foto do card correspondente se for válida
         if (!productImageUrl && candidatos[0].img && isImagemValidaProdutoMl(candidatos[0].img)) {
@@ -287,7 +287,7 @@ export async function expandUrl(
     }
   }
 
-  return { resolvedUrl: currentUrl, productImageUrl };
+  return { resolvedUrl: currentUrl, productImageUrl, rawHtml: lastHtml };
 }
 
 let cachedSocialLinks: Record<string, { link: string; expiresAt: number }> = {};
