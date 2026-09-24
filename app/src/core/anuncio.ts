@@ -466,22 +466,31 @@ export function extrairCupom(texto: string): string | null {
     // cupom (com possíveis adjetivos/local: ativo, válido, exclusivo, liberado, no app, de 10% off, etc.)
     // seguido de separadores como colons, asteriscos, espaços ou hífens e o código
     /cupo(?:m|ns)(?:\s+(?:ativo|v[aá]lido|exclusivo|liberado|especial|novo|do\s+app|no\s+app|no\s+carrinho|direto\s+no\s+app|na\s+p[aá]gina|no\s+an[uú]ncio|de\s+[^\n:]+))?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
-    // (use | usando | com | aplique | aplicar | ative | ativar | insira | inserir | coloque | colocar | digite | digitar | resgate | resgatar) [o] cupom [:] [*]CODE[*]
-    /(?:use|usando|com|aplique|aplicar|ative|ativar|insira|inserir|coloque|colocar|digite|digitar|resgate|resgatar)\s+(?:o\s+)?cupo(?:m|ns)[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
+    // (use | usando | com | aplique | aplicar | ative | ativar | insira | inserir | coloque | colocar | digite | digitar | resgate | resgatar) [o] (cupom|código|cod) [:] [*]CODE[*]
+    /(?:use|usando|com|aplique|aplicar|ative|ativar|insira|inserir|coloque|colocar|digite|digitar|resgate|resgatar)\s+(?:o\s+)?(?:cupo(?:m|ns)|c[oó]digo|cod)[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
+    // (código | cod) [:] CODE
+    /(?:c[oó]digo|cod)[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
     // cupom [de] 10% [off] [:] CODE
     /cupo(?:m|ns)(?:\s+de)?\s+\d+%\s*(?:off)?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
     // cupom [CODE] ou cupom (CODE) ou cupom "CODE"
     /cupo(?:m|ns)[\s:]+[\[\("]([a-z0-9_\-]{3,25})[\]\)"]/i,
     // cupom CODE destacado (ex: Cupom MELIKIDS, Cupom 20OFF)
-    /cupo(?:m|ns)\s+([A-Z0-9_\-]{3,25})/
+    /cupo(?:m|ns)\s+([A-Z0-9_\-]{3,25})/,
+    // Emojis de cupom (🎟️, 🎫, 🏷️) seguidos de código diretamente ou após 'cupom/código' (ex: 🎟️ MELIUZKIDS)
+    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?)\s*(?:(?:cupo(?:m|ns)|c[oó]digo|cod)[:\s\*_~=\-]*)?([a-z0-9_\-]{3,25})/iu
   ];
 
   for (const regex of regexesCodigo) {
     const match = texto.match(regex);
     if (match && match[1]) {
       const code = match[1].trim().replace(/[\*_~\[\]\(\)\"\']/g, '').toUpperCase();
-      // Não pode estar na blacklist, não pode ser apenas números e deve ter pelo menos 3 caracteres
-      if (!blacklist.has(code) && !/^\d+$/.test(code) && code.length >= 3) {
+      // Não pode estar na blacklist, não pode ser apenas números, deve ter pelo menos 3 caracteres e não ser termo genérico
+      if (
+        !blacklist.has(code) &&
+        !/^\d+$/.test(code) &&
+        code.length >= 3 &&
+        !/^(?:COM|SEM|TEM|CUPOM)$/i.test(code)
+      ) {
         return code;
       }
     }

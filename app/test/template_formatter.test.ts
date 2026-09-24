@@ -145,6 +145,10 @@ test('extrairCupom extrai código de cupom com precisão e suporta negrito/itál
   assert.strictEqual(extrairCupom('Cupom de R$ 20: *VINTE*'), 'VINTE');
   assert.strictEqual(extrairCupom('🎟️ *CUPOM DE 10% OFF:* POKEMON10'), 'POKEMON10');
   assert.strictEqual(extrairCupom('Cupom: *10OFF* no carrinho'), '10OFF');
+  assert.strictEqual(extrairCupom('🎟️ MELIUZKIDS'), 'MELIUZKIDS');
+  assert.strictEqual(extrairCupom('🏷️ MELIUZKIDS'), 'MELIUZKIDS');
+  assert.strictEqual(extrairCupom('🎫 POKEDAY20'), 'POKEDAY20');
+  assert.strictEqual(extrairCupom('Código: *MELIUZKIDS*'), 'MELIUZKIDS');
   assert.strictEqual(extrairCupom('Sem cupom nenhum neste post'), null);
 });
 
@@ -328,4 +332,36 @@ test('formatarMensagemReplicada preserva e destaca bandeira de país no título 
   assert.strictEqual(msg.includes('🎟️ Cupom: *MELIUZKIDS*'), true);
   assert.strictEqual(msg.includes('🛒 https://meli.la/2ZGA7nH'), true);
 });
+
+test('formatarMensagemReplicada deve extrair e replicar cupom informado apenas com emoji de ticket (ex: 🎟️ MELIUZKIDS)', () => {
+  const mensagemConcorrente = `🚨 Pokémon TCG: Elite Trainer Box Perfect Order em Inglês 🇺🇸
+
+De ❌ : R$ 479,89
+😱 Por: R$377 🔥
+
+🎟️ MELIUZKIDS
+
+🔗 Compre aqui: https://meli.la/2HsojrA
+
+⚠️ Promoção sujeita a alteração a qualquer momento.`;
+
+  const cupom = extrairCupom(mensagemConcorrente);
+  assert.strictEqual(cupom, 'MELIUZKIDS');
+
+  const msgFormatada = formatarMensagemReplicada({
+    tipo: 'oferta',
+    titulo: '🇺🇸 Pokémon TCG: Elite Trainer Box Perfect Order em Inglês',
+    precoDe: 'R$ 479,89',
+    precoPor: 'R$ 377',
+    cupom: cupom || undefined,
+    linkAfiliado: 'https://meli.la/2wWPZzD'
+  });
+
+  assert.strictEqual(msgFormatada.includes('📦 🇺🇸 *Pokémon TCG: Elite Trainer Box Perfect Order em Inglês*'), true);
+  assert.strictEqual(msgFormatada.includes('❌ ~De: R$ 479,89~'), true);
+  assert.strictEqual(msgFormatada.includes('🔥 *Por apenas: R$ 377*'), true);
+  assert.strictEqual(msgFormatada.includes('🎟️ Cupom: *MELIUZKIDS*'), true);
+  assert.strictEqual(msgFormatada.includes('🛒 https://meli.la/2wWPZzD'), true);
+});
+
 

@@ -114,7 +114,8 @@ export function extrairDadosOferta(
         !/^de:?|^por:?|^apenas:?|^https?:/i.test(l) &&
         !/R\$\s*[\d\.,]+/i.test(l) &&
         !l.startsWith('🔗') &&
-        !l.startsWith('@')
+        !l.startsWith('@') &&
+        !/^[\u{1F39F}\u{1F3AB}\u{1F3F7}]/u.test(l)
       ) {
         // Extrai bandeiras de país presentes na linha (ex: 🇺🇸, 🇯🇵, 🇧🇷)
         const flagsNaLinha = l.match(/[\u{1F1E6}-\u{1F1FF}]{2}/gu);
