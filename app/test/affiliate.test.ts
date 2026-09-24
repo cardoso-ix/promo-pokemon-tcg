@@ -9,7 +9,8 @@ import {
   normalizarFotoMl,
   pontuarSlug,
   normalizarPalavras,
-  expandUrl
+  expandUrl,
+  isImagemValidaProdutoMl
 } from '../src/core/affiliate.js';
 
 test('isMercadoLivreUrl deve reconhecer dominios validos do ML', () => {
@@ -139,12 +140,34 @@ test('normalizarFotoMl deve converter D_Q_NP_ e sufixos -T para D_NQ_NP_2X_ e -O
   assert.strictEqual(normalized, 'https://http2.mlstatic.com/D_NQ_NP_2X_683557-MLB112586912210_062026-O.jpg');
 });
 
-test('expandUrl deve extrair foto do fichario e nao avatar/logo da vitrine para meli.la/1nZurKE', async () => {
-  const expansion = await expandUrl('https://meli.la/1nZurKE', 'Fichário Álbum 360 Cartas Preto');
-  assert.strictEqual(expansion.resolvedUrl.includes('360-cartas'), true);
-  assert.strictEqual(expansion.productImageUrl?.includes('653157'), true);
-  // Não deve conter o logo/avatar do CLUB PROMO (794667)
-  assert.strictEqual(expansion.productImageUrl?.includes('794667'), false);
+test('normalizarFotoMl deve remover {sanitized_title} e converter para 2X e JPG', () => {
+  const urlComToken = 'https://http2.mlstatic.com/D_Q_NP_679655-MLA116433773373_082026-AB{sanitized_title}.webp';
+  const normalizada = normalizarFotoMl(urlComToken);
+  assert.strictEqual(normalizada, 'https://http2.mlstatic.com/D_NQ_NP_2X_679655-MLA116433773373_082026-AB.jpg');
 });
+
+test('isImagemValidaProdutoMl deve rejeitar banners promocionais (Meli+ -OO) e aceitar fotos com _NP_', () => {
+  // Banner de assinatura do Meli+ (R$ 74,90/mês)
+  assert.strictEqual(isImagemValidaProdutoMl('https://http2.mlstatic.com/D_NQ_828036-MLA118086665863_092026-OO.webp'), false);
+  assert.strictEqual(isImagemValidaProdutoMl('https://http2.mlstatic.com/D_NQ_828036-MLA118086665863_092026-OO.jpg'), false);
+  // Logos e navegação
+  assert.strictEqual(isImagemValidaProdutoMl('https://http2.mlstatic.com/frontend-assets/ui-navigation/5.21.22/logo.png'), false);
+  assert.strictEqual(isImagemValidaProdutoMl('https://http2.mlstatic.com/frontend-assets/ui-navigation/180x180.png'), false);
+
+  // Fotos legítimas de produtos Pokémon TCG
+  assert.strictEqual(isImagemValidaProdutoMl('https://http2.mlstatic.com/D_NQ_NP_679655-MLA116433773373_082026-O.webp'), true);
+  assert.strictEqual(isImagemValidaProdutoMl('https://http2.mlstatic.com/D_NQ_NP_2X_679655-MLA116433773373_082026-O.jpg'), true);
+  assert.strictEqual(isImagemValidaProdutoMl('https://http2.mlstatic.com/D_Q_NP_2X_679655-MLA116433773373_082026-V.webp'), true);
+});
+
+test('expandUrl para meli.la/2PTWG6y (Pitch Black) deve extrair a foto real do produto e JAMAIS o banner do Meli+ 828036', async () => {
+  const expansion = await expandUrl('https://meli.la/2PTWG6y', 'Jogo De Tabuleiro Pokémon Tcg Mega Evolution Pitch Black');
+  assert.strictEqual(expansion.resolvedUrl.includes('pitch-black') || expansion.resolvedUrl.includes('MLB77720188'), true);
+  // Deve conter a foto oficial do produto (679655)
+  assert.strictEqual(expansion.productImageUrl?.includes('679655'), true);
+  // NUNCA deve conter o banner do Meli+ (828036)
+  assert.strictEqual(expansion.productImageUrl?.includes('828036'), false);
+});
+
 
 

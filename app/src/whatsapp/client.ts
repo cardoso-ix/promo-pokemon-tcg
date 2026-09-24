@@ -761,7 +761,9 @@ export class WhatsAppManager {
     }
 
     // C) Fallback de Imagem: Se não conseguimos a foto em alta resolução do ML, mas tínhamos a miniatura do link preview
-    if ((!imageBuffer || imageBuffer.length === 0) && linkPreviewThumbnail && linkPreviewThumbnail.length > 500) {
+    // IMPORTANTE: Nunca usar preview de link de Mercado Livre como foto de produto, pois o crawler da Meta
+    // com frequência captura o banner de exibição de assinaturas (Meli+) ao invés da foto do produto.
+    if ((!imageBuffer || imageBuffer.length === 0) && linkPreviewThumbnail && linkPreviewThumbnail.length > 3000 && !contemMercadoLivre) {
       imageBuffer = linkPreviewThumbnail;
       console.log(`[Imagem Preview Fallback] Usando miniatura do link preview do WhatsApp (${Math.round(imageBuffer.length / 1024)} KB).`);
     }

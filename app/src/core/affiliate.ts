@@ -82,13 +82,50 @@ export function extractCanonicalProductId(url: string): string | null {
 }
 
 /**
+ * Valida se uma URL pertence legitimamente a uma foto oficial de produto do Mercado Livre
+ * e não a banners de cabeçalho (ex: Meli+ 74,90/mês), logos, ícones ou exibidores de campanha.
+ */
+export function isImagemValidaProdutoMl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const u = url.toLowerCase().trim();
+
+  // Rejeita banners de navegação, exibidores, logos e ícones
+  if (
+    u.includes('ui-navigation') ||
+    u.includes('/navigation/') ||
+    u.includes('navigation-') ||
+    u.includes('exhibitor') ||
+    u.includes('logo') ||
+    u.includes('accessibility') ||
+    u.includes('180x180')
+  ) {
+    return false;
+  }
+
+  // Rejeita banners promocionais de campanha e streamings (ex: -OO.webp, -OO.jpg)
+  if (/-oo\.(?:webp|jpe?g|png)/i.test(u)) {
+    return false;
+  }
+
+  // Se for imagem do domínio mlstatic, fotos legítimas de produto contêm _NP_
+  if (u.includes('http2.mlstatic.com')) {
+    if (!u.includes('_np_')) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Normaliza qualquer URL de foto do Mercado Livre para a variante de alta resolução 2X e JPG
  */
 export function normalizarFotoMl(url: string): string {
   let u = String(url || '').trim()
     .replace(/&amp;/g, '&')
     .replace(/\\u002[fF]/g, '/')
-    .replace(/\\/g, '/');
+    .replace(/\\/g, '/')
+    .replace(/\{sanitized_title\}/gi, ''); // Limpa token de placeholder se presente no og:image do ML
 
   if (u.startsWith('//')) u = 'https:' + u;
   if (!/^https?:\/\//i.test(u)) return '';
@@ -128,7 +165,7 @@ export async function expandUrl(
       }
 
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 6000);
+      const timeout = setTimeout(() => controller.abort(), 10000);
 
       const headers: Record<string, string> = { ...BROWSER_HEADERS };
       if (cookie) headers['cookie'] = cookie;
@@ -167,15 +204,15 @@ export async function expandUrl(
     const pageTitle = ogTitleMatch ? ogTitleMatch[1].trim() : '';
 
     const ogImageMatch = lastHtml.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
-    const ogImg = ogImageMatch ? ogImageMatch[1].trim() : '';
+    let ogImg = ogImageMatch ? ogImageMatch[1].trim().replace(/\{sanitized_title\}/gi, '') : '';
 
-    // Verifica se a página social compartilha um produto específico (ex: link com ref)
+    // Verifica se a página social compartilha um produto específico (ex: link com ref ou lista de produto)
     const isGenericVitrine = !pageTitle || /minhas listas|recomenda[çc][õo]es|vitrine|perfil/i.test(pageTitle);
 
     let palavras = normalizarPalavras(textHint);
     if (!isGenericVitrine) {
       palavras = normalizarPalavras(`${pageTitle} ${textHint}`);
-      if (ogImg && !ogImg.includes('{sanitized_title}')) {
+      if (ogImg && isImagemValidaProdutoMl(ogImg)) {
         productImageUrl = normalizarFotoMl(ogImg);
       }
     }
@@ -183,16 +220,18 @@ export async function expandUrl(
     const candidatos: { url: string; slug: string; img?: string; pontos: number }[] = [];
 
     // Tenta extrair produtos e fotos específicas a partir dos cards da vitrine (poly-card)
-    const cardChunks = lastHtml.split('<div id="');
+    // Secciona por limites de card (poly-card ou ui-search-layout__item) sem depender de <div id="
+    const cardChunks = lastHtml.split(/(?=<div[^>]*class="[^"]*poly-card|<li[^>]*class="[^"]*ui-search-layout__item)/i);
     for (const c of cardChunks) {
-      if (!c.includes('poly-card')) continue;
+      if (!c.includes('poly-card') && !c.includes('ui-search-layout__item')) continue;
       const linkMatch = c.match(/href="(https?:\/\/(?:www\.)?mercadolivre\.com\.br\/[^\s"'<>]+?\/(?:p\/MLB\d+|up\/MLBU\d+|MLB-\d+)[^"]*)"/i);
-      const imgMatch = c.match(/src="(https?:\/\/http2\.mlstatic\.com\/[^\s"']+\.(?:webp|jpe?g|png))"/i);
+      const imgMatch = c.match(/(?:src|data-src)="(https?:\/\/http2\.mlstatic\.com\/[^\s"']+\.(?:webp|jpe?g|png))"/i);
       if (linkMatch) {
         const cleanUrl = linkMatch[1].split('?')[0].split('#')[0];
         const slugMatch = cleanUrl.match(/mercadolivre\.com\.br\/([^\s"'<>]+?)\/(?:p\/|up\/|MLB-)/i);
         const slug = slugMatch ? slugMatch[1] : '';
-        const img = imgMatch ? normalizarFotoMl(imgMatch[1]) : undefined;
+        const imgRaw = imgMatch ? imgMatch[1].replace(/\{sanitized_title\}/gi, '') : undefined;
+        const img = imgRaw && isImagemValidaProdutoMl(imgRaw) ? normalizarFotoMl(imgRaw) : undefined;
         candidatos.push({
           url: cleanUrl,
           slug,
@@ -223,8 +262,8 @@ export async function expandUrl(
       // Exige pontuação relevante para assumir que é o mesmo produto
       if (candidatos[0].pontos >= 2) {
         currentUrl = candidatos[0].url;
-        // Se ainda não temos a foto do produto, adota a foto do card correspondente
-        if (!productImageUrl && candidatos[0].img) {
+        // Se ainda não temos a foto do produto, adota a foto do card correspondente se for válida
+        if (!productImageUrl && candidatos[0].img && isImagemValidaProdutoMl(candidatos[0].img)) {
           productImageUrl = candidatos[0].img;
         }
       }
@@ -234,12 +273,16 @@ export async function expandUrl(
   // Se temos o HTML da página direta do anúncio (e NÃO era vitrine social), extrai a foto oficial
   if (lastHtml && !wasSocial && !productImageUrl && !currentUrl.includes('/social/')) {
     const ogMatch = lastHtml.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
-    if (ogMatch && ogMatch[1] && !ogMatch[1].includes('{sanitized_title}')) {
-      productImageUrl = normalizarFotoMl(ogMatch[1]);
+    const ogClean = ogMatch && ogMatch[1] ? ogMatch[1].replace(/\{sanitized_title\}/gi, '').trim() : '';
+    if (ogClean && isImagemValidaProdutoMl(ogClean)) {
+      productImageUrl = normalizarFotoMl(ogClean);
     } else {
       const mlImgs = lastHtml.match(/https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi);
       if (mlImgs && mlImgs.length > 0) {
-        productImageUrl = normalizarFotoMl(mlImgs[0]);
+        const validImgs = mlImgs.filter(isImagemValidaProdutoMl);
+        if (validImgs.length > 0) {
+          productImageUrl = normalizarFotoMl(validImgs[0]);
+        }
       }
     }
   }
@@ -407,6 +450,10 @@ export async function downloadProductImage(
   hintImageUrl = ''
 ): Promise<Buffer | null> {
   let targetImageUrl = hintImageUrl ? normalizarFotoMl(hintImageUrl) : '';
+  if (targetImageUrl && !isImagemValidaProdutoMl(targetImageUrl)) {
+    console.warn(`[Download Foto] Imagem descartada por ser banner ou não pertencer a produto: ${targetImageUrl}`);
+    targetImageUrl = '';
+  }
 
   if (!targetImageUrl && productUrl && !productUrl.includes('/social/')) {
     try {
@@ -414,7 +461,7 @@ export async function downloadProductImage(
       const timeout = setTimeout(() => controller.abort(), 12000); // 12s resiliente para resposta do ML
 
       const headers: Record<string, string> = {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'pt-BR,pt;q=0.9'
       };
@@ -428,12 +475,16 @@ export async function downloadProductImage(
 
       const html = await res.text();
       const ogMatch = html.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
-      if (ogMatch && ogMatch[1] && !ogMatch[1].includes('{sanitized_title}')) {
-        targetImageUrl = normalizarFotoMl(ogMatch[1]);
+      const ogClean = ogMatch && ogMatch[1] ? ogMatch[1].replace(/\{sanitized_title\}/gi, '').trim() : '';
+      if (ogClean && isImagemValidaProdutoMl(ogClean)) {
+        targetImageUrl = normalizarFotoMl(ogClean);
       } else {
         const mlImgs = html.match(/https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi);
         if (mlImgs && mlImgs.length > 0) {
-          targetImageUrl = normalizarFotoMl(mlImgs[0]);
+          const validImgs = mlImgs.filter(isImagemValidaProdutoMl);
+          if (validImgs.length > 0) {
+            targetImageUrl = normalizarFotoMl(validImgs[0]);
+          }
         }
       }
     } catch (err) {

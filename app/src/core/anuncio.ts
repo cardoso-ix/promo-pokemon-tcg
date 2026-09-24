@@ -1,4 +1,4 @@
-import { expandUrl, normalizarFotoMl, shortenToMeli, buildAffiliateUrl } from './affiliate.js';
+import { expandUrl, normalizarFotoMl, shortenToMeli, buildAffiliateUrl, isImagemValidaProdutoMl } from './affiliate.js';
 
 export interface AnuncioInput {
   url: string;
@@ -564,14 +564,18 @@ export async function extrairDadosAnuncio(
           const ogImg = html.match(
             /<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i
           );
-          if (ogImg && ogImg[1] && !ogImg[1].includes('{sanitized_title}')) {
-            imageUrl = normalizarFotoMl(ogImg[1]);
+          const ogClean = ogImg && ogImg[1] ? ogImg[1].replace(/\{sanitized_title\}/gi, '').trim() : '';
+          if (ogClean && isImagemValidaProdutoMl(ogClean)) {
+            imageUrl = normalizarFotoMl(ogClean);
           } else {
             const mlImgs = html.match(
               /https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi
             );
             if (mlImgs && mlImgs.length > 0) {
-              imageUrl = normalizarFotoMl(mlImgs[0]);
+              const validImgs = mlImgs.filter(isImagemValidaProdutoMl);
+              if (validImgs.length > 0) {
+                imageUrl = normalizarFotoMl(validImgs[0]);
+              }
             }
           }
         }

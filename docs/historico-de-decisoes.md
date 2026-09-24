@@ -4,6 +4,23 @@ Este registro documenta a evolução arquitetural e as decisões estratégicas d
 
 ---
 
+## Decisão 67 — Blindagem de Extração de Imagens e Eliminação de Banners Meli+
+**Data:** 24/09/2026 · **Decisor:** Eduardo / Antigravity
+
+- **A decisão**:
+  1. **Sanitização de Tokens em og:image (`{sanitized_title}`)**:
+     - O Mercado Livre insere o token `{sanitized_title}` no `og:image` de listas e vitrines (`/social/`). Em vez de descartar a imagem, o sistema agora limpa o token via `.replace(/\{sanitized_title\}/gi, '')`, recuperando a foto oficial do produto em resolução 2X HD (`679655-MLA...`).
+  2. **Validador Estrito de Imagens de Produto (`isImagemValidaProdutoMl`)**:
+     - Rejeição ativa de banners promocionais de campanha (sufixo `-OO.webp` / `-OO.jpg`), logos (`ui-navigation`, `180x180.png`), cabeçalhos e exibidores (`exhibitor`).
+     - Validação obrigatória da tag de produto `_NP_` em URLs do `mlstatic.com`.
+  3. **Segmentação Resiliente de Cards**:
+     - Substituição do split frágil por `<div id="` para um regex lookahead por container de card (`poly-card` e `ui-search-layout__item`), impedindo que a página inteira seja tratada como um único card e evitando a captura acidental do banner do cabeçalho da página.
+  4. **Proteção de Fallback no WhatsApp Client**:
+     - O fallback de `linkPreviewThumbnail` foi desativado para mensagens com Mercado Livre (`!contemMercadoLivre`), pois o crawler da Meta costumava capturar o banner do Meli+ em vez do produto.
+- **Motivo**: Prevenir que postagens nos grupos VIP sejam disparadas com banners horizontais de "Por apenas R$ 74,90/mês" ou propagandas de assinatura em vez da foto real do colecionável Pokémon TCG.
+
+---
+
 ## Decisão 66 — Redesign Pokémon TCG "Ultra Ball & Rare Holo Foil" e Esteira Sentinela de Resiliência
 **Data:** 15/09/2026 · **Decisor:** Eduardo / Antigravity
 
