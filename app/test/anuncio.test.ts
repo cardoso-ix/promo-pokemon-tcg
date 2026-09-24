@@ -119,3 +119,54 @@ test('extrairDadosAnuncio deve extrair dados de links do Mercado Livre e preench
   assert.strictEqual(resultado.textoGerado.includes('SUPER PROMOÇÃO'), false);
   assert.strictEqual(resultado.textoGerado.startsWith('📦 *'), true);
 });
+
+test('extrairDetalhesPrecoECupom NÃO deve extrair parcelamento quando houver juros e NÃO deve aceitar Com cupom genérico', () => {
+  const htmlComJurosESemCupom = `
+    <div class="poly-card">
+      <h2 class="poly-box"><a class="poly-component__title" href="#">Case Lacrada De Combo De Booster Escuridao Absoluta</a></h2>
+      <s class="andes-money-amount poly-price__previous andes-money-amount--previous" aria-label="Antes: 239 reais com 90 centavos">
+        <span class="andes-money-amount__fraction">239</span>
+        <span class="andes-money-amount__cents">90</span>
+      </s>
+      <div class="poly-price__current">
+        <span class="andes-money-amount" aria-label="Agora: 213 reais com 30 centavos">
+          <span class="andes-money-amount__fraction">213</span>
+          <span class="andes-money-amount__cents">30</span>
+        </span>
+      </div>
+      <div class="poly-price__installments">
+        12x <span class="andes-money-amount" aria-label="21 reais com 11 centavos">R$ 21,11</span>
+      </div>
+      <span class="poly-coupon">Com cupom</span>
+    </div>
+  `;
+
+  const detalhes = extrairDetalhesPrecoECupom(htmlComJurosESemCupom);
+
+  assert.strictEqual(detalhes.precoDe, '239,90');
+  assert.strictEqual(detalhes.precoPor, '213,30');
+  // Deve ser undefined pois 12x 21,11 tem juros e não tem menção de "sem juros"
+  assert.strictEqual(detalhes.parcelamento, undefined);
+  // Deve ser undefined pois "Com cupom" é texto genérico de UI e não um código
+  assert.strictEqual(detalhes.cupom, undefined);
+  assert.strictEqual(detalhes.valorComCupom, undefined);
+});
+
+test('gerarCopyPromocional NÃO deve incluir linha de parcelamento com juros e NÃO deve exibir COM CUPOM', () => {
+  const copy = gerarCopyPromocional({
+    titulo: 'Case Lacrada De Combo De Booster Escuridao Absoluta Pokemon',
+    linkAfiliado: 'https://meli.la/1ttELw8',
+    precoDe: '239,90',
+    precoPor: '213,30',
+    cupom: 'COM CUPOM', // se vier valor inválido, deve ser descartado
+    parcelamento: '12x de R$ 21,11' // sem menção de "sem juros"
+  });
+
+  assert.strictEqual(copy.includes('COM CUPOM'), false);
+  assert.strictEqual(copy.includes('Cupom de Desconto'), false);
+  assert.strictEqual(copy.includes('💳'), false);
+  assert.strictEqual(copy.includes('12x'), false);
+  assert.strictEqual(copy.includes('❌ ~De: R$ 239,90~'), true);
+  assert.strictEqual(copy.includes('👉 *Por apenas: R$ 213,30*'), true);
+});
+

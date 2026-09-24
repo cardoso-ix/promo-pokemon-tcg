@@ -156,25 +156,52 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
                           bloco.match(/cupom(?:\s+de)?:\s*([A-Z0-9_\-\%]+(?:\s*OFF)?)/i);
       if (couponMatch) {
         let raw = couponMatch[1].replace(/\{[^}]+\}/g, '').trim();
-        if (raw) {
+        // Descarta termos genéricos de interface do ML que não são códigos reais ("Com cupom", "Cupom", etc.)
+        const isTermoGenerico = /^(?:com\s+cupom(?:\s+no\s+app)?|cupom(?:\s+de\s+desconto)?|sem\s+cupom)$/i.test(raw);
+        if (raw && !isTermoGenerico) {
           cupom = raw;
         }
       }
     }
 
-    // 4. Extração de Parcelamento
+    // 4. Extração de Parcelamento (EXCLUSIVAMENTE se for comprovadamente SEM JUROS)
     if (!parcelamento) {
       const instMatch = bloco.match(/(?:class="poly-price__installments"[^>]*>)?(\d{1,2}x)\s*(?:de\s*)?<span[^>]*aria-label="(\d+)\s*reais(?:(?:\s*com\s*|\s*e\s*)(\d+)\s*centavos)?"/i) ||
-                        bloco.match(/(\d{1,2}x\s+(?:de\s+)?R\$\s*[\d\.,]+(?:\s+sem\s+juros)?)/i) ||
+                        bloco.match(/(\d{1,2}x\s+(?:de\s+)?R\$\s*[\d\.,]+\s*sem\s+juros)/i) ||
                         bloco.match(/(\d{1,2}x\s+sem\s+juros)/i);
       if (instMatch) {
+        // Verifica se no bloco ou no entorno imediato do match há menção explícita de "sem juros" ou "no_interest": true
+        const matchIdx = instMatch.index || 0;
+        const trechoEntorno = bloco.substring(Math.max(0, matchIdx - 20), Math.min(bloco.length, matchIdx + instMatch[0].length + 80));
+        const temTextoSemJuros = /sem\s+juros|s\/\s*juros|"no_interest":\s*true/i.test(trechoEntorno);
+
         if (instMatch[2]) {
           const numx = instMatch[1];
           const r = instMatch[2];
           const c = instMatch[3] ? instMatch[3].padStart(2, '0') : '00';
-          parcelamento = `${numx} de R$ ${r},${c} sem juros`;
-        } else {
-          parcelamento = instMatch[1].trim();
+          const valorParcelaNum = parseFloat(`${r}.${c}`);
+          const vezesNum = parseInt(numx.replace(/\D/g, ''), 10);
+
+          // Validação matemática: se a soma das parcelas superar o preço por mais de 3%, TEM JUROS
+          let temJurosMatematico = false;
+          if (precoPor && !isNaN(valorParcelaNum) && !isNaN(vezesNum)) {
+            const precoPorNum = parseFloat(precoPor.replace(/\./g, '').replace(',', '.'));
+            if (!isNaN(precoPorNum) && precoPorNum > 0) {
+              if (vezesNum * valorParcelaNum > precoPorNum * 1.03) {
+                temJurosMatematico = true;
+              }
+            }
+          }
+
+          // Só adiciona se for realmente sem juros no texto e na matemática
+          if (temTextoSemJuros && !temJurosMatematico) {
+            parcelamento = `${numx} de R$ ${r},${c} sem juros`;
+          }
+        } else if (temTextoSemJuros) {
+          const textoLimpo = instMatch[1].trim();
+          if (/sem\s+juros|s\/\s*juros/i.test(textoLimpo)) {
+            parcelamento = textoLimpo;
+          }
         }
       }
     }
@@ -268,20 +295,23 @@ export function gerarCopyPromocional(params: {
     linhas.push(`🔥 *Com cupom sai por apenas: ${valorFinal}!*`);
   }
 
-  // Linha de parcelamento se houver
-  if (parcelamento && parcelamento.trim()) {
+  // Linha de parcelamento apenas se for estritamente SEM JUROS (nunca inclui parcelamento com juros)
+  const temSemJuros = parcelamento && parcelamento.trim() && /sem\s+juros|s\/\s*juros/i.test(parcelamento);
+  if (temSemJuros) {
     linhas.push(`💳 *${parcelamento.trim()}*`);
   }
 
-  if (de || por || comCupom || parcelamento) {
+  if (de || por || comCupom || temSemJuros) {
     linhas.push('');
   }
 
-  // Linha de cupom opcional
+  // Linha de cupom opcional (rejeita termos genéricos como "COM CUPOM" ou "CUPOM")
   if (cupom && cupom.trim()) {
     const codCupom = cupom.trim().toUpperCase();
-    linhas.push(`🎟️ Cupom de Desconto: *${codCupom}*`);
-    linhas.push('');
+    if (!/^(?:COM\s+CUPOM(?:\s+NO\s+APP)?|CUPOM(?:\s+DE\s+DESCONTO)?|SEM\s+CUPOM)$/i.test(codCupom)) {
+      linhas.push(`🎟️ Cupom de Desconto: *${codCupom}*`);
+      linhas.push('');
+    }
   }
 
   linhas.push('⚡ Produto original com estoque e envio rápido!');
@@ -617,17 +647,19 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
   }
 
   let linhaParcelamento = '';
-  if (parcelamento && parcelamento.trim()) {
+  if (parcelamento && parcelamento.trim() && /sem\s+juros|s\/\s*juros/i.test(parcelamento)) {
     linhaParcelamento = parcelamento.trim();
   }
 
   let linhaCupom = '';
   if (cupom && cupom.trim()) {
     const limpo = cupom.trim();
-    if (/^[a-z0-9_\-]+$/i.test(limpo)) {
-      linhaCupom = `🎟️ Cupom: *${limpo.toUpperCase()}*`;
-    } else {
-      linhaCupom = `🎟️ Cupom: *${limpo}*`;
+    if (!/^(?:com\s+cupom(?:\s+no\s+app)?|cupom(?:\s+de\s+desconto)?|sem\s+cupom)$/i.test(limpo)) {
+      if (/^[a-z0-9_\-]+$/i.test(limpo)) {
+        linhaCupom = `🎟️ Cupom: *${limpo.toUpperCase()}*`;
+      } else {
+        linhaCupom = `🎟️ Cupom: *${limpo}*`;
+      }
     }
   }
 
@@ -820,9 +852,18 @@ export async function extrairDadosAnuncio(
     // 5. Preços e Cupons Finais (Prioriza o digitado manualmente pelo usuário, fallback para extração automática)
     const precoDeFinal = (input.precoDe || '').trim() || detalhes.precoDe || undefined;
     const precoPorFinal = (input.precoPor || '').trim() || detalhes.precoPor || undefined;
-    const cupomFinal = (input.cupom || '').trim() || detalhes.cupom || undefined;
+
+    let cupomFinal = (input.cupom || '').trim() || detalhes.cupom || undefined;
+    if (cupomFinal && /^(?:com\s+cupom(?:\s+no\s+app)?|cupom(?:\s+de\s+desconto)?|sem\s+cupom)$/i.test(cupomFinal.trim())) {
+      cupomFinal = undefined;
+    }
+
     const valorComCupomFinal = (input.valorComCupom || '').trim() || detalhes.valorComCupom || undefined;
-    const parcelamentoFinal = (input.parcelamento || '').trim() || detalhes.parcelamento || undefined;
+
+    let parcelamentoFinal = (input.parcelamento || '').trim() || detalhes.parcelamento || undefined;
+    if (parcelamentoFinal && !/sem\s+juros|s\/\s*juros/i.test(parcelamentoFinal)) {
+      parcelamentoFinal = undefined;
+    }
 
     // 6. Montar a Copy
     const textoGerado = gerarCopyPromocional({

@@ -1604,11 +1604,17 @@ Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
 
         currentAnuncioData = data;
 
-        // Auto-preencher campos com os dados extraídos do anúncio
-        if (data.precoDe) anuncioPrecoDe.value = data.precoDe;
-        if (data.precoPor) anuncioPrecoPor.value = data.precoPor;
-        if (data.cupom) anuncioCupom.value = data.cupom;
-        if (data.valorComCupom && anuncioPrecoCupom) anuncioPrecoCupom.value = data.valorComCupom;
+        // Auto-preencher campos com os dados extraídos do anúncio (limpando campos sem valor)
+        anuncioPrecoDe.value = data.precoDe || '';
+        anuncioPrecoPor.value = data.precoPor || '';
+        if (data.cupom && !/^(?:com\s+cupom|cupom|sem\s+cupom)$/i.test(data.cupom.trim())) {
+          anuncioCupom.value = data.cupom;
+        } else {
+          anuncioCupom.value = '';
+        }
+        if (anuncioPrecoCupom) {
+          anuncioPrecoCupom.value = data.valorComCupom || '';
+        }
 
         // Atualizar imagem
         if (data.imageUrl) {
