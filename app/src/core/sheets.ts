@@ -105,6 +105,8 @@ export function extrairDadosOferta(
         !lower.includes('aproveite') &&
         !lower.includes('compre aqui') &&
         !lower.includes('loja verificada') &&
+        !lower.includes('visite a pagina') &&
+        !lower.includes('encontre todos os produtos') &&
         !lower.startsWith('cupom') &&
         !lower.includes('cupom:') &&
         !lower.includes('novo cupom') &&
@@ -114,10 +116,26 @@ export function extrairDadosOferta(
         !l.startsWith('🔗') &&
         !l.startsWith('@')
       ) {
-        // Remover emojis decorativos iniciais
-        produto = l.replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{1F1E6}-\u{1F1FF}\s]+/u, '').trim();
+        // Extrai bandeiras de país presentes na linha (ex: 🇺🇸, 🇯🇵, 🇧🇷)
+        const flagsNaLinha = l.match(/[\u{1F1E6}-\u{1F1FF}]{2}/gu);
+        const flagsStr = flagsNaLinha ? flagsNaLinha.join(' ') : '';
+        // Remove as bandeiras temporariamente para limpar outros emojis decorativos do início (ex: ✨, 🔥, ⚡, 👉)
+        const semBandeiras = l.replace(/[\u{1F1E6}-\u{1F1FF}]{2}/gu, '').trim();
+        const textoSemDecoracao = semBandeiras
+          .replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\s*~_—–-]+/u, '')
+          .trim();
+        produto = flagsStr ? `${flagsStr} ${textoSemDecoracao}` : textoSemDecoracao;
         break;
       }
+    }
+  }
+
+  // Preservar bandeira de país se existir no texto da mensagem e ainda não estiver no título do produto
+  const bandeiraNoTexto = texto.match(/[\u{1F1E6}-\u{1F1FF}]{2}/gu);
+  if (bandeiraNoTexto && bandeiraNoTexto.length > 0) {
+    const primeiraBandeira = bandeiraNoTexto[0];
+    if (!produto.includes(primeiraBandeira)) {
+      produto = `${primeiraBandeira} ${produto}`;
     }
   }
 

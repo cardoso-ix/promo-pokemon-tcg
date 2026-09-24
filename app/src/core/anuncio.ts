@@ -239,7 +239,12 @@ export function gerarCopyPromocional(params: {
   const linhas: string[] = [];
 
   // Começa direto no nome do item (arrancada a linha '🔥 *SUPER PROMOÇÃO POKÉMON TCG!* 🔥')
-  linhas.push(`📦 *${titulo.trim()}*`);
+  const flagMatch = titulo.match(/^([\u{1F1E6}-\u{1F1FF}]{2})\s*(.*)$/u);
+  if (flagMatch) {
+    linhas.push(`📦 ${flagMatch[1]} *${flagMatch[2].trim()}*`);
+  } else {
+    linhas.push(`📦 *${titulo.trim()}*`);
+  }
   linhas.push('');
 
   // Linhas de preço (se preenchidas)
@@ -626,6 +631,12 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
     }
   }
 
+  // Preservação e destaque visual de bandeira do país (ex: 🇺🇸, 🇯🇵, 🇧🇷)
+  const flagMatch = titulo.match(/^([\u{1F1E6}-\u{1F1FF}]{2})\s*(.*)$/u);
+  const linhaProduto = flagMatch
+    ? `📦 ${flagMatch[1]} *${flagMatch[2].trim()}*`
+    : `📦 *${titulo.trim()}*`;
+
   // Template 2: Alerta de Urgência & Escassez
   if (tipo === 'urgencia') {
     const linhas: string[] = [
@@ -633,7 +644,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
       '',
       '🚨 *ATENÇÃO: ÚLTIMAS UNIDADES EM ESTOQUE!* 🚨',
       '',
-      `📦 *${titulo.trim()}*`,
+      linhaProduto,
       ''
     ];
 
@@ -652,7 +663,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
   const linhas: string[] = [
     '@pokemon_tcg_promo',
     '',
-    `📦 *${titulo.trim()}*`,
+    linhaProduto,
     ''
   ];
 

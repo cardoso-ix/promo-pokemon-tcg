@@ -21,7 +21,7 @@ _@rasgabooster.tcg_`;
   assert.ok(oferta.data.length > 0);
 });
 
-test('extrairDadosOferta deve extrair dados com emojis e marcadores estilizados', () => {
+test('extrairDadosOferta deve extrair dados com emojis e marcadores estilizados preservando bandeira', () => {
   const mensagem = `🇧🇷 *Box Estampas Ilustradas Pokémon Copag Coleção Treinador Avançado Caos Ascendente Português com 20 mazos*
 
 De *R$ 397* ❌
@@ -32,11 +32,30 @@ https://meli.la/2S6b4wn`;
 
   const oferta = extrairDadosOferta(mensagem, undefined, 'Grupo Promoções');
 
-  assert.strictEqual(oferta.produto, 'Box Estampas Ilustradas Pokémon Copag Coleção Treinador Avançado Caos Ascendente Português com 20 mazos');
+  assert.strictEqual(oferta.produto, '🇧🇷 Box Estampas Ilustradas Pokémon Copag Coleção Treinador Avançado Caos Ascendente Português com 20 mazos');
   assert.strictEqual(oferta.valorPor, 'R$ 330');
   assert.strictEqual(oferta.valorDe, 'R$ 397');
   assert.strictEqual(oferta.link, 'https://meli.la/2S6b4wn');
   assert.strictEqual(oferta.grupo, 'Grupo Promoções');
+});
+
+test('extrairDadosOferta deve preservar bandeira de país no produto (ex: 🇺🇸 Poster Collection)', () => {
+  const mensagem = `visite a pagina e encontre todos os produtos de CLUB PROMOCOES em um meli.la
+
+🇺🇸 ✨ 30 ANOS - POSTER COLLECTION
+
+É em inglês e tá acompanhando o menor da liga 🧐
+
+👉 Por R$319
+🏷 Cupom: MELIUZKIDS
+
+🔗 https://meli.la/14kn6gv`;
+
+  const oferta = extrairDadosOferta(mensagem, undefined, 'Canal Importados');
+
+  assert.strictEqual(oferta.produto, '🇺🇸 30 ANOS - POSTER COLLECTION');
+  assert.strictEqual(oferta.valorPor, 'R$ 319');
+  assert.strictEqual(oferta.link, 'https://meli.la/14kn6gv');
 });
 
 test('extrairDadosOferta deve extrair do gerador de anúncios oficial', () => {

@@ -312,3 +312,20 @@ test('formatarMensagemReplicada inclui linha de parcelamento apenas quando prese
   assert.strictEqual(msgSemParcelamento.includes('💳'), false);
   assert.strictEqual(msgSemParcelamento.includes('sem juros'), false);
 });
+
+test('formatarMensagemReplicada preserva e destaca bandeira de país no título (ex: 🇺🇸 30 ANOS - POSTER COLLECTION)', () => {
+  const msg = formatarMensagemReplicada({
+    tipo: 'oferta',
+    titulo: '🇺🇸 30 ANOS - POSTER COLLECTION',
+    precoPor: 'R$ 319',
+    cupom: 'MELIUZKIDS',
+    linkAfiliado: 'https://meli.la/2ZGA7nH'
+  });
+
+  // Deve conter o emoji da caixa e a bandeira destacada com o nome em negrito
+  assert.strictEqual(msg.includes('📦 🇺🇸 *30 ANOS - POSTER COLLECTION*'), true);
+  assert.strictEqual(msg.includes('🔥 *Por apenas: R$ 319*'), true);
+  assert.strictEqual(msg.includes('🎟️ Cupom: *MELIUZKIDS*'), true);
+  assert.strictEqual(msg.includes('🛒 https://meli.la/2ZGA7nH'), true);
+});
+
