@@ -26,6 +26,13 @@ A plataforma opera **100% online na nuvem em VPS própria (HostGator) gerenciada
 - **Objetivo:** Captação de membros de grupos em 1 clique, disparos em massa com proteção anti-ban e Spintax `{A|B|C}`, simulador oficial do WhatsApp ao vivo lado a lado, modelos prontos de alta conversão de Pokémon TCG e atendimento privado automático com **Inteligência Artificial DeepSeek V4 (OpenCode Gateway)**.
 - **🛡️ Meta Shield Anti-Ban:** Auditor heurístico em tempo real que pontua o risco de cada template (0-100) e sugere melhorias com IA.
 - **🔍 Filtro de Grupos em Tempo Real:** Campo de pesquisa instantânea ao selecionar grupos para criação e disparo de campanhas.
+- **💼 Módulo de Gestão Financeira & Relatórios Meta Ads:**
+  - **Upload Semanal de Planilhas:** Suporte nativo a `.xlsx`, `.xls` e `.csv` exportados do Meta Ads Manager, com armazenamento físico seguro dos arquivos brutos para auditoria em `/app/data/financas_uploads/`.
+  - **Parser Inteligente:** Detecção flexível de cabeçalhos (pt-BR e en-US), conversão de moedas (`R$ 1.234,56`), separadores de milhar e datas.
+  - **Dashboard com KPIs Executivos:** Investimento Total no Mês, Leads/Cadastros Gerados, Custo Médio por Lead (CPL com selo de eficiência), Volume de Cliques, Impressões, CTR, CPC e CPM.
+  - **Evolução Semana a Semana:** Comparativo de desempenho entre as semanas do mês com valores apurados.
+  - **Performance por Campanha:** Ranking consolidado de campanhas com fatia de orçamento (`share`), volume de leads e CPL individual.
+  - **Exportação & Impressão Executiva:** Download consolidado em `.csv` (com BOM UTF-8 para Excel) e impressão/salvar em PDF com layout profissional otimizado (`@media print`).
 
 ---
 
