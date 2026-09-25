@@ -103,16 +103,24 @@ Em vez de herdar o estilo e formatação dos concorrentes, o bot classifica a me
 O sistema conta com um agendador autônomo e de alta precisão para engajar e dar as boas-vindas aos membros da comunidade todas as manhãs:
 
 1. **Horário de Brasília (`America/Sao_Paulo`)**:
-   - Disparado pontualmente no horário configurado (padrão: `07:00` da manhã), independente de o servidor em nuvem (Railway) operar em UTC.
-2. **Conteúdo Estratégico e Caloroso**:
-   - Anuncia que o grupo oficial está aberto para o dia de hoje.
-   - Agradece a cada um dos membros pela presença e apoio.
-   - Informa que os robôs e a equipe já estão rastreando ativamente as melhores ofertas, cupons e quedas de preços em cartas, boxes e coleções de Pokémon TCG.
-   - Convida abertamente a adicionar amigos e compartilhar o grupo para expandir a comunidade colecionadora de forma orgânica.
-   - Assinatura oficial `@pokemon_tcg_promo`.
+   - Disparado pontualmente no horário configurado (padrão: `07:00` da manhã), independente de o servidor em nuvem operar em UTC.
+2. **Conteúdo 100% Humanizado & Curadoria a Dedo**:
+   - **Zero menção a robôs ou automações frias**: a comunicação transmite calor humano, proximidade e dedicação diária de fã para fã.
+   - Reforça o tempo diário dedicado pelo criador/administrador para garimpar estoques reais, verificar cupons válidos e evitar pegadinhas ou preços abusivos.
+   - Agradece de coração a cada um dos membros pela presença e apoio mútuo.
+   - Convida abertamente a adicionar amigos colecionadores e compartilhar o grupo para expandir a comunidade de forma orgânica.
+   - Assinatura oficial `@pokemon_tcg_promo` e tag dinâmica `{dia_semana}` (ex: sexta-feira).
 3. **Persistência Anti-Duplicidade no SQLite**:
    - A data do envio é persistida em banco (`msg_abertura_ultimo_envio`). Mesmo que o container reinicie ou o WhatsApp reconecte às 07:02, a mensagem nunca é enviada duas vezes no mesmo dia.
 4. **Pacing Seguro Multi-Grupo**:
    - A mensagem é enviada automaticamente para todos os grupos de destino configurados nas rotas ativas (`rota_destinos`), com cadência humanizada de 3 segundos entre cada grupo para evitar qualquer risco à conexão do WhatsApp.
-5. **Customização Total no Painel Web**:
-   - O operador pode ativar/desativar o agendador, ajustar o horário de envio, personalizar o texto da mensagem com tags dinâmicas como `{dia_semana}`, restaurar o texto de fábrica e disparar um teste instantâneo pelo botão **"🚀 Testar Envio Agora no WhatsApp"**.
+5. **Seletor de Flags Visuais e Simulador WhatsApp no Cockpit**:
+   - O operador conta com cards/flags visuais de 1 clique no painel para alternar entre os modelos ou ativar o modo rotativo:
+     - 🔄 **Alternância Automática (`[ROTACAO_DIARIA]`)**: Revezamento dinâmico — a cada dia da semana o grupo acorda com uma mensagem diferente e humanizada.
+     - 🌟 **Modelo 1 (Comunidade & Curadoria a Dedo)**: Foco em gratidão, acolhimento e dedicação pessoal às buscas.
+     - 🎯 **Modelo 2 (Garimpo Diário & Ofertas Reais)**: Foco em caçar promoções verdadeiras, alertando contra fakes e ágio.
+     - 🃏 **Modelo 3 (Colecionador Raiz & Preço Justo)**: Linguagem técnica e próxima de colecionador experiente.
+     - 🎟️ **Modelo 4 (Cupons & Achados Selecionados)**: Foco em estratégia de compra, cupons acumulados e frete grátis.
+   - **Simulador Visual do WhatsApp**: balão com pré-visualização ao vivo renderizando a data do dia em tempo real.
+   - **Salvar com 1 Clique**: botão direto no card para persistir instantaneamente sem precisar rolar a página.
+   - **Disparo de Teste**: botão **"🚀 Testar Envio Agora no WhatsApp"** para homologação em tempo real.

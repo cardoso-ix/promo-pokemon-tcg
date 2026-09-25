@@ -12,80 +12,80 @@ export interface ModeloAbertura {
 export const PRESET_MSGS_ABERTURA: ModeloAbertura[] = [
   {
     id: 'comunidade_gratidao',
-    nome: 'Modelo 1: Comunidade & Gratidão (Clássico)',
+    nome: 'Modelo 1: Comunidade & Curadoria a Dedo',
     icone: '🌟',
-    descricao: 'Tom acolhedor, agradecimento pelo crescimento do grupo e incentivo a convidar amigos.',
+    descricao: 'Tom pessoal e acolhedor, agradecendo a comunidade e destacando a dedicação diária de buscar ofertas reais a dedo.',
     texto: `@pokemon_tcg_promo
 
 🌅 *BOM DIA, TREINADORES E COLECIONADORES!* ⚡
 O nosso grupo oficial de ofertas de Pokémon TCG está oficialmente *ABERTO* para o dia de hoje!
 
-Quero agradecer imensamente a cada um de vocês por fazer parte da nossa comunidade. É muito gratificante ver a nossa família de colecionadores crescendo todos os dias! 🙏✨
+Quero agradecer de coração a cada um de vocês por fazer parte da nossa comunidade. É muito gratificante ver a nossa família de colecionadores crescendo todos os dias! 🙏✨
 
-🔎 Nossa equipe e nossos robôs já estão a postos monitorando os estoques, cupons relâmpago e promoções exclusivas em boosters, boxes, latas, ETBs e cartas lacradas para trazer os menores preços reais para vocês.
+🔎 Passo boa parte do meu dia garimpando pessoalmente lojas oficiais, distribuidores e estoques confiáveis para encontrar ofertas reais, cupons que funcionam de verdade e oportunidades selecionadas a dedo em boosters, boxes, latas, ETBs e produtos lacrados. Aqui dedico meu tempo para que você não pague preços abusivos e consiga colecionar gastando o justo.
 
-👥 *Dica especial:* Se você tem amigos, conhecidos ou colecionadores que também amam Pokémon TCG e querem economizar de verdade sem pagar preços abusivos, fiquem 100% à vontade para adicioná-los ou mandar o link do grupo! Bora crescer a nossa comunidade juntos! 🚀
+👥 *Dica especial:* Se você tem amigos ou conhecidos que também amam Pokémon TCG e querem economizar com segurança, fique 100% à vontade para adicioná-los ou mandar o link do nosso grupo. Quanto mais gente junta, mais forte fica a nossa comunidade! 🚀
 
 Tenham todos uma excelente {dia_semana} e um dia cheio de bons pulls! 🔥`
   },
   {
     id: 'radar_drops',
-    nome: 'Modelo 2: Radar TCG & Drops Relâmpago',
+    nome: 'Modelo 2: Garimpo Diário & Ofertas Reais',
     icone: '🎯',
-    descricao: 'Foco no rastreador automático de estoque, drops das lojas oficiais e agilidade em promoções.',
+    descricao: 'Foco na busca manual diária, tempo dedicado para filtrar os melhores preços e reposições de estoque.',
     texto: `@pokemon_tcg_promo
 
 ⚡ *BOM DIA, MESTRES POKÉMON!* 🎯
-Grupo liberado e sistema a todo vapor nesta {dia_semana}!
+Grupo liberado e dia começando a todo vapor nesta {dia_semana}!
 
-Radar ligado: hoje o foco é garimpar os melhores drops de Pokémon TCG diretamente das lojas oficiais e distribuidores parceiros, com preço justo de verdade.
+Hoje já comecei a varredura manual pelos estoques oficiais. Todo dia sento e dedico tempo para vasculhar os anúncios um por um, separando somente o que é produto original, de vendedor seguro e com preço justo de verdade.
 
-🛒 *O que monitoramos o dia todo para você:*
-• Boosters avulsos e combos com menor valor por pacote
-• Boxes, Bundles, Fichários e Latas promocionais
-• Cupons de desconto relâmpago antes que esgotem
-• Reposições de estoques disputados
+🛒 *O que garimpo a dedo todos os dias para vocês:*
+• Combos de boosters avulsos com o menor valor real por pacote
+• Boxes temáticas, Bundles, Fichários e Latas com desconto verdadeiro
+• Cupons de desconto relâmpago testados e funcionando no carrinho
+• Reposições de estoques disputados sem ágio de revenda
 
-🔔 *Dica de ouro:* Mantenha as notificações ativadas! As ofertas mais quentes com preço de custo costumam evaporar em poucos minutos.
+🔔 *Dica de amigo:* Mantenha as notificações ativadas! As melhores oportunidades que encontro costumam esgotar bem rápido.
 
-Bora caçar aquelas cartas secretas e fechar as coleções! Ótimo dia a todos! 🌟`
+Bora caçar aquelas cartas secretas e completar as coleções! Ótimo dia a todos! 🌟`
   },
   {
     id: 'colecionador_raiz',
     nome: 'Modelo 3: Colecionador Raiz & Preço Justo',
     icone: '🃏',
-    descricao: 'Compromisso contra ágio abusivo (anti-scalper), análise de preço por booster e amor pelo hobby.',
+    descricao: 'Compromisso pessoal contra ágio abusivo, cálculo manual de preço por booster e amor pelo hobby.',
     texto: `@pokemon_tcg_promo
 
 ☀️ *BOM DIA, FAMÍLIA POKÉMON TCG!* 🃏
 Mais um dia começando e o nosso grupo está oficialmente *ABERTO* nesta {dia_semana}!
 
-Colecionar é paixão, e o nosso maior compromisso aqui é defender o seu bolso. Nada de pagar ágio abusivo ou cair em armadilhas de preços inflacionados: aqui só passa o que realmente vale a pena!
+Colecionar é uma paixão compartilhada, e o meu maior compromisso aqui é cuidar do bolso de vocês. Eu mesmo confiro o histórico de preços e calculo o valor unitário por booster antes de postar qualquer link, para garantir que você esteja fazendo um bom negócio e não caindo em armadilhas de falsas promoções.
 
-📦 Nossos algoritmos analisam o histórico de preços e o valor unitário por booster para garantir que cada centavo investido na sua coleção traga o melhor custo-benefício.
+📦 Aqui não tem pegadinha nem preço inflacionado: só entra no grupo o que eu mesmo compraria para a minha própria coleção!
 
-🚀 Se você curte o nosso trabalho de curadoria diária, convide aquele amigo que também rasga booster para o grupo. Juntos fortalecemos o hobby no Brasil! 🇧🇷
+🚀 Se você valoriza esse trabalho diário de busca e curadoria feita de fã para fãs, convide aquele amigo que também rasga booster para se juntar a nós. Vamos juntos fortalecer o hobby no Brasil! 🇧🇷
 
 Que o dia venha recheado de hits e raridades! Pra cima! 🔥✨`
   },
   {
     id: 'cupons_estrategia',
-    nome: 'Modelo 4: Cupons & Oportunidades no App',
+    nome: 'Modelo 4: Cupons & Achados Selecionados',
     icone: '🎟️',
-    descricao: 'Foco prático em cupons limitados por CPF, melhores horários de resgate e compras inteligentes.',
+    descricao: 'Dicas práticas de compra, acompanhamento manual de cupons e economia real.',
     texto: `@pokemon_tcg_promo
 
 🎟️ *BOM DIA, COLECIONADORES E CAÇADORES DE OFERTAS!* ⚡
 Grupo 100% aberto e pronto para as melhores oportunidades desta {dia_semana}!
 
-Hoje o nosso radar está calibrado para novos cupons de desconto, ofertas no app e combos promocionais de Pokémon TCG com frete grátis e parcelamento sem juros.
+Hoje o foco do meu garimpo está nos novos cupons liberados no app, compras com frete grátis e combos que realmente compensam o parcelamento sem juros. Testo os cupons manualmente antes de mandar aqui para você não perder tempo.
 
-💡 *Como aproveitar ao máximo:*
-1. Ao ver uma oferta com cupom, resgate imediatamente no app
-2. Confira sempre o valor final no carrinho com as vantagens aplicadas
-3. Seja rápido nos alertas de "Últimas Unidades"
+💡 *Dicas para aproveitar melhor o dia:*
+1. Quando eu postar um cupom, resgate imediatamente no seu aplicativo
+2. Confira sempre o valor final com as vantagens aplicadas no carrinho
+3. Fique atento aos avisos de "Últimas Unidades" para não ficar sem
 
-Obrigado a cada membro pela confiança e pela parceria diária. Vamos juntos em busca dos melhores achados do mercado! 🏆🎯`
+Obrigado a cada um de vocês pela confiança no meu trabalho e pela parceria diária. Vamos juntos em busca dos melhores achados! 🏆🎯`
   }
 ];
 

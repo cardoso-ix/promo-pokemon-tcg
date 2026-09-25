@@ -1131,3 +1131,123 @@ input:checked + .slider:before {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ==========================================================
+   SELETOR DE FLAGS DE MODELOS DE ABERTURA DIÁRIA DO GRUPO
+   ========================================================== */
+.abertura-flags-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  margin: 12px 0 18px 0;
+}
+
+.abertura-flag-card {
+  position: relative;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.abertura-flag-card:hover {
+  border-color: rgba(245, 158, 11, 0.55);
+  transform: translateY(-2px);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.abertura-flag-card.active {
+  border-color: #f59e0b;
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.14) 0%, rgba(20, 24, 33, 0.95) 100%);
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.22);
+}
+
+.abertura-flag-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.abertura-flag-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.abertura-flag-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-rotacao {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-ativo-status {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  display: none;
+}
+
+.abertura-flag-card.active .badge-ativo-status {
+  display: inline-block;
+}
+
+.abertura-flag-desc {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Simulador WhatsApp de Mensagem de Abertura */
+.wa-abertura-preview-container {
+  background: #0b141a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+
+.wa-abertura-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 12px;
+}
+
+.wa-bubble-sent-abertura {
+  background: #005c4b;
+  color: #e9edef;
+  border-radius: 8px 8px 2px 8px;
+  padding: 12px 16px;
+  max-width: 95%;
+  margin: 0 auto;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+

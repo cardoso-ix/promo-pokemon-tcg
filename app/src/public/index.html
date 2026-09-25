@@ -620,32 +620,117 @@
               </div>
             </div>
 
-            <div class="form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                <label for="cfg-msg-abertura-texto" style="margin-bottom: 0;">Texto da Mensagem Oficial:</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">Modelos Prontos:</span>
-                  <select id="select-modelo-abertura" class="input-field" style="padding: 0.35rem 0.6rem; font-size: 0.82rem; height: auto; border-color: rgba(245, 158, 11, 0.45); background: var(--bg-surface); cursor: pointer;">
-                    <option value="">-- Selecionar Modelo --</option>
-                    <option value="rotacao">🔄 Alternância Diária Automática (Recomendado)</option>
-                    <option value="0">🌟 Modelo 1: Comunidade & Boas-Vindas</option>
-                    <option value="1">🎯 Modelo 2: Radar & Drops Relâmpago</option>
-                    <option value="2">🃏 Modelo 3: Colecionador Raiz & Preço Justo</option>
-                    <option value="3">🎟️ Modelo 4: Cupons & Estratégia de Compra</option>
-                  </select>
-                </div>
+            <!-- Seletor Visual de Modelos (Flags Interativas) -->
+            <div style="margin-top: 10px; margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                <label style="font-weight: 600; font-size: 0.92rem; color: #fff; display: flex; align-items: center; gap: 6px;">
+                  <span>🏷️</span> Escolha o Modelo de Bom Dia para o Grupo:
+                </label>
+                <span style="font-size: 0.78rem; color: var(--text-secondary);">Clique na flag para alternar</span>
               </div>
-              <textarea id="cfg-msg-abertura-texto" class="textarea-field" rows="8" style="font-family: inherit; line-height: 1.5;"></textarea>
-              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
-                <span class="field-hint">Dica: A tag <code>{dia_semana}</code> é substituída pelo dia da semana atual.</span>
-                <span id="rotacao-hint" style="font-size: 0.8rem; color: #f59e0b; font-weight: 500; display: none;">🔄 Modo de alternância diária ativado: envia um modelo diferente a cada dia da semana!</span>
+
+              <div id="abertura-flags-container" class="abertura-flags-grid">
+                <!-- Flag Rotativo Diário -->
+                <div class="abertura-flag-card active" data-modelo="rotacao" id="flag-modelo-rotacao" title="Alternar diariamente entre todos os modelos humanizados">
+                  <div class="abertura-flag-title">
+                    <span>🔄 Alternância Automática</span>
+                    <span class="abertura-flag-badge badge-rotacao">Recomendado</span>
+                    <span class="abertura-flag-badge badge-ativo-status">✓ Ativo</span>
+                  </div>
+                  <p class="abertura-flag-desc">
+                    Revezamento inteligente: a cada dia da semana o grupo acorda com uma mensagem diferente, dinâmica e 100% humanizada.
+                  </p>
+                </div>
+
+                <!-- Flag Modelo 1 -->
+                <div class="abertura-flag-card" data-modelo="0" id="flag-modelo-0" title="Fixar Modelo 1">
+                  <div class="abertura-flag-title">
+                    <span>🌟 Modelo 1: Comunidade & Curadoria a Dedo</span>
+                    <span class="abertura-flag-badge badge-ativo-status">✓ Ativo</span>
+                  </div>
+                  <p class="abertura-flag-desc">
+                    Foco em gratidão, crescimento da comunidade e garimpo diário feito pessoalmente de fã para fã.
+                  </p>
+                </div>
+
+                <!-- Flag Modelo 2 -->
+                <div class="abertura-flag-card" data-modelo="1" id="flag-modelo-1" title="Fixar Modelo 2">
+                  <div class="abertura-flag-title">
+                    <span>🎯 Modelo 2: Garimpo Diário & Ofertas Reais</span>
+                    <span class="abertura-flag-badge badge-ativo-status">✓ Ativo</span>
+                  </div>
+                  <p class="abertura-flag-desc">
+                    Foco no tempo dedicado a caçar promoções reais, alertando sobre fakes, pegadinhas e preços abusivos.
+                  </p>
+                </div>
+
+                <!-- Flag Modelo 3 -->
+                <div class="abertura-flag-card" data-modelo="2" id="flag-modelo-2" title="Fixar Modelo 3">
+                  <div class="abertura-flag-title">
+                    <span>🃏 Modelo 3: Colecionador Raiz & Preço Justo</span>
+                    <span class="abertura-flag-badge badge-ativo-status">✓ Ativo</span>
+                  </div>
+                  <p class="abertura-flag-desc">
+                    Linguagem de colecionador experiente, separando o que vale a pena abrir ou guardar lacrado pelo melhor valor.
+                  </p>
+                </div>
+
+                <!-- Flag Modelo 4 -->
+                <div class="abertura-flag-card" data-modelo="3" id="flag-modelo-3" title="Fixar Modelo 4">
+                  <div class="abertura-flag-title">
+                    <span>🎟️ Modelo 4: Cupons & Achados Selecionados</span>
+                    <span class="abertura-flag-badge badge-ativo-status">✓ Ativo</span>
+                  </div>
+                  <p class="abertura-flag-desc">
+                    Foco em economia inteligente, garimpando cupons válidos, frete grátis e combos vantajosos do dia.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <button type="button" id="btn-testar-msg-abertura" class="btn btn-secondary">🚀 Testar Envio Agora no WhatsApp</button>
-                <button type="button" id="btn-restaurar-msg-abertura" class="btn btn-sm btn-secondary" title="Restaura o texto padrão">🔄 Restaurar Padrão</button>
+            <!-- Área de Edição do Texto da Mensagem -->
+            <div class="form-group" style="margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label for="cfg-msg-abertura-texto" style="margin-bottom: 0; font-size: 0.88rem; font-weight: 600;">
+                  📝 Texto Oficial (Editável):
+                </label>
+                <span id="rotacao-hint" style="font-size: 0.8rem; color: #f59e0b; font-weight: 500;">
+                  🔄 Modo Alternância Ativo (envia um modelo a cada dia)
+                </span>
+              </div>
+              <textarea id="cfg-msg-abertura-texto" class="textarea-field" rows="7" style="font-family: inherit; line-height: 1.5; font-size: 0.88rem;"></textarea>
+              <span class="field-hint" style="margin-top: 4px; display: block;">
+                💡 <code>{dia_semana}</code> é substituído automaticamente pelo dia da semana real (ex: sexta-feira).
+              </span>
+            </div>
+
+            <!-- Simulador Visual do WhatsApp -->
+            <div class="wa-abertura-preview-container">
+              <div class="wa-abertura-preview-header">
+                <span style="font-size: 0.82rem; font-weight: 600; color: #8696a0; display: flex; align-items: center; gap: 6px;">
+                  <span>💬</span> Prévia no WhatsApp (como o membro verá):
+                </span>
+                <span id="wa-preview-modelo-nome" style="font-size: 0.75rem; color: #00a884; font-weight: 600;">
+                  Rotativo Diário
+                </span>
+              </div>
+              <div id="wa-abertura-bubble" class="wa-bubble-sent-abertura">
+                Carregando prévia da mensagem...
+              </div>
+            </div>
+
+            <!-- Barra de Ações Rápidas do Card -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.07);">
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <button type="button" id="btn-salvar-msg-abertura" class="btn btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; font-weight: 600;">
+                  💾 Salvar Configurações de Abertura
+                </button>
+                <button type="button" id="btn-testar-msg-abertura" class="btn btn-secondary">
+                  🚀 Testar Envio Agora no WhatsApp
+                </button>
+                <button type="button" id="btn-restaurar-msg-abertura" class="btn btn-sm btn-secondary" title="Restaura o texto para o modelo padrão">
+                  🔄 Restaurar Modelo 1
+                </button>
               </div>
               <span id="msg-abertura-feedback" class="action-feedback"></span>
             </div>

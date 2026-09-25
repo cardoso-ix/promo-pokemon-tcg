@@ -1297,58 +1297,200 @@
     });
   }
 
-  // Agendador: Texto padrão e ações da Mensagem Diária de Abertura
+  // Agendador: Texto padrão humanizado e ações da Mensagem Diária de Abertura
   let listaModelosAbertura = [];
-  const selectModeloAbertura = document.getElementById('select-modelo-abertura');
   const rotacaoHint = document.getElementById('rotacao-hint');
+  const btnSalvarMsgAbertura = document.getElementById('btn-salvar-msg-abertura');
+  const waAberturaBubble = document.getElementById('wa-abertura-bubble');
+  const waPreviewModeloNome = document.getElementById('wa-preview-modelo-nome');
+  const aberturaFlagCards = document.querySelectorAll('.abertura-flag-card');
+
+  const DIAS_SEMANA_NOMES = [
+    'domingo',
+    'segunda-feira',
+    'terça-feira',
+    'quarta-feira',
+    'quinta-feira',
+    'sexta-feira',
+    'sábado'
+  ];
 
   const DEFAULT_TEXTO_ABERTURA = `@pokemon_tcg_promo
 
 🌅 *BOM DIA, TREINADORES E COLECIONADORES!* ⚡
 O nosso grupo oficial de ofertas de Pokémon TCG está oficialmente *ABERTO* para o dia de hoje!
 
-Quero agradecer imensamente a cada um de vocês por fazer parte da nossa comunidade. É muito gratificante ver a nossa família de colecionadores crescendo todos os dias! 🙏✨
+Quero agradecer de coração a cada um de vocês por fazer parte da nossa comunidade. É muito gratificante ver a nossa família de colecionadores crescendo todos os dias! 🙏✨
 
-🔎 Nossa equipe e nossos robôs já estão a postos monitorando os estoques, cupons relâmpago e promoções exclusivas em boosters, boxes, latas, ETBs e cartas lacradas para trazer os menores preços reais para vocês.
+🔎 Dedico horas do meu dia garimpando pessoalmente os melhores estoques, cupons válidos e oportunidades reais em boosters, boxes, latas, ETBs e produtos lacrados. Aqui a curadoria é feita a dedo, de colecionador para colecionador, para garantir que você só receba o que realmente vale a pena e com preço justo, sem cair em pegadinhas ou preços inflacionados.
 
-👥 *Dica especial:* Se você tem amigos, conhecidos ou colecionadores que também amam Pokémon TCG e querem economizar de verdade sem pagar preços abusivos, fiquem 100% à vontade para adicioná-los ou mandar o link do grupo! Bora crescer a nossa comunidade juntos! 🚀
+👥 *Dica especial:* Se você tem amigos ou conhecidos que também amam Pokémon TCG e querem economizar de verdade, fiquem 100% à vontade para adicioná-los ou mandar o link do nosso grupo! Bora fortalecer a nossa comunidade juntos! 🚀
 
 Tenham todos uma excelente {dia_semana} e um dia cheio de bons pulls! 🔥`;
 
-  function atualizarEstadoRotacaoHint() {
+  function obterDiaSemanaAtualTexto() {
+    const hoje = new Date();
+    return DIAS_SEMANA_NOMES[hoje.getDay()] || 'semana';
+  }
+
+  function atualizarPreviaWhatsApp(textoBase, modeloTitulo) {
+    if (!waAberturaBubble) return;
+
+    let textoFinal = (textoBase || '').trim();
+    const diaAtual = obterDiaSemanaAtualTexto();
+
+    if (!textoFinal) {
+      textoFinal = listaModelosAbertura[0]?.texto || DEFAULT_TEXTO_ABERTURA;
+    }
+
+    if (textoFinal === '[ROTACAO_DIARIA]' || textoFinal.toLowerCase() === 'rotacao') {
+      const hoje = new Date();
+      const indice = listaModelosAbertura.length > 0 ? hoje.getDay() % listaModelosAbertura.length : 0;
+      const modeloHoje = listaModelosAbertura[indice] || { nome: 'Modelo 1', texto: DEFAULT_TEXTO_ABERTURA };
+      
+      if (waPreviewModeloNome) {
+        waPreviewModeloNome.textContent = `🔄 Alternância Diária • Hoje (${diaAtual}): ${modeloHoje.nome}`;
+      }
+      textoFinal = modeloHoje.texto;
+    } else if (waPreviewModeloNome) {
+      waPreviewModeloNome.textContent = modeloTitulo || 'Modelo Selecionado';
+    }
+
+    const textoRenderizado = textoFinal.replace(/\{dia_semana\}/gi, diaAtual);
+    waAberturaBubble.textContent = textoRenderizado;
+  }
+
+  function marcarFlagAtiva(chaveModelo) {
+    aberturaFlagCards.forEach((card) => {
+      if (card.dataset.modelo === String(chaveModelo)) {
+        card.classList.add('active');
+      } else {
+        card.classList.remove('active');
+      }
+    });
+  }
+
+  function sincronizarFlagsComTexto() {
     if (!cfgMsgAberturaTexto) return;
     const val = cfgMsgAberturaTexto.value.trim();
+
     if (val === '[ROTACAO_DIARIA]' || val.toLowerCase() === 'rotacao') {
       if (rotacaoHint) rotacaoHint.style.display = 'inline';
-      if (selectModeloAbertura) selectModeloAbertura.value = 'rotacao';
-    } else {
-      if (rotacaoHint) rotacaoHint.style.display = 'none';
-      if (selectModeloAbertura && selectModeloAbertura.value === 'rotacao') {
-        selectModeloAbertura.value = '';
+      marcarFlagAtiva('rotacao');
+      atualizarPreviaWhatsApp('[ROTACAO_DIARIA]', '🔄 Alternância Diária Automática');
+      return;
+    }
+
+    if (rotacaoHint) rotacaoHint.style.display = 'none';
+
+    let modeloEncontradoIdx = -1;
+    for (let i = 0; i < listaModelosAbertura.length; i++) {
+      if (listaModelosAbertura[i].texto.trim() === val) {
+        modeloEncontradoIdx = i;
+        break;
       }
+    }
+
+    if (modeloEncontradoIdx !== -1) {
+      marcarFlagAtiva(String(modeloEncontradoIdx));
+      const mod = listaModelosAbertura[modeloEncontradoIdx];
+      atualizarPreviaWhatsApp(mod.texto, mod.nome);
+    } else {
+      // Texto personalizado digitado manualmente
+      marcarFlagAtiva('none');
+      atualizarPreviaWhatsApp(val, '✏️ Mensagem Personalizada');
     }
   }
 
-  if (selectModeloAbertura && cfgMsgAberturaTexto) {
-    selectModeloAbertura.addEventListener('change', () => {
-      const val = selectModeloAbertura.value;
-      if (!val) return;
+  function aplicarModelo(chaveModelo) {
+    if (!cfgMsgAberturaTexto) return;
 
-      if (val === 'rotacao') {
-        cfgMsgAberturaTexto.value = '[ROTACAO_DIARIA]';
-        atualizarEstadoRotacaoHint();
-        showToast('Modo de alternância diária ativado! Clique em "Salvar Todas as Configurações". 🔄');
-      } else {
-        const idx = parseInt(val, 10);
-        if (listaModelosAbertura[idx]) {
-          cfgMsgAberturaTexto.value = listaModelosAbertura[idx].texto;
-          atualizarEstadoRotacaoHint();
-          showToast(`Modelo aplicado! Clique em "Salvar Todas as Configurações". ✨`);
-        }
+    if (chaveModelo === 'rotacao') {
+      cfgMsgAberturaTexto.value = '[ROTACAO_DIARIA]';
+      if (rotacaoHint) rotacaoHint.style.display = 'inline';
+      marcarFlagAtiva('rotacao');
+      atualizarPreviaWhatsApp('[ROTACAO_DIARIA]', '🔄 Alternância Diária Automática');
+      showToast('🔄 Alternância diária selecionada! Clique em "Salvar Configurações de Abertura".');
+      return;
+    }
+
+    const idx = parseInt(chaveModelo, 10);
+    const modelo = listaModelosAbertura[idx];
+    if (modelo) {
+      cfgMsgAberturaTexto.value = modelo.texto;
+      if (rotacaoHint) rotacaoHint.style.display = 'none';
+      marcarFlagAtiva(String(idx));
+      atualizarPreviaWhatsApp(modelo.texto, modelo.nome);
+      showToast(`✨ ${modelo.nome} aplicado! Clique em "Salvar Configurações de Abertura".`);
+    }
+  }
+
+  // Vincular clique nas flags interativas
+  aberturaFlagCards.forEach((card) => {
+    card.addEventListener('click', () => {
+      const modeloChave = card.dataset.modelo;
+      if (modeloChave) {
+        aplicarModelo(modeloChave);
       }
     });
+  });
 
-    cfgMsgAberturaTexto.addEventListener('input', atualizarEstadoRotacaoHint);
+  if (cfgMsgAberturaTexto) {
+    cfgMsgAberturaTexto.addEventListener('input', sincronizarFlagsComTexto);
+  }
+
+  // Botão Rápido de Salvar Configurações de Abertura
+  if (btnSalvarMsgAbertura) {
+    btnSalvarMsgAbertura.addEventListener('click', async () => {
+      btnSalvarMsgAbertura.disabled = true;
+      const originalText = btnSalvarMsgAbertura.textContent;
+      btnSalvarMsgAbertura.textContent = '⏳ Salvando...';
+      if (msgAberturaFeedback) {
+        msgAberturaFeedback.textContent = '';
+        msgAberturaFeedback.className = 'action-feedback';
+      }
+
+      try {
+        const payload = {
+          ativo: cfgMsgAberturaAtivo ? cfgMsgAberturaAtivo.checked : true,
+          horario: cfgMsgAberturaHorario ? cfgMsgAberturaHorario.value.trim() : '07:00',
+          texto: cfgMsgAberturaTexto ? cfgMsgAberturaTexto.value.trim() : DEFAULT_TEXTO_ABERTURA
+        };
+
+        const res = await fetch('/api/agendador/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          if (msgAberturaFeedback) {
+            msgAberturaFeedback.textContent = `✅ ${data.message}`;
+            msgAberturaFeedback.className = 'action-feedback success';
+          }
+          showToast('Configurações de abertura salvas com sucesso! 🌅✓');
+          playChime();
+          carregarStatusAgendador();
+        } else {
+          throw new Error(data.error || 'Falha ao salvar configurações.');
+        }
+      } catch (err) {
+        if (msgAberturaFeedback) {
+          msgAberturaFeedback.textContent = `❌ ${err.message || 'Erro ao salvar.'}`;
+          msgAberturaFeedback.className = 'action-feedback error';
+        }
+        showToast('Erro ao salvar mensagem de abertura.');
+      } finally {
+        btnSalvarMsgAbertura.disabled = false;
+        btnSalvarMsgAbertura.textContent = originalText;
+        setTimeout(() => {
+          if (msgAberturaFeedback && msgAberturaFeedback.className.includes('success')) {
+            msgAberturaFeedback.textContent = '';
+          }
+        }, 5000);
+      }
+    });
   }
 
   async function carregarStatusAgendador() {
@@ -1358,14 +1500,14 @@ Tenham todos uma excelente {dia_semana} e um dia cheio de bons pulls! 🔥`;
       const data = await res.json();
       if (cfgMsgAberturaAtivo) cfgMsgAberturaAtivo.checked = data.ativo;
       if (cfgMsgAberturaHorario && data.horario) cfgMsgAberturaHorario.value = data.horario;
-      if (cfgMsgAberturaTexto && !cfgMsgAberturaTexto.value && data.texto) {
+      if (cfgMsgAberturaTexto && data.texto) {
         cfgMsgAberturaTexto.value = data.texto;
       }
 
-      if (Array.isArray(data.modelos)) {
+      if (Array.isArray(data.modelos) && data.modelos.length > 0) {
         listaModelosAbertura = data.modelos;
       }
-      atualizarEstadoRotacaoHint();
+      sincronizarFlagsComTexto();
 
       if (msgAberturaStatusBadge) {
         if (data.ativo) {
@@ -1380,10 +1522,8 @@ Tenham todos uma excelente {dia_semana} e um dia cheio de bons pulls! 🔥`;
 
   if (btnRestaurarMsgAbertura && cfgMsgAberturaTexto) {
     btnRestaurarMsgAbertura.addEventListener('click', () => {
-      cfgMsgAberturaTexto.value = listaModelosAbertura[0]?.texto || DEFAULT_TEXTO_ABERTURA;
-      if (selectModeloAbertura) selectModeloAbertura.value = '0';
-      atualizarEstadoRotacaoHint();
-      showToast('Texto padrão restaurado! Clique em "Salvar Todas as Configurações" para aplicar.');
+      aplicarModelo('0');
+      showToast('Modelo 1 restaurado! Clique em "Salvar Configurações de Abertura" para aplicar.');
     });
   }
 
