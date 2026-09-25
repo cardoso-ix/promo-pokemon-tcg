@@ -279,12 +279,16 @@ export function gerarCopyPromocional(params: {
   const por = (precoPor || '').trim();
   const comCupom = (valorComCupom || '').trim();
 
-  if (de && por) {
+  const isPorValido = Boolean(por && por.toLowerCase() !== 'consultar' && por !== '0' && por !== 'R$ 0');
+  const isDeValido = Boolean(de && de.toLowerCase() !== 'consultar' && de !== '0' && de !== 'R$ 0');
+  const calculo = isPorValido && isDeValido ? calcularDesconto(de, por) : null;
+
+  if (isDeValido && calculo) {
     const valorDe = de.startsWith('R$') ? de : `R$ ${de}`;
     const valorPor = por.startsWith('R$') ? por : `R$ ${por}`;
     linhas.push(`❌ ~De: ${valorDe}~`);
     linhas.push(`👉 *Por apenas: ${valorPor}*`);
-  } else if (por) {
+  } else if (isPorValido) {
     const valorPor = por.startsWith('R$') ? por : `R$ ${por}`;
     linhas.push(`👉 *Por apenas: ${valorPor}*`);
   }
@@ -644,7 +648,8 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
   const tagDesconto = calculo ? calculo.tagDesconto : '';
 
   let linhaPrecoDe = '';
-  if (isDeValido) {
+  // Preço "De" SÓ pode ser incluído se for comprovadamente maior que o preço "Por" (desconto real)
+  if (isDeValido && calculo) {
     const valorDe = de.startsWith('R$') ? de : `R$ ${de}`;
     linhaPrecoDe = `❌ ~De: ${valorDe}~`;
   }

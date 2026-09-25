@@ -9,6 +9,7 @@ import {
   extrairParcelamento,
   determinarTipoMensagem
 } from '../src/core/anuncio.js';
+import { extrairDadosOferta } from '../src/core/sheets.js';
 
 test('detectarGatilhoUrgencia identifica termos de escassez e ofertas relâmpago', () => {
   assert.strictEqual(detectarGatilhoUrgencia('🚨 ÚLTIMAS UNIDADES! Corre que vai acabar!'), true);
@@ -363,5 +364,36 @@ De ❌ : R$ 479,89
   assert.strictEqual(msgFormatada.includes('🎟️ Cupom: *MELIUZKIDS*'), true);
   assert.strictEqual(msgFormatada.includes('🛒 https://meli.la/2wWPZzD'), true);
 });
+
+test('Postagem com apenas 1 valor (sem preço De) não deve extrair números do título como De (ex: Fichário de 30 anos)', () => {
+  const textoOriginal = `produtos de CLUB PROMOCOES em um meli.la
+
+✨Fichário de 30 anos em 🇧🇷 português !
+
+✅R$299
+
+https://meli.la/21rpBnN`;
+
+  const dados = extrairDadosOferta(textoOriginal, 'https://meli.la/21rpBnN');
+
+  // Não deve extrair o "30" de "30 anos" como valorDe!
+  assert.strictEqual(dados.valorDe, '');
+  assert.strictEqual(dados.valorPor, 'R$ 299');
+
+  const msgFormatada = formatarMensagemReplicada({
+    tipo: 'oferta',
+    titulo: dados.produto,
+    precoDe: dados.valorDe,
+    precoPor: dados.valorPor,
+    linkAfiliado: 'https://meli.la/1FRkD5j'
+  });
+
+  // NÃO deve conter a linha "De: R$ 30" ou "❌"
+  assert.strictEqual(msgFormatada.includes('De: R$ 30'), false);
+  assert.strictEqual(msgFormatada.includes('❌'), false);
+  assert.strictEqual(msgFormatada.includes('🔥 *Por apenas: R$ 299*'), true);
+  assert.strictEqual(msgFormatada.includes('🛒 https://meli.la/1FRkD5j'), true);
+});
+
 
 

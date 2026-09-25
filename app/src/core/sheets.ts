@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { getConfig } from '../db/database.js';
-import { formatarTituloPorSlug } from './anuncio.js';
+import { formatarTituloPorSlug, parseValorMoeda } from './anuncio.js';
 
 export interface OfertaPlanilha {
   data: string;
@@ -166,9 +166,10 @@ export function extrairDadosOferta(
   }
 
   // Regex De com barreira anti-backtracking de dígitos (?!\d)
-  // Garante que não seja contexto de cupom ("cupom de R$ 20") nem de parcelas ("10x de R$ 8,80")
+  // Exige marcador explícito (❌, ~, dois pontos ou R$ obrigatório) e rejeita preposições comuns
+  // do português (ex: "Fichário de 30 anos", "Box de 36 boosters", "Pacote de 10 unidades")
   const deMatch = texto.match(
-    /(?:❌|~|\*)?\s*(?:de)[:\s\*~❌]*R?\$?\s*(\d+(?:[.,]\d+)*)(?!\d)(?!\s*[%xX]|\s*vezes)/i
+    /(?:(?:❌|~+)\s*[*~_]*\s*(?:de:?|R\$)?|(?:\bde)\s*(?::|[*~_]*\s*R\$))\s*[*~_]*\s*(?:R\$\s*)?(\d+(?:[.,]\d+)*)(?!\d)(?!\s*(?:anos?|dias?|mes(?:es)?|horas?|cartas?|cards?|boosters?|unidades?|unids?|und?|pe[çc]as?|pcs?|sleeves?|p[áa]ginas?|pags?|bolsos?|folhas?|vezes|[xX%]))/i
   );
   if (deMatch && deMatch[1]) {
     const idx = deMatch.index || 0;
@@ -209,6 +210,21 @@ export function extrairDadosOferta(
       valorPor = normalizarMoeda(precosCandidatos[1]);
     } else if (precosCandidatos.length === 1) {
       valorPor = normalizarMoeda(precosCandidatos[0]);
+      // Se a mensagem original só contém 1 valor monetário e nenhum De explícito válido,
+      // garante que valorDe permaneça vazio
+      if (!texto.match(/(?:❌|~)\s*de:?|\bde:\s*R?\$?|\bde\s*R\$/i)) {
+        valorDe = '';
+      }
+    }
+  }
+
+  // 4. Validação e Consistência Numérica de Desconto:
+  // Se o preço De for menor ou igual ao preço Por, descarta o De (é falso positivo ou número de anos/cartas)
+  if (valorDe && valorPor) {
+    const numDe = parseValorMoeda(valorDe);
+    const numPor = parseValorMoeda(valorPor);
+    if (numPor > 0 && numDe <= numPor) {
+      valorDe = '';
     }
   }
 
