@@ -39,6 +39,12 @@ import {
   listarMesesDisponiveisFinancas,
   getDespesaPdfById,
   obterResumoDespesasPeriodo,
+  salvarLancamentoDiario,
+  listarLancamentosDiarios,
+  deleteLancamentoDiario,
+  getBalancoMensal,
+  getPercentualReinvestimento,
+  setPercentualReinvestimento,
   db
 } from '../db/database.js';
 import {
@@ -49,7 +55,8 @@ import {
   extrairDadosPdfFatura,
   arquivarDespesaPdf,
   removerDespesaPdf,
-  exportarRelatorioPeriodoCsv
+  exportarRelatorioPeriodoCsv,
+  exportarBalancoMensalCsv
 } from '../core/financas.js';
 import { whatsapp, WhatsAppState } from '../whatsapp/client.js';
 import { dispatchEngine } from '../core/engine.js';
@@ -1083,6 +1090,95 @@ export async function createServer() {
     const sufixo = inicio && fim ? `${inicio}_a_${fim}` : 'geral';
     reply.header('Content-Type', 'text/csv; charset=utf-8');
     reply.header('Content-Disposition', `attachment; filename="despesas_meta_ads_${sufixo}.csv"`);
+    return reply.send(csvComBom);
+  });
+
+  // ==========================================
+  // ROTAS DE LANÇAMENTOS DIÁRIOS & BALANÇO MENSAL DRE
+  // ==========================================
+
+  // Consultar Balanço Mensal de Lucro & Prejuízo com Reinvestimento
+  app.get('/api/financas/balanco', async (req: any) => {
+    let mes = (req.query.mes || '').trim();
+    if (!mes) {
+      const meses = listarMesesDisponiveisFinancas();
+      mes = meses.length > 0 ? meses[0] : new Date().toISOString().substring(0, 7);
+    }
+    const balanco = getBalancoMensal(mes);
+    return { ok: true, balanco };
+  });
+
+  // Registrar Lançamento Manual Diário (Gastos com Campanhas e Lucros Diários)
+  app.post('/api/financas/lancamento', async (req: any, reply) => {
+    const { dataLancamento, gastoCampanhas, lucroBruto, descricao, categoria } = req.body || {};
+    if (!dataLancamento) {
+      return reply.status(400).send({ ok: false, error: 'A data do lançamento é obrigatória.' });
+    }
+
+    const gastoNum = Number(gastoCampanhas) || 0;
+    const lucroNum = Number(lucroBruto) || 0;
+
+    const id = salvarLancamentoDiario({
+      dataLancamento: String(dataLancamento).trim(),
+      gastoCampanhas: gastoNum,
+      lucroBruto: lucroNum,
+      descricao: descricao ? String(descricao).trim() : undefined,
+      categoria: categoria ? String(categoria).trim() : undefined
+    });
+
+    logSistema(
+      'info',
+      'financas',
+      `Lançamento manual ID ${id} cadastrado para ${dataLancamento} (Gasto: R$ ${gastoNum.toFixed(2)}, Lucro: R$ ${lucroNum.toFixed(2)}).`
+    );
+    return { ok: true, id, message: 'Lançamento diário registrado com sucesso.' };
+  });
+
+  // Excluir Lançamento Manual Diário
+  app.delete('/api/financas/lancamento/:id', async (req: any, reply) => {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id) || id <= 0) {
+      return reply.status(400).send({ ok: false, error: 'ID de lançamento inválido.' });
+    }
+
+    const removido = deleteLancamentoDiario(id);
+    if (!removido) {
+      return reply.status(404).send({ ok: false, error: 'Lançamento não encontrado ou já removido.' });
+    }
+
+    logSistema('warn', 'financas', `Lançamento manual ID ${id} excluído pelo usuário.`);
+    return { ok: true, id, message: 'Lançamento excluído com sucesso.' };
+  });
+
+  // Configurar Flag de Reinvestimento de Lucro em Campanhas (%)
+  app.post('/api/financas/config-reinvestimento', async (req: any, reply) => {
+    const { percentual } = req.body || {};
+    const num = Number(percentual);
+    if (isNaN(num) || num < 0 || num > 100) {
+      return reply.status(400).send({
+        ok: false,
+        error: 'O percentual de reinvestimento deve ser um número entre 0 e 100.'
+      });
+    }
+
+    setPercentualReinvestimento(num);
+    logSistema('info', 'financas', `Meta de reinvestimento de lucro alterada para ${num}%.`);
+    return { ok: true, percentual: num, message: `Meta de reinvestimento atualizada para ${num}%.` };
+  });
+
+  // Exportar Balanço Completo em CSV (Excel)
+  app.get('/api/financas/balanco/exportar-csv', async (req: any, reply) => {
+    let mes = (req.query.mes || '').trim();
+    if (!mes) {
+      const meses = listarMesesDisponiveisFinancas();
+      mes = meses.length > 0 ? meses[0] : new Date().toISOString().substring(0, 7);
+    }
+
+    const csvContent = exportarBalancoMensalCsv(mes);
+    const csvComBom = '\uFEFF' + csvContent;
+
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
+    reply.header('Content-Disposition', `attachment; filename="balanco_reinvestimento_${mes}.csv"`);
     return reply.send(csvComBom);
   });
 

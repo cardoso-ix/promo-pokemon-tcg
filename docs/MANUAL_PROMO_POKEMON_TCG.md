@@ -95,6 +95,15 @@ No painel web (`http://108.174.145.77:3000`), aba **⚙️ Configurações**, no
 1. **Ponte de Ofertas:** Acesse `http://108.174.145.77:3333` ➔ Aba **Ofertas Recebidas** ➔ Clique em **Criar Campanha** em qualquer oferta replicada.
 2. **Gestão de Leads:** Na aba **Contatos**, importe planilhas CSV/XLSX de leads captados no tráfego pago.
 3. **Atendimento IA:** A inteligência artificial (DeepSeek V4) conversa com quem responder no privado e entrega o link do grupo VIP de forma amigável e conversacional.
+4. **Gestão Financeira, Balanço DRE & Regra de Reinvestimento (70%):**
+   - Acesse a aba **📊 Finanças**.
+   - **Lançamentos Diários Manuais:** Lance todos os dias o valor gasto com campanhas (Meta Ads, Google, tráfego pago) e o lucro/faturamento bruto do dia (vendas, comissões ML).
+   - **Balanço Mensal de Lucro & Prejuízo:** O sistema consolida as entradas e saídas, exibindo o resultado líquido real do mês, ROI e margem líquida.
+   - **Flag de Reinvestimento em Campanhas (Padrão 70%):** Flag configurável na tela onde você determina o percentual do lucro a reinvestir. O sistema calcula automaticamente:
+     - **70% do Lucro Líquido:** Alocado como orçamento para investimento acelerado em novas campanhas de tráfego.
+     - **30% do Lucro Líquido:** Saldo livre para distribuição / retirada dos sócios.
+     - Se o mês fechar em déficit/prejuízo, o reinvestimento é zerado automaticamente.
+   - **Exportação e Relatórios:** Botão **Exportar Balanço (DRE / Excel)** para download imediato em CSV compatível com Excel, e botão **Imprimir / PDF** para emissão de relatório contábil executivo completo.
 
 ---
 

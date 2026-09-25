@@ -2269,15 +2269,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // 2. Buscar uploads arquivados e relatório mensal consolidado
-      const [resUploads, resRelatorio] = await Promise.all([
+      // 2. Buscar uploads arquivados, relatório mensal consolidado e balanço DRE com reinvestimento
+      const [resUploads, resRelatorio, resBalanco] = await Promise.all([
         fetch(`/api/financas/uploads?mes=${encodeURIComponent(state.financas.mesAtivo)}`).then(r => r.json()).catch(() => ({ uploads: [] })),
-        fetch(`/api/financas/relatorio?mes=${encodeURIComponent(state.financas.mesAtivo)}`).then(r => r.json()).catch(() => ({ relatorio: null }))
+        fetch(`/api/financas/relatorio?mes=${encodeURIComponent(state.financas.mesAtivo)}`).then(r => r.json()).catch(() => ({ relatorio: null })),
+        fetch(`/api/financas/balanco?mes=${encodeURIComponent(state.financas.mesAtivo)}`).then(r => r.json()).catch(() => ({ balanco: null }))
       ]);
 
       state.financas.uploads = resUploads.uploads || [];
       state.financas.relatorio = resRelatorio.relatorio || null;
+      state.financas.balanco = resBalanco.balanco || null;
 
+      renderBalancoUI();
       renderFinancasUI();
     } catch (err) {
       console.warn('Erro ao carregar dados financeiros:', err);
@@ -2520,6 +2523,192 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fechamento-cpl-medio').innerText = formatCurrency(kpis.custoPorLeadMedio);
   }
 
+  // Renderização da Seção de Balanço DRE, Lançamentos Diários e Reinvestimento
+  function renderBalancoUI() {
+    const mesAtivo = state.financas.mesAtivo || getMesAtualIso();
+    const mesFormatado = formatMonthName(mesAtivo);
+    const balanco = state.financas.balanco || {
+      mesReferencia: mesAtivo,
+      totalGastoCampanhas: 0,
+      totalLucroBruto: 0,
+      resultadoLiquido: 0,
+      status: 'neutro',
+      percentualReinvestimento: 70,
+      valorReinvestimentoCampanhas: 0,
+      valorLucroDisponivel: 0,
+      margemLiquidaPercentual: 0,
+      roiPercentual: 0,
+      totalDiasLancados: 0,
+      itens: []
+    };
+
+    // 1. Títulos de Mês
+    const elDreMesNome = document.getElementById('balanco-dre-mes-nome');
+    if (elDreMesNome) elDreMesNome.innerText = mesFormatado;
+
+    const elTabelaMesNome = document.getElementById('tabela-lancamentos-mes-nome');
+    if (elTabelaMesNome) elTabelaMesNome.innerText = mesFormatado;
+
+    // 2. Badges de Percentual e Labels de Reinvestimento
+    const elBadgePct = document.getElementById('balanco-badge-pct-reinvest');
+    if (elBadgePct) elBadgePct.innerText = `${balanco.percentualReinvestimento}%`;
+
+    const elLabelCampanhas = document.getElementById('balanco-pct-campanhas-label');
+    if (elLabelCampanhas) elLabelCampanhas.innerText = `${balanco.percentualReinvestimento}%`;
+
+    const elLabelLivre = document.getElementById('balanco-pct-livre-label');
+    if (elLabelLivre) elLabelLivre.innerText = `${100 - balanco.percentualReinvestimento}%`;
+
+    const elInputFlag = document.getElementById('cfg-percentual-reinvestimento');
+    if (elInputFlag && !elInputFlag.matches(':focus')) {
+      elInputFlag.value = balanco.percentualReinvestimento;
+    }
+
+    const elTextoExplicativo = document.getElementById('texto-explicativo-reinvestimento');
+    if (elTextoExplicativo) {
+      const parteCampanhas = (balanco.percentualReinvestimento * 10).toFixed(0);
+      const parteLivre = ((100 - balanco.percentualReinvestimento) * 10).toFixed(0);
+      elTextoExplicativo.innerHTML = `🎯 <strong>Regra de Ouro:</strong> Com a meta em <strong>${balanco.percentualReinvestimento}%</strong>, cada R$ 1.000 de lucro líquido apurado destina <strong>R$ ${parteCampanhas}</strong> para novas campanhas de tráfego e <strong>R$ ${parteLivre}</strong> para retirada limpa.`;
+    }
+
+    // 3. Status Badge
+    const elStatusBadge = document.getElementById('balanco-resumo-badge');
+    if (elStatusBadge) {
+      if (balanco.status === 'lucro') {
+        elStatusBadge.innerText = '🟢 LUCRO LÍQUIDO APURADO';
+        elStatusBadge.style.background = 'rgba(74, 222, 128, 0.2)';
+        elStatusBadge.style.color = '#86efac';
+        elStatusBadge.style.borderColor = 'rgba(74, 222, 128, 0.4)';
+      } else if (balanco.status === 'prejuizo') {
+        elStatusBadge.innerText = '🔴 PREJUÍZO CONTÁBIL NO MÊS';
+        elStatusBadge.style.background = 'rgba(239, 68, 68, 0.2)';
+        elStatusBadge.style.color = '#fca5a5';
+        elStatusBadge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+      } else {
+        elStatusBadge.innerText = '⚪ EQUILÍBRIO (R$ 0,00)';
+        elStatusBadge.style.background = 'rgba(148, 163, 184, 0.2)';
+        elStatusBadge.style.color = '#cbd5e1';
+        elStatusBadge.style.borderColor = 'rgba(148, 163, 184, 0.4)';
+      }
+    }
+
+    // 4. 5 KPIs do Balanço
+    const elLucroBruto = document.getElementById('balanco-resumo-lucro-bruto');
+    if (elLucroBruto) elLucroBruto.innerText = formatCurrency(balanco.totalLucroBruto);
+
+    const elDiasLucro = document.getElementById('balanco-resumo-dias-lucro');
+    if (elDiasLucro) elDiasLucro.innerText = `${balanco.totalDiasLancados} dia(s) com registros`;
+
+    const elGastoCampanhas = document.getElementById('balanco-resumo-gasto-campanhas');
+    if (elGastoCampanhas) elGastoCampanhas.innerText = formatCurrency(balanco.totalGastoCampanhas);
+
+    const elRoiBadge = document.getElementById('balanco-resumo-roi-badge');
+    if (elRoiBadge) elRoiBadge.innerText = `ROI: ${balanco.roiPercentual.toFixed(1)}%`;
+
+    const elResultadoLiquido = document.getElementById('balanco-resumo-resultado-liquido');
+    if (elResultadoLiquido) {
+      elResultadoLiquido.innerText = formatCurrency(balanco.resultadoLiquido);
+      if (balanco.resultadoLiquido > 0) elResultadoLiquido.style.color = '#4ade80';
+      else if (balanco.resultadoLiquido < 0) elResultadoLiquido.style.color = '#f87171';
+      else elResultadoLiquido.style.color = '#fbbf24';
+    }
+
+    const elMargemBadge = document.getElementById('balanco-resumo-margem-badge');
+    if (elMargemBadge) elMargemBadge.innerText = `Margem Líquida: ${balanco.margemLiquidaPercentual.toFixed(1)}%`;
+
+    const elReinvestimento = document.getElementById('balanco-resumo-reinvestimento');
+    if (elReinvestimento) elReinvestimento.innerText = formatCurrency(balanco.valorReinvestimentoCampanhas);
+
+    const elLucroLivre = document.getElementById('balanco-resumo-lucro-livre');
+    if (elLucroLivre) elLucroLivre.innerText = formatCurrency(balanco.valorLucroDisponivel);
+
+    // 5. Tabela de Lançamentos Diários
+    const tbodyLancamentos = document.getElementById('tabela-lancamentos-tbody');
+    const badgeLancamentos = document.getElementById('badge-total-lancamentos');
+    const itens = balanco.itens || [];
+
+    if (badgeLancamentos) {
+      badgeLancamentos.innerText = `${itens.length} lançamento${itens.length === 1 ? '' : 's'}`;
+    }
+
+    if (tbodyLancamentos) {
+      if (itens.length === 0) {
+        tbodyLancamentos.innerHTML = `
+          <tr>
+            <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px 20px;">
+              ✍️ Nenhum lançamento diário registrado para <strong>${mesFormatado}</strong> ainda.<br>
+              <small>Preencha os valores gastos em campanhas e o lucro diário obtido no formulário acima.</small>
+            </td>
+          </tr>
+        `;
+      } else {
+        tbodyLancamentos.innerHTML = itens.map(it => {
+          const gasto = Number(it.gasto_campanhas) || 0;
+          const lucro = Number(it.lucro_bruto) || 0;
+          const saldo = lucro - gasto;
+          const reinvest = saldo > 0 ? saldo * (balanco.percentualReinvestimento / 100) : 0;
+          const livre = saldo > 0 ? saldo - reinvest : saldo;
+
+          const dataBr = it.data_lancamento ? it.data_lancamento.split('-').reverse().join('/') : '-';
+          const corSaldo = saldo > 0 ? '#4ade80' : saldo < 0 ? '#f87171' : '#cbd5e1';
+
+          let catBadge = '<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #cbd5e1; font-size: 11px;">Geral</span>';
+          if (it.categoria === 'meta_ads') {
+            catBadge = '<span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35); font-size: 11px;">Meta Ads</span>';
+          } else if (it.categoria === 'google_ads') {
+            catBadge = '<span class="badge" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.35); font-size: 11px;">Google Ads</span>';
+          } else if (it.categoria === 'afiliado_ml') {
+            catBadge = '<span class="badge" style="background: rgba(250, 204, 21, 0.2); color: #fde047; border: 1px solid rgba(250, 204, 21, 0.4); font-size: 11px;">Afiliado ML</span>';
+          } else if (it.categoria === 'venda_direta') {
+            catBadge = '<span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); font-size: 11px;">Venda Direta</span>';
+          }
+
+          return `
+            <tr>
+              <td><strong style="color: #fff;">${dataBr}</strong></td>
+              <td><strong style="color: #f87171;">${formatCurrency(gasto)}</strong></td>
+              <td><strong style="color: #4ade80;">${formatCurrency(lucro)}</strong></td>
+              <td><strong style="color: ${corSaldo};">${saldo > 0 ? '+' : ''}${formatCurrency(saldo)}</strong></td>
+              <td><span style="color: #38bdf8; font-weight: 600;">${formatCurrency(reinvest)}</span></td>
+              <td><span style="color: #c084fc; font-weight: 600;">${formatCurrency(livre)}</span></td>
+              <td>${catBadge}</td>
+              <td><span title="${escapeHtml(it.descricao || '')}" style="color: var(--text-secondary); max-width: 220px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(it.descricao || '-')}</span></td>
+              <td style="text-align: right;">
+                <button class="btn btn-secondary btn-sm" onclick="removerLancamentoDiario(${it.id})" title="Excluir lançamento" style="padding: 3px 8px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+                  🗑️
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // Inicializa a data do formulário com a data de hoje (se ainda vazia)
+    const inputData = document.getElementById('lancamento-data');
+    if (inputData && !inputData.value) {
+      inputData.value = new Date().toISOString().substring(0, 10);
+    }
+  }
+
+  // Ação Global para Excluir Lançamento Manual Diário
+  window.removerLancamentoDiario = async function(id) {
+    if (confirm('Deseja realmente remover este lançamento diário?\nOs cálculos de balanço e reinvestimento serão recalculados imediatamente.')) {
+      try {
+        const res = await fetch(`/api/financas/lancamento/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('Lançamento excluído com sucesso!', 'success');
+          await loadFinancasData(state.financas.mesAtivo);
+        } else {
+          showToast(data.error || 'Erro ao excluir lançamento.', 'error');
+        }
+      } catch (err) {
+        showToast(`Erro na requisição: ${err.message}`, 'error');
+      }
+    }
+  };
+
   // Ações Globais de Finanças & Documentos
   window.downloadFinancasUpload = function(id) {
     window.open(`/api/financas/download/${id}`, '_blank');
@@ -2569,6 +2758,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploads = state.financas.uploads || [];
     const semanas = rel?.semanas || [];
     const campanhas = rel?.topCampanhas || [];
+    const balanco = state.financas.balanco || {
+      totalGastoCampanhas: 0,
+      totalLucroBruto: 0,
+      resultadoLiquido: 0,
+      status: 'neutro',
+      percentualReinvestimento: 70,
+      valorReinvestimentoCampanhas: 0,
+      valorLucroDisponivel: 0,
+      margemLiquidaPercentual: 0,
+      roiPercentual: 0,
+      totalDiasLancados: 0,
+      itens: []
+    };
+
     const emitidoEm = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const protocoloId = `MTA-${mesAtivo.replace('-', '')}-${Date.now().toString().slice(-4)}`;
 
@@ -2577,6 +2780,28 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (kpis.custoPorLeadMedio <= 5) cplClassificacao = 'Alta Eficiência (Excelente)';
     else if (kpis.custoPorLeadMedio <= 12) cplClassificacao = 'Moderado / Saudável';
     else cplClassificacao = 'Atenção / Otimizar Criativos';
+
+    const rowsLancamentosPrint = balanco.itens.length === 0
+      ? `<tr><td colspan="7" style="text-align: center; padding: 14px; color: #6b7280;">Nenhum lançamento diário manual registrado para este mês contábil.</td></tr>`
+      : balanco.itens.map(it => {
+          const gasto = Number(it.gasto_campanhas) || 0;
+          const lucro = Number(it.lucro_bruto) || 0;
+          const saldo = lucro - gasto;
+          const reinvest = saldo > 0 ? saldo * (balanco.percentualReinvestimento / 100) : 0;
+          const livre = saldo > 0 ? saldo - reinvest : saldo;
+          const dataBr = it.data_lancamento ? it.data_lancamento.split('-').reverse().join('/') : '-';
+          return `
+            <tr>
+              <td><strong>${dataBr}</strong></td>
+              <td style="text-align: right; color: #b91c1c; font-weight: 600;">${formatCurrency(gasto)}</td>
+              <td style="text-align: right; color: #15803d; font-weight: 600;">${formatCurrency(lucro)}</td>
+              <td style="text-align: right; font-weight: 700; color: ${saldo >= 0 ? '#15803d' : '#b91c1c'};">${saldo > 0 ? '+' : ''}${formatCurrency(saldo)}</td>
+              <td style="text-align: right; color: #0284c7;">${formatCurrency(reinvest)}</td>
+              <td style="text-align: right; color: #7c3aed;">${formatCurrency(livre)}</td>
+              <td>${escapeHtml(it.descricao || it.categoria || '-')}</td>
+            </tr>
+          `;
+        }).join('');
 
     const rowsArquivos = uploads.length === 0
       ? `<tr><td colspan="6" style="text-align: center; padding: 18px; color: #6b7280;">Nenhum arquivo ou fatura arquivada para este mês contábil.</td></tr>`
@@ -2632,7 +2857,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="print-title-group">
               <h1 class="print-title">RELATÓRIO EXECUTIVO DE FECHAMENTO FINANCEIRO</h1>
-              <p class="print-subtitle">Demonstrativo mensal consolidado de custos de aquisição de tráfego, faturas em PDF e performance de anúncios.</p>
+              <p class="print-subtitle">Demonstrativo mensal consolidado de receitas, custos de aquisição de tráfego, balanço DRE e regras de reinvestimento.</p>
             </div>
           </div>
           <div class="print-meta-card">
@@ -2646,35 +2871,105 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <!-- Grade de Indicadores-Chave de Performance (KPIs) -->
         <div class="print-kpi-grid">
-          <div class="print-kpi-card border-red">
-            <span class="print-kpi-label">INVESTIMENTO TOTAL NO MÊS</span>
-            <strong class="print-kpi-val text-red">${formatCurrency(kpis.gastoTotal)}</strong>
-            <span class="print-kpi-sub">${kpis.qtdUploads} comprovante(s) e fatura(s) arquivadas</span>
+          <div class="print-kpi-card border-green">
+            <span class="print-kpi-label">LUCRO / FATURAMENTO BRUTO</span>
+            <strong class="print-kpi-val text-green">${formatCurrency(balanco.totalLucroBruto)}</strong>
+            <span class="print-kpi-sub">${balanco.totalDiasLancados} dia(s) com registros operacionais</span>
           </div>
 
-          <div class="print-kpi-card border-green">
-            <span class="print-kpi-label">LEADS / CADASTROS CONQUISTADOS</span>
-            <strong class="print-kpi-val text-green">${formatNumber(kpis.leadsTotal)}</strong>
-            <span class="print-kpi-sub">${kpis.qtdCampanhasDistintas} campanha(s) em veiculação</span>
+          <div class="print-kpi-card border-red">
+            <span class="print-kpi-label">INVESTIMENTO EM CAMPANHAS</span>
+            <strong class="print-kpi-val text-red">${formatCurrency(balanco.totalGastoCampanhas || kpis.gastoTotal)}</strong>
+            <span class="print-kpi-sub">${uploads.length} comprovante(s) e fatura(s) arquivadas</span>
           </div>
 
           <div class="print-kpi-card border-blue">
-            <span class="print-kpi-label">CUSTO MÉDIO POR LEAD (CPL)</span>
-            <strong class="print-kpi-val text-blue">${formatCurrency(kpis.custoPorLeadMedio)}</strong>
-            <span class="print-kpi-sub">${cplClassificacao}</span>
+            <span class="print-kpi-label">RESULTADO LÍQUIDO DO MÊS</span>
+            <strong class="print-kpi-val ${balanco.resultadoLiquido >= 0 ? 'text-green' : 'text-red'}">${formatCurrency(balanco.resultadoLiquido)}</strong>
+            <span class="print-kpi-sub">${balanco.status === 'lucro' ? '🟢 Lucro Líquido' : balanco.status === 'prejuizo' ? '🔴 Déficit Operacional' : '⚪ Equilíbrio'} (ROI: ${balanco.roiPercentual.toFixed(1)}%)</span>
           </div>
 
           <div class="print-kpi-card border-amber">
-            <span class="print-kpi-label">CLIQUE, ALCANCE & EFICIÊNCIA</span>
-            <strong class="print-kpi-val text-amber">${formatNumber(kpis.cliquesTotal)} <span style="font-size: 13px; font-weight: 500; color: #4b5563;">cliques</span></strong>
-            <span class="print-kpi-sub">CTR: ${kpis.ctrMedio}% · CPC: ${formatCurrency(kpis.cpcMedio)} · CPM: ${formatCurrency(kpis.cpmMedio)}</span>
+            <span class="print-kpi-label">DESTINAÇÃO PARA NOVAS CAMPANHAS</span>
+            <strong class="print-kpi-val text-amber">${formatCurrency(balanco.valorReinvestimentoCampanhas)}</strong>
+            <span class="print-kpi-sub">Fundo de ${balanco.percentualReinvestimento}% para acelerar novos anúncios</span>
           </div>
         </div>
 
-        <!-- Seção 1: Arquivos, Comprovantes e Faturas Arquivadas -->
+        <!-- Seção 0: Demonstrativo de Resultado (Balanço de Lucro & Prejuízo) e Destinação de Reinvestimento -->
         <div class="print-section">
           <div class="print-section-header">
-            <h3>1. Demonstrativo de Arquivos, Faturas e Recibos Conciliados</h3>
+            <h3>Balanço Executivo Mensal (DRE) & Fundo de Reinvestimento em Tráfego</h3>
+            <span class="print-section-count">Meta Reinvestimento: ${balanco.percentualReinvestimento}%</span>
+          </div>
+          <table class="print-table">
+            <thead>
+              <tr>
+                <th>Demonstrativo Contábil / Indicador</th>
+                <th style="text-align: right; width: 170px;">Valor Apurado (R$)</th>
+                <th>Parecer / Destinação Estratégica</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Faturamento / Lucro Bruto Total:</strong></td>
+                <td style="text-align: right; font-weight: 700; color: #15803d;">${formatCurrency(balanco.totalLucroBruto)}</td>
+                <td>Total de receitas e comissões registradas no mês (${balanco.totalDiasLancados} dia(s) com registros)</td>
+              </tr>
+              <tr>
+                <td><strong>Investimento Total em Campanhas:</strong></td>
+                <td style="text-align: right; font-weight: 700; color: #b91c1c;">${formatCurrency(balanco.totalGastoCampanhas)}</td>
+                <td>Total consumido em campanhas de anúncios (Meta Ads, Google, tráfego pago)</td>
+              </tr>
+              <tr style="background: rgba(0,0,0,0.03);">
+                <td><strong>Resultado Líquido Apurado no Mês:</strong></td>
+                <td style="text-align: right; font-weight: 800; font-size: 14px; color: ${balanco.resultadoLiquido >= 0 ? '#15803d' : '#b91c1c'};">${formatCurrency(balanco.resultadoLiquido)}</td>
+                <td><strong>${balanco.status === 'lucro' ? '🟢 LUCRO LÍQUIDO APURADO' : balanco.status === 'prejuizo' ? '🔴 PREJUÍZO CONTÁBIL' : '⚪ EQUILÍBRIO'}</strong> (Margem: ${balanco.margemLiquidaPercentual.toFixed(1)}% · ROI: ${balanco.roiPercentual.toFixed(1)}%)</td>
+              </tr>
+              <tr>
+                <td><strong>🚀 Orçamento Destinado a Novas Campanhas (${balanco.percentualReinvestimento}%):</strong></td>
+                <td style="text-align: right; font-weight: 800; color: #0284c7;">${formatCurrency(balanco.valorReinvestimentoCampanhas)}</td>
+                <td>Fundo obrigatório retido para reinvestimento acelerado em anúncios no próximo ciclo</td>
+              </tr>
+              <tr>
+                <td><strong>💵 Lucro Líquido Real / Retirada dos Sócios (${100 - balanco.percentualReinvestimento}%):</strong></td>
+                <td style="text-align: right; font-weight: 800; color: #7c3aed;">${formatCurrency(balanco.valorLucroDisponivel)}</td>
+                <td>Saldo líquido livre disponível para distribuição de lucro / retirada no bolso</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        ${balanco.itens.length > 0 ? `
+        <!-- Seção: Detalhamento dos Lançamentos Diários -->
+        <div class="print-section" style="margin-top: 18px;">
+          <div class="print-section-header">
+            <h3>Discriminação dos Lançamentos Diários de Receita & Tráfego</h3>
+            <span class="print-section-count">${balanco.itens.length} lançamento(s)</span>
+          </div>
+          <table class="print-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th style="text-align: right;">Gasto Campanhas (R$)</th>
+                <th style="text-align: right;">Lucro Bruto (R$)</th>
+                <th style="text-align: right;">Saldo do Dia (R$)</th>
+                <th style="text-align: right;">Reinvestimento (${balanco.percentualReinvestimento}%)</th>
+                <th style="text-align: right;">Lucro Livre (${100 - balanco.percentualReinvestimento}%)</th>
+                <th>Descrição / Categoria</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsLancamentosPrint}
+            </tbody>
+          </table>
+        </div>
+        ` : ''}
+
+        <!-- Seção 1: Arquivos, Comprovantes e Faturas Arquivadas -->
+        <div class="print-section" style="margin-top: 18px;">
+          <div class="print-section-header">
+            <h3>Demonstrativo de Arquivos, Faturas e Recibos Conciliados</h3>
             <span class="print-section-count">${uploads.length} item(ns)</span>
           </div>
           <table class="print-table">
@@ -2789,6 +3084,114 @@ document.addEventListener('DOMContentLoaded', () => {
       btnExportarCsv.addEventListener('click', () => {
         const mes = state.financas.mesAtivo || getMesAtualIso();
         window.open(`/api/financas/exportar-csv?mes=${encodeURIComponent(mes)}`, '_blank');
+      });
+    }
+
+    // 3.1. Exportar Balanço DRE Completo (CSV / Excel)
+    const btnBalancoCsv = document.getElementById('btn-balanco-exportar-csv');
+    if (btnBalancoCsv) {
+      btnBalancoCsv.addEventListener('click', () => {
+        const mes = state.financas.mesAtivo || getMesAtualIso();
+        window.open(`/api/financas/balanco/exportar-csv?mes=${encodeURIComponent(mes)}`, '_blank');
+      });
+    }
+
+    // 3.2. Salvar Flag de Reinvestimento
+    const btnSalvarFlag = document.getElementById('btn-salvar-flag-reinvestimento');
+    const inputFlag = document.getElementById('cfg-percentual-reinvestimento');
+    if (btnSalvarFlag && inputFlag) {
+      btnSalvarFlag.addEventListener('click', async () => {
+        const valor = Number(inputFlag.value);
+        if (isNaN(valor) || valor < 0 || valor > 100) {
+          showToast('Insira uma porcentagem válida entre 0 e 100.', 'warning');
+          return;
+        }
+
+        try {
+          btnSalvarFlag.disabled = true;
+          btnSalvarFlag.innerText = 'Salvando...';
+          const res = await fetch('/api/financas/config-reinvestimento', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ percentual: valor })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            showToast(`Meta de reinvestimento atualizada para ${data.percentual}%!`, 'success');
+            await loadFinancasData(state.financas.mesAtivo);
+          } else {
+            showToast(data.error || 'Erro ao salvar meta.', 'error');
+          }
+        } catch (err) {
+          showToast(`Erro: ${err.message}`, 'error');
+        } finally {
+          btnSalvarFlag.disabled = false;
+          btnSalvarFlag.innerText = '💾 Salvar Meta';
+        }
+      });
+    }
+
+    // 3.3. Gravar Lançamento Manual Diário
+    const btnGravarLancamento = document.getElementById('btn-gravar-lancamento');
+    const inputLancData = document.getElementById('lancamento-data');
+    const inputLancGasto = document.getElementById('lancamento-gasto');
+    const inputLancLucro = document.getElementById('lancamento-lucro');
+    const selectLancCat = document.getElementById('lancamento-categoria');
+    const inputLancDesc = document.getElementById('lancamento-descricao');
+
+    if (btnGravarLancamento) {
+      btnGravarLancamento.addEventListener('click', async () => {
+        const dataVal = inputLancData?.value?.trim();
+        if (!dataVal) {
+          showToast('Por favor, informe a data do lançamento.', 'warning');
+          inputLancData?.focus();
+          return;
+        }
+
+        const gastoVal = Number(inputLancGasto?.value) || 0;
+        const lucroVal = Number(inputLancLucro?.value) || 0;
+        const catVal = selectLancCat?.value || 'geral';
+        const descVal = inputLancDesc?.value?.trim() || '';
+
+        if (gastoVal === 0 && lucroVal === 0) {
+          showToast('Informe ao menos o valor gasto com campanha ou o lucro/faturamento obtido.', 'warning');
+          inputLancGasto?.focus();
+          return;
+        }
+
+        try {
+          btnGravarLancamento.disabled = true;
+          btnGravarLancamento.innerText = 'Gravando...';
+
+          const res = await fetch('/api/financas/lancamento', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              dataLancamento: dataVal,
+              gastoCampanhas: gastoVal,
+              lucroBruto: lucroVal,
+              categoria: catVal,
+              descricao: descVal
+            })
+          });
+          const data = await res.json();
+          if (data.ok) {
+            showToast('Lançamento registrado com sucesso!', 'success');
+            if (inputLancGasto) inputLancGasto.value = '';
+            if (inputLancLucro) inputLancLucro.value = '';
+            if (inputLancDesc) inputLancDesc.value = '';
+
+            const mesLanc = dataVal.substring(0, 7);
+            await loadFinancasData(mesLanc);
+          } else {
+            showToast(data.error || 'Erro ao registrar lançamento.', 'error');
+          }
+        } catch (err) {
+          showToast(`Erro na requisição: ${err.message}`, 'error');
+        } finally {
+          btnGravarLancamento.disabled = false;
+          btnGravarLancamento.innerText = '➕ Gravar Lançamento';
+        }
       });
     }
 

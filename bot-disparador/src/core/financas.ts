@@ -20,7 +20,9 @@ import {
   deleteDespesaPdf,
   FinancasDespesaInput,
   FinancasDespesaRow,
-  FinancasResumoPeriodo
+  FinancasResumoPeriodo,
+  getBalancoMensal,
+  FinancasBalancoMensal
 } from '../db/database.js';
 
 export interface PlanilhaProcessadaResult {
@@ -884,6 +886,62 @@ export function exportarRelatorioPeriodoCsv(dataInicio?: string, dataFim?: strin
     const dataBr = it.data_despesa ? it.data_despesa.split('-').reverse().join('/') : '';
     linhas.push(
       `"${dataBr}";"${it.descricao.replace(/"/g, '""')}";${Number(it.valor).toFixed(2).replace('.', ',')};"${it.nome_arquivo}";"${it.metodo_pagamento || ''}";"${it.conta_anuncio || ''}"`
+    );
+  });
+
+  return linhas.join('\n');
+}
+
+/**
+ * Exporta em formato CSV o balanço mensal completo de lucro e prejuízo com divisão de reinvestimento
+ */
+export function exportarBalancoMensalCsv(mesReferencia: string): string {
+  const balanco = getBalancoMensal(mesReferencia);
+
+  const formatarMoeda = (num: number) =>
+    num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const formatarData = (d: string) => (d ? d.split('-').reverse().join('/') : '');
+
+  const linhas: string[] = [];
+  linhas.push('BALANÇO FINANCEIRO MENSAL E REINVESTIMENTO EM TRÁFEGO · POKÉMON TCG');
+  linhas.push(`Mês de Referência:;${balanco.mesReferencia}`);
+  linhas.push(`Gerado em:;${new Date().toLocaleString('pt-BR')}`);
+  linhas.push('');
+
+  linhas.push('--- DEMONSTRATIVO DE RESULTADO (DRE MENSAL) ---');
+  linhas.push(`Faturamento / Lucro Bruto Total (R$);R$ ${formatarMoeda(balanco.totalLucroBruto)}`);
+  linhas.push(`Investimento Total em Campanhas (R$);R$ ${formatarMoeda(balanco.totalGastoCampanhas)}`);
+  linhas.push(`Resultado Líquido do Mês (R$);R$ ${formatarMoeda(balanco.resultadoLiquido)}`);
+  linhas.push(
+    `Status do Fechamento;${
+      balanco.status === 'lucro'
+        ? 'LUCRO LÍQUIDO'
+        : balanco.status === 'prejuizo'
+        ? 'PREJUÍZO'
+        : 'EQUILÍBRIO (ZERO)'
+    }`
+  );
+  linhas.push(`Margem Líquida (%);${balanco.margemLiquidaPercentual.toFixed(2).replace('.', ',')}%`);
+  linhas.push(`Retorno sobre Investimento - ROI (%);${balanco.roiPercentual.toFixed(2).replace('.', ',')}%`);
+  linhas.push('');
+
+  linhas.push('--- POLÍTICA DE REINVESTIMENTO DE LUCRO EM CAMPANHAS ---');
+  linhas.push(`Meta de Reinvestimento Configurada (%);${balanco.percentualReinvestimento.toFixed(1).replace('.', ',')}%`);
+  linhas.push(`Orçamento Destinado a Novas Campanhas (R$);R$ ${formatarMoeda(balanco.valorReinvestimentoCampanhas)}`);
+  linhas.push(`Lucro Líquido Real / Retirada do Caixa (R$);R$ ${formatarMoeda(balanco.valorLucroDisponivel)}`);
+  linhas.push(`Total de Dias com Lançamentos;${balanco.totalDiasLancados}`);
+  linhas.push('');
+
+  linhas.push('--- DISCRIMINAÇÃO DOS LANÇAMENTOS DIÁRIOS ---');
+  linhas.push('Data;Gasto em Campanhas (R$);Lucro Bruto (R$);Saldo Líquido Dia (R$);Reinvestimento Sugerido (R$);Lucro Livre Dia (R$);Categoria;Descrição / Observações');
+
+  balanco.itens.forEach((it) => {
+    const saldoDia = (Number(it.lucro_bruto) || 0) - (Number(it.gasto_campanhas) || 0);
+    const reinvestDia = saldoDia > 0 ? saldoDia * (balanco.percentualReinvestimento / 100) : 0;
+    const livreDia = saldoDia > 0 ? saldoDia - reinvestDia : saldoDia;
+
+    linhas.push(
+      `"${formatarData(it.data_lancamento)}";${(Number(it.gasto_campanhas) || 0).toFixed(2).replace('.', ',')};${(Number(it.lucro_bruto) || 0).toFixed(2).replace('.', ',')};${saldoDia.toFixed(2).replace('.', ',')};${reinvestDia.toFixed(2).replace('.', ',')};${livreDia.toFixed(2).replace('.', ',')};"${it.categoria || 'geral'}";"${(it.descricao || '').replace(/"/g, '""')}"`
     );
   });
 

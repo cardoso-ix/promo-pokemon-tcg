@@ -176,10 +176,24 @@ db.exec(`
     criado_em TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS financas_lancamentos_diarios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    data_lancamento TEXT NOT NULL,
+    mes_referencia TEXT NOT NULL,
+    gasto_campanhas REAL NOT NULL DEFAULT 0,
+    lucro_bruto REAL NOT NULL DEFAULT 0,
+    descricao TEXT,
+    categoria TEXT DEFAULT 'geral',
+    criado_em TEXT NOT NULL,
+    atualizado_em TEXT NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_financas_uploads_mes ON financas_uploads(mes_referencia);
   CREATE INDEX IF NOT EXISTS idx_financas_itens_mes ON financas_itens(mes_referencia);
   CREATE INDEX IF NOT EXISTS idx_financas_itens_upload ON financas_itens(upload_id);
   CREATE INDEX IF NOT EXISTS idx_financas_despesas_data ON financas_despesas(data_despesa);
+  CREATE INDEX IF NOT EXISTS idx_financas_lancamentos_mes ON financas_lancamentos_diarios(mes_referencia);
+  CREATE INDEX IF NOT EXISTS idx_financas_lancamentos_data ON financas_lancamentos_diarios(data_lancamento);
 `);
 
 // Migração suave de colunas na tabela campanhas
@@ -1037,10 +1051,21 @@ export function deleteFinancasUpload(id: number): { id: number; caminhoArquivo: 
 }
 
 export function listarMesesDisponiveisFinancas(): string[] {
-  const rows: any[] = db
-    .prepare('SELECT DISTINCT mes_referencia FROM financas_uploads ORDER BY mes_referencia DESC')
+  const rowsUploads: any[] = db
+    .prepare('SELECT DISTINCT mes_referencia FROM financas_uploads')
     .all();
-  return rows.map((r) => r.mes_referencia).filter(Boolean);
+  const rowsLancamentos: any[] = db
+    .prepare('SELECT DISTINCT mes_referencia FROM financas_lancamentos_diarios')
+    .all();
+
+  const setMeses = new Set<string>();
+  rowsUploads.forEach((r) => { if (r.mes_referencia) setMeses.add(r.mes_referencia); });
+  rowsLancamentos.forEach((r) => { if (r.mes_referencia) setMeses.add(r.mes_referencia); });
+
+  const mesAtual = new Date().toISOString().substring(0, 7);
+  setMeses.add(mesAtual);
+
+  return Array.from(setMeses).sort().reverse();
 }
 
 export function obterConsolidadoMensalFinancas(mesReferencia: string): FinancasConsolidadoMensal {
@@ -1305,6 +1330,141 @@ export function deleteDespesaPdf(id: number): { id: number; caminhoArquivo: stri
   return {
     id: registro.id,
     caminhoArquivo: registro.caminho_arquivo
+  };
+}
+
+// ==========================================
+// LANÇAMENTOS DIÁRIOS & BALANÇO MENSAL DRE
+// ==========================================
+
+export interface FinancasLancamentoInput {
+  dataLancamento: string; // YYYY-MM-DD
+  gastoCampanhas: number;
+  lucroBruto: number;
+  descricao?: string;
+  categoria?: string;
+}
+
+export interface FinancasLancamentoRow {
+  id: number;
+  data_lancamento: string;
+  mes_referencia: string;
+  gasto_campanhas: number;
+  lucro_bruto: number;
+  descricao: string | null;
+  categoria: string;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export interface FinancasBalancoMensal {
+  mesReferencia: string;
+  totalGastoCampanhas: number;
+  totalLucroBruto: number;
+  resultadoLiquido: number;
+  status: 'lucro' | 'prejuizo' | 'neutro';
+  percentualReinvestimento: number;
+  valorReinvestimentoCampanhas: number;
+  valorLucroDisponivel: number;
+  margemLiquidaPercentual: number;
+  roiPercentual: number;
+  totalDiasLancados: number;
+  itens: FinancasLancamentoRow[];
+}
+
+export function getPercentualReinvestimento(): number {
+  const val = parseFloat(getConfig('financas_percentual_reinvestimento', '70'));
+  return isNaN(val) ? 70 : Math.max(0, Math.min(100, val));
+}
+
+export function setPercentualReinvestimento(pct: number): void {
+  const seguro = isNaN(pct) ? 70 : Math.max(0, Math.min(100, pct));
+  setConfig('financas_percentual_reinvestimento', String(seguro));
+}
+
+export function salvarLancamentoDiario(input: FinancasLancamentoInput): number {
+  const data = (input.dataLancamento || '').trim() || new Date().toISOString().substring(0, 10);
+  const mesRef = data.substring(0, 7);
+  const gasto = Number(input.gastoCampanhas) || 0;
+  const lucro = Number(input.lucroBruto) || 0;
+  const desc = input.descricao?.trim() || null;
+  const cat = input.categoria?.trim() || 'geral';
+  const agora = new Date().toISOString();
+
+  const stmt = db.prepare(`
+    INSERT INTO financas_lancamentos_diarios (
+      data_lancamento, mes_referencia, gasto_campanhas, lucro_bruto,
+      descricao, categoria, criado_em, atualizado_em
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const info = stmt.run(data, mesRef, gasto, lucro, desc, cat, agora, agora);
+  return Number(info.lastInsertRowid);
+}
+
+export function listarLancamentosDiarios(mesReferencia?: string): FinancasLancamentoRow[] {
+  if (mesReferencia && mesReferencia.trim()) {
+    return db
+      .prepare('SELECT * FROM financas_lancamentos_diarios WHERE mes_referencia = ? ORDER BY data_lancamento DESC, id DESC')
+      .all(mesReferencia.trim()) as FinancasLancamentoRow[];
+  }
+  return db
+    .prepare('SELECT * FROM financas_lancamentos_diarios ORDER BY data_lancamento DESC, id DESC')
+    .all() as FinancasLancamentoRow[];
+}
+
+export function deleteLancamentoDiario(id: number): boolean {
+  const res = db.prepare('DELETE FROM financas_lancamentos_diarios WHERE id = ?').run(id);
+  return res.changes > 0;
+}
+
+export function getBalancoMensal(mesReferencia: string): FinancasBalancoMensal {
+  const mes = (mesReferencia || '').trim() || new Date().toISOString().substring(0, 7);
+  const itens = listarLancamentosDiarios(mes);
+  const pctReinvestimento = getPercentualReinvestimento();
+
+  let totalGasto = 0;
+  let totalLucro = 0;
+  const diasUnicos = new Set<string>();
+
+  for (const it of itens) {
+    totalGasto += Number(it.gasto_campanhas) || 0;
+    totalLucro += Number(it.lucro_bruto) || 0;
+    if (it.data_lancamento) diasUnicos.add(it.data_lancamento);
+  }
+
+  totalGasto = Math.round(totalGasto * 100) / 100;
+  totalLucro = Math.round(totalLucro * 100) / 100;
+  const resultadoLiquido = Math.round((totalLucro - totalGasto) * 100) / 100;
+
+  let status: 'lucro' | 'prejuizo' | 'neutro' = 'neutro';
+  if (resultadoLiquido > 0) status = 'lucro';
+  else if (resultadoLiquido < 0) status = 'prejuizo';
+
+  let valorReinvestimentoCampanhas = 0;
+  let valorLucroDisponivel = resultadoLiquido;
+
+  if (resultadoLiquido > 0) {
+    valorReinvestimentoCampanhas = Math.round((resultadoLiquido * (pctReinvestimento / 100)) * 100) / 100;
+    valorLucroDisponivel = Math.round((resultadoLiquido - valorReinvestimentoCampanhas) * 100) / 100;
+  }
+
+  const margemLiquidaPercentual = totalLucro > 0 ? Math.round((resultadoLiquido / totalLucro) * 10000) / 100 : 0;
+  const roiPercentual = totalGasto > 0 ? Math.round(((totalLucro - totalGasto) / totalGasto) * 10000) / 100 : 0;
+
+  return {
+    mesReferencia: mes,
+    totalGastoCampanhas: totalGasto,
+    totalLucroBruto: totalLucro,
+    resultadoLiquido,
+    status,
+    percentualReinvestimento: pctReinvestimento,
+    valorReinvestimentoCampanhas,
+    valorLucroDisponivel,
+    margemLiquidaPercentual,
+    roiPercentual,
+    totalDiasLancados: diasUnicos.size,
+    itens
   };
 }
 
