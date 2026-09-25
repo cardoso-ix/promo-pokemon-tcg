@@ -162,9 +162,24 @@ db.exec(`
     FOREIGN KEY(upload_id) REFERENCES financas_uploads(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS financas_despesas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome_arquivo TEXT NOT NULL,
+    caminho_arquivo TEXT NOT NULL,
+    tamanho_bytes INTEGER NOT NULL,
+    data_despesa TEXT NOT NULL,
+    valor REAL NOT NULL,
+    descricao TEXT NOT NULL,
+    conta_anuncio TEXT,
+    metodo_pagamento TEXT,
+    observacoes TEXT,
+    criado_em TEXT NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_financas_uploads_mes ON financas_uploads(mes_referencia);
   CREATE INDEX IF NOT EXISTS idx_financas_itens_mes ON financas_itens(mes_referencia);
   CREATE INDEX IF NOT EXISTS idx_financas_itens_upload ON financas_itens(upload_id);
+  CREATE INDEX IF NOT EXISTS idx_financas_despesas_data ON financas_despesas(data_despesa);
 `);
 
 // Migração suave de colunas na tabela campanhas
@@ -1148,6 +1163,141 @@ export function obterConsolidadoMensalFinancas(mesReferencia: string): FinancasC
     },
     semanas,
     topCampanhas
+  };
+}
+
+// ==========================================
+// DESPESAS E FATURAS EM PDF (Meta Ads)
+// ==========================================
+
+export interface FinancasDespesaInput {
+  nomeArquivo: string;
+  caminhoArquivo: string;
+  tamanhoBytes: number;
+  dataDespesa: string; // YYYY-MM-DD
+  valor: number;
+  descricao: string;
+  contaAnuncio?: string | null;
+  metodoPagamento?: string | null;
+  observacoes?: string | null;
+}
+
+export interface FinancasDespesaRow {
+  id: number;
+  nome_arquivo: string;
+  caminho_arquivo: string;
+  tamanho_bytes: number;
+  data_despesa: string;
+  valor: number;
+  descricao: string;
+  conta_anuncio: string | null;
+  metodo_pagamento: string | null;
+  observacoes: string | null;
+  criado_em: string;
+}
+
+export interface FinancasResumoPeriodo {
+  dataInicio: string | null;
+  dataFim: string | null;
+  totalGasto: number;
+  totalFaturas: number;
+  maiorDespesa: number;
+  mediaPorFatura: number;
+  itens: FinancasDespesaRow[];
+}
+
+export function salvarDespesaPdf(despesa: FinancasDespesaInput): number {
+  const agora = new Date().toISOString();
+  const stmt = db.prepare(`
+    INSERT INTO financas_despesas (
+      nome_arquivo, caminho_arquivo, tamanho_bytes, data_despesa,
+      valor, descricao, conta_anuncio, metodo_pagamento, observacoes, criado_em
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const res = stmt.run(
+    despesa.nomeArquivo,
+    despesa.caminhoArquivo,
+    despesa.tamanhoBytes,
+    despesa.dataDespesa,
+    Number(despesa.valor) || 0,
+    despesa.descricao,
+    despesa.contaAnuncio || null,
+    despesa.metodoPagamento || null,
+    despesa.observacoes || null,
+    agora
+  );
+
+  return Number(res.lastInsertRowid);
+}
+
+export function listarDespesasPeriodo(dataInicio?: string, dataFim?: string): FinancasDespesaRow[] {
+  let query = 'SELECT * FROM financas_despesas';
+  const params: any[] = [];
+
+  const condicoes: string[] = [];
+  if (dataInicio && dataInicio.trim()) {
+    condicoes.push('data_despesa >= ?');
+    params.push(dataInicio.trim());
+  }
+  if (dataFim && dataFim.trim()) {
+    condicoes.push('data_despesa <= ?');
+    params.push(dataFim.trim());
+  }
+
+  if (condicoes.length > 0) {
+    query += ' WHERE ' + condicoes.join(' AND ');
+  }
+
+  query += ' ORDER BY data_despesa DESC, id DESC';
+
+  return db.prepare(query).all(...params) as FinancasDespesaRow[];
+}
+
+export function obterResumoDespesasPeriodo(dataInicio?: string, dataFim?: string): FinancasResumoPeriodo {
+  const itens = listarDespesasPeriodo(dataInicio, dataFim);
+
+  let totalGasto = 0;
+  let maiorDespesa = 0;
+
+  for (const it of itens) {
+    const val = Number(it.valor) || 0;
+    totalGasto += val;
+    if (val > maiorDespesa) {
+      maiorDespesa = val;
+    }
+  }
+
+  totalGasto = Number(totalGasto.toFixed(2));
+  maiorDespesa = Number(maiorDespesa.toFixed(2));
+  const totalFaturas = itens.length;
+  const mediaPorFatura = totalFaturas > 0 ? Number((totalGasto / totalFaturas).toFixed(2)) : 0;
+
+  return {
+    dataInicio: dataInicio || null,
+    dataFim: dataFim || null,
+    totalGasto,
+    totalFaturas,
+    maiorDespesa,
+    mediaPorFatura,
+    itens
+  };
+}
+
+export function getDespesaPdfById(id: number): FinancasDespesaRow | null {
+  const row = db.prepare('SELECT * FROM financas_despesas WHERE id = ?').get(id) as FinancasDespesaRow | undefined;
+  return row || null;
+}
+
+export function deleteDespesaPdf(id: number): { id: number; caminhoArquivo: string } | null {
+  const registro = getDespesaPdfById(id);
+  if (!registro) return null;
+
+  db.prepare('DELETE FROM financas_despesas WHERE id = ?').run(id);
+
+  return {
+    id: registro.id,
+    caminhoArquivo: registro.caminho_arquivo
   };
 }
 

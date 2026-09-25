@@ -60,6 +60,14 @@ npm test
    - Integração com o gateway OpenCode (`https://opencode.ai/zen/go/v1`) com modelos `deepseek-v4-pro` e `deepseek-v4-flash`.
    - Sandbox interativa para testar respostas da IA diretamente no navegador.
 
+5. **Gestão Financeira & Faturas PDF (Meta Ads):**
+   - **Upload Inteligente de Faturas em PDF:** Upload direto das faturas e recibos de cobrança do Meta Ads (`.pdf`) com armazenamento permanente no volume de dados.
+   - **Extração Automática com `pdf-parse`:** Leitura e detecção instantânea da data da despesa, valor total cobrado (R$), identificador da transação e método de pagamento.
+   - **Filtro de Período por Calendário Livre:** Seletor de Data Início (`De:`) e Data Fim (`Até:`) com atalhos rápidos (*Este Mês*, *Últimos 7 dias*, *Últimos 30 dias*, *Mês Anterior*, *Todo o Período*).
+   - **KPIs Executivos em Tempo Real:** Total consumido no período selecionado, quantidade de faturas arquivadas, gasto médio por fatura e maior despesa.
+   - **Ações Rápidas no PDF:** Botão para visualizar o PDF original inline no navegador, download direto e exclusão com remoção de arquivo físico.
+   - **Exportação & Impressão:** Exportação dos lançamentos em CSV (com UTF-8 BOM para Excel) e impressão de relatório executivo consolidado em PDF (`window.print`).
+
 ---
 
 ## 📁 Estrutura de Diretórios

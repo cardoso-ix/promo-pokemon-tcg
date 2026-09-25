@@ -2874,6 +2874,494 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ==========================================
+  // MÓDULO DE FINANÇAS & FATURAS PDF (META ADS)
+  // ==========================================
+  function setupFinancasListeners() {
+    const dataInicioInput = document.getElementById('financas-data-inicio');
+    const dataFimInput = document.getElementById('financas-data-fim');
+    const btnFiltrar = document.getElementById('btn-financas-filtrar');
+    const chipsPeriodo = document.querySelectorAll('.chip-periodo');
+    const btnExportarCsv = document.getElementById('btn-financas-exportar-csv');
+    const btnImprimir = document.getElementById('btn-financas-imprimir');
+
+    const pdfDropzone = document.getElementById('financas-pdf-dropzone');
+    const pdfInput = document.getElementById('financas-pdf-input');
+    const previewPanel = document.getElementById('financas-pdf-preview-panel');
+    const btnCancelarPdf = document.getElementById('btn-cancelar-pdf');
+    const btnSalvarDespesaPdf = document.getElementById('btn-salvar-despesa-pdf');
+
+    let arquivoPdfAtual = null;
+
+    // Inicializar datas com o mês corrente (Dia 01 até Hoje)
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    const hojeIso = `${ano}-${mes}-${dia}`;
+    const primeiroDiaMesIso = `${ano}-${mes}-01`;
+
+    if (dataInicioInput && !dataInicioInput.value) {
+      dataInicioInput.value = primeiroDiaMesIso;
+    }
+    if (dataFimInput && !dataFimInput.value) {
+      dataFimInput.value = hojeIso;
+    }
+
+    // Carregar despesas do período atual
+    async function carregarDespesas() {
+      const inicio = (dataInicioInput?.value || '').trim();
+      const fim = (dataFimInput?.value || '').trim();
+
+      const tbody = document.getElementById('financas-despesas-tbody');
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 28px;">
+              ⏳ Carregando despesas do período selecionado...
+            </td>
+          </tr>
+        `;
+      }
+
+      try {
+        const queryParams = new URLSearchParams();
+        if (inicio) queryParams.set('inicio', inicio);
+        if (fim) queryParams.set('fim', fim);
+
+        const res = await fetch(`/api/financas/despesas?${queryParams.toString()}`);
+        const data = await res.json();
+
+        if (!data.ok || !data.resumo) {
+          throw new Error(data.error || 'Erro ao carregar despesas.');
+        }
+
+        renderizarDespesas(data.resumo, inicio, fim);
+      } catch (err) {
+        console.error('Erro ao buscar despesas:', err);
+        if (tbody) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; color: #ef4444; padding: 24px;">
+                ❌ Erro ao consultar despesas: ${escapeHtml(err.message)}
+              </td>
+            </tr>
+          `;
+        }
+      }
+    }
+
+    function renderizarDespesas(resumo, inicio, fim) {
+      const formatarDataBr = (iso) => {
+        if (!iso) return '';
+        const partes = iso.split('-');
+        if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        return iso;
+      };
+
+      const periodoFormatado = inicio && fim
+        ? `${formatarDataBr(inicio)} a ${formatarDataBr(fim)}`
+        : (inicio ? `A partir de ${formatarDataBr(inicio)}` : (fim ? `Até ${formatarDataBr(fim)}` : 'Todo o Período'));
+
+      // Atualizar badges e labels
+      const badgeTabela = document.getElementById('financas-tabela-periodo-badge');
+      if (badgeTabela) badgeTabela.textContent = periodoFormatado;
+
+      const kpiPeriodoLabel = document.getElementById('financas-kpi-periodo-label');
+      if (kpiPeriodoLabel) kpiPeriodoLabel.textContent = periodoFormatado;
+
+      // KPIs
+      const kpiGasto = document.getElementById('financas-kpi-gasto');
+      if (kpiGasto) kpiGasto.textContent = `R$ ${resumo.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      const kpiFaturas = document.getElementById('financas-kpi-faturas-count');
+      if (kpiFaturas) kpiFaturas.textContent = `${resumo.totalFaturas}`;
+
+      const kpiMedia = document.getElementById('financas-kpi-media');
+      if (kpiMedia) kpiMedia.textContent = `R$ ${resumo.mediaPorFatura.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      const kpiMaior = document.getElementById('financas-kpi-maior');
+      if (kpiMaior) kpiMaior.textContent = `R$ ${resumo.maiorDespesa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      // Badges do card
+      const badgeCount = document.getElementById('badge-total-despesas-count');
+      if (badgeCount) badgeCount.textContent = `${resumo.totalFaturas} ${resumo.totalFaturas === 1 ? 'fatura' : 'faturas'}`;
+
+      const badgeValor = document.getElementById('badge-total-despesas-valor');
+      if (badgeValor) badgeValor.textContent = `R$ ${resumo.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      // Rodapé Fechamento
+      const fechPeriodo = document.getElementById('fechamento-periodo-texto');
+      if (fechPeriodo) fechPeriodo.textContent = periodoFormatado;
+
+      const fechQtd = document.getElementById('fechamento-qtd-faturas');
+      if (fechQtd) fechQtd.textContent = `${resumo.totalFaturas} faturas`;
+
+      const fechTotal = document.getElementById('fechamento-total-consumido');
+      if (fechTotal) fechTotal.textContent = `R$ ${resumo.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      // Tabela de itens
+      const tbody = document.getElementById('financas-despesas-tbody');
+      if (!tbody) return;
+
+      if (!resumo.itens || resumo.itens.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px;">
+              Nenhuma despesa ou fatura em PDF encontrada para o período <strong>${escapeHtml(periodoFormatado)}</strong>.<br>
+              <span style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; display: inline-block;">
+                Arraste o PDF da sua fatura acima para registrar os custos consumidos.
+              </span>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = resumo.itens.map(it => {
+        const dataBr = formatarDataBr(it.data_despesa);
+        const valorFmt = Number(it.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const tamanhoKb = (it.tamanho_bytes / 1024).toFixed(0);
+        const detalhePagto = [it.metodo_pagamento, it.conta_anuncio].filter(Boolean).join(' • ') || 'Meta Ads';
+
+        return `
+          <tr data-id="${it.id}">
+            <td style="font-weight: 600; color: #fff;">
+              📅 ${escapeHtml(dataBr)}
+            </td>
+            <td>
+              <strong style="color: #fff; display: block; font-size: 13.5px;">${escapeHtml(it.descricao)}</strong>
+              ${it.observacoes ? `<span style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(it.observacoes)}</span>` : ''}
+            </td>
+            <td>
+              <span style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary);" title="${escapeHtml(it.nome_arquivo)}">
+                📄 <span style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(it.nome_arquivo)}</span>
+                <small style="color: var(--text-muted);">(${tamanhoKb} KB)</small>
+              </span>
+            </td>
+            <td>
+              <span class="badge" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); color: var(--text-secondary); font-size: 11.5px;">
+                ${escapeHtml(detalhePagto)}
+              </span>
+            </td>
+            <td style="text-align: right; font-weight: 700; color: #4ade80; font-size: 15px;">
+              R$ ${valorFmt}
+            </td>
+            <td style="text-align: right; white-space: nowrap;">
+              <div style="display: inline-flex; gap: 6px; align-items: center;">
+                <a href="/api/financas/despesas/pdf/${it.id}" target="_blank" class="btn btn-secondary btn-sm" title="Visualizar PDF original em nova aba" style="padding: 4px 8px; font-size: 12px; text-decoration: none;">
+                  👁️ Ver
+                </a>
+                <a href="/api/financas/despesas/download/${it.id}" class="btn btn-secondary btn-sm" title="Baixar PDF original" style="padding: 4px 8px; font-size: 12px; text-decoration: none;">
+                  ⬇️
+                </a>
+                <button type="button" class="btn btn-danger btn-sm btn-delete-despesa" data-id="${it.id}" data-nome="${escapeHtml(it.descricao)}" title="Excluir despesa e remover PDF" style="padding: 4px 8px; font-size: 12px;">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Listeners de exclusão
+      tbody.querySelectorAll('.btn-delete-despesa').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-id');
+          const nome = btn.getAttribute('data-nome');
+          if (!confirm(`Tem certeza que deseja excluir a despesa "${nome}" e apagar o arquivo PDF correspondente?`)) {
+            return;
+          }
+
+          try {
+            const delRes = await fetch(`/api/financas/despesas/${id}`, { method: 'DELETE' });
+            const delData = await delRes.json();
+            if (delData.ok) {
+              carregarDespesas();
+            } else {
+              alert(delData.error || 'Erro ao excluir despesa.');
+            }
+          } catch (err) {
+            alert('Erro de conexão ao excluir despesa: ' + err.message);
+          }
+        });
+      });
+    }
+
+    // Filtrar ao clicar no botão
+    if (btnFiltrar) {
+      btnFiltrar.addEventListener('click', () => {
+        chipsPeriodo.forEach(c => c.classList.remove('active'));
+        carregarDespesas();
+      });
+    }
+
+    // Atalhos Rápidos (Chips)
+    chipsPeriodo.forEach(chip => {
+      chip.addEventListener('click', () => {
+        chipsPeriodo.forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+
+        const tipo = chip.getAttribute('data-periodo');
+        const now = new Date();
+
+        if (tipo === 'mes-atual') {
+          const y = now.getFullYear();
+          const m = String(now.getMonth() + 1).padStart(2, '0');
+          const d = String(now.getDate()).padStart(2, '0');
+          dataInicioInput.value = `${y}-${m}-01`;
+          dataFimInput.value = `${y}-${m}-${d}`;
+        } else if (tipo === 'ultimos-7') {
+          const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          dataInicioInput.value = past.toISOString().split('T')[0];
+          dataFimInput.value = now.toISOString().split('T')[0];
+        } else if (tipo === 'ultimos-30') {
+          const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          dataInicioInput.value = past.toISOString().split('T')[0];
+          dataFimInput.value = now.toISOString().split('T')[0];
+        } else if (tipo === 'mes-anterior') {
+          const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+          dataInicioInput.value = firstDayLastMonth.toISOString().split('T')[0];
+          dataFimInput.value = lastDayLastMonth.toISOString().split('T')[0];
+        } else if (tipo === 'todos') {
+          dataInicioInput.value = '';
+          dataFimInput.value = '';
+        }
+
+        carregarDespesas();
+      });
+    });
+
+    // Exportar CSV
+    if (btnExportarCsv) {
+      btnExportarCsv.addEventListener('click', () => {
+        const inicio = (dataInicioInput?.value || '').trim();
+        const fim = (dataFimInput?.value || '').trim();
+        const queryParams = new URLSearchParams();
+        if (inicio) queryParams.set('inicio', inicio);
+        if (fim) queryParams.set('fim', fim);
+        window.location.href = `/api/financas/despesas/exportar-csv?${queryParams.toString()}`;
+      });
+    }
+
+    // Imprimir / Salvar PDF
+    if (btnImprimir) {
+      btnImprimir.addEventListener('click', () => {
+        window.print();
+      });
+    }
+
+    // --- UPLOAD E ANÁLISE DE PDF ---
+    if (pdfDropzone && pdfInput) {
+      pdfDropzone.addEventListener('click', () => pdfInput.click());
+
+      pdfDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        pdfDropzone.classList.add('dragover');
+      });
+
+      pdfDropzone.addEventListener('dragleave', () => {
+        pdfDropzone.classList.remove('dragover');
+      });
+
+      pdfDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        pdfDropzone.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          tratarArquivoPdf(e.dataTransfer.files[0]);
+        }
+      });
+
+      pdfInput.addEventListener('change', () => {
+        if (pdfInput.files && pdfInput.files[0]) {
+          tratarArquivoPdf(pdfInput.files[0]);
+        }
+      });
+    }
+
+    async function tratarArquivoPdf(file) {
+      if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+        alert('Por favor, selecione um arquivo no formato PDF (.pdf).');
+        return;
+      }
+
+      arquivoPdfAtual = file;
+
+      const titleEl = document.getElementById('pdf-dropzone-title');
+      const subtitleEl = document.getElementById('pdf-dropzone-subtitle');
+      const badgeFilename = document.getElementById('pdf-dropzone-filename');
+
+      if (titleEl) titleEl.textContent = '🔍 Lendo arquivo e extraindo dados do recibo...';
+      if (subtitleEl) subtitleEl.textContent = file.name;
+      if (badgeFilename) {
+        badgeFilename.textContent = `Arquivo: ${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
+        badgeFilename.style.display = 'inline-flex';
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const res = await fetch('/api/financas/despesas/analisar-pdf', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await res.json();
+        if (!data.ok) {
+          throw new Error(data.error || 'Não foi possível analisar o PDF.');
+        }
+
+        const sug = data.sugestao || {};
+
+        const inputData = document.getElementById('financas-input-data');
+        const inputValor = document.getElementById('financas-input-valor');
+        const inputDesc = document.getElementById('financas-input-desc');
+        const inputMetodo = document.getElementById('financas-input-metodo');
+        const inputConta = document.getElementById('financas-input-conta');
+
+        if (inputData) inputData.value = sug.dataSugerida || hojeIso;
+        if (inputValor) inputValor.value = sug.valorSugerido ? sug.valorSugerido.toFixed(2) : '';
+        if (inputDesc) inputDesc.value = sug.descricaoSugerida || `Recibo Meta Ads - ${file.name}`;
+        if (inputMetodo) inputMetodo.value = sug.metodoPagamento || '';
+        if (inputConta) inputConta.value = sug.contaAnuncio || '';
+
+        if (titleEl) titleEl.textContent = '✅ Fatura PDF Selecionada!';
+        if (subtitleEl) subtitleEl.textContent = 'Confira os dados detectados abaixo e clique em Confirmar.';
+
+        if (previewPanel) {
+          previewPanel.style.display = 'block';
+          previewPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      } catch (err) {
+        console.warn('Fallback na leitura automática do PDF:', err);
+        const inputData = document.getElementById('financas-input-data');
+        const inputValor = document.getElementById('financas-input-valor');
+        const inputDesc = document.getElementById('financas-input-desc');
+
+        if (inputData && !inputData.value) inputData.value = hojeIso;
+        if (inputValor && !inputValor.value) inputValor.value = '';
+        if (inputDesc && !inputDesc.value) inputDesc.value = `Fatura Meta Ads - ${file.name}`;
+
+        if (titleEl) titleEl.textContent = '📄 Fatura PDF Pronta para Registro';
+        if (subtitleEl) subtitleEl.textContent = 'Preencha a data e o valor nos campos abaixo para arquivar.';
+
+        if (previewPanel) {
+          previewPanel.style.display = 'block';
+        }
+      }
+    }
+
+    if (btnCancelarPdf) {
+      btnCancelarPdf.addEventListener('click', () => {
+        limparUploadPdf();
+      });
+    }
+
+    function limparUploadPdf() {
+      arquivoPdfAtual = null;
+      if (pdfInput) pdfInput.value = '';
+
+      const titleEl = document.getElementById('pdf-dropzone-title');
+      const subtitleEl = document.getElementById('pdf-dropzone-subtitle');
+      const badgeFilename = document.getElementById('pdf-dropzone-filename');
+
+      if (titleEl) titleEl.textContent = 'Arraste a fatura ou recibo em PDF aqui';
+      if (subtitleEl) subtitleEl.textContent = 'ou clique para selecionar o arquivo PDF do seu computador';
+      if (badgeFilename) {
+        badgeFilename.textContent = '';
+        badgeFilename.style.display = 'none';
+      }
+
+      if (previewPanel) {
+        previewPanel.style.display = 'none';
+      }
+    }
+
+    if (btnSalvarDespesaPdf) {
+      btnSalvarDespesaPdf.addEventListener('click', async () => {
+        if (!arquivoPdfAtual) {
+          alert('Nenhum arquivo PDF foi selecionado.');
+          return;
+        }
+
+        const inputData = document.getElementById('financas-input-data');
+        const inputValor = document.getElementById('financas-input-valor');
+        const inputDesc = document.getElementById('financas-input-desc');
+        const inputMetodo = document.getElementById('financas-input-metodo');
+        const inputConta = document.getElementById('financas-input-conta');
+
+        const dataDespesa = inputData?.value?.trim();
+        const valor = parseFloat(inputValor?.value || '0');
+        const descricao = inputDesc?.value?.trim();
+        const metodoPagamento = inputMetodo?.value?.trim();
+        const contaAnuncio = inputConta?.value?.trim();
+
+        if (!dataDespesa) {
+          alert('Por favor, informe a data da despesa.');
+          inputData?.focus();
+          return;
+        }
+
+        if (isNaN(valor) || valor <= 0) {
+          alert('Por favor, informe um valor consumido válido maior que zero (R$).');
+          inputValor?.focus();
+          return;
+        }
+
+        if (!descricao) {
+          alert('Por favor, informe uma descrição ou identificador para a fatura.');
+          inputDesc?.focus();
+          return;
+        }
+
+        btnSalvarDespesaPdf.disabled = true;
+        btnSalvarDespesaPdf.textContent = '⏳ Salvando no servidor...';
+
+        try {
+          const formData = new FormData();
+          formData.append('file', arquivoPdfAtual);
+          formData.append('dataDespesa', dataDespesa);
+          formData.append('valor', valor.toString());
+          formData.append('descricao', descricao);
+          if (metodoPagamento) formData.append('metodoPagamento', metodoPagamento);
+          if (contaAnuncio) formData.append('contaAnuncio', contaAnuncio);
+
+          const res = await fetch('/api/financas/despesas/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await res.json();
+          if (!data.ok) {
+            throw new Error(data.error || 'Erro ao arquivar fatura.');
+          }
+
+          limparUploadPdf();
+          carregarDespesas();
+          alert(`✅ Fatura arquivada com sucesso!\nValor: R$ ${valor.toFixed(2)} | Data: ${dataDespesa}`);
+        } catch (err) {
+          alert('Erro ao salvar despesa: ' + err.message);
+        } finally {
+          btnSalvarDespesaPdf.disabled = false;
+          btnSalvarDespesaPdf.textContent = '💾 Confirmar e Salvar Despesa';
+        }
+      });
+    }
+
+    // Carregar ao clicar na aba Finanças
+    const navFinancas = document.querySelector('[data-tab="financas"]');
+    if (navFinancas) {
+      navFinancas.addEventListener('click', () => {
+        carregarDespesas();
+      });
+    }
+
+    // Carga inicial
+    carregarDespesas();
+  }
+
   // Inicialização
   initFireParticles();
   setupCockpitSwitchers();
@@ -2883,4 +3371,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initSSE();
   setInterval(loadStatus, 10000);
 });
+
 

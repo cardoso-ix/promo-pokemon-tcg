@@ -37,13 +37,19 @@ import {
   listarFinancasUploads,
   getFinancasUploadById,
   listarMesesDisponiveisFinancas,
+  getDespesaPdfById,
+  obterResumoDespesasPeriodo,
   db
 } from '../db/database.js';
 import {
   arquivarPlanilhaSemanal,
   removerUploadArquivado,
   gerarRelatorioExecutivo,
-  exportarRelatorioCsv
+  exportarRelatorioCsv,
+  extrairDadosPdfFatura,
+  arquivarDespesaPdf,
+  removerDespesaPdf,
+  exportarRelatorioPeriodoCsv
 } from '../core/financas.js';
 import { whatsapp, WhatsAppState } from '../whatsapp/client.js';
 import { dispatchEngine } from '../core/engine.js';
@@ -920,6 +926,155 @@ export async function createServer() {
 
     logSistema('warn', 'financas', `Planilha arquivada ID ${id} removida pelo usuário.`);
     return { ok: true, id, message: 'Upload removido com sucesso.' };
+  });
+
+  // ==========================================
+  // FATURAS & DESPESAS EM PDF (META ADS)
+  // ==========================================
+
+  // Analisar PDF para extrair automaticamente data, valor e dados do recibo
+  app.post('/api/financas/despesas/analisar-pdf', async (req: any, reply) => {
+    try {
+      const part = await req.file();
+      if (!part) {
+        return reply.status(400).send({ ok: false, error: 'Nenhum arquivo enviado.' });
+      }
+
+      const buffer = await part.toBuffer();
+      if (!buffer || buffer.length === 0) {
+        return reply.status(400).send({ ok: false, error: 'O arquivo enviado está vazio.' });
+      }
+
+      const extraido = await extrairDadosPdfFatura(buffer, part.filename);
+      return {
+        ok: true,
+        nomeArquivo: part.filename,
+        tamanhoBytes: buffer.length,
+        sugestao: extraido
+      };
+    } catch (err: any) {
+      logSistema('error', 'financas', `Erro ao analisar fatura PDF: ${err.message}`);
+      return reply.status(400).send({ ok: false, error: err.message || 'Erro ao analisar fatura PDF.' });
+    }
+  });
+
+  // Upload e cadastro de fatura PDF (com extração inteligente e suporte a campos confirmados)
+  app.post('/api/financas/despesas/upload', async (req: any, reply) => {
+    try {
+      const part = await req.file();
+      if (!part) {
+        return reply.status(400).send({ ok: false, error: 'Nenhum arquivo enviado.' });
+      }
+
+      const buffer = await part.toBuffer();
+      if (!buffer || buffer.length === 0) {
+        return reply.status(400).send({ ok: false, error: 'O arquivo enviado está vazio.' });
+      }
+
+      const fields: any = part.fields || {};
+      const dataDespesa = (fields.dataDespesa?.value || req.query.dataDespesa || '').trim();
+      const valorStr = (fields.valor?.value || req.query.valor || '').trim();
+      const valor = valorStr ? parseFloat(valorStr) : undefined;
+      const descricao = (fields.descricao?.value || req.query.descricao || '').trim();
+      const contaAnuncio = (fields.contaAnuncio?.value || req.query.contaAnuncio || '').trim();
+      const metodoPagamento = (fields.metodoPagamento?.value || req.query.metodoPagamento || '').trim();
+      const observacoes = (fields.observacoes?.value || req.query.observacoes || '').trim();
+
+      const resultado = await arquivarDespesaPdf(buffer, part.filename, {
+        dataDespesa: dataDespesa || undefined,
+        valor: valor !== undefined && !isNaN(valor) ? valor : undefined,
+        descricao: descricao || undefined,
+        contaAnuncio: contaAnuncio || undefined,
+        metodoPagamento: metodoPagamento || undefined,
+        observacoes: observacoes || undefined
+      });
+
+      logSistema(
+        'info',
+        'financas',
+        `Fatura PDF arquivada com sucesso: "${resultado.despesa.nome_arquivo}" (Data: ${resultado.despesa.data_despesa}, R$ ${resultado.despesa.valor})`
+      );
+
+      return {
+        ok: true,
+        message: 'Fatura cadastrada e arquivada com sucesso.',
+        despesaId: resultado.despesaId,
+        despesa: resultado.despesa
+      };
+    } catch (err: any) {
+      logSistema('error', 'financas', `Erro ao arquivar fatura PDF: ${err.message}`);
+      return reply.status(400).send({ ok: false, error: err.message || 'Erro ao arquivar fatura PDF.' });
+    }
+  });
+
+  // Consultar despesas e resumo por intervalo de calendário (data início e data fim)
+  app.get('/api/financas/despesas', async (req: any) => {
+    const inicio = (req.query.inicio || '').trim();
+    const fim = (req.query.fim || '').trim();
+
+    const resumo = obterResumoDespesasPeriodo(inicio || undefined, fim || undefined);
+    return { ok: true, resumo };
+  });
+
+  // Visualizar PDF no navegador (inline)
+  app.get('/api/financas/despesas/pdf/:id', async (req: any, reply) => {
+    const id = parseInt(req.params.id, 10);
+    const despesa = getDespesaPdfById(id);
+
+    if (!despesa || !despesa.caminho_arquivo || !fs.existsSync(despesa.caminho_arquivo)) {
+      return reply.status(404).send({ ok: false, error: 'Arquivo PDF não encontrado no servidor.' });
+    }
+
+    const stream = fs.createReadStream(despesa.caminho_arquivo);
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `inline; filename="${encodeURIComponent(despesa.nome_arquivo)}"`);
+    return reply.send(stream);
+  });
+
+  // Download do arquivo PDF original
+  app.get('/api/financas/despesas/download/:id', async (req: any, reply) => {
+    const id = parseInt(req.params.id, 10);
+    const despesa = getDespesaPdfById(id);
+
+    if (!despesa || !despesa.caminho_arquivo || !fs.existsSync(despesa.caminho_arquivo)) {
+      return reply.status(404).send({ ok: false, error: 'Arquivo PDF não encontrado.' });
+    }
+
+    const stream = fs.createReadStream(despesa.caminho_arquivo);
+    reply.header('Content-Type', 'application/pdf');
+    reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(despesa.nome_arquivo)}"`);
+    return reply.send(stream);
+  });
+
+  // Excluir registro de despesa e o arquivo PDF físico correspondente
+  app.delete('/api/financas/despesas/:id', async (req: any, reply) => {
+    const id = parseInt(req.params.id, 10);
+    const despesa = getDespesaPdfById(id);
+    if (!despesa) {
+      return reply.status(404).send({ ok: false, error: 'Despesa não encontrada.' });
+    }
+
+    const sucesso = removerDespesaPdf(id);
+    if (!sucesso) {
+      return reply.status(500).send({ ok: false, error: 'Erro ao remover arquivo físico.' });
+    }
+
+    logSistema('warn', 'financas', `Despesa ID ${id} ("${despesa.descricao}", R$ ${despesa.valor}) removida pelo usuário.`);
+    return { ok: true, id, message: 'Despesa e fatura PDF removidas com sucesso.' };
+  });
+
+  // Exportar relatório em CSV do período selecionado
+  app.get('/api/financas/despesas/exportar-csv', async (req: any, reply) => {
+    const inicio = (req.query.inicio || '').trim();
+    const fim = (req.query.fim || '').trim();
+
+    const csvContent = exportarRelatorioPeriodoCsv(inicio || undefined, fim || undefined);
+    const csvComBom = '\uFEFF' + csvContent;
+
+    const sufixo = inicio && fim ? `${inicio}_a_${fim}` : 'geral';
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
+    reply.header('Content-Disposition', `attachment; filename="despesas_meta_ads_${sufixo}.csv"`);
+    return reply.send(csvComBom);
   });
 
   return app;

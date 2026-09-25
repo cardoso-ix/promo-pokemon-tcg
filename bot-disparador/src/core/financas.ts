@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import path from 'node:path';
 import fs from 'node:fs';
+import { PDFParse } from 'pdf-parse';
 import {
   DATA_DIR,
   salvarFinancasUpload,
@@ -11,7 +12,15 @@ import {
   listarMesesDisponiveisFinancas,
   FinancasUploadInput,
   FinancasItemInput,
-  FinancasConsolidadoMensal
+  FinancasConsolidadoMensal,
+  salvarDespesaPdf,
+  listarDespesasPeriodo,
+  obterResumoDespesasPeriodo,
+  getDespesaPdfById,
+  deleteDespesaPdf,
+  FinancasDespesaInput,
+  FinancasDespesaRow,
+  FinancasResumoPeriodo
 } from '../db/database.js';
 
 export interface PlanilhaProcessadaResult {
@@ -486,3 +495,313 @@ export function exportarRelatorioCsv(mesReferencia: string): string {
 
   return linhas.join('\n');
 }
+
+// ==========================================
+// PROCESSAMENTO INTELIGENTE DE FATURAS PDF (Meta Ads)
+// ==========================================
+
+const MESES_PT: Record<string, string> = {
+  janeiro: '01', jan: '01',
+  fevereiro: '02', fev: '02',
+  marco: '03', março: '03', mar: '03',
+  abril: '04', abr: '04',
+  maio: '05', mai: '05',
+  junho: '06', jun: '06',
+  julho: '07', jul: '07',
+  agosto: '08', ago: '08',
+  setembro: '09', set: '09',
+  outubro: '10', out: '10',
+  novembro: '11', nov: '11',
+  dezembro: '12', dez: '12'
+};
+
+/**
+ * Extrai todo o texto contido em um arquivo PDF usando pdf-parse com fallback seguro
+ */
+export async function extrairTextoDePdf(buffer: Buffer): Promise<string> {
+  try {
+    const parser = new PDFParse({ data: buffer });
+    const textResult = await parser.getText();
+    await parser.destroy();
+    if (textResult && typeof textResult.text === 'string' && textResult.text.trim()) {
+      return textResult.text;
+    }
+  } catch (err) {
+    // Falha silenciosa no parser; cai no fallback de leitura crua do buffer
+  }
+
+  return buffer.toString('utf-8');
+}
+
+export interface DadosFaturaPdfExtraidos {
+  dataSugerida: string;
+  valorSugerido: number;
+  descricaoSugerida: string;
+  contaAnuncio: string | null;
+  metodoPagamento: string | null;
+  textoExtraido: string;
+}
+
+/**
+ * Analisa o texto de faturas e recibos do Meta Ads (Facebook Ads / Instagram Ads)
+ * para detectar data, valor total cobrado, ID da transação e conta.
+ */
+export async function extrairDadosPdfFatura(
+  buffer: Buffer,
+  nomeArquivoOriginal: string
+): Promise<DadosFaturaPdfExtraidos> {
+  const texto = await extrairTextoDePdf(buffer);
+  const textoNorm = texto.replace(/\r\n/g, '\n');
+
+  // 1. Extração de Data
+  let dataSugerida = '';
+
+  // Padrão 1: "Data da transação: 15/09/2026" ou "Data: 15/09/2026" ou DD/MM/YYYY geral
+  const dataBrRegex = /(?:data(?:\s+da\s+transa[çc][aã]o|\s+de\s+faturamento|\s+do\s+pagamento)?[:\s]+)?(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})/i;
+  const matchDataBr = textoNorm.match(dataBrRegex);
+
+  if (matchDataBr) {
+    const dia = matchDataBr[1].padStart(2, '0');
+    const mes = matchDataBr[2].padStart(2, '0');
+    const ano = matchDataBr[3];
+    dataSugerida = `${ano}-${mes}-${dia}`;
+  }
+
+  // Padrão 2: Extenso "15 de setembro de 2026"
+  if (!dataSugerida) {
+    const extensoRegex = /(\d{1,2})\s+de\s+([a-zA-Zç]+)\s+de\s+(\d{4})/i;
+    const matchExtenso = textoNorm.match(extensoRegex);
+    if (matchExtenso) {
+      const dia = matchExtenso[1].padStart(2, '0');
+      const mesNome = matchExtenso[2].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const ano = matchExtenso[3];
+      const mesNum = MESES_PT[mesNome];
+      if (mesNum) {
+        dataSugerida = `${ano}-${mesNum}-${dia}`;
+      }
+    }
+  }
+
+  // Padrão 3: Formato ISO YYYY-MM-DD
+  if (!dataSugerida) {
+    const isoRegex = /\b(\d{4})-(\d{2})-(\d{2})\b/;
+    const matchIso = textoNorm.match(isoRegex);
+    if (matchIso) {
+      dataSugerida = matchIso[0];
+    }
+  }
+
+  // Fallback: se não encontrou data no arquivo, usa a data atual
+  if (!dataSugerida) {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    dataSugerida = `${ano}-${mes}-${dia}`;
+  }
+
+  // 2. Extração de Valor Monetário
+  let valorSugerido = 0;
+
+  // Prioridade A: Linhas com "total cobrado", "valor cobrado", "total pago", "total", "subtotal"
+  const linhas = textoNorm.split('\n');
+  for (const l of linhas) {
+    const lNorm = l.toLowerCase();
+    if (
+      lNorm.includes('total cobrado') ||
+      lNorm.includes('valor cobrado') ||
+      lNorm.includes('total da transa') ||
+      lNorm.includes('total pago') ||
+      lNorm.includes('amount billed') ||
+      lNorm.includes('total da fatura')
+    ) {
+      const matchVal = l.match(/(?:R\$\s*|BRL\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}|\d+\.\d{2})/);
+      if (matchVal) {
+        const num = converterNumeroSeguro(matchVal[1]);
+        if (num > 0) {
+          valorSugerido = num;
+          break;
+        }
+      }
+    }
+  }
+
+  // Prioridade B: Qualquer "Total: R$ XX,XX"
+  if (valorSugerido === 0) {
+    for (const l of linhas) {
+      const lNorm = l.toLowerCase().trim();
+      if (lNorm.startsWith('total') || lNorm.includes('valor')) {
+        const matchVal = l.match(/(?:R\$\s*|BRL\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})/);
+        if (matchVal) {
+          const num = converterNumeroSeguro(matchVal[1]);
+          if (num > 0) {
+            valorSugerido = num;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Prioridade C: Buscar maior valor em R$ encontrado no documento
+  if (valorSugerido === 0) {
+    const todosValores = Array.from(textoNorm.matchAll(/R\$\s*(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})/gi));
+    let maior = 0;
+    for (const mv of todosValores) {
+      const num = converterNumeroSeguro(mv[1]);
+      if (num > maior) maior = num;
+    }
+    if (maior > 0) valorSugerido = maior;
+  }
+
+  // 3. Identificador da Transação / Descrição
+  let descricaoSugerida = '';
+  const matchIdTransacao = textoNorm.match(/(?:id\s+da\s+transa[çc][aã]o|n[úu]mero\s+de\s+refer[êe]ncia|refer[êe]ncia|c[óo]digo\s+da\s+fatura)[:\s]+([A-Za-z0-9\-]+)/i);
+  if (matchIdTransacao && matchIdTransacao[1]) {
+    descricaoSugerida = `Recibo Meta Ads #${matchIdTransacao[1].trim()}`;
+  } else {
+    const nomeLimpo = path.basename(nomeArquivoOriginal, path.extname(nomeArquivoOriginal))
+      .replace(/[_-]+/g, ' ')
+      .trim();
+    descricaoSugerida = `Fatura Meta Ads - ${nomeLimpo}`;
+  }
+
+  // 4. Conta de Anúncio
+  let contaAnuncio: string | null = null;
+  const matchConta = textoNorm.match(/(?:conta\s+de\s+an[úu]ncios|conta|account)[:\s]+([^\n\r]+)/i);
+  if (matchConta && matchConta[1]) {
+    contaAnuncio = matchConta[1].trim().slice(0, 80);
+  } else {
+    const matchAct = textoNorm.match(/\bact_\d+\b/i);
+    if (matchAct) {
+      contaAnuncio = matchAct[0];
+    }
+  }
+
+  // 5. Método de Pagamento
+  let metodoPagamento: string | null = null;
+  if (/mastercard/i.test(textoNorm)) metodoPagamento = 'Cartão Mastercard';
+  else if (/visa/i.test(textoNorm)) metodoPagamento = 'Cartão Visa';
+  else if (/boleto/i.test(textoNorm)) metodoPagamento = 'Boleto Bancário';
+  else if (/pix/i.test(textoNorm)) metodoPagamento = 'PIX';
+  else if (/elo/i.test(textoNorm)) metodoPagamento = 'Cartão Elo';
+  else if (/american\s+express|amex/i.test(textoNorm)) metodoPagamento = 'American Express';
+
+  return {
+    dataSugerida,
+    valorSugerido,
+    descricaoSugerida,
+    contaAnuncio,
+    metodoPagamento,
+    textoExtraido: texto.slice(0, 1000)
+  };
+}
+
+/**
+ * Salva o arquivo PDF no diretório permanente (data/financas_pdf/) e cadastra no SQLite
+ */
+export async function arquivarDespesaPdf(
+  buffer: Buffer,
+  nomeArquivoOriginal: string,
+  dadosManual?: Partial<FinancasDespesaInput>
+): Promise<{ despesaId: number; despesa: FinancasDespesaRow }> {
+  const pastaPdf = path.join(DATA_DIR, 'financas_pdf');
+  if (!fs.existsSync(pastaPdf)) {
+    fs.mkdirSync(pastaPdf, { recursive: true });
+  }
+
+  // Nome seguro sem caracteres estranhos
+  const timestamp = Date.now();
+  const safeBase = path.basename(nomeArquivoOriginal).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const nomeSalvo = `${timestamp}_${safeBase}`;
+  const caminhoCompleto = path.join(pastaPdf, nomeSalvo);
+
+  fs.writeFileSync(caminhoCompleto, buffer);
+
+  // Extrair automaticamente caso campos manuais não venham completos
+  let dataFinal = dadosManual?.dataDespesa;
+  let valorFinal = dadosManual?.valor !== undefined ? Number(dadosManual.valor) : undefined;
+  let descFinal = dadosManual?.descricao;
+  let contaFinal = dadosManual?.contaAnuncio;
+  let metodoFinal = dadosManual?.metodoPagamento;
+
+  if (!dataFinal || valorFinal === undefined || !descFinal) {
+    const extraido = await extrairDadosPdfFatura(buffer, nomeArquivoOriginal);
+    if (!dataFinal) dataFinal = extraido.dataSugerida;
+    if (valorFinal === undefined || isNaN(valorFinal)) valorFinal = extraido.valorSugerido;
+    if (!descFinal) descFinal = extraido.descricaoSugerida;
+    if (!contaFinal) contaFinal = extraido.contaAnuncio;
+    if (!metodoFinal) metodoFinal = extraido.metodoPagamento;
+  }
+
+  const input: FinancasDespesaInput = {
+    nomeArquivo: nomeArquivoOriginal,
+    caminhoArquivo: caminhoCompleto,
+    tamanhoBytes: buffer.length,
+    dataDespesa: dataFinal || new Date().toISOString().split('T')[0],
+    valor: Number(valorFinal) || 0,
+    descricao: descFinal || `Fatura ${nomeArquivoOriginal}`,
+    contaAnuncio: contaFinal || null,
+    metodoPagamento: metodoFinal || null,
+    observacoes: dadosManual?.observacoes || null
+  };
+
+  const despesaId = salvarDespesaPdf(input);
+  const despesaCadastrada = getDespesaPdfById(despesaId);
+
+  if (!despesaCadastrada) {
+    throw new Error('Falha ao recuperar o registro da despesa cadastrada.');
+  }
+
+  return {
+    despesaId,
+    despesa: despesaCadastrada
+  };
+}
+
+/**
+ * Remove a despesa do banco e apaga o arquivo físico correspondente
+ */
+export function removerDespesaPdf(id: number): boolean {
+  const res = deleteDespesaPdf(id);
+  if (res && res.caminhoArquivo && fs.existsSync(res.caminhoArquivo)) {
+    try {
+      fs.unlinkSync(res.caminhoArquivo);
+    } catch (err) {
+      console.warn(`[Finanças] Aviso ao remover PDF físico ${res.caminhoArquivo}:`, err);
+    }
+  }
+  return true;
+}
+
+/**
+ * Exporta em formato CSV o resumo e a listagem de despesas do período
+ */
+export function exportarRelatorioPeriodoCsv(dataInicio?: string, dataFim?: string): string {
+  const resumo = obterResumoDespesasPeriodo(dataInicio, dataFim);
+
+  const linhas: string[] = [];
+  linhas.push('RELATÓRIO DE DESPESAS COM ANÚNCIOS META ADS');
+  linhas.push(`Período Consultado:;${dataInicio || 'Início'} até ${dataFim || 'Hoje'}`);
+  linhas.push(`Gerado em:;${new Date().toLocaleString('pt-BR')}`);
+  linhas.push('');
+
+  linhas.push('--- RESUMO FINANCEIRO DO PERÍODO ---');
+  linhas.push(`Total Consumido (R$);R$ ${resumo.totalGasto.toFixed(2).replace('.', ',')}`);
+  linhas.push(`Total de Faturas / Recibos;${resumo.totalFaturas}`);
+  linhas.push(`Gasto Médio por Fatura;R$ ${resumo.mediaPorFatura.toFixed(2).replace('.', ',')}`);
+  linhas.push(`Maior Fatura Registrada;R$ ${resumo.maiorDespesa.toFixed(2).replace('.', ',')}`);
+  linhas.push('');
+
+  linhas.push('--- DISCRIMINAÇÃO DAS FATURAS E RECIBOS ---');
+  linhas.push('Data;Descrição / Referência;Valor (R$);Arquivo PDF;Método de Pagamento;Conta');
+  resumo.itens.forEach((it) => {
+    const dataBr = it.data_despesa ? it.data_despesa.split('-').reverse().join('/') : '';
+    linhas.push(
+      `"${dataBr}";"${it.descricao.replace(/"/g, '""')}";${Number(it.valor).toFixed(2).replace('.', ',')};"${it.nome_arquivo}";"${it.metodo_pagamento || ''}";"${it.conta_anuncio || ''}"`
+    );
+  });
+
+  return linhas.join('\n');
+}
+
