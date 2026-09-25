@@ -1855,6 +1855,94 @@ Tenham todos uma excelente {dia_semana} e um dia cheio de bons pulls! 🔥`;
     }
   }
 
+  // Sincronização em tempo real da copy ao editar campos de preço e cupom
+  function sincronizarCopyAnuncioEmTempoReal() {
+    if (!currentAnuncioData && !anuncioTextoFinal.value) return;
+
+    const titulo = (currentAnuncioData && currentAnuncioData.titulo) || '';
+    const link = (currentAnuncioData && currentAnuncioData.linkAfiliado) || (anuncioUrl ? anuncioUrl.value.trim() : '');
+    const de = (anuncioPrecoDe ? anuncioPrecoDe.value : '').trim();
+    const por = (anuncioPrecoPor ? anuncioPrecoPor.value : '').trim();
+    const cupom = (anuncioCupom ? anuncioCupom.value : '').trim();
+    const comCupom = (anuncioPrecoCupom ? anuncioPrecoCupom.value : '').trim();
+
+    // Se o usuário digitou cupom em % (ex: 10% ou APP10 e tem Por), calcula comCupom se vazio
+    if (cupom && por && anuncioPrecoCupom && !comCupom) {
+      const pctMatch = cupom.match(/(\d+)%/);
+      if (pctMatch) {
+        const numPor = parseFloat(por.replace(/\./g, '').replace(',', '.'));
+        const pct = parseInt(pctMatch[1], 10);
+        if (!isNaN(numPor) && pct > 0 && pct < 100) {
+          const comDesc = numPor * (1 - pct / 100);
+          anuncioPrecoCupom.value = comDesc.toFixed(2).replace('.', ',');
+        }
+      }
+    }
+
+    const valorComCupomAtual = (anuncioPrecoCupom ? anuncioPrecoCupom.value : '').trim();
+
+    const linhas = [];
+    if (titulo) {
+      const flagMatch = titulo.match(/^([\u{1F1E6}-\u{1F1FF}]{2})\s*(.*)$/u);
+      if (flagMatch) {
+        linhas.push(`📦 ${flagMatch[1]} *${flagMatch[2].trim()}*`);
+      } else {
+        linhas.push(`📦 *${titulo.trim()}*`);
+      }
+      linhas.push('');
+    }
+
+    const isPorValido = Boolean(por && por.toLowerCase() !== 'consultar' && por !== '0');
+    const isDeValido = Boolean(de && de.toLowerCase() !== 'consultar' && de !== '0' && de !== por);
+
+    if (isDeValido && isPorValido) {
+      const vDe = de.startsWith('R$') ? de : `R$ ${de}`;
+      const vPor = por.startsWith('R$') ? por : `R$ ${por}`;
+      linhas.push(`❌ ~De: ${vDe}~`);
+      linhas.push(`👉 *Por apenas: ${vPor}*`);
+    } else if (isPorValido) {
+      const vPor = por.startsWith('R$') ? por : `R$ ${por}`;
+      linhas.push(`👉 *Por apenas: ${vPor}*`);
+    }
+
+    let temCupom = false;
+    if (cupom) {
+      const cod = cupom.toUpperCase().trim();
+      if (!/^(?:COM\s+CUPOM|CUPOM|SEM\s+CUPOM)$/i.test(cod)) {
+        linhas.push(`🎟️ Cupom: *${cod}*`);
+        temCupom = true;
+      }
+    }
+
+    if (valorComCupomAtual && valorComCupomAtual !== por) {
+      const vCom = valorComCupomAtual.startsWith('R$') ? valorComCupomAtual : `R$ ${valorComCupomAtual}`;
+      linhas.push(`🔥 *Com cupom: ${vCom}*`);
+      temCupom = true;
+    }
+
+    if (isDeValido || isPorValido || temCupom) {
+      linhas.push('');
+    }
+
+    if (link) {
+      linhas.push(`👉 ${link}`);
+      linhas.push('');
+    }
+
+    linhas.push('⚠️ _Preço e estoque promocional sujeitos a alteração a qualquer momento._');
+
+    anuncioTextoFinal.value = linhas.join('\n');
+    if (anuncioCharCounter) {
+      anuncioCharCounter.textContent = `${anuncioTextoFinal.value.length} caracteres`;
+    }
+  }
+
+  [anuncioPrecoDe, anuncioPrecoPor, anuncioCupom, anuncioPrecoCupom].forEach((input) => {
+    if (input) {
+      input.addEventListener('input', sincronizarCopyAnuncioEmTempoReal);
+    }
+  });
+
   if (btnPublicarAnuncio) {
     btnPublicarAnuncio.addEventListener('click', async () => {
       const texto = (anuncioTextoFinal.value || '').trim();

@@ -85,7 +85,38 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
 
   if (!html) return {};
 
-  // Se tiver múltiplos cards (como vitrine /social/), tenta isolar o card do produto alvo
+  // 1. Tentar primeiro extração de alta precisão via JSON de estado do produto principal do Mercado Livre
+  const jsonPriceMatch = html.match(/"type":"price"(?:,"id":"price")?[^}]*"current_price":\{"value":([\d\.]+)/);
+  if (jsonPriceMatch) {
+    const valCurrent = parseFloat(jsonPriceMatch[1]);
+    if (!isNaN(valCurrent) && valCurrent > 0) {
+      precoPor = Number.isInteger(valCurrent)
+        ? String(valCurrent)
+        : valCurrent.toFixed(2).replace('.', ',');
+    }
+
+    const jsonBlock = html.substring(jsonPriceMatch.index || 0, (jsonPriceMatch.index || 0) + 400);
+    const jsonPrevMatch = jsonBlock.match(/"(?:previous_price|original_price)":\{"value":([\d\.]+)/);
+    if (jsonPrevMatch) {
+      const valPrev = parseFloat(jsonPrevMatch[1]);
+      if (!isNaN(valPrev) && valPrev > valCurrent) {
+        precoDe = Number.isInteger(valPrev)
+          ? String(valPrev)
+          : valPrev.toFixed(2).replace('.', ',');
+      }
+    }
+
+    // Parcelamento estritamente sem juros no JSON
+    const instMatch = jsonBlock.match(/"installments":\{"text":"([^"]+)","no_interest":(true|false)/);
+    if (instMatch && instMatch[2] === 'true') {
+      const priceValMatch = jsonBlock.match(/"price":\{"value":([\d\.]+)/);
+      const parcelaNum = priceValMatch ? parseFloat(priceValMatch[1]) : 0;
+      const parcelaStr = Number.isInteger(parcelaNum) ? String(parcelaNum) : parcelaNum.toFixed(2).replace('.', ',');
+      parcelamento = instMatch[1].replace('{price}', `R$ ${parcelaStr}`) + ' sem juros';
+    }
+  }
+
+  // 2. Delimitar escopo do HTML para evitar poluição de carrosséis de recomendações ou produtos patrocinados
   let escopoHtml = html;
   if (slugDesejado && html.includes(slugDesejado)) {
     const cardChunks = html.split(/(?=<div[^>]*class="[^"]*poly-card|<li[^>]*class="[^"]*ui-search-layout__item)/i);
@@ -95,11 +126,18 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
         break;
       }
     }
+  } else {
+    // Para página de produto individual, delimita tudo antes de recomendações
+    const corte = html.search(/<section[^>]*class="[^"]*(?:ui-recommendations|recommendations|poly-carousel|poly-card)/i);
+    if (corte > 0) {
+      escopoHtml = html.substring(0, corte);
+    }
   }
 
   function extrairCampos(bloco: string) {
-    // Título em card se disponível
-    const cardTitleMatch = bloco.match(/class="[^"]*(?:poly-component__title|ui-search-item__title)[^"]*"[^>]*>([^<]+)<\/a>/i) ||
+    // Título em card ou PDP se disponível
+    const cardTitleMatch = bloco.match(/class="[^"]*(?:poly-component__title|ui-search-item__title|ui-pdp-title)[^"]*"[^>]*>([^<]+)</i) ||
+                           bloco.match(/<h1[^>]*class="[^"]*ui-pdp-title[^"]*"[^>]*>([^<]+)<\/h1>/i) ||
                            bloco.match(/<h2[^>]*class="[^"]*poly-box[^"]*"[^>]*>([^<]+)<\/h2>/i);
     if (!tituloExtraido && cardTitleMatch && cardTitleMatch[1]) {
       tituloExtraido = cardTitleMatch[1].trim();
@@ -110,42 +148,38 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
       const prevAria = bloco.match(/aria-label="Antes:\s*(\d+)\s*reais(?:(?:\s*com\s*|\s*e\s*)(\d+)\s*centavos)?"/i);
       if (prevAria) {
         const r = prevAria[1];
-        const c = prevAria[2] ? prevAria[2].padStart(2, '0') : '00';
-        precoDe = `${r},${c}`;
+        const c = prevAria[2] ? prevAria[2].padStart(2, '0') : '';
+        const deCand = c && c !== '00' ? `${r},${c}` : r;
+        if (deCand !== precoPor) {
+          precoDe = deCand;
+        }
       } else {
         const prevBlock = bloco.match(/(?:andes-money-amount--previous|poly-price__previous|poly-price__former)[\s\S]*?<span[^>]*class="andes-money-amount__fraction[^"]*"[^>]*>([\d\.,]+)<\/span>(?:[\s\S]*?<span[^>]*class="andes-money-amount__cents[^"]*"[^>]*>(\d+)<\/span>)?/i);
         if (prevBlock) {
           const frac = prevBlock[1].replace(/\./g, '');
-          const cents = prevBlock[2] ? prevBlock[2].padStart(2, '0') : '00';
-          precoDe = `${frac},${cents}`;
+          const cents = prevBlock[2] ? prevBlock[2].padStart(2, '0') : '';
+          const deCand = cents && cents !== '00' ? `${frac},${cents}` : frac;
+          if (deCand !== precoPor) {
+            precoDe = deCand;
+          }
         }
       }
     }
 
     // 2. Extração de Preço "Por" (Atual / A Pagar)
     if (!precoPor) {
-      const currAria = bloco.match(/aria-label="Agora:\s*(\d+)\s*reais(?:(?:\s*com\s*|\s*e\s*)(\d+)\s*centavos)?"/i);
+      const currAria = bloco.match(/aria-label="(?:Agora:\s*)?(\d+)\s*reais(?:(?:\s*com\s*|\s*e\s*)(\d+)\s*centavos)?"/i);
       if (currAria) {
         const r = currAria[1];
-        const c = currAria[2] ? currAria[2].padStart(2, '0') : '00';
-        precoPor = `${r},${c}`;
+        const c = currAria[2] ? currAria[2].padStart(2, '0') : '';
+        precoPor = c && c !== '00' ? `${r},${c}` : r;
       } else {
         const currBlock = bloco.match(/(?:poly-price__current|andes-money-amount--current|ui-pdp-price__second-line)[\s\S]*?<span[^>]*class="andes-money-amount__fraction[^"]*"[^>]*>([\d\.,]+)<\/span>(?:[\s\S]*?<span[^>]*class="andes-money-amount__cents[^"]*"[^>]*>(\d+)<\/span>)?/i);
         if (currBlock) {
           const frac = currBlock[1].replace(/\./g, '');
-          const cents = currBlock[2] ? currBlock[2].padStart(2, '0') : '00';
-          precoPor = `${frac},${cents}`;
+          const cents = currBlock[2] ? currBlock[2].padStart(2, '0') : '';
+          precoPor = cents && cents !== '00' ? `${frac},${cents}` : frac;
         }
-      }
-    }
-
-    // Fallback para Preço "Por": se tiver aria-label de valor sem "Antes:"
-    if (!precoPor) {
-      const genericAria = bloco.match(/aria-label="(?:Agora:\s*)?(\d+)\s*reais(?:(?:\s*com\s*|\s*e\s*)(\d+)\s*centavos)?"/i);
-      if (genericAria) {
-        const r = genericAria[1];
-        const c = genericAria[2] ? genericAria[2].padStart(2, '0') : '00';
-        precoPor = `${r},${c}`;
       }
     }
 
@@ -156,7 +190,6 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
                           bloco.match(/cupom(?:\s+de)?:\s*([A-Z0-9_\-\%]+(?:\s*OFF)?)/i);
       if (couponMatch) {
         let raw = couponMatch[1].replace(/\{[^}]+\}/g, '').trim();
-        // Descarta termos genéricos de interface do ML que não são códigos reais ("Com cupom", "Cupom", etc.)
         const isTermoGenerico = /^(?:com\s+cupom(?:\s+no\s+app)?|cupom(?:\s+de\s+desconto)?|sem\s+cupom)$/i.test(raw);
         if (raw && !isTermoGenerico) {
           cupom = raw;
@@ -164,13 +197,12 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
       }
     }
 
-    // 4. Extração de Parcelamento (EXCLUSIVAMENTE se for comprovadamente SEM JUROS)
+    // 4. Extração de Parcelamento (sem juros)
     if (!parcelamento) {
       const instMatch = bloco.match(/(?:class="poly-price__installments"[^>]*>)?(\d{1,2}x)\s*(?:de\s*)?<span[^>]*aria-label="(\d+)\s*reais(?:(?:\s*com\s*|\s*e\s*)(\d+)\s*centavos)?"/i) ||
                         bloco.match(/(\d{1,2}x\s+(?:de\s+)?R\$\s*[\d\.,]+\s*sem\s+juros)/i) ||
                         bloco.match(/(\d{1,2}x\s+sem\s+juros)/i);
       if (instMatch) {
-        // Verifica se no bloco ou no entorno imediato do match há menção explícita de "sem juros" ou "no_interest": true
         const matchIdx = instMatch.index || 0;
         const trechoEntorno = bloco.substring(Math.max(0, matchIdx - 20), Math.min(bloco.length, matchIdx + instMatch[0].length + 80));
         const temTextoSemJuros = /sem\s+juros|s\/\s*juros|"no_interest":\s*true/i.test(trechoEntorno);
@@ -182,7 +214,6 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
           const valorParcelaNum = parseFloat(`${r}.${c}`);
           const vezesNum = parseInt(numx.replace(/\D/g, ''), 10);
 
-          // Validação matemática: se a soma das parcelas superar o preço por mais de 3%, TEM JUROS
           let temJurosMatematico = false;
           if (precoPor && !isNaN(valorParcelaNum) && !isNaN(vezesNum)) {
             const precoPorNum = parseFloat(precoPor.replace(/\./g, '').replace(',', '.'));
@@ -193,7 +224,6 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
             }
           }
 
-          // Só adiciona se for realmente sem juros no texto e na matemática
           if (temTextoSemJuros && !temJurosMatematico) {
             parcelamento = `${numx} de R$ ${r},${c} sem juros`;
           }
@@ -210,9 +240,14 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
   // Tenta primeiro no escopo isolado
   extrairCampos(escopoHtml);
 
-  // Se faltou preço ou cupom e o escopo era restrito, tenta no HTML global
-  if ((!precoPor || !precoDe || !cupom) && escopoHtml !== html) {
+  // Se faltou precoPor e o escopo era restrito por busca de slug em vitrine, tenta no HTML global
+  if (!precoPor && slugDesejado && escopoHtml !== html) {
     extrairCampos(html);
+  }
+
+  // Sanitização: se precoDe for igual a precoPor, anula precoDe
+  if (precoDe && precoPor && precoDe.trim() === precoPor.trim()) {
+    precoDe = '';
   }
 
   // 5. Cálculo automático de Valor com Cupom
@@ -250,7 +285,13 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
 }
 
 /**
- * Monta a copy promocional persuasiva para o WhatsApp
+ * Monta a copy promocional limpa, persuasiva e direta para o WhatsApp
+ * Contém estritamente:
+ * 1. Nome do produto
+ * 2. Valores DE / POR (ou só POR se não houver DE)
+ * 3. Cupom e Valor com Cupom (se informados)
+ * 4. Link apenas
+ * 5. Rodapé: Preço e estoque promocional sujeitos a alteração a qualquer momento.
  */
 export function gerarCopyPromocional(params: {
   titulo: string;
@@ -261,29 +302,28 @@ export function gerarCopyPromocional(params: {
   valorComCupom?: string;
   parcelamento?: string;
 }): string {
-  const { titulo, linkAfiliado, cupom, precoDe, precoPor, valorComCupom, parcelamento } = params;
+  const { titulo, linkAfiliado, cupom, precoDe, precoPor, valorComCupom } = params;
 
   const linhas: string[] = [];
 
-  // Começa direto no nome do item (arrancada a linha '🔥 *SUPER PROMOÇÃO POKÉMON TCG!* 🔥')
-  const flagMatch = titulo.match(/^([\u{1F1E6}-\u{1F1FF}]{2})\s*(.*)$/u);
+  // 1. Nome do produto (com bandeira se houver)
+  const flagMatch = (titulo || '').match(/^([\u{1F1E6}-\u{1F1FF}]{2})\s*(.*)$/u);
   if (flagMatch) {
     linhas.push(`📦 ${flagMatch[1]} *${flagMatch[2].trim()}*`);
   } else {
-    linhas.push(`📦 *${titulo.trim()}*`);
+    linhas.push(`📦 *${(titulo || 'Colecionável Pokémon TCG').trim()}*`);
   }
   linhas.push('');
 
-  // Linhas de preço (se preenchidas)
+  // 2. Preços DE / POR
   const de = (precoDe || '').trim();
   const por = (precoPor || '').trim();
   const comCupom = (valorComCupom || '').trim();
 
   const isPorValido = Boolean(por && por.toLowerCase() !== 'consultar' && por !== '0' && por !== 'R$ 0');
-  const isDeValido = Boolean(de && de.toLowerCase() !== 'consultar' && de !== '0' && de !== 'R$ 0');
-  const calculo = isPorValido && isDeValido ? calcularDesconto(de, por) : null;
+  const isDeValido = Boolean(de && de.toLowerCase() !== 'consultar' && de !== '0' && de !== 'R$ 0' && de !== por);
 
-  if (isDeValido && calculo) {
+  if (isDeValido && isPorValido) {
     const valorDe = de.startsWith('R$') ? de : `R$ ${de}`;
     const valorPor = por.startsWith('R$') ? por : `R$ ${por}`;
     linhas.push(`❌ ~De: ${valorDe}~`);
@@ -293,36 +333,31 @@ export function gerarCopyPromocional(params: {
     linhas.push(`👉 *Por apenas: ${valorPor}*`);
   }
 
-  // Linha de valor com cupom (se calculado ou informado)
-  if (comCupom && comCupom !== por) {
-    const valorFinal = comCupom.startsWith('R$') ? comCupom : `R$ ${comCupom}`;
-    linhas.push(`🔥 *Com cupom sai por apenas: ${valorFinal}!*`);
-  }
-
-  // Linha de parcelamento apenas se for estritamente SEM JUROS (nunca inclui parcelamento com juros)
-  const temSemJuros = parcelamento && parcelamento.trim() && /sem\s+juros|s\/\s*juros/i.test(parcelamento);
-  if (temSemJuros) {
-    linhas.push(`💳 *${parcelamento.trim()}*`);
-  }
-
-  if (de || por || comCupom || temSemJuros) {
-    linhas.push('');
-  }
-
-  // Linha de cupom opcional (rejeita termos genéricos como "COM CUPOM" ou "CUPOM")
+  // 3. Cupom e Valor com Cupom
+  let temCupom = false;
   if (cupom && cupom.trim()) {
     const codCupom = cupom.trim().toUpperCase();
     if (!/^(?:COM\s+CUPOM(?:\s+NO\s+APP)?|CUPOM(?:\s+DE\s+DESCONTO)?|SEM\s+CUPOM)$/i.test(codCupom)) {
-      linhas.push(`🎟️ Cupom de Desconto: *${codCupom}*`);
-      linhas.push('');
+      linhas.push(`🎟️ Cupom: *${codCupom}*`);
+      temCupom = true;
     }
   }
 
-  linhas.push('⚡ Produto original com estoque e envio rápido!');
-  linhas.push('');
-  linhas.push('🛒 *Compre com desconto exclusivo aqui:*');
+  if (comCupom && comCupom !== por) {
+    const valorFinal = comCupom.startsWith('R$') ? comCupom : `R$ ${comCupom}`;
+    linhas.push(`🔥 *Com cupom: ${valorFinal}*`);
+    temCupom = true;
+  }
+
+  if (isDeValido || isPorValido || temCupom) {
+    linhas.push('');
+  }
+
+  // 4. Link direto apenas
   linhas.push(`👉 ${linkAfiliado.trim()}`);
   linhas.push('');
+
+  // 5. Rodapé legal
   linhas.push('⚠️ _Preço e estoque promocional sujeitos a alteração a qualquer momento._');
 
   return linhas.join('\n');
@@ -907,8 +942,9 @@ export async function extrairDadosAnuncio(
     }
 
     // 5. Preços e Cupons Finais (Prioriza o digitado manualmente pelo usuário, fallback para extração automática)
-    const precoDeFinal = (input.precoDe || '').trim() || detalhes.precoDe || undefined;
+    const rawPrecoDe = (input.precoDe || '').trim() || detalhes.precoDe || undefined;
     const precoPorFinal = (input.precoPor || '').trim() || detalhes.precoPor || undefined;
+    const precoDeFinal = (rawPrecoDe && precoPorFinal && rawPrecoDe === precoPorFinal) ? undefined : rawPrecoDe;
 
     let cupomFinal = (input.cupom || '').trim() || detalhes.cupom || undefined;
     if (cupomFinal && /^(?:com\s+cupom(?:\s+no\s+app)?|cupom(?:\s+de\s+desconto)?|sem\s+cupom)$/i.test(cupomFinal.trim())) {

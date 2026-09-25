@@ -33,13 +33,19 @@ Ambos os painéis utilizam controle de acesso por credenciais seguras e tokens a
 - **Como Usar**:
   1. Cole o link de afiliado ou produto do Mercado Livre (aceita `https://mercadolivre.com/sec/...`, `meli.la` ou link direto do anúncio).
   2. Ao colar o link (ou clicar em **⚡ Puxar Dados & Gerar Anúncio**), o sistema extrai **automaticamente**:
-     - O **título limpo** do produto;
+     - O **título limpo** do produto (imune a títulos genéricos);
      - A **foto oficial em 2X HD** do produto;
-     - O **Preço De (Original / Riscado)** e o **Preço Por (A Pagar)**;
-     - O **Cupom de Desconto** ativo e calcula o **Valor com Cupom** final;
-     - O parcelamento sem juros (se houver).
-  3. Todos os campos do formulário são pré-preenchidos para permitir ajustes manuais finos imediatos.
-  4. A copy é gerada de forma limpa e direta, iniciando imediatamente no nome do item (`📦 *[Título]*`), sem linhas repetitivas de cabeçalho.
+     - O **Preço real do item** diretamente do objeto de dados do anúncio principal (imune a carrosséis de produtos recomendados ou patrocinados);
+     - O **Preço De** (apenas quando o produto realmente possui preço riscado anterior diferente do preço atual);
+     - O **Cupom de Desconto** ativo (se houver).
+  3. **Edição Reativa em Tempo Real**: Ao digitar ou alterar o Cupom ou o Valor com Cupom no formulário, a mensagem formatada no preview atualiza **instantaneamente**, sem necessidade de clicar novamente em puxar dados.
+  4. **Estrutura Estrita e Limpa da Copy**: A mensagem contém apenas as informações essenciais para máxima conversão:
+     - 📦 Nome do Produto
+     - ❌ ~De~ e 👉 *Por apenas* (ou apenas *Por apenas* se for valor único)
+     - 🎟️ Cupom e 🔥 *Com cupom* (se informados)
+     - 👉 Link de afiliado limpo direto
+     - ⚠️ Rodapé: *Preço e estoque promocional sujeitos a alteração a qualquer momento.*
+     *(Sem slogans ou frases genéricas extras intermediárias).*
   5. Marque os grupos de destino desejados (com auxílio da barra de busca de grupos).
   6. Clique em **🚀 Publicar no WhatsApp** para disparar a foto com a legenda com 1 clique!
 

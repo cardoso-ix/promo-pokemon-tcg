@@ -41,17 +41,18 @@ test('gerarCopyPromocional deve incluir cupom e valor com cupom quando informado
     cupom: 'POKEMON10',
     precoDe: '299,00',
     precoPor: '249,00',
-    valorComCupom: '224,10',
-    parcelamento: '10x de R$ 24,90 sem juros'
+    valorComCupom: '224,10'
   });
 
   assert.strictEqual(copy.startsWith('📦 *Pokémon Booster Box 36 Pacotes*'), true);
   assert.strictEqual(copy.includes('❌ ~De: R$ 299,00~'), true);
   assert.strictEqual(copy.includes('👉 *Por apenas: R$ 249,00*'), true);
-  assert.strictEqual(copy.includes('🔥 *Com cupom sai por apenas: R$ 224,10!*'), true);
-  assert.strictEqual(copy.includes('💳 *10x de R$ 24,90 sem juros*'), true);
-  assert.strictEqual(copy.includes('🎟️ Cupom de Desconto: *POKEMON10*'), true);
+  assert.strictEqual(copy.includes('🔥 *Com cupom: R$ 224,10*'), true);
+  assert.strictEqual(copy.includes('🎟️ Cupom: *POKEMON10*'), true);
   assert.strictEqual(copy.includes('https://mercadolivre.com/sec/2rM6RPm'), true);
+  // Não deve conter linhas extras desnecessárias
+  assert.strictEqual(copy.includes('Produto original com estoque'), false);
+  assert.strictEqual(copy.includes('Compre com desconto exclusivo'), false);
 });
 
 test('gerarCopyPromocional deve omitir a linha de cupom quando vazio', () => {
@@ -166,5 +167,28 @@ test('gerarCopyPromocional NÃO deve incluir linha de parcelamento com juros e N
   assert.strictEqual(copy.includes('12x'), false);
   assert.strictEqual(copy.includes('❌ ~De: R$ 239,90~'), true);
   assert.strictEqual(copy.includes('👉 *Por apenas: R$ 213,30*'), true);
+});
+
+test('extrairDadosAnuncio deve extrair preço real de produto com valor único e não capturar carrossel de recomendação', async () => {
+  const resultado = await extrairDadosAnuncio(
+    {
+      url: 'https://meli.la/1FRkD5j'
+    },
+    {
+      mattWord: 'meutag',
+      mattTool: '123456'
+    }
+  );
+
+  assert.strictEqual(resultado.ok, true);
+  assert.strictEqual(resultado.titulo.includes('Pokémon'), true);
+  // O preço deve ser ~299 e JAMAIS 65 ou 78 de carrossel
+  assert.strictEqual(resultado.precoPor?.startsWith('299'), true);
+  // Não deve conter preço De falso de carrossel
+  assert.strictEqual(resultado.precoDe, undefined);
+  // Copy gerada deve conter o link e o preço Por, sem linhas extras
+  assert.strictEqual(resultado.textoGerado.includes('299'), true);
+  assert.strictEqual(resultado.textoGerado.includes('https://meli.la/1FRkD5j'), true);
+  assert.strictEqual(resultado.textoGerado.includes('Produto original com estoque'), false);
 });
 
