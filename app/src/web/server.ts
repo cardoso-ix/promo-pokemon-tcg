@@ -73,10 +73,17 @@ export async function createServer() {
 
   await app.register(fastifyWebsocket);
 
-  // Servir frontend estático
+  // Servir frontend estático com controle de cache estrito
   await app.register(fastifyStatic, {
     root: publicPath,
-    prefix: '/'
+    prefix: '/',
+    setHeaders: (res, pathName) => {
+      if (pathName.endsWith('.html') || pathName.endsWith('.js') || pathName.endsWith('.css')) {
+        res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.header('Pragma', 'no-cache');
+        res.header('Expires', '0');
+      }
+    }
   });
 
   // Hook de Autenticação Global
