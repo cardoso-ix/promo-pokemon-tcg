@@ -86,20 +86,25 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
   if (!html) return {};
 
   // 1. Tentar primeiro extração de alta precisão via JSON de estado do produto principal do Mercado Livre
-  const jsonPriceMatch = html.match(/"type":"price"(?:,"id":"price")?[^}]*"current_price":\{"value":([\d\.]+)/);
-  if (jsonPriceMatch) {
-    const valCurrent = parseFloat(jsonPriceMatch[1]);
-    if (!isNaN(valCurrent) && valCurrent > 0) {
-      precoPor = Number.isInteger(valCurrent)
-        ? String(valCurrent)
-        : valCurrent.toFixed(2).replace('.', ',');
+  // O primeiro "type":"price" do documento HTML pertence SEMPRE ao produto principal
+  const firstPriceIdx = html.indexOf('"type":"price"');
+  if (firstPriceIdx !== -1) {
+    const priceBlock = html.substring(firstPriceIdx, firstPriceIdx + 1500);
+
+    const currentMatch = priceBlock.match(/"current_price":\{"value":([\d\.]+)/);
+    if (currentMatch) {
+      const valCurrent = parseFloat(currentMatch[1]);
+      if (!isNaN(valCurrent) && valCurrent > 0) {
+        precoPor = Number.isInteger(valCurrent)
+          ? String(valCurrent)
+          : valCurrent.toFixed(2).replace('.', ',');
+      }
     }
 
-    const jsonBlock = html.substring(jsonPriceMatch.index || 0, (jsonPriceMatch.index || 0) + 400);
-    const jsonPrevMatch = jsonBlock.match(/"(?:previous_price|original_price)":\{"value":([\d\.]+)/);
-    if (jsonPrevMatch) {
-      const valPrev = parseFloat(jsonPrevMatch[1]);
-      if (!isNaN(valPrev) && valPrev > valCurrent) {
+    const prevMatch = priceBlock.match(/"(?:previous_price|original_price)":\{"value":([\d\.]+)/);
+    if (prevMatch) {
+      const valPrev = parseFloat(prevMatch[1]);
+      if (!isNaN(valPrev) && valPrev > 0 && (!precoPor || valPrev > parseFloat(currentMatch?.[1] || '0'))) {
         precoDe = Number.isInteger(valPrev)
           ? String(valPrev)
           : valPrev.toFixed(2).replace('.', ',');
@@ -107,9 +112,9 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
     }
 
     // Parcelamento estritamente sem juros no JSON
-    const instMatch = jsonBlock.match(/"installments":\{"text":"([^"]+)","no_interest":(true|false)/);
+    const instMatch = priceBlock.match(/"installments":\{"text":"([^"]+)","no_interest":(true|false)/);
     if (instMatch && instMatch[2] === 'true') {
-      const priceValMatch = jsonBlock.match(/"price":\{"value":([\d\.]+)/);
+      const priceValMatch = priceBlock.match(/"price":\{"value":([\d\.]+)/);
       const parcelaNum = priceValMatch ? parseFloat(priceValMatch[1]) : 0;
       const parcelaStr = Number.isInteger(parcelaNum) ? String(parcelaNum) : parcelaNum.toFixed(2).replace('.', ',');
       parcelamento = instMatch[1].replace('{price}', `R$ ${parcelaStr}`) + ' sem juros';
@@ -183,14 +188,14 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
       }
     }
 
-    // 3. Extração de Cupom
+    // 3. Extração de Cupom (estritamente códigos reais, rejeita textos genéricos de UI)
     if (!cupom) {
       const couponMatch = bloco.match(/"type":"coupon"[^}]*"text":"([^"]+)"/i) ||
                           bloco.match(/<span[^>]*class="[^"]*(?:coupon|cupom|poly-coupon)[^"]*"[^>]*>([^<]+)<\/span>/i) ||
                           bloco.match(/cupom(?:\s+de)?:\s*([A-Z0-9_\-\%]+(?:\s*OFF)?)/i);
       if (couponMatch) {
         let raw = couponMatch[1].replace(/\{[^}]+\}/g, '').trim();
-        const isTermoGenerico = /^(?:com\s+cupom(?:\s+no\s+app)?|cupom(?:\s+de\s+desconto)?|sem\s+cupom)$/i.test(raw);
+        const isTermoGenerico = /^(?:com\s+cupom|cupom|sem\s+cupom|\d+%\s*off.*|.*off\s*com\s*cupom.*|cupom\s+de\s+desconto)$/i.test(raw);
         if (raw && !isTermoGenerico) {
           cupom = raw;
         }

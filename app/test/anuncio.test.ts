@@ -192,3 +192,27 @@ test('extrairDadosAnuncio deve extrair preço real de produto com valor único e
   assert.strictEqual(resultado.textoGerado.includes('Produto original com estoque'), false);
 });
 
+test('extrairDadosAnuncio deve extrair De 70,90 e Por 37,57 do Fichario meli.la/1355NNd e rejeitar cupom generico de recomendacao', async () => {
+  const resultado = await extrairDadosAnuncio(
+    {
+      url: 'https://meli.la/1355NNd'
+    },
+    {
+      mattWord: 'meutag',
+      mattTool: '123456'
+    }
+  );
+
+  assert.strictEqual(resultado.ok, true);
+  assert.strictEqual(resultado.titulo.includes('Fichário'), true);
+  assert.strictEqual(resultado.precoDe, '70,90');
+  assert.strictEqual(resultado.precoPor, '37,57');
+  // Não pode capturar texto genérico como "7% OFF com Cupom"
+  assert.strictEqual(resultado.cupom, undefined);
+  assert.strictEqual(resultado.valorComCupom, undefined);
+  // Copy gerada deve ter De e Por corretos
+  assert.strictEqual(resultado.textoGerado.includes('De: R$ 70,90'), true);
+  assert.strictEqual(resultado.textoGerado.includes('Por apenas: R$ 37,57'), true);
+});
+
+
