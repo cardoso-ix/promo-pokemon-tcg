@@ -1,7 +1,21 @@
 import Database from 'better-sqlite3';
 import { DB_PATH, CONFIG } from '../config.js';
 
-export const DEFAULT_MSG_ABERTURA = `@pokemon_tcg_promo
+export interface ModeloAbertura {
+  id: string;
+  nome: string;
+  icone: string;
+  descricao: string;
+  texto: string;
+}
+
+export const PRESET_MSGS_ABERTURA: ModeloAbertura[] = [
+  {
+    id: 'comunidade_gratidao',
+    nome: 'Modelo 1: Comunidade & Gratidão (Clássico)',
+    icone: '🌟',
+    descricao: 'Tom acolhedor, agradecimento pelo crescimento do grupo e incentivo a convidar amigos.',
+    texto: `@pokemon_tcg_promo
 
 🌅 *BOM DIA, TREINADORES E COLECIONADORES!* ⚡
 O nosso grupo oficial de ofertas de Pokémon TCG está oficialmente *ABERTO* para o dia de hoje!
@@ -12,7 +26,70 @@ Quero agradecer imensamente a cada um de vocês por fazer parte da nossa comunid
 
 👥 *Dica especial:* Se você tem amigos, conhecidos ou colecionadores que também amam Pokémon TCG e querem economizar de verdade sem pagar preços abusivos, fiquem 100% à vontade para adicioná-los ou mandar o link do grupo! Bora crescer a nossa comunidade juntos! 🚀
 
-Tenham todos um dia incrível e cheio de bons pulls! 🔥`;
+Tenham todos uma excelente {dia_semana} e um dia cheio de bons pulls! 🔥`
+  },
+  {
+    id: 'radar_drops',
+    nome: 'Modelo 2: Radar TCG & Drops Relâmpago',
+    icone: '🎯',
+    descricao: 'Foco no rastreador automático de estoque, drops das lojas oficiais e agilidade em promoções.',
+    texto: `@pokemon_tcg_promo
+
+⚡ *BOM DIA, MESTRES POKÉMON!* 🎯
+Grupo liberado e sistema a todo vapor nesta {dia_semana}!
+
+Radar ligado: hoje o foco é garimpar os melhores drops de Pokémon TCG diretamente das lojas oficiais e distribuidores parceiros, com preço justo de verdade.
+
+🛒 *O que monitoramos o dia todo para você:*
+• Boosters avulsos e combos com menor valor por pacote
+• Boxes, Bundles, Fichários e Latas promocionais
+• Cupons de desconto relâmpago antes que esgotem
+• Reposições de estoques disputados
+
+🔔 *Dica de ouro:* Mantenha as notificações ativadas! As ofertas mais quentes com preço de custo costumam evaporar em poucos minutos.
+
+Bora caçar aquelas cartas secretas e fechar as coleções! Ótimo dia a todos! 🌟`
+  },
+  {
+    id: 'colecionador_raiz',
+    nome: 'Modelo 3: Colecionador Raiz & Preço Justo',
+    icone: '🃏',
+    descricao: 'Compromisso contra ágio abusivo (anti-scalper), análise de preço por booster e amor pelo hobby.',
+    texto: `@pokemon_tcg_promo
+
+☀️ *BOM DIA, FAMÍLIA POKÉMON TCG!* 🃏
+Mais um dia começando e o nosso grupo está oficialmente *ABERTO* nesta {dia_semana}!
+
+Colecionar é paixão, e o nosso maior compromisso aqui é defender o seu bolso. Nada de pagar ágio abusivo ou cair em armadilhas de preços inflacionados: aqui só passa o que realmente vale a pena!
+
+📦 Nossos algoritmos analisam o histórico de preços e o valor unitário por booster para garantir que cada centavo investido na sua coleção traga o melhor custo-benefício.
+
+🚀 Se você curte o nosso trabalho de curadoria diária, convide aquele amigo que também rasga booster para o grupo. Juntos fortalecemos o hobby no Brasil! 🇧🇷
+
+Que o dia venha recheado de hits e raridades! Pra cima! 🔥✨`
+  },
+  {
+    id: 'cupons_estrategia',
+    nome: 'Modelo 4: Cupons & Oportunidades no App',
+    icone: '🎟️',
+    descricao: 'Foco prático em cupons limitados por CPF, melhores horários de resgate e compras inteligentes.',
+    texto: `@pokemon_tcg_promo
+
+🎟️ *BOM DIA, COLECIONADORES E CAÇADORES DE OFERTAS!* ⚡
+Grupo 100% aberto e pronto para as melhores oportunidades desta {dia_semana}!
+
+Hoje o nosso radar está calibrado para novos cupons de desconto, ofertas no app e combos promocionais de Pokémon TCG com frete grátis e parcelamento sem juros.
+
+💡 *Como aproveitar ao máximo:*
+1. Ao ver uma oferta com cupom, resgate imediatamente no app
+2. Confira sempre o valor final no carrinho com as vantagens aplicadas
+3. Seja rápido nos alertas de "Últimas Unidades"
+
+Obrigado a cada membro pela confiança e pela parceria diária. Vamos juntos em busca dos melhores achados do mercado! 🏆🎯`
+  }
+];
+
+export const DEFAULT_MSG_ABERTURA = PRESET_MSGS_ABERTURA[0].texto;
 
 export const db = new Database(DB_PATH);
 

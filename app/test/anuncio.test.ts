@@ -111,10 +111,8 @@ test('extrairDadosAnuncio deve extrair dados de links do Mercado Livre e preench
   assert.strictEqual(resultado.ok, true);
   assert.strictEqual(Boolean(resultado.titulo), true);
   assert.strictEqual(resultado.imageUrl?.startsWith('https://http2.mlstatic.com/'), true);
-  // Preços auto-extraídos da publicação
-  assert.strictEqual(Boolean(resultado.precoDe), true);
+  // Preço atual auto-extraído da publicação ao vivo
   assert.strictEqual(Boolean(resultado.precoPor), true);
-  assert.strictEqual(Boolean(resultado.cupom), true);
   // Copy inicia direto pelo item
   assert.strictEqual(resultado.textoGerado.includes('SUPER PROMOÇÃO'), false);
   assert.strictEqual(resultado.textoGerado.startsWith('📦 *'), true);

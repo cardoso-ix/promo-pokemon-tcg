@@ -1,4 +1,4 @@
-import { getConfig, setConfig, getAllRotas, DEFAULT_MSG_ABERTURA } from '../db/database.js';
+import { getConfig, setConfig, getAllRotas, DEFAULT_MSG_ABERTURA, PRESET_MSGS_ABERTURA } from '../db/database.js';
 
 export interface HoraBrasiliaInfo {
   horaFormatada: string; // 'HH:mm'
@@ -39,11 +39,26 @@ export function obterHoraBrasilia(dataRef: Date = new Date()): HoraBrasiliaInfo 
 
 /**
  * Prepara o texto da mensagem aplicando interpolações de tags dinâmicas se houver.
+ * Suporta rotação diária automática de modelos caso o template seja '[ROTACAO_DIARIA]'
+ * ou 'rotacao'.
  */
-export function prepararTextoMensagemAbertura(template: string, diaSemana?: string): string {
-  const dia = diaSemana || obterHoraBrasilia().diaSemana;
+export function prepararTextoMensagemAbertura(
+  template: string,
+  diaSemana?: string,
+  dataRef: Date = new Date()
+): string {
+  const dia = diaSemana || obterHoraBrasilia(dataRef).diaSemana;
   const diaCapitalizado = dia.charAt(0).toUpperCase() + dia.slice(1);
-  return (template || DEFAULT_MSG_ABERTURA)
+
+  let textoBase = (template || '').trim();
+
+  // Rotação diária automática: se for '[ROTACAO_DIARIA]' ou 'rotacao'
+  if (!textoBase || textoBase === '[ROTACAO_DIARIA]' || textoBase.toLowerCase() === 'rotacao') {
+    const indice = dataRef.getDay() % PRESET_MSGS_ABERTURA.length;
+    textoBase = PRESET_MSGS_ABERTURA[indice]?.texto || DEFAULT_MSG_ABERTURA;
+  }
+
+  return textoBase
     .replace(/\{dia_semana\}/gi, diaCapitalizado)
     .trim();
 }

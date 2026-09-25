@@ -555,6 +555,40 @@ export function extrairParcelamento(texto: string): string | null {
   return null;
 }
 
+/**
+ * Extrai preço unitário de combos/múltiplos (ex: "(APENAS 11,90 CADA)", "Apenas R$ 11,90 cada", "11,90 cada", "(11,90 a unidade)")
+ */
+export function extrairPrecoUnitario(texto: string): string | null {
+  if (!texto) return null;
+
+  const padroes = [
+    // (APENAS 11,90 CADA) ou (Apenas R$ 11,90 cada) ou (11,90 cd) ou (sai a 11,90 cada)
+    /\(?\s*(?:apenas|saindo a|sai a|sai por)?\s*R?\$?\s*(\d+(?:[.,]\d+)*)\s*(?:cada|cd|a\s+unid(?:ade)?|por\s+unid(?:ade)?|a\s+und|por\s+und)\b\)?/i,
+    // (apenas 11,90 unidade)
+    /\(\s*(?:apenas\s*)?R?\$?\s*(\d+(?:[.,]\d+)*)\s*(?:cada|cd|unidade)\s*\)/i,
+    // cada por R$ 11,90
+    /\b(?:cada|unidade)\s*(?:por|sai a|a)?\s*R?\$?\s*(\d+(?:[.,]\d+)*)/i
+  ];
+
+  for (const regex of padroes) {
+    const match = texto.match(regex);
+    if (match && match[1]) {
+      let valor = match[1].trim().replace(/\.$/, '').replace(/,$/, '');
+      if (!valor.includes(',') && !valor.includes('.')) {
+        valor = `${valor},00`;
+      } else if (/\.\d{1}$/.test(valor) || /,\d{1}$/.test(valor)) {
+        valor = `${valor}0`;
+      }
+      if (!valor.startsWith('R$')) {
+        valor = `R$ ${valor}`;
+      }
+      return valor;
+    }
+  }
+
+  return null;
+}
+
 export interface DeterminarTipoParams {
   texto: string;
   hasProdutoEspecifico: boolean;
@@ -589,6 +623,7 @@ export interface FormatarReplicadaParams {
   titulo: string;
   precoDe?: string;
   precoPor?: string;
+  precoUnitario?: string;
   parcelamento?: string;
   cupom?: string;
   detalhesCupom?: string;
@@ -601,7 +636,7 @@ export interface FormatarReplicadaParams {
  * Formata a mensagem final replicada aplicando o Template Premium de Marca
  */
 export function formatarMensagemReplicada(params: FormatarReplicadaParams): string {
-  const { tipo, titulo, precoDe, precoPor, parcelamento, cupom, detalhesCupom, linkAfiliado, linkVitrineCurto, textoOriginalHigienizado } = params;
+  const { tipo, titulo, precoDe, precoPor, precoUnitario, parcelamento, cupom, detalhesCupom, linkAfiliado, linkVitrineCurto, textoOriginalHigienizado } = params;
   const link = (linkAfiliado || linkVitrineCurto || '').trim();
 
   // Template 3: Cupons & Campanhas Promocionais
@@ -660,6 +695,12 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
     linhaPrecoPor = `🔥 *Por apenas: ${valorPor}*${tagDesconto}`;
   }
 
+  let linhaPrecoUnitario = '';
+  if (precoUnitario && precoUnitario.trim()) {
+    const valUnit = precoUnitario.trim().startsWith('R$') ? precoUnitario.trim() : `R$ ${precoUnitario.trim()}`;
+    linhaPrecoUnitario = `🏷️ *(Apenas ${valUnit} cada)*`;
+  }
+
   let linhaParcelamento = '';
   if (parcelamento && parcelamento.trim() && /sem\s+juros|s\/\s*juros/i.test(parcelamento)) {
     linhaParcelamento = parcelamento.trim();
@@ -696,6 +737,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
     if (linhaPrecoDe) linhas.push(linhaPrecoDe);
     if (linhaPrecoPor) linhas.push(linhaPrecoPor);
+    if (linhaPrecoUnitario) linhas.push(linhaPrecoUnitario);
     if (linhaParcelamento) linhas.push(linhaParcelamento);
     if (linhaCupom) linhas.push(linhaCupom);
 
@@ -715,6 +757,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
   if (linhaPrecoDe) linhas.push(linhaPrecoDe);
   if (linhaPrecoPor) linhas.push(linhaPrecoPor);
+  if (linhaPrecoUnitario) linhas.push(linhaPrecoUnitario);
   if (linhaParcelamento) linhas.push(linhaParcelamento);
   if (linhaCupom) linhas.push(linhaCupom);
 

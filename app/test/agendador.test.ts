@@ -86,3 +86,46 @@ test('verificarEExecutarAgendador - Não deve reenviar se já foi enviado hoje (
   assert.strictEqual(executou, false);
   assert.strictEqual(envioChamado, false);
 });
+
+test('PRESET_MSGS_ABERTURA - Deve conter 4 modelos com marca e elementos de TCG', async () => {
+  const { PRESET_MSGS_ABERTURA } = await import('../src/db/database.js');
+
+  assert.strictEqual(PRESET_MSGS_ABERTURA.length, 4);
+
+  for (const modelo of PRESET_MSGS_ABERTURA) {
+    assert.ok(modelo.nome.length > 5);
+    assert.ok(modelo.texto.includes('@pokemon_tcg_promo'), `Modelo ${modelo.nome} deve conter @pokemon_tcg_promo`);
+    assert.ok(modelo.texto.includes('{dia_semana}'), `Modelo ${modelo.nome} deve conter a tag {dia_semana}`);
+    assert.ok(
+      modelo.texto.toLowerCase().includes('pokémon') ||
+      modelo.texto.toLowerCase().includes('boosters') ||
+      modelo.texto.toLowerCase().includes('colecionadores'),
+      `Modelo ${modelo.nome} deve mencionar elementos de Pokémon TCG`
+    );
+  }
+});
+
+test('prepararTextoMensagemAbertura - Modo [ROTACAO_DIARIA] deve alternar modelos conforme o dia da semana', () => {
+  // Simular Domingo (0), Segunda (1), Terça (2), Quarta (3)
+  const dataDomingo = new Date('2026-09-20T10:00:00Z'); // Domingo
+  const dataSegunda = new Date('2026-09-21T10:00:00Z'); // Segunda
+  const dataTerca = new Date('2026-09-22T10:00:00Z');   // Terça
+  const dataQuarta = new Date('2026-09-23T10:00:00Z');  // Quarta
+
+  const textoDom = prepararTextoMensagemAbertura('[ROTACAO_DIARIA]', undefined, dataDomingo);
+  const textoSeg = prepararTextoMensagemAbertura('[ROTACAO_DIARIA]', undefined, dataSegunda);
+  const textoTer = prepararTextoMensagemAbertura('[ROTACAO_DIARIA]', undefined, dataTerca);
+  const textoQua = prepararTextoMensagemAbertura('[ROTACAO_DIARIA]', undefined, dataQuarta);
+
+  // Cada um deve ser diferente do outro (alternância efetiva)
+  assert.notStrictEqual(textoDom, textoSeg);
+  assert.notStrictEqual(textoSeg, textoTer);
+  assert.notStrictEqual(textoTer, textoQua);
+
+  // Todos devem ter a tag substituída e assinatura correta
+  assert.ok(textoDom.includes('@pokemon_tcg_promo'));
+  assert.ok(!textoDom.includes('{dia_semana}'));
+  assert.ok(textoSeg.includes('@pokemon_tcg_promo'));
+  assert.ok(!textoSeg.includes('{dia_semana}'));
+});
+

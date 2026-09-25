@@ -621,9 +621,25 @@
             </div>
 
             <div class="form-group">
-              <label for="cfg-msg-abertura-texto">Texto da Mensagem Oficial:</label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                <label for="cfg-msg-abertura-texto" style="margin-bottom: 0;">Texto da Mensagem Oficial:</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;">Modelos Prontos:</span>
+                  <select id="select-modelo-abertura" class="input-field" style="padding: 0.35rem 0.6rem; font-size: 0.82rem; height: auto; border-color: rgba(245, 158, 11, 0.45); background: var(--bg-surface); cursor: pointer;">
+                    <option value="">-- Selecionar Modelo --</option>
+                    <option value="rotacao">🔄 Alternância Diária Automática (Recomendado)</option>
+                    <option value="0">🌟 Modelo 1: Comunidade & Boas-Vindas</option>
+                    <option value="1">🎯 Modelo 2: Radar & Drops Relâmpago</option>
+                    <option value="2">🃏 Modelo 3: Colecionador Raiz & Preço Justo</option>
+                    <option value="3">🎟️ Modelo 4: Cupons & Estratégia de Compra</option>
+                  </select>
+                </div>
+              </div>
               <textarea id="cfg-msg-abertura-texto" class="textarea-field" rows="8" style="font-family: inherit; line-height: 1.5;"></textarea>
-              <span class="field-hint">Dica: A tag <code>{dia_semana}</code> é substituída pelo dia da semana atual.</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+                <span class="field-hint">Dica: A tag <code>{dia_semana}</code> é substituída pelo dia da semana atual.</span>
+                <span id="rotacao-hint" style="font-size: 0.8rem; color: #f59e0b; font-weight: 500; display: none;">🔄 Modo de alternância diária ativado: envia um modelo diferente a cada dia da semana!</span>
+              </div>
             </div>
 
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 10px;">

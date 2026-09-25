@@ -16,7 +16,8 @@ import {
   getCachedChats,
   getPostsLastHour,
   insertLog,
-  DEFAULT_MSG_ABERTURA
+  DEFAULT_MSG_ABERTURA,
+  PRESET_MSGS_ABERTURA
 } from '../db/database.js';
 import {
   dispararMensagemAbertura,
@@ -39,6 +40,7 @@ import {
   formatarMensagemReplicada,
   extrairCupom,
   extrairParcelamento,
+  extrairPrecoUnitario,
   determinarTipoMensagem
 } from '../core/anuncio.js';
 import {
@@ -483,6 +485,7 @@ export async function createServer() {
         titulo: dadosOferta.produto || 'Colecionável Pokémon TCG',
         precoDe: dadosOferta.valorDe,
         precoPor: dadosOferta.valorPor,
+        precoUnitario: dadosOferta.valorUnitario || extrairPrecoUnitario(text) || undefined,
         parcelamento: parcelamentoExtraido || undefined,
         cupom: cupomExtraido,
         detalhesCupom: tipoDetectado === 'cupom' ? 'Desconto especial no app para colecionáveis' : undefined,
@@ -702,6 +705,7 @@ export async function createServer() {
       ativo: getConfig('msg_abertura_ativa', 'true') === 'true',
       horario: getConfig('msg_abertura_horario', '07:00'),
       texto,
+      modelos: PRESET_MSGS_ABERTURA,
       previa: prepararTextoMensagemAbertura(texto, diaSemana),
       ultimoEnvio: getConfig('msg_abertura_ultimo_envio', ''),
       horaAtualBrasilia: horaFormatada,

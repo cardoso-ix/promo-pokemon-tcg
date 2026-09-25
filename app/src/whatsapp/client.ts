@@ -33,6 +33,7 @@ import {
   formatarMensagemReplicada,
   extrairCupom,
   extrairParcelamento,
+  extrairPrecoUnitario,
   determinarTipoMensagem,
   calcularDesconto
 } from '../core/anuncio.js';
@@ -809,6 +810,7 @@ export class WhatsAppManager {
         titulo: dadosOferta.produto || 'Colecionável Pokémon TCG',
         precoDe: dadosOferta.valorDe,
         precoPor: dadosOferta.valorPor,
+        precoUnitario: dadosOferta.valorUnitario || extrairPrecoUnitario(rawText) || undefined,
         parcelamento: parcelamentoExtraido || undefined,
         cupom: cupomExtraido,
         detalhesCupom: tipoMensagem === 'cupom' ? 'Desconto especial no app para colecionáveis' : undefined,

@@ -1,14 +1,100 @@
 import fs from 'node:fs';
 import { getConfig } from '../db/database.js';
-import { formatarTituloPorSlug, parseValorMoeda } from './anuncio.js';
+import { formatarTituloPorSlug, parseValorMoeda, extrairPrecoUnitario } from './anuncio.js';
 
 export interface OfertaPlanilha {
   data: string;
   produto: string;
   valorPor: string;
   valorDe: string;
+  valorUnitario?: string;
   link: string;
   grupo: string;
+}
+
+/**
+ * Detecta se uma linha é clickbait, pergunta de engajamento ou cabeçalho comercial (não é produto)
+ */
+function isLinhaClickbaitOuCabecalho(linha: string): boolean {
+  const l = (linha || '').replace(/[\*_~]/g, '').trim();
+  if (!l || l.length < 3) return true;
+
+  // Perguntas promocionais terminadas em ? (ex: "Tá Afim de Gastar Pouco?")
+  if (/\?\s*$/m.test(l)) return true;
+
+  const lower = l.toLowerCase();
+
+  const termosEngajamento = [
+    'gastar pouco', 'afim de', 'a fim de', 'olha esse', 'olha essa', 'olha isso',
+    'olha o preco', 'olha o preço', 'quem avisa', 'achadinho', 'da uma olhada',
+    'dá uma olhada', 'veja isso', 'corre', 'imperdivel', 'imperdível', 'surreal',
+    'loucura', 'nao perca', 'não perca', 'super promocao', 'super promoção',
+    'promocao', 'promoção', 'oferta', 'frete', 'aproveite', 'compre aqui',
+    'loja verificada', 'loja oficial', 'visite a pagina', 'encontre todos os produtos',
+    'novo cupom', 'liberado', 'link aqui', 'oferta aqui', 'estoque limitado',
+    'promocao sujeita', 'promoção sujeita', 'vendido por', 'entregue por',
+    'menor preco', 'menor preço', 'apenas hoje', 'so hoje', 'só hoje',
+    'atencao', 'atenção', 'alerta'
+  ];
+
+  if (termosEngajamento.some((t) => lower.includes(t))) {
+    return true;
+  }
+
+  // Linhas de preços, URLs, cupons, arrobas ou cabeçalhos de lojas
+  if (/^de:?|^por:?|^apenas:?|^https?:/i.test(l)) return true;
+  if (/^R\$\s*[\d\.,]+/i.test(l)) return true;
+  if (l.startsWith('🔗') || l.startsWith('@') || /^[\u{1F39F}\u{1F3AB}\u{1F3F7}]/u.test(l)) return true;
+
+  return false;
+}
+
+/**
+ * Calcula a pontuação semântica de uma linha para determinar se é o título do produto real
+ */
+function pontuarLinhaProduto(linha: string): number {
+  const l = (linha || '').replace(/[\*_~]/g, '').trim();
+  if (l.length < 4) return -100;
+  if (isLinhaClickbaitOuCabecalho(l)) return -100;
+
+  const lower = l.toLowerCase();
+  let score = 10;
+
+  // Multiplicador no início ou meio (ex: 2X, 3X, 4X, Combo, Kit, Pack)
+  if (/(?:^|\s|\b)(\d+\s*[xX])(?:\s|\b)/i.test(l) || lower.includes('combo') || lower.includes('kit') || lower.includes('pack')) {
+    score += 45;
+  }
+
+  // Palavras-chave essenciais de Pokémon TCG e colecionáveis
+  const termosTCG = [
+    'booster', 'copag', 'escuridao absoluta', 'escuridão absoluta', 'fichario', 'fichário',
+    'pasta', 'blister', 'deck', 'box', 'evolucoes', 'evoluções', 'colecao', 'coleção',
+    'cartas', 'pokemon', 'pokémon', 'display', 'sleeves', 'shield', 'triple pack',
+    'quad pack', 'etb', 'elite trainer box', 'lata', 'tin', 'bundle', 'poster collection',
+    'destinos de paldea', 'chamas obsidiana', '151', 'origem perdida', 'cinzas do tempo',
+    'tempestade prateada', 'coroa estelar', 'faiscas volumosas', 'faíscas volumosas',
+    'forca temporal', 'força temporal', 'mascaras do crepusculo', 'máscaras do crepúsculo',
+    'fogo supremo', 'parafuso', 'glauco', 'treinador avancado', 'treinador avançado'
+  ];
+
+  for (const t of termosTCG) {
+    if (lower.includes(t)) {
+      score += 35;
+      break;
+    }
+  }
+
+  // Marcadores visuais de produto (👉, 📦, 🃏, ✨)
+  if (/^[👉📦🃏✨🏷️]/u.test(l)) {
+    score += 15;
+  }
+
+  // Presença de bandeiras de país (🇧🇷, 🇺🇸, 🇯🇵)
+  if (/[\u{1F1E6}-\u{1F1FF}]{2}/u.test(l)) {
+    score += 15;
+  }
+
+  return score;
 }
 
 export const APPS_SCRIPT_TEMPLATE = `function doGet(e) {
@@ -82,50 +168,62 @@ export function extrairDadosOferta(
     link = resolvedUrl;
   }
 
-  // 2. Extração do Título do Produto
+  // 2. Extração do Título do Produto com Sistema de Pontuação (anti-clickbait)
   let produto = '';
-  // Se houver linha destacada com 📦
-  const linhaCaixa = linhas.find((l) => l.includes('📦'));
-  if (linhaCaixa) {
-    produto = linhaCaixa.replace(/📦/g, '').replace(/[\*_~]/g, '').trim();
+  let melhorScore = -999;
+  let melhorLinha = '';
+
+  for (const linha of linhas) {
+    const l = linha.replace(/[\*_~]/g, '').trim();
+    if (!l || l.length < 3) continue;
+
+    // Se a linha for o link ou preço Por/De explícito ou cabeçalho clickbait descartável
+    if (/^https?:/i.test(l) || l.startsWith('🔗') || l.startsWith('@')) continue;
+    if (isLinhaClickbaitOuCabecalho(l)) continue;
+    if (/^(?:❌|~+)?\s*(?:de:?|por:?|apenas:?)\s*R?\$?\s*\d+/i.test(l)) continue;
+    if (/^\(?\s*(?:apenas\s*)?R?\$?\s*\d+(?:[.,]\d+)*\s*(?:cada|cd|unidade)\)?$/i.test(l)) continue;
+
+    const score = pontuarLinhaProduto(l);
+    if (score > melhorScore) {
+      melhorScore = score;
+      melhorLinha = l;
+    }
   }
 
-  // Fallback para primeira linha substantiva
+  if (melhorLinha && melhorScore > 0) {
+    const flagsNaLinha = melhorLinha.match(/[\u{1F1E6}-\u{1F1FF}]{2}/gu);
+    const flagsStr = flagsNaLinha ? flagsNaLinha.join(' ') : '';
+    const bandeiraNoInicio = /^[\u{1F1E6}-\u{1F1FF}]{2}/u.test(melhorLinha.trim());
+    const semBandeiras = melhorLinha.replace(/[\u{1F1E6}-\u{1F1FF}]{2}/gu, '').trim();
+    const textoSemDecoracao = semBandeiras
+      .replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\s~_—–\->:]+/u, '')
+      .trim();
+
+    if (flagsStr) {
+      if (bandeiraNoInicio) {
+        produto = `${flagsStr} ${textoSemDecoracao}`;
+      } else {
+        produto = `${textoSemDecoracao} ${flagsStr}`;
+      }
+    } else {
+      produto = textoSemDecoracao || melhorLinha;
+    }
+  }
+
+  // Fallback 1: Se houver linha destacada com 📦 que não seja clickbait
+  if (!produto) {
+    const linhaCaixa = linhas.find((l) => l.includes('📦') && !isLinhaClickbaitOuCabecalho(l));
+    if (linhaCaixa) {
+      produto = linhaCaixa.replace(/📦/g, '').replace(/[\*_~]/g, '').trim();
+    }
+  }
+
+  // Fallback 2: Primeira linha substantiva que não seja clickbait
   if (!produto) {
     for (const linha of linhas) {
       const l = linha.replace(/[\*_~]/g, '').trim();
-      const lower = l.toLowerCase();
-      // Ignorar linhas de cabeçalho padrão, chamadas de ação, links ou preços
-      if (
-        l.length > 5 &&
-        !lower.includes('super promoção') &&
-        !lower.includes('promoção') &&
-        !lower.includes('oferta') &&
-        !lower.includes('frete') &&
-        !lower.includes('aproveite') &&
-        !lower.includes('compre aqui') &&
-        !lower.includes('loja verificada') &&
-        !lower.includes('visite a pagina') &&
-        !lower.includes('encontre todos os produtos') &&
-        !lower.startsWith('cupom') &&
-        !lower.includes('cupom:') &&
-        !lower.includes('novo cupom') &&
-        !lower.includes('liberado') &&
-        !/^de:?|^por:?|^apenas:?|^https?:/i.test(l) &&
-        !/R\$\s*[\d\.,]+/i.test(l) &&
-        !l.startsWith('🔗') &&
-        !l.startsWith('@') &&
-        !/^[\u{1F39F}\u{1F3AB}\u{1F3F7}]/u.test(l)
-      ) {
-        // Extrai bandeiras de país presentes na linha (ex: 🇺🇸, 🇯🇵, 🇧🇷)
-        const flagsNaLinha = l.match(/[\u{1F1E6}-\u{1F1FF}]{2}/gu);
-        const flagsStr = flagsNaLinha ? flagsNaLinha.join(' ') : '';
-        // Remove as bandeiras temporariamente para limpar outros emojis decorativos do início (ex: ✨, 🔥, ⚡, 👉)
-        const semBandeiras = l.replace(/[\u{1F1E6}-\u{1F1FF}]{2}/gu, '').trim();
-        const textoSemDecoracao = semBandeiras
-          .replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\s*~_—–-]+/u, '')
-          .trim();
-        produto = flagsStr ? `${flagsStr} ${textoSemDecoracao}` : textoSemDecoracao;
+      if (l.length > 5 && !isLinhaClickbaitOuCabecalho(l) && !/^https?:/i.test(l) && !/R\$\s*[\d\.,]+/i.test(l) && !l.startsWith('🔗') && !l.startsWith('@')) {
+        produto = l.replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\s*~_—–-]+/u, '').trim();
         break;
       }
     }
@@ -136,7 +234,7 @@ export function extrairDadosOferta(
   if (bandeiraNoTexto && bandeiraNoTexto.length > 0) {
     const primeiraBandeira = bandeiraNoTexto[0];
     if (!produto.includes(primeiraBandeira)) {
-      produto = `${primeiraBandeira} ${produto}`;
+      produto = `${produto} ${primeiraBandeira}`;
     }
   }
 
@@ -228,11 +326,15 @@ export function extrairDadosOferta(
     }
   }
 
+  // 5. Extração de Preço Unitário (se houver, ex: "(APENAS 11,90 CADA)")
+  const precoUnitarioExtraido = extrairPrecoUnitario(texto);
+
   return {
     data: agoraFormatado,
     produto,
     valorPor: valorPor || 'Consultar',
     valorDe: valorDe || '',
+    valorUnitario: precoUnitarioExtraido || undefined,
     link,
     grupo: origemNome || 'Grupo Pokémon TCG'
   };
