@@ -502,7 +502,8 @@ export function extrairCupom(texto: string): string | null {
     'LIBERADOS', 'ESPECIAL', 'HOJE', 'AGORA', 'AQUI', 'TODO', 'TODOS', 'SITE', 'ITEM', 'ITEMS',
     'PRODUTO', 'PRODUTOS', 'CLIENTE', 'PRIMEIRA', 'COMPRA', 'APENAS', 'EXCLUSIVO', 'DIRETO',
     'CARRINHO', 'PAGINA', 'ANUNCIO', 'FINALIZAR', 'PAGAMENTO', 'COMPRANDO', 'USANDO', 'RESGATE',
-    'RESGATAR', 'PEGUE', 'ATIVE', 'APLIQUE', 'USE', 'INSIRA', 'COLOQUE', 'DIGITE', 'OFF'
+    'RESGATAR', 'PEGUE', 'ATIVE', 'APLIQUE', 'USE', 'INSIRA', 'COLOQUE', 'DIGITE', 'OFF',
+    'TREINADORES', 'RESGATEM', 'ACESSE', 'ACESSEM', 'CONFIRA', 'CONFIRAM', 'LINK', 'LINKS'
   ]);
 
   // A) Expressões regulares para encontrar CÓDIGO de cupom alfanumérico
@@ -521,7 +522,11 @@ export function extrairCupom(texto: string): string | null {
     // cupom CODE destacado (ex: Cupom MELIKIDS, Cupom 20OFF)
     /cupo(?:m|ns)\s+([A-Z0-9_\-]{3,25})/,
     // Emojis de cupom (🎟️, 🎫, 🏷️) seguidos de código diretamente ou após 'cupom/código' (ex: 🎟️ MELIUZKIDS)
-    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?)\s*(?:(?:cupo(?:m|ns)|c[oó]digo|cod)[:\s\*_~=\-]*)?([a-z0-9_\-]{3,25})/iu
+    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?)\s*(?:(?:cupo(?:m|ns)|c[oó]digo|cod)[:\s\*_~=\-]*)?([a-z0-9_\-]{3,25})/iu,
+    // Linha com especificação de % OFF seguida de quebra de linha e código isolado (ex: 🎟️ 20% OFF acima de R$ 49...\nQUEIMADEESTOQUE24)
+    /(?:\d+%\s*off[^\n]*\n+)\s*([a-z0-9_\-]{3,25})/i,
+    // Linha isolada contendo código após emoji de cupom e descrição
+    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?[^\n]*\n+)\s*([a-z0-9_\-]{3,25})/iu
   ];
 
   for (const regex of regexesCodigo) {
@@ -656,6 +661,34 @@ export function determinarTipoMensagem(params: DeterminarTipoParams): 'oferta' |
   }
 
   return isUrgencia ? 'urgencia' : 'oferta';
+}
+
+export interface DeveBuscarFotoExternaParams {
+  messageHasImage: boolean;
+  isCupom: boolean;
+  tipoMensagem?: 'oferta' | 'urgencia' | 'cupom';
+  isComunicadoSemLink?: boolean;
+}
+
+/**
+ * Determina se uma mensagem replicada deve buscar foto externa do produto ou manter estritamente como texto puro.
+ * REGRA MANDATÓRIA: Se for publicação de NOVO CUPOM, lista de cupons ou comunicado e a mensagem original
+ * do grupo monitorado NÃO continha imagem (era apenas digitação), o envio DEVE ser feito exatamente no mesmo
+ * formato: estritamente texto puro / sem imagem, sem puxar banners ou produtos aleatórios da vitrine.
+ */
+export function deveBuscarFotoExterna(params: DeveBuscarFotoExternaParams): boolean {
+  // Se a mensagem original já veio com imagem, ela será baixada diretamente do WhatsApp
+  if (params.messageHasImage) return false;
+
+  // Se for comunicado de texto sem link, não tem foto
+  if (params.isComunicadoSemLink) return false;
+
+  // Se for publicação de NOVO CUPOM ou tipo cupom, DEVE ser postada apenas como digitação (sem imagem)
+  if (params.isCupom || params.tipoMensagem === 'cupom') return false;
+
+  // Para ofertas normais de produtos específicos onde o concorrente não anexou foto,
+  // é permitido buscar a foto oficial do produto no ML
+  return true;
 }
 
 export interface FormatarReplicadaParams {

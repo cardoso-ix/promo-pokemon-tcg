@@ -438,13 +438,18 @@ export async function createServer() {
         linkVitrineCurto
       );
 
+      const cupomExtraido = extrairCupom(text) || '';
+      const isCupom = Boolean(cupomExtraido || detectarMensagemCupom(text) || /\bcupo(?:m|ns)\b/i.test(text));
+
       let imagePreviewUrl: string | null = null;
-      if (result.productImageUrl) {
-        imagePreviewUrl = result.productImageUrl;
-      } else if (result.resolvedProductUrl) {
-        const imgBuf = await downloadProductImage(result.resolvedProductUrl);
-        if (imgBuf) {
-          imagePreviewUrl = `data:image/jpeg;base64,${imgBuf.toString('base64')}`;
+      if (!isCupom) {
+        if (result.productImageUrl) {
+          imagePreviewUrl = result.productImageUrl;
+        } else if (result.resolvedProductUrl) {
+          const imgBuf = await downloadProductImage(result.resolvedProductUrl);
+          if (imgBuf) {
+            imagePreviewUrl = `data:image/jpeg;base64,${imgBuf.toString('base64')}`;
+          }
         }
       }
 
@@ -453,9 +458,6 @@ export async function createServer() {
       const dadosOferta = extrairDadosOferta(result.novoTexto, result.resolvedProductUrl);
       const slugParaFiltro = result.resolvedProductUrl ? result.resolvedProductUrl.split('/').pop() || '' : '';
       const isTCG = isProdutoTCG(text, dadosOferta.produto, slugParaFiltro);
-
-      const cupomExtraido = extrairCupom(text) || '';
-      const isCupom = Boolean(cupomExtraido || detectarMensagemCupom(text) || /\bcupo(?:m|ns)\b/i.test(text));
 
       const hasCanonicalProduct = Boolean(
         result.canonicalProductId &&

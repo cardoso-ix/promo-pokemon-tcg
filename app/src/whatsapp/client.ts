@@ -35,7 +35,8 @@ import {
   extrairParcelamento,
   extrairPrecoUnitario,
   determinarTipoMensagem,
-  calcularDesconto
+  calcularDesconto,
+  deveBuscarFotoExterna
 } from '../core/anuncio.js';
 import { notificarDisparadorOferta } from '../core/internal-sync.js';
 
@@ -742,9 +743,20 @@ export class WhatsAppManager {
       }
     }
 
+    // REGRA DE OURO (NOVO CUPOM / COMUNICADO APENAS EM TEXTO):
+    // Se a publicação for de CUPOM ou COMUNICADO e a mensagem original do grupo monitorado NÃO continha imagem (só digitação),
+    // é OBRIGATÓRIO postar no mesmo formato: apenas digitação / sem imagem!
+    // JAMAIS puxar imagem externa de produtos ou vitrines do Mercado Livre quando a publicação original era apenas texto.
+    const isPublicacaoCupom = Boolean(isCupom || /cupo(?:m|ns)/i.test(rawText));
+    const buscarFotoMl = deveBuscarFotoExterna({
+      messageHasImage: Boolean(messageHasImage),
+      isCupom: isPublicacaoCupom,
+      isComunicadoSemLink: Boolean(isComunicadoSemLink)
+    });
+
     // B) Se NÃO veio foto anexada no WhatsApp (ou falhou o download), mas temos anúncio do Mercado Livre:
-    // Baixa a imagem oficial do anúncio em alta resolução diretamente do Mercado Livre (se houver foto válida)
-    if ((!imageBuffer || imageBuffer.length === 0) && (contemMercadoLivre || productImageUrl)) {
+    // Baixa a imagem oficial do anúncio em alta resolução diretamente do Mercado Livre (se permitido)
+    if (buscarFotoMl && (!imageBuffer || imageBuffer.length === 0) && (contemMercadoLivre || productImageUrl)) {
       if (productImageUrl || resolvedProductUrl) {
         try {
           imageBuffer = await downloadProductImage(
@@ -762,9 +774,8 @@ export class WhatsAppManager {
     }
 
     // C) Fallback de Imagem: Se não conseguimos a foto em alta resolução do ML, mas tínhamos a miniatura do link preview
-    // IMPORTANTE: Nunca usar preview de link de Mercado Livre como foto de produto, pois o crawler da Meta
-    // com frequência captura o banner de exibição de assinaturas (Meli+) ao invés da foto do produto.
-    if ((!imageBuffer || imageBuffer.length === 0) && linkPreviewThumbnail && linkPreviewThumbnail.length > 3000 && !contemMercadoLivre) {
+    // IMPORTANTE: Nunca usar preview de link de Mercado Livre como foto de produto, e NUNCA usar para mensagens de cupom só em texto.
+    if (buscarFotoMl && (!imageBuffer || imageBuffer.length === 0) && linkPreviewThumbnail && linkPreviewThumbnail.length > 3000 && !contemMercadoLivre) {
       imageBuffer = linkPreviewThumbnail;
       console.log(`[Imagem Preview Fallback] Usando miniatura do link preview do WhatsApp (${Math.round(imageBuffer.length / 1024)} KB).`);
     }
@@ -872,6 +883,13 @@ export class WhatsAppManager {
 
     if (this.sock) {
       let safeImageBuffer: Buffer | null = imageBuffer;
+
+      // Blindagem absoluta: Se for publicação de NOVO CUPOM e veio apenas como digitação (sem imagem no concorrente),
+      // NUNCA anexar fotos! O envio DEVE ser estritamente texto puro.
+      if (!messageHasImage && isPublicacaoCupom) {
+        safeImageBuffer = null;
+      }
+
       if (safeImageBuffer && safeImageBuffer.length > 8 * 1024 * 1024) {
         console.warn(`[Mídia Segura] Imagem excede 8MB (${Math.round(safeImageBuffer.length / 1024)} KB). Enviando apenas texto.`);
         safeImageBuffer = null;
@@ -942,7 +960,7 @@ export class WhatsAppManager {
             desconto: descCalculado ? descCalculado.percentualOff : undefined,
             cupom: cupomExtraido || undefined,
             parcelamento: parcelamentoExtraido,
-            imagemUrl: productImageUrl || undefined,
+            imagemUrl: (!messageHasImage && isPublicacaoCupom) ? undefined : (productImageUrl || undefined),
             mensagemFormatada: textoFinalPublicar,
             origem: `replicador:${origemNome}`
           }).catch(() => {});
