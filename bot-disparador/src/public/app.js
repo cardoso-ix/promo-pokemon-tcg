@@ -11,7 +11,14 @@ const state = {
   configs: {},
   metaStatus: { ativo: false, configured: false, tokenConfigured: false, phoneNumberId: null, wabaId: null, apiVersion: 'v21.0' },
   metaTemplates: [],
-  metaPresets: []
+  metaPresets: [],
+  financas: {
+    mesAtivo: '',
+    meses: [],
+    uploads: [],
+    relatorio: null,
+    selectedFile: null
+  }
 };
 
 // Toast de Notificação
@@ -145,6 +152,7 @@ const tabTitles = {
   contatos: { title: 'Base de Leads', desc: 'Contatos captados automaticamente de grupos ou importados manualmente.' },
   campanhas: { title: 'Disparador em Massa', desc: 'Crie e gerencie filas de envios em massa com Spintax inteligente e anti-ban.' },
   'meta-cloud': { title: 'Meta Cloud API Oficial', desc: 'Disparos oficiais autenticados pela Meta com zero risco de banimento e otimização de custos.' },
+  financas: { title: 'Gestão Financeira & Relatórios Meta Ads', desc: 'Controle de custos de tráfego pago, arquivamento semanal de planilhas e relatórios mensais executivos.' },
   deepseek: { title: 'Atendimento IA (DeepSeek V4)', desc: 'Configure a inteligência artificial para responder clientes no privado imitando a sua voz.' },
   configuracoes: { title: 'Anti-Ban & Parâmetros', desc: 'Regule os intervalos de envio, limites de aquecimento de chip e horários de operação.' },
   logs: { title: 'Logs ao Vivo', desc: 'Registro cronológico de disparos, respostas da IA e eventos do WhatsApp.' }
@@ -172,6 +180,7 @@ function switchTab(tabId) {
   }
   if (tabId === 'campanhas') loadCampanhas();
   if (tabId === 'meta-cloud') loadMetaCloudData();
+  if (tabId === 'financas') loadFinancasData();
   if (tabId === 'deepseek' || tabId === 'configuracoes') loadConfigs();
   if (tabId === 'logs') loadLogs();
 }
@@ -2212,6 +2221,473 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // ==========================================
+  // MÓDULO DE FINANÇAS & CONTROLE META ADS
+  // ==========================================
+
+  function formatCurrency(val) {
+    const num = Number(val || 0);
+    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function formatNumber(val) {
+    return Number(val || 0).toLocaleString('pt-BR');
+  }
+
+  function formatMonthName(isoMonth) {
+    if (!isoMonth || !isoMonth.includes('-')) return isoMonth || 'Mês Atual';
+    const [ano, mes] = isoMonth.split('-');
+    const mesesNomes = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const idx = parseInt(mes, 10) - 1;
+    return `${mesesNomes[idx] || mes} de ${ano}`;
+  }
+
+  function getMesAtualIso() {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    return `${ano}-${mes}`;
+  }
+
+  async function loadFinancasData(mesDesejado) {
+    try {
+      // 1. Buscar lista de meses com histórico
+      const resMeses = await fetch('/api/financas/meses').then(r => r.json()).catch(() => ({ meses: [] }));
+      state.financas.meses = resMeses.meses || [];
+
+      // Determinar mês ativo
+      if (mesDesejado) {
+        state.financas.mesAtivo = mesDesejado;
+      } else if (!state.financas.mesAtivo) {
+        if (state.financas.meses.length > 0) {
+          state.financas.mesAtivo = state.financas.meses[0];
+        } else {
+          state.financas.mesAtivo = getMesAtualIso();
+        }
+      }
+
+      // 2. Buscar uploads arquivados e relatório mensal consolidado
+      const [resUploads, resRelatorio] = await Promise.all([
+        fetch(`/api/financas/uploads?mes=${encodeURIComponent(state.financas.mesAtivo)}`).then(r => r.json()).catch(() => ({ uploads: [] })),
+        fetch(`/api/financas/relatorio?mes=${encodeURIComponent(state.financas.mesAtivo)}`).then(r => r.json()).catch(() => ({ relatorio: null }))
+      ]);
+
+      state.financas.uploads = resUploads.uploads || [];
+      state.financas.relatorio = resRelatorio.relatorio || null;
+
+      renderFinancasUI();
+    } catch (err) {
+      console.warn('Erro ao carregar dados financeiros:', err);
+      showToast(`Erro ao carregar finanças: ${err.message}`, 'error');
+    }
+  }
+
+  function renderFinancasUI() {
+    const mesAtivo = state.financas.mesAtivo || getMesAtualIso();
+    const mesFormatado = formatMonthName(mesAtivo);
+
+    // 1. Atualizar Seletor de Meses
+    const selectMes = document.getElementById('financas-mes-select');
+    if (selectMes) {
+      let optionsHtml = '';
+      const listaMeses = [...state.financas.meses];
+      if (!listaMeses.includes(mesAtivo)) {
+        listaMeses.unshift(mesAtivo);
+      }
+
+      listaMeses.forEach(m => {
+        optionsHtml += `<option value="${m}" ${m === mesAtivo ? 'selected' : ''}>📅 ${formatMonthName(m)} (${m})</option>`;
+      });
+
+      selectMes.innerHTML = optionsHtml;
+    }
+
+    // Atualizar campo de mês do formulário de upload
+    const inputMesUpload = document.getElementById('financas-mes-input');
+    if (inputMesUpload && !inputMesUpload.value) {
+      inputMesUpload.value = mesAtivo;
+    }
+
+    // Labels de mês
+    const badgeLabel = document.getElementById('financas-mes-badge-label');
+    if (badgeLabel) badgeLabel.innerText = mesFormatado;
+
+    const relatorioTitulo = document.getElementById('financas-relatorio-titulo');
+    if (relatorioTitulo) relatorioTitulo.innerText = `📊 Desempenho Financeiro e de Tráfego · ${mesFormatado}`;
+
+    // 2. Atualizar KPIs Executivos
+    const rel = state.financas.relatorio;
+    const kpis = rel?.kpis || {
+      gastoTotal: 0,
+      leadsTotal: 0,
+      custoPorLeadMedio: 0,
+      impressoesTotal: 0,
+      cliquesTotal: 0,
+      ctrMedio: 0,
+      cpcMedio: 0,
+      cpmMedio: 0,
+      qtdUploads: state.financas.uploads.length,
+      qtdCampanhasDistintas: 0
+    };
+
+    document.getElementById('financas-kpi-gasto').innerText = formatCurrency(kpis.gastoTotal);
+    document.getElementById('financas-kpi-uploads-count').innerText = `${kpis.qtdUploads} planilha(s) semanal(is) arquivada(s)`;
+
+    document.getElementById('financas-kpi-leads').innerText = formatNumber(kpis.leadsTotal);
+    document.getElementById('financas-kpi-campanhas-count').innerText = `${kpis.qtdCampanhasDistintas} campanha(s) analisada(s) no mês`;
+
+    document.getElementById('financas-kpi-cpl').innerText = formatCurrency(kpis.custoPorLeadMedio);
+
+    const cplBadge = document.getElementById('financas-kpi-cpl-badge');
+    if (cplBadge) {
+      if (kpis.leadsTotal === 0) {
+        cplBadge.innerText = 'Sem leads registrados';
+        cplBadge.style.color = 'var(--text-muted)';
+      } else if (kpis.custoPorLeadMedio <= 5) {
+        cplBadge.innerText = '🟢 CPL Excelente (Abaixo de R$ 5,00)';
+        cplBadge.style.color = '#4ade80';
+      } else if (kpis.custoPorLeadMedio <= 12) {
+        cplBadge.innerText = '🟡 CPL Moderado / Saudável';
+        cplBadge.style.color = '#facc15';
+      } else {
+        cplBadge.innerText = '🔴 CPL Alto (Atenção ao criativo/público)';
+        cplBadge.style.color = '#f87171';
+      }
+    }
+
+    document.getElementById('financas-kpi-cliques').innerText = `${formatNumber(kpis.cliquesTotal)} cliques`;
+    document.getElementById('financas-kpi-ctr-cpc').innerText = `CTR: ${kpis.ctrMedio}% • CPC: ${formatCurrency(kpis.cpcMedio)} • CPM: ${formatCurrency(kpis.cpmMedio)}`;
+
+    // 3. Renderizar Tabela de Uploads Arquivados
+    const tbodyUploads = document.getElementById('financas-uploads-tbody');
+    const badgeArquivos = document.getElementById('badge-total-arquivos');
+    const uploads = state.financas.uploads || [];
+
+    if (badgeArquivos) {
+      badgeArquivos.innerText = `${uploads.length} arquivo${uploads.length === 1 ? '' : 's'}`;
+    }
+
+    if (tbodyUploads) {
+      if (uploads.length === 0) {
+        tbodyUploads.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 36px 20px;">
+              📁 Nenhuma planilha arquivada para <strong>${mesFormatado}</strong>.<br>
+              <small>Arraste o arquivo do Meta Ads na área acima para começar o controle mensal.</small>
+            </td>
+          </tr>
+        `;
+      } else {
+        tbodyUploads.innerHTML = uploads.map(u => {
+          const cpl = Number(u.custo_por_lead_medio || 0);
+          const periodo = (u.periodo_inicio && u.periodo_fim)
+            ? `${u.periodo_inicio.split('-').reverse().slice(0, 2).join('/')} a ${u.periodo_fim.split('-').reverse().slice(0, 2).join('/')}`
+            : 'Período contínuo';
+          const dataUpload = u.criado_em ? new Date(u.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
+
+          return `
+            <tr>
+              <td>
+                <strong style="color: #fff; display: flex; align-items: center; gap: 6px;">
+                  <span>📅</span> ${escapeHtml(u.semana_rotulo)}
+                </strong>
+              </td>
+              <td>
+                <span title="${escapeHtml(u.nome_arquivo)}" style="color: var(--text-secondary); max-width: 220px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;">
+                  📄 ${escapeHtml(u.nome_arquivo)}
+                </span>
+              </td>
+              <td>${periodo}</td>
+              <td><strong style="color: #f87171;">${formatCurrency(u.valor_total_gasto)}</strong></td>
+              <td><strong style="color: #4ade80;">${formatNumber(u.total_resultados)}</strong> leads</td>
+              <td>${formatCurrency(cpl)}</td>
+              <td><small class="text-muted">${dataUpload}</small></td>
+              <td style="text-align: right; white-space: nowrap;">
+                <button class="btn btn-secondary btn-sm" onclick="downloadFinancasUpload(${u.id})" title="Baixar planilha original" style="padding: 4px 8px; margin-right: 4px;">
+                  ⬇️ Baixar
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="excluirFinancasUpload(${u.id}, '${escapeHtml(u.nome_arquivo)}')" title="Excluir do histórico" style="padding: 4px 8px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+                  🗑️
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // 4. Renderizar Tabela de Evolução Semana a Semana
+    const tbodySemanas = document.getElementById('financas-semanas-tbody');
+    const semanas = rel?.semanas || [];
+
+    if (tbodySemanas) {
+      if (semanas.length === 0) {
+        tbodySemanas.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">
+              Aguardando o arquivamento das primeiras planilhas semanais...
+            </td>
+          </tr>
+        `;
+      } else {
+        tbodySemanas.innerHTML = semanas.map(s => {
+          const periodo = (s.periodoInicio && s.periodoFim)
+            ? `${s.periodoInicio.split('-').reverse().slice(0, 2).join('/')} a ${s.periodoFim.split('-').reverse().slice(0, 2).join('/')}`
+            : 'Período da planilha';
+
+          return `
+            <tr>
+              <td><strong>${escapeHtml(s.semanaRotulo)}</strong></td>
+              <td><span class="text-muted">${periodo}</span></td>
+              <td><strong style="color: #f87171;">${formatCurrency(s.gastoTotal)}</strong></td>
+              <td><strong style="color: #4ade80;">${formatNumber(s.leadsTotal)}</strong></td>
+              <td>${formatCurrency(s.custoPorLeadMedio)}</td>
+              <td>${formatNumber(s.cliquesTotal)}</td>
+              <td>${formatNumber(s.impressoesTotal)}</td>
+              <td>${s.ctrMedio.toFixed(2)}%</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // 5. Renderizar Tabela de Performance por Campanha
+    const tbodyCampanhas = document.getElementById('financas-campanhas-tbody');
+    const topCampanhas = rel?.topCampanhas || [];
+
+    if (tbodyCampanhas) {
+      if (topCampanhas.length === 0) {
+        tbodyCampanhas.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">
+              Nenhuma campanha encontrada nas planilhas deste mês.
+            </td>
+          </tr>
+        `;
+      } else {
+        tbodyCampanhas.innerHTML = topCampanhas.map(c => {
+          let badgeEfic = '<span class="badge badge-seguro">🟢 Excelente</span>';
+          if (c.leads === 0) {
+            badgeEfic = '<span class="badge badge-alto_risco">🔴 Sem Leads</span>';
+          } else if (c.custoPorLead > 12) {
+            badgeEfic = '<span class="badge badge-moderado">🟡 CPL Alto</span>';
+          }
+
+          return `
+            <tr>
+              <td>
+                <strong style="color: #fff;">${escapeHtml(c.nomeCampanha)}</strong>
+              </td>
+              <td><strong style="color: #f87171;">${formatCurrency(c.valorGasto)}</strong></td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; min-width: 60px;">
+                    <div style="width: ${Math.min(c.shareGasto, 100)}%; height: 100%; background: #ef4444; border-radius: 3px;"></div>
+                  </div>
+                  <small style="font-weight: 600; min-width: 42px;">${c.shareGasto.toFixed(1)}%</small>
+                </div>
+              </td>
+              <td><strong style="color: #4ade80;">${formatNumber(c.leads)}</strong></td>
+              <td>${formatCurrency(c.custoPorLead)}</td>
+              <td>${formatNumber(c.cliques)}</td>
+              <td>${formatNumber(c.impressoes)}</td>
+              <td>${badgeEfic}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // 6. Atualizar Caixa de Fechamento Financeiro
+    document.getElementById('fechamento-total-gasto').innerText = formatCurrency(kpis.gastoTotal);
+    document.getElementById('fechamento-total-leads').innerText = `${formatNumber(kpis.leadsTotal)} contatos / leads`;
+    document.getElementById('fechamento-cpl-medio').innerText = formatCurrency(kpis.custoPorLeadMedio);
+  }
+
+  // Ações Globais de Finanças
+  window.downloadFinancasUpload = function(id) {
+    window.open(`/api/financas/download/${id}`, '_blank');
+  };
+
+  window.excluirFinancasUpload = async function(id, nome) {
+    if (confirm(`Deseja realmente excluir a planilha "${nome}" e todas as suas métricas arquivadas?\nEsta ação recalculará o relatório do mês.`)) {
+      try {
+        const res = await fetch(`/api/financas/upload/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('Planilha removida e métricas recalculadas!', 'success');
+          await loadFinancasData(state.financas.mesAtivo);
+        } else {
+          showToast(data.error || 'Erro ao remover planilha.', 'error');
+        }
+      } catch (err) {
+        showToast(`Erro na requisição: ${err.message}`, 'error');
+      }
+    }
+  };
+
+  function setupFinancasListeners() {
+    // 1. Alternador de Mês
+    const selectMes = document.getElementById('financas-mes-select');
+    if (selectMes) {
+      selectMes.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val) loadFinancasData(val);
+      });
+    }
+
+    // 2. Botão Mês Atual
+    const btnMesAtual = document.getElementById('btn-financas-mes-atual');
+    if (btnMesAtual) {
+      btnMesAtual.addEventListener('click', () => {
+        const mesAtual = getMesAtualIso();
+        loadFinancasData(mesAtual);
+        showToast(`Exibindo mês atual: ${formatMonthName(mesAtual)}`, 'info');
+      });
+    }
+
+    // 3. Exportar CSV
+    const btnExportarCsv = document.getElementById('btn-financas-exportar-csv');
+    if (btnExportarCsv) {
+      btnExportarCsv.addEventListener('click', () => {
+        const mes = state.financas.mesAtivo || getMesAtualIso();
+        window.open(`/api/financas/exportar-csv?mes=${encodeURIComponent(mes)}`, '_blank');
+      });
+    }
+
+    // 4. Imprimir / Salvar PDF
+    const btnImprimir = document.getElementById('btn-financas-imprimir');
+    if (btnImprimir) {
+      btnImprimir.addEventListener('click', () => {
+        window.print();
+      });
+    }
+
+    // 5. Configuração da Dropzone e Seleção de Arquivo
+    const dropzone = document.getElementById('financas-dropzone');
+    const fileInput = document.getElementById('financas-file-input');
+    const dropTitle = document.getElementById('dropzone-title');
+    const dropSubtitle = document.getElementById('dropzone-subtitle');
+    const dropFilename = document.getElementById('dropzone-filename');
+    const btnLimpar = document.getElementById('btn-limpar-upload');
+    const btnProcessar = document.getElementById('btn-processar-upload');
+
+    function handleFileSelection(file) {
+      if (!file) return;
+
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+        alert('Formato inválido! Por favor, selecione um arquivo Excel (.xlsx, .xls) ou CSV exportado do Meta Ads.');
+        return;
+      }
+
+      state.financas.selectedFile = file;
+
+      if (dropTitle) dropTitle.innerText = 'Arquivo pronto para processamento:';
+      if (dropSubtitle) dropSubtitle.innerText = 'Revise a semana e o mês de referência abaixo se desejar.';
+      if (dropFilename) {
+        const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+        dropFilename.style.display = 'inline-flex';
+        dropFilename.innerHTML = `📊 <strong>${escapeHtml(file.name)}</strong> (${sizeMb} MB)`;
+      }
+      if (btnLimpar) btnLimpar.style.display = 'inline-block';
+    }
+
+    function resetDropzone() {
+      state.financas.selectedFile = null;
+      if (fileInput) fileInput.value = '';
+      if (dropTitle) dropTitle.innerText = 'Arraste a planilha do Meta Ads aqui';
+      if (dropSubtitle) dropSubtitle.innerText = 'ou clique para selecionar do seu computador (.xlsx, .xls, .csv)';
+      if (dropFilename) {
+        dropFilename.style.display = 'none';
+        dropFilename.innerHTML = '';
+      }
+      if (btnLimpar) btnLimpar.style.display = 'none';
+      const semanaInput = document.getElementById('financas-semana-input');
+      if (semanaInput) semanaInput.value = '';
+    }
+
+    if (dropzone && fileInput) {
+      dropzone.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (file) handleFileSelection(file);
+      });
+
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('dragover');
+      });
+
+      dropzone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+        const file = e.dataTransfer?.files?.[0];
+        if (file) handleFileSelection(file);
+      });
+    }
+
+    if (btnLimpar) {
+      btnLimpar.addEventListener('click', resetDropzone);
+    }
+
+    // 6. Submissão do Upload
+    if (btnProcessar) {
+      btnProcessar.addEventListener('click', async () => {
+        const file = state.financas.selectedFile;
+        if (!file) {
+          alert('Por favor, selecione ou arraste uma planilha do Meta Ads antes de processar.');
+          return;
+        }
+
+        const semanaRotulo = document.getElementById('financas-semana-input')?.value.trim();
+        const mesReferencia = document.getElementById('financas-mes-input')?.value.trim();
+
+        btnProcessar.disabled = true;
+        btnProcessar.innerText = '⏳ Processando e Arquivando Planilha...';
+
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          if (semanaRotulo) formData.append('semanaRotulo', semanaRotulo);
+          if (mesReferencia) formData.append('mesReferencia', mesReferencia);
+
+          const res = await fetch('/api/financas/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          const data = await res.json();
+          if (data.ok) {
+            const resMes = data.resumo?.mesReferencia || mesReferencia || state.financas.mesAtivo;
+            showToast(`Sucesso! Planilha arquivada. Total apurado: ${formatCurrency(data.resumo?.gastoTotal)} (${data.resumo?.leadsTotal} leads).`, 'success');
+            resetDropzone();
+            await loadFinancasData(resMes);
+          } else {
+            alert(`Erro ao processar planilha:\n\n${data.error || 'Verifique se o arquivo contém as colunas exportadas do Meta Ads.'}`);
+          }
+        } catch (err) {
+          alert(`Falha na conexão com o servidor: ${err.message}`);
+        } finally {
+          btnProcessar.disabled = false;
+          btnProcessar.innerText = '⚡ Arquivar e Processar Planilha';
+        }
+      });
+    }
+  }
+
   // Motor Gráfico de Brasas & Fagulhas de Fogo (Canvas 60fps GPU)
   function initFireParticles() {
     const canvas = document.getElementById('ambient-fx');
@@ -2401,6 +2877,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Inicialização
   initFireParticles();
   setupCockpitSwitchers();
+  setupFinancasListeners();
   loadStatus();
   loadPastasLeads();
   initSSE();

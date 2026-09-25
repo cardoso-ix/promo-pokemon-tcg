@@ -34,8 +34,17 @@ import {
   getOfertasRecebidas,
   marcarOfertaStatus,
   deleteOfertaRecebida,
+  listarFinancasUploads,
+  getFinancasUploadById,
+  listarMesesDisponiveisFinancas,
   db
 } from '../db/database.js';
+import {
+  arquivarPlanilhaSemanal,
+  removerUploadArquivado,
+  gerarRelatorioExecutivo,
+  exportarRelatorioCsv
+} from '../core/financas.js';
 import { whatsapp, WhatsAppState } from '../whatsapp/client.js';
 import { dispatchEngine } from '../core/engine.js';
 import { renderMessageTemplate } from '../core/spintax.js';
@@ -790,6 +799,127 @@ export async function createServer() {
     const id = parseInt(req.params.id, 10);
     deleteOfertaRecebida(id);
     return { ok: true, id };
+  });
+
+  // ==========================================
+  // MÓDULO DE FINANÇAS & CONTROLE META ADS
+  // ==========================================
+
+  // Upload semanal de planilha Excel (XLSX, XLS, CSV)
+  app.post('/api/financas/upload', async (req: any, reply) => {
+    try {
+      const part = await req.file();
+      if (!part) {
+        return reply.status(400).send({ ok: false, error: 'Nenhum arquivo enviado.' });
+      }
+
+      const buffer = await part.toBuffer();
+      if (!buffer || buffer.length === 0) {
+        return reply.status(400).send({ ok: false, error: 'O arquivo enviado está vazio.' });
+      }
+
+      const fields: any = part.fields || {};
+      const semanaRotulo = (fields.semanaRotulo?.value || req.query.semanaRotulo || '').trim();
+      const mesReferencia = (fields.mesReferencia?.value || req.query.mesReferencia || '').trim();
+
+      const resultado = await arquivarPlanilhaSemanal(
+        buffer,
+        part.filename,
+        semanaRotulo || undefined,
+        mesReferencia || undefined
+      );
+
+      logSistema(
+        'info',
+        'financas',
+        `Planilha de Meta Ads arquivada: "${part.filename}" (${resultado.resumo.semanaRotulo}, Mês ${resultado.resumo.mesReferencia}, R$ ${resultado.resumo.gastoTotal})`
+      );
+
+      return {
+        ok: true,
+        message: 'Planilha processada e arquivada com sucesso.',
+        uploadId: resultado.uploadId,
+        resumo: resultado.resumo
+      };
+    } catch (err: any) {
+      logSistema('error', 'financas', `Erro ao processar planilha: ${err.message}`);
+      return reply.status(400).send({ ok: false, error: err.message || 'Erro ao processar planilha.' });
+    }
+  });
+
+  // Listar histórico de uploads arquivados
+  app.get('/api/financas/uploads', async (req: any) => {
+    const mes = (req.query.mes || '').trim();
+    const uploads = listarFinancasUploads(mes || undefined);
+    return { ok: true, uploads };
+  });
+
+  // Listar meses disponíveis com dados
+  app.get('/api/financas/meses', async () => {
+    const meses = listarMesesDisponiveisFinancas();
+    return { ok: true, meses };
+  });
+
+  // Obter relatório mensal consolidado
+  app.get('/api/financas/relatorio', async (req: any) => {
+    let mes = (req.query.mes || '').trim();
+    if (!mes) {
+      const mesesDisponiveis = listarMesesDisponiveisFinancas();
+      if (mesesDisponiveis.length > 0) {
+        mes = mesesDisponiveis[0];
+      } else {
+        const hoje = new Date();
+        const ano = hoje.getFullYear();
+        const m = String(hoje.getMonth() + 1).padStart(2, '0');
+        mes = `${ano}-${m}`;
+      }
+    }
+
+    const relatorio = gerarRelatorioExecutivo(mes);
+    return { ok: true, relatorio };
+  });
+
+  // Exportar relatório consolidado do mês em CSV
+  app.get('/api/financas/exportar-csv', async (req: any, reply) => {
+    let mes = (req.query.mes || '').trim();
+    if (!mes) {
+      const mesesDisponiveis = listarMesesDisponiveisFinancas();
+      mes = mesesDisponiveis[0] || new Date().toISOString().substring(0, 7);
+    }
+
+    const csvContent = exportarRelatorioCsv(mes);
+    // Prefixo BOM UTF-8 (\uFEFF) para garantir acentuação perfeita no Microsoft Excel brasileiro
+    const csvComBom = '\uFEFF' + csvContent;
+
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
+    reply.header('Content-Disposition', `attachment; filename="relatorio_meta_ads_${mes}.csv"`);
+    return reply.send(csvComBom);
+  });
+
+  // Download do arquivo de planilha original arquivado
+  app.get('/api/financas/download/:id', async (req: any, reply) => {
+    const id = parseInt(req.params.id, 10);
+    const upload = getFinancasUploadById(id);
+
+    if (!upload || !upload.caminho_arquivo || !fs.existsSync(upload.caminho_arquivo)) {
+      return reply.status(404).send({ ok: false, error: 'Arquivo original não encontrado.' });
+    }
+
+    const stream = fs.createReadStream(upload.caminho_arquivo);
+    reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(upload.nome_arquivo)}"`);
+    return reply.send(stream);
+  });
+
+  // Excluir upload arquivado e suas métricas
+  app.delete('/api/financas/upload/:id', async (req: any, reply) => {
+    const id = parseInt(req.params.id, 10);
+    const sucesso = removerUploadArquivado(id);
+    if (!sucesso) {
+      return reply.status(404).send({ ok: false, error: 'Registro não encontrado.' });
+    }
+
+    logSistema('warn', 'financas', `Planilha arquivada ID ${id} removida pelo usuário.`);
+    return { ok: true, id, message: 'Upload removido com sucesso.' };
   });
 
   return app;

@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'node:path';
 import fs from 'node:fs';
 
-const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.resolve('data');
+export const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.resolve('data');
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
@@ -117,6 +117,54 @@ db.exec(`
     status TEXT DEFAULT 'nova',
     criado_em TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS financas_uploads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome_arquivo TEXT NOT NULL,
+    caminho_arquivo TEXT NOT NULL,
+    tamanho_bytes INTEGER NOT NULL,
+    mes_referencia TEXT NOT NULL,
+    semana_rotulo TEXT NOT NULL,
+    periodo_inicio TEXT,
+    periodo_fim TEXT,
+    total_linhas INTEGER NOT NULL DEFAULT 0,
+    valor_total_gasto REAL NOT NULL DEFAULT 0,
+    total_resultados INTEGER NOT NULL DEFAULT 0,
+    impressoes_total INTEGER NOT NULL DEFAULT 0,
+    cliques_total INTEGER NOT NULL DEFAULT 0,
+    ctr_medio REAL NOT NULL DEFAULT 0,
+    cpc_medio REAL NOT NULL DEFAULT 0,
+    cpm_medio REAL NOT NULL DEFAULT 0,
+    custo_por_lead_medio REAL NOT NULL DEFAULT 0,
+    criado_em TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS financas_itens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    upload_id INTEGER NOT NULL,
+    mes_referencia TEXT NOT NULL,
+    semana_rotulo TEXT NOT NULL,
+    nome_campanha TEXT NOT NULL,
+    status_veiculacao TEXT,
+    orcamento REAL,
+    tipo_orcamento TEXT,
+    valor_gasto REAL NOT NULL DEFAULT 0,
+    resultados INTEGER NOT NULL DEFAULT 0,
+    custo_por_resultado REAL,
+    impressoes INTEGER NOT NULL DEFAULT 0,
+    cpm REAL,
+    cliques INTEGER NOT NULL DEFAULT 0,
+    ctr REAL,
+    cpc REAL,
+    inicio_relatorio TEXT,
+    fim_relatorio TEXT,
+    criado_em TEXT NOT NULL,
+    FOREIGN KEY(upload_id) REFERENCES financas_uploads(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_financas_uploads_mes ON financas_uploads(mes_referencia);
+  CREATE INDEX IF NOT EXISTS idx_financas_itens_mes ON financas_itens(mes_referencia);
+  CREATE INDEX IF NOT EXISTS idx_financas_itens_upload ON financas_itens(upload_id);
 `);
 
 // Migração suave de colunas na tabela campanhas
@@ -787,6 +835,320 @@ export function marcarOfertaStatus(id: number, status: string): void {
 
 export function deleteOfertaRecebida(id: number): void {
   db.prepare('DELETE FROM ofertas_recebidas WHERE id = ?').run(id);
+}
+
+// ==========================================
+// MÓDULO DE FINANÇAS & CONTROLE META ADS
+// ==========================================
+
+export interface FinancasUploadInput {
+  nomeArquivo: string;
+  caminhoArquivo: string;
+  tamanhoBytes: number;
+  semanaRotulo: string;
+  periodoInicio: string | null;
+  periodoFim: string | null;
+  mesReferencia: string;
+  gastoTotal: number;
+  impressoesTotal: number;
+  cliquesTotal: number;
+  leadsTotal: number;
+  ctrMedio: number;
+  cpcMedio: number;
+  cpmMedio: number;
+  custoPorLeadMedio: number;
+  qtdCampanhas: number;
+}
+
+export interface FinancasItemInput {
+  nomeCampanha: string;
+  statusVeiculacao?: string;
+  orcamento?: number;
+  tipoOrcamento?: string;
+  valorGasto: number;
+  impressoes: number;
+  cliques: number;
+  ctr: number;
+  cpc: number;
+  cpm: number;
+  leads: number;
+  custoPorLead: number;
+  dataInicio?: string | null;
+  dataFim?: string | null;
+  mesReferencia: string;
+}
+
+export interface FinancasConsolidadoMensal {
+  mesReferencia: string;
+  kpis: {
+    gastoTotal: number;
+    leadsTotal: number;
+    custoPorLeadMedio: number;
+    impressoesTotal: number;
+    cliquesTotal: number;
+    ctrMedio: number;
+    cpcMedio: number;
+    cpmMedio: number;
+    qtdUploads: number;
+    qtdCampanhasDistintas: number;
+  };
+  semanas: Array<{
+    uploadId: number;
+    nomeArquivo: string;
+    semanaRotulo: string;
+    periodoInicio: string | null;
+    periodoFim: string | null;
+    gastoTotal: number;
+    leadsTotal: number;
+    custoPorLeadMedio: number;
+    impressoesTotal: number;
+    cliquesTotal: number;
+    ctrMedio: number;
+    cpcMedio: number;
+    cpmMedio: number;
+    criadoEm: string;
+  }>;
+  topCampanhas: Array<{
+    nomeCampanha: string;
+    valorGasto: number;
+    leads: number;
+    custoPorLead: number;
+    impressoes: number;
+    cliques: number;
+    shareGasto: number;
+  }>;
+}
+
+export function salvarFinancasUpload(upload: FinancasUploadInput, itens: FinancasItemInput[]): number {
+  const agora = new Date().toISOString();
+
+  const insertUpload = db.prepare(`
+    INSERT INTO financas_uploads (
+      nome_arquivo, caminho_arquivo, tamanho_bytes, mes_referencia, semana_rotulo,
+      periodo_inicio, periodo_fim, total_linhas, valor_total_gasto, total_resultados,
+      impressoes_total, cliques_total, ctr_medio, cpc_medio, cpm_medio, custo_por_lead_medio,
+      criado_em
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const insertItem = db.prepare(`
+    INSERT INTO financas_itens (
+      upload_id, mes_referencia, semana_rotulo, nome_campanha, status_veiculacao,
+      orcamento, tipo_orcamento, valor_gasto, resultados, custo_por_resultado,
+      impressoes, cpm, cliques, ctr, cpc, inicio_relatorio, fim_relatorio, criado_em
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const transacao = db.transaction(() => {
+    const resUpload = insertUpload.run(
+      upload.nomeArquivo,
+      upload.caminhoArquivo,
+      upload.tamanhoBytes,
+      upload.mesReferencia,
+      upload.semanaRotulo,
+      upload.periodoInicio,
+      upload.periodoFim,
+      itens.length,
+      upload.gastoTotal,
+      upload.leadsTotal,
+      upload.impressoesTotal,
+      upload.cliquesTotal,
+      upload.ctrMedio,
+      upload.cpcMedio,
+      upload.cpmMedio,
+      upload.custoPorLeadMedio,
+      agora
+    );
+
+    const uploadId = Number(resUpload.lastInsertRowid);
+
+    for (const it of itens) {
+      insertItem.run(
+        uploadId,
+        upload.mesReferencia,
+        upload.semanaRotulo,
+        it.nomeCampanha,
+        it.statusVeiculacao || 'ativa',
+        it.orcamento ?? null,
+        it.tipoOrcamento || null,
+        it.valorGasto,
+        it.leads,
+        it.custoPorLead,
+        it.impressoes,
+        it.cpm,
+        it.cliques,
+        it.ctr,
+        it.cpc,
+        it.dataInicio || null,
+        it.dataFim || null,
+        agora
+      );
+    }
+
+    return uploadId;
+  });
+
+  return transacao();
+}
+
+export function listarFinancasUploads(mesReferencia?: string): any[] {
+  if (mesReferencia && mesReferencia.trim()) {
+    return db
+      .prepare('SELECT * FROM financas_uploads WHERE mes_referencia = ? ORDER BY id DESC')
+      .all(mesReferencia.trim());
+  }
+  return db.prepare('SELECT * FROM financas_uploads ORDER BY id DESC').all();
+}
+
+export function getFinancasUploadById(id: number): any {
+  return db.prepare('SELECT * FROM financas_uploads WHERE id = ?').get(id);
+}
+
+export function deleteFinancasUpload(id: number): { id: number; caminhoArquivo: string } | null {
+  const registro: any = db.prepare('SELECT id, caminho_arquivo FROM financas_uploads WHERE id = ?').get(id);
+  if (!registro) return null;
+
+  const transacao = db.transaction(() => {
+    db.prepare('DELETE FROM financas_itens WHERE upload_id = ?').run(id);
+    db.prepare('DELETE FROM financas_uploads WHERE id = ?').run(id);
+  });
+
+  transacao();
+
+  return {
+    id: registro.id,
+    caminhoArquivo: registro.caminho_arquivo
+  };
+}
+
+export function listarMesesDisponiveisFinancas(): string[] {
+  const rows: any[] = db
+    .prepare('SELECT DISTINCT mes_referencia FROM financas_uploads ORDER BY mes_referencia DESC')
+    .all();
+  return rows.map((r) => r.mes_referencia).filter(Boolean);
+}
+
+export function obterConsolidadoMensalFinancas(mesReferencia: string): FinancasConsolidadoMensal {
+  const mes = (mesReferencia || '').trim();
+
+  const uploads: any[] = db
+    .prepare('SELECT * FROM financas_uploads WHERE mes_referencia = ? ORDER BY id ASC')
+    .all(mes);
+
+  const kpisPadrao = {
+    gastoTotal: 0,
+    leadsTotal: 0,
+    custoPorLeadMedio: 0,
+    impressoesTotal: 0,
+    cliquesTotal: 0,
+    ctrMedio: 0,
+    cpcMedio: 0,
+    cpmMedio: 0,
+    qtdUploads: 0,
+    qtdCampanhasDistintas: 0
+  };
+
+  if (!uploads || uploads.length === 0) {
+    return {
+      mesReferencia: mes,
+      kpis: kpisPadrao,
+      semanas: [],
+      topCampanhas: []
+    };
+  }
+
+  // Agregações de Totais a partir dos itens do mês
+  const aggGeral: any = db
+    .prepare(`
+      SELECT 
+        COALESCE(SUM(valor_gasto), 0) AS gasto_total,
+        COALESCE(SUM(resultados), 0) AS leads_total,
+        COALESCE(SUM(impressoes), 0) AS impressoes_total,
+        COALESCE(SUM(cliques), 0) AS cliques_total,
+        COUNT(DISTINCT nome_campanha) AS qtd_campanhas_distintas
+      FROM financas_itens
+      WHERE mes_referencia = ?
+    `)
+    .get(mes);
+
+  const gastoTotal = Number((aggGeral?.gasto_total || 0).toFixed(2));
+  const leadsTotal = Number(aggGeral?.leads_total || 0);
+  const impressoesTotal = Number(aggGeral?.impressoes_total || 0);
+  const cliquesTotal = Number(aggGeral?.cliques_total || 0);
+  const qtdCampanhasDistintas = Number(aggGeral?.qtd_campanhas_distintas || 0);
+
+  const custoPorLeadMedio = leadsTotal > 0 ? Number((gastoTotal / leadsTotal).toFixed(2)) : 0;
+  const ctrMedio = impressoesTotal > 0 ? Number(((cliquesTotal / impressoesTotal) * 100).toFixed(2)) : 0;
+  const cpcMedio = cliquesTotal > 0 ? Number((gastoTotal / cliquesTotal).toFixed(2)) : 0;
+  const cpmMedio = impressoesTotal > 0 ? Number(((gastoTotal / impressoesTotal) * 1000).toFixed(2)) : 0;
+
+  const semanas = uploads.map((u) => ({
+    uploadId: u.id,
+    nomeArquivo: u.nome_arquivo,
+    semanaRotulo: u.semana_rotulo,
+    periodoInicio: u.periodo_inicio,
+    periodoFim: u.periodo_fim,
+    gastoTotal: Number(u.valor_total_gasto || 0),
+    leadsTotal: Number(u.total_resultados || 0),
+    custoPorLeadMedio: Number(u.custo_por_lead_medio || 0),
+    impressoesTotal: Number(u.impressoes_total || 0),
+    cliquesTotal: Number(u.cliques_total || 0),
+    ctrMedio: Number(u.ctr_medio || 0),
+    cpcMedio: Number(u.cpc_medio || 0),
+    cpmMedio: Number(u.cpm_medio || 0),
+    criadoEm: u.criado_em
+  }));
+
+  // Agrupar por campanha no mês para ranking e distribuição de verba
+  const campanhasRows: any[] = db
+    .prepare(`
+      SELECT 
+        nome_campanha,
+        COALESCE(SUM(valor_gasto), 0) AS valor_gasto,
+        COALESCE(SUM(resultados), 0) AS leads,
+        COALESCE(SUM(impressoes), 0) AS impressoes,
+        COALESCE(SUM(cliques), 0) AS cliques
+      FROM financas_itens
+      WHERE mes_referencia = ?
+      GROUP BY nome_campanha
+      ORDER BY valor_gasto DESC
+    `)
+    .all(mes);
+
+  const topCampanhas = campanhasRows.map((c) => {
+    const vg = Number((c.valor_gasto || 0).toFixed(2));
+    const ld = Number(c.leads || 0);
+    const cpl = ld > 0 ? Number((vg / ld).toFixed(2)) : 0;
+    const share = gastoTotal > 0 ? Number(((vg / gastoTotal) * 100).toFixed(1)) : 0;
+
+    return {
+      nomeCampanha: c.nome_campanha,
+      valorGasto: vg,
+      leads: ld,
+      custoPorLead: cpl,
+      impressoes: Number(c.impressoes || 0),
+      cliques: Number(c.cliques || 0),
+      shareGasto: share
+    };
+  });
+
+  return {
+    mesReferencia: mes,
+    kpis: {
+      gastoTotal,
+      leadsTotal,
+      custoPorLeadMedio,
+      impressoesTotal,
+      cliquesTotal,
+      ctrMedio,
+      cpcMedio,
+      cpmMedio,
+      qtdUploads: uploads.length,
+      qtdCampanhasDistintas
+    },
+    semanas,
+    topCampanhas
+  };
 }
 
 export { db };
