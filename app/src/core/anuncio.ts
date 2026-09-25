@@ -363,10 +363,12 @@ export function gerarCopyPromocional(params: {
   linhas.push('');
 
   // 5. Rodapé legal
-  linhas.push('⚠️ _Preço e estoque promocional sujeitos a alteração a qualquer momento._');
+  linhas.push(AVISO_LEGAL_RODAPE);
 
   return linhas.join('\n');
 }
+
+export const AVISO_LEGAL_RODAPE = '⚠️ _Preço e estoque promocional sujeitos a alteração a qualquer momento._';
 
 /**
  * Guardião de Nicho TCG: Aceita Pokémon TCG, Yu-Gi-Oh!, Magic: The Gathering e todo o ecossistema TCG
@@ -721,9 +723,9 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
       const hasLink = /https?:\/\//i.test(textoLimpo);
       const vitrine = (linkVitrineCurto || linkAfiliado || '').trim();
       if (!hasLink && vitrine) {
-        return `@pokemon_tcg_promo\n\n${textoLimpo}\n\n🛒 ${vitrine}`;
+        return `@pokemon_tcg_promo\n\n${textoLimpo}\n\n🛒 ${vitrine}\n\n${AVISO_LEGAL_RODAPE}`;
       }
-      return `@pokemon_tcg_promo\n\n${textoLimpo}`;
+      return `@pokemon_tcg_promo\n\n${textoLimpo}\n\n${AVISO_LEGAL_RODAPE}`;
     }
 
     const codCupom = (cupom || 'CUPOM NO APP').trim().toUpperCase();
@@ -744,6 +746,8 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
     linhas.push('');
     linhas.push('🛒 *Aproveite na vitrine oficial de Pokémon TCG:*');
     linhas.push(`👉 ${vitrine}`);
+    linhas.push('');
+    linhas.push(AVISO_LEGAL_RODAPE);
     return linhas.join('\n');
   }
 
@@ -817,6 +821,8 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
     linhas.push('');
     linhas.push('⚡ *Corre antes que acabe o estoque!*');
     linhas.push(`🛒 ${link}`);
+    linhas.push('');
+    linhas.push(AVISO_LEGAL_RODAPE);
     return linhas.join('\n');
   }
 
@@ -836,6 +842,8 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
   linhas.push('');
   linhas.push(`🛒 ${link}`);
+  linhas.push('');
+  linhas.push(AVISO_LEGAL_RODAPE);
 
   return linhas.join('\n');
 }
