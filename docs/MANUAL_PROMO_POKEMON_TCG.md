@@ -44,6 +44,16 @@ Os dois módulos conversam através da rede interna Docker (`promo_network`). Se
 | **Teto de Envios (Anti-Flood)**| Trava automática para no máximo 40 mensagens por hora. | Preserva a comunidade limpa e agradável. |
 | **Abertura Matinal (07:00)** | Dispara diariamente às 07:00 (Brasília) uma saudação com rotação automática entre 4 modelos de curadoria a dedo. | Engajamento diário orgânico sem intervenção manual. |
 
+### 2.1. Os 3 Templates Visuais de Postagem & Configuração no Painel
+
+No painel web (`http://108.174.145.77:3000`), aba **⚙️ Configurações**, no card **💧 Suíte de Réplica Pro (Templates & Anti-Duplicidade Global)**, encontra-se a opção **Padrão Visual de Postagem (`template_modo`)**:
+
+* **⚡ Template Padronizado de Marca (Recomendado):** O robô reescreve a mensagem aplicando a identidade visual oficial com assinatura `@pokemon_tcg_promo`, selecionando dinamicamente entre 3 templates conforme o conteúdo:
+  1. **Template 1 — Oferta Regular TCG:** Para produtos normais. Destaca o título com bandeira de idioma (🇧🇷/🇺🇸/🇯🇵), preço riscado `~De: R$ XX~`, preço `🔥 *Por apenas: R$ YY* (% OFF)`, cálculo do valor unitário por booster (`🏷️ Apenas R$ 27 cada`), parcelamento sem juros condicional, cupom ativo e link encurtado oficial `meli.la`.
+  2. **Template 2 — Alerta de Urgência & Escassez:** Ativado automaticamente quando são detectados termos como *"últimas unidades"*, *"corre"*, *"vai acabar"*, *"estoque acabando"* ou *"queima de estoque"*. Aplica marcadores de urgência (`🚨 ÚLTIMAS UNIDADES EM ESTOQUE! 🚨`) e CTA de compra rápida.
+  3. **Template 3 — Cupons & Vitrine:** Ativado para comunicados de cupons gerais no app do Mercado Livre (sem produto específico). Formata o código em caixa alta (`🏷️ Cupom: *CODIGO*`), exibe regras e condições, link da vitrine de Pokémon TCG e envia como digitação de texto puro (sem foto forçada).
+* **📄 Modo Fiel:** Preserva rigorosamente o texto original escrito pelo grupo concorrente, substituindo apenas os links de terceiros pelo seu link de afiliado oficial.
+
 ---
 
 ## 3. ARQUITETURA RESILIENTE DE IMAGEM EM 4 CAMADAS
