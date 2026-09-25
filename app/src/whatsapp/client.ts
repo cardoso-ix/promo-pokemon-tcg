@@ -743,15 +743,42 @@ export class WhatsAppManager {
       }
     }
 
+    const imageDownloadSuccess = Boolean(imageBuffer && imageBuffer.length > 0);
+
+    // Identificação de produto específico (ID canônico MLB real, ou preço válido e título de produto)
+    const hasCanonicalProduct = Boolean(
+      canonicalProductId &&
+      !canonicalProductId.startsWith('CUPOM_')
+    );
+    const hasPrecoValido = Boolean(
+      (dadosOferta.valorPor && dadosOferta.valorPor !== 'Consultar' && dadosOferta.valorPor !== 'R$ 0') ||
+      (dadosOferta.valorDe && dadosOferta.valorDe !== 'Consultar' && dadosOferta.valorDe !== 'R$ 0')
+    );
+    const isTituloProduto = Boolean(
+      dadosOferta.produto &&
+      dadosOferta.produto !== 'Colecionável Pokémon TCG' &&
+      !dadosOferta.produto.toLowerCase().includes('cupom') &&
+      !dadosOferta.produto.toLowerCase().includes('desconto')
+    );
+
+    const hasProdutoEspecifico = Boolean(
+      hasCanonicalProduct ||
+      (!isCupom && hasPrecoValido && isTituloProduto) ||
+      (Boolean(messageHasImage) && !isCupom) ||
+      (contemMercadoLivre && hasPrecoValido)
+    );
+
     // REGRA DE OURO (NOVO CUPOM / COMUNICADO APENAS EM TEXTO):
-    // Se a publicação for de CUPOM ou COMUNICADO e a mensagem original do grupo monitorado NÃO continha imagem (só digitação),
+    // Se a publicação for de NOVO CUPOM PURO (sem produto específico) e a mensagem original do grupo monitorado NÃO continha imagem (só digitação),
     // é OBRIGATÓRIO postar no mesmo formato: apenas digitação / sem imagem!
-    // JAMAIS puxar imagem externa de produtos ou vitrines do Mercado Livre quando a publicação original era apenas texto.
-    const isPublicacaoCupom = Boolean(isCupom || /cupo(?:m|ns)/i.test(rawText));
+    // Ofertas com produto específico real continuam podendo buscar a foto oficial do produto normalmente.
+    const isPublicacaoCupomPuro = Boolean(isCupom || /cupo(?:m|ns)/i.test(rawText)) && !hasProdutoEspecifico;
     const buscarFotoMl = deveBuscarFotoExterna({
       messageHasImage: Boolean(messageHasImage),
-      isCupom: isPublicacaoCupom,
-      isComunicadoSemLink: Boolean(isComunicadoSemLink)
+      imageDownloadSuccess,
+      isCupom: Boolean(isCupom),
+      isComunicadoSemLink: Boolean(isComunicadoSemLink),
+      hasProdutoEspecifico
     });
 
     // B) Se NÃO veio foto anexada no WhatsApp (ou falhou o download), mas temos anúncio do Mercado Livre:
@@ -774,10 +801,13 @@ export class WhatsAppManager {
     }
 
     // C) Fallback de Imagem: Se não conseguimos a foto em alta resolução do ML, mas tínhamos a miniatura do link preview
-    // IMPORTANTE: Nunca usar preview de link de Mercado Livre como foto de produto, e NUNCA usar para mensagens de cupom só em texto.
-    if (buscarFotoMl && (!imageBuffer || imageBuffer.length === 0) && linkPreviewThumbnail && linkPreviewThumbnail.length > 3000 && !contemMercadoLivre) {
-      imageBuffer = linkPreviewThumbnail;
-      console.log(`[Imagem Preview Fallback] Usando miniatura do link preview do WhatsApp (${Math.round(imageBuffer.length / 1024)} KB).`);
+    // Usa a miniatura do WhatsApp quando há produto específico ou para links que não são vitrines genéricas
+    if (buscarFotoMl && (!imageBuffer || imageBuffer.length === 0) && linkPreviewThumbnail && linkPreviewThumbnail.length > 3000) {
+      const isVitrineGenericaSocial = Boolean(resolvedProductUrl && resolvedProductUrl.includes('/social/'));
+      if (!isVitrineGenericaSocial || hasProdutoEspecifico) {
+        imageBuffer = linkPreviewThumbnail;
+        console.log(`[Imagem Preview Fallback] Usando miniatura do link preview do WhatsApp (${Math.round(imageBuffer.length / 1024)} KB).`);
+      }
     }
 
     // 9. Determinar Texto Final para Envio (Modo Template de Marca vs Modo Fiel)
@@ -785,28 +815,6 @@ export class WhatsAppManager {
     let textoFinalPublicar = novoTexto;
 
     if (templateModo === 'padrao' && !isComunicadoSemLink) {
-      // Verifica se a mensagem traz um produto específico (ID canônico MLB real, ou preço válido sem ser cupom)
-      const hasCanonicalProduct = Boolean(
-        canonicalProductId &&
-        !canonicalProductId.startsWith('CUPOM_')
-      );
-      const hasPrecoValido = Boolean(
-        (dadosOferta.valorPor && dadosOferta.valorPor !== 'Consultar' && dadosOferta.valorPor !== 'R$ 0') ||
-        (dadosOferta.valorDe && dadosOferta.valorDe !== 'Consultar' && dadosOferta.valorDe !== 'R$ 0')
-      );
-      const isTituloProduto = Boolean(
-        dadosOferta.produto &&
-        dadosOferta.produto !== 'Colecionável Pokémon TCG' &&
-        !dadosOferta.produto.toLowerCase().includes('cupom') &&
-        !dadosOferta.produto.toLowerCase().includes('desconto')
-      );
-
-      const hasProdutoEspecifico = Boolean(
-        hasCanonicalProduct ||
-        (!isCupom && hasPrecoValido && isTituloProduto) ||
-        (Boolean(messageHasImage) && !isCupom)
-      );
-
       const tipoMensagem = determinarTipoMensagem({
         texto: rawText,
         hasProdutoEspecifico
@@ -884,9 +892,9 @@ export class WhatsAppManager {
     if (this.sock) {
       let safeImageBuffer: Buffer | null = imageBuffer;
 
-      // Blindagem absoluta: Se for publicação de NOVO CUPOM e veio apenas como digitação (sem imagem no concorrente),
+      // Blindagem absoluta: Se for publicação de NOVO CUPOM PURO (sem produto específico) e veio apenas como digitação (sem imagem no concorrente),
       // NUNCA anexar fotos! O envio DEVE ser estritamente texto puro.
-      if (!messageHasImage && isPublicacaoCupom) {
+      if (!messageHasImage && isPublicacaoCupomPuro) {
         safeImageBuffer = null;
       }
 
@@ -960,7 +968,7 @@ export class WhatsAppManager {
             desconto: descCalculado ? descCalculado.percentualOff : undefined,
             cupom: cupomExtraido || undefined,
             parcelamento: parcelamentoExtraido,
-            imagemUrl: (!messageHasImage && isPublicacaoCupom) ? undefined : (productImageUrl || undefined),
+            imagemUrl: (!messageHasImage && isPublicacaoCupomPuro) ? undefined : (productImageUrl || undefined),
             mensagemFormatada: textoFinalPublicar,
             origem: `replicador:${origemNome}`
           }).catch(() => {});

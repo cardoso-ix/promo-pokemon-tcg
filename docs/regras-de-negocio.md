@@ -87,14 +87,20 @@ Em vez de herdar o estilo e formatação dos concorrentes, o bot classifica a me
 
 ---
 
-## 4. Manipulação de Mídia e Imagens
+## 4. Manipulação de Mídia e Imagens (Arquitetura em 4 Camadas de Resiliência)
 
 1. **Fotos Nativas do WhatsApp**:
    - Mensagens com imagem anexada têm seus buffers de áudio/foto extraídos diretamente pelo Baileys.
    - Suporte nativo a desempacotamento de mensagens temporárias (*ephemeral*), fotos de visualização única (*viewOnce*) e mensagens postadas pelo próprio aparelho conectado (`deviceSentMessage`).
-2. **Fallback de Scraper em Alta Definição (2X)**:
-   - Se a postagem original for apenas texto, mas contiver um link de produto do Mercado Livre, o sistema faz uma requisição leve para coletar a imagem oficial do produto (`og:image`) em alta resolução (`2X`).
-   - A imagem é baixada em memória e enviada junto com o texto como legenda (*caption*), garantindo que o grupo de destino sempre receba uma postagem visualmente atraente.
+2. **Parser Resiliente de Vitrines e Listas Sociais do Mercado Livre**:
+   - Para links encurtados de vitrines e listas de concorrentes (`/social/.../lists`), o parser delimita os cards inteiros por containers (`andes-card`, `poly-card--grid-card`), preservando a portada da imagem e o link do produto juntos.
+   - Extrai a imagem oficial do produto do card e a normaliza automaticamente para alta definição (`2X`) e formato JPG.
+3. **Diferenciação Inteligente de Cupons vs Ofertas com Cupom**:
+   - Mensagens de **comunicados puros de novos cupons** (sem produto específico, sem preço De/Por) que chegam originalmente apenas em digitação no concorrente continuam sendo postadas como texto puro / sem fotos aleatórias da vitrine.
+   - **Ofertas reais de produtos específicos que aceitam cupom** (ex: Blister Triplo com cupom) agora são identificadas como produtos legítimos e buscam a foto oficial no anúncio normalmente.
+4. **Fallback em Cascata (WhatsApp Fallback & Link Preview)**:
+   - Se a mensagem original tinha foto mas o download do WhatsApp falhou (por oscilação de rede ou mídia expirada na Meta), a esteira aciona automaticamente a busca da foto oficial pelo link do anúncio.
+   - Se o download da foto oficial em alta resolução sofrer bloqueio de WAF (`suspicious-traffic-frontend`), o sistema utiliza como plano de contingência a miniatura de pré-visualização (`linkPreviewThumbnail`) gerada pelo próprio WhatsApp.
 
 ---
 

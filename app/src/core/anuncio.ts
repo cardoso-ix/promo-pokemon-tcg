@@ -667,29 +667,42 @@ export function determinarTipoMensagem(params: DeterminarTipoParams): 'oferta' |
 
 export interface DeveBuscarFotoExternaParams {
   messageHasImage: boolean;
-  isCupom: boolean;
+  imageDownloadSuccess?: boolean;
+  isCupom?: boolean;
   tipoMensagem?: 'oferta' | 'urgencia' | 'cupom';
   isComunicadoSemLink?: boolean;
+  hasProdutoEspecifico?: boolean;
 }
 
 /**
  * Determina se uma mensagem replicada deve buscar foto externa do produto ou manter estritamente como texto puro.
- * REGRA MANDATÓRIA: Se for publicação de NOVO CUPOM, lista de cupons ou comunicado e a mensagem original
- * do grupo monitorado NÃO continha imagem (era apenas digitação), o envio DEVE ser feito exatamente no mesmo
- * formato: estritamente texto puro / sem imagem, sem puxar banners ou produtos aleatórios da vitrine.
+ * REGRA MANDATÓRIA:
+ * 1. Se veio imagem no WhatsApp e o download foi bem-sucedido, usa a imagem do WhatsApp (retorna false para busca externa).
+ * 2. Se veio imagem no WhatsApp mas o download falhou (timeout/mídia expirada), permite fallback para buscar foto oficial no ML.
+ * 3. Se for comunicado de novo cupom puramente em texto (sem produto específico) e sem imagem original, DEVE postar apenas como digitação (retorna false).
+ * 4. Se for oferta de produto específico (mesmo que use cupom), permite e recomenda buscar a foto oficial no ML.
  */
 export function deveBuscarFotoExterna(params: DeveBuscarFotoExternaParams): boolean {
-  // Se a mensagem original já veio com imagem, ela será baixada diretamente do WhatsApp
-  if (params.messageHasImage) return false;
+  // 1. Se a mensagem original já veio com imagem e o download do WhatsApp foi concluído com sucesso, não busca externa
+  if (params.messageHasImage && params.imageDownloadSuccess !== false) {
+    return false;
+  }
 
-  // Se for comunicado de texto sem link, não tem foto
+  // 1.1 Se veio com imagem mas o download falhou explicitamente (fallback de mídia):
+  if (params.messageHasImage && params.imageDownloadSuccess === false) {
+    const isCupomPuro = Boolean((params.isCupom || params.tipoMensagem === 'cupom') && !params.hasProdutoEspecifico);
+    return !isCupomPuro && !params.isComunicadoSemLink;
+  }
+
+  // 2. Se for comunicado de texto sem link, não tem foto
   if (params.isComunicadoSemLink) return false;
 
-  // Se for publicação de NOVO CUPOM ou tipo cupom, DEVE ser postada apenas como digitação (sem imagem)
-  if (params.isCupom || params.tipoMensagem === 'cupom') return false;
+  // 3. Se for publicação puramente de cupom (sem produto específico), DEVE ser postada apenas como digitação (sem imagem)
+  const isCupomPuro = Boolean((params.isCupom || params.tipoMensagem === 'cupom') && !params.hasProdutoEspecifico);
+  if (isCupomPuro) return false;
 
-  // Para ofertas normais de produtos específicos onde o concorrente não anexou foto,
-  // é permitido buscar a foto oficial do produto no ML
+  // 4. Para ofertas de produtos específicos (inclusive com cupom) onde o concorrente não anexou foto,
+  // é permitido e recomendado buscar a foto oficial do produto no ML
   return true;
 }
 

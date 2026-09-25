@@ -2,6 +2,20 @@
 
 Este registro documenta a evolução arquitetural e as decisões estratégicas do projeto, prevenindo regressões e alinhando os princípios operacionais.
 
+## Decisão 68 — Arquitetura Resiliente de Imagem em 4 Camadas e Tratamento de Vitrines Sociais
+**Data:** 25/09/2026 · **Decisor:** Eduardo / Antigravity
+
+- **A decisão**:
+  1. **Correção Estrutural de Cards de Vitrines Sociais (`extrairProdutosVitrineSocial`)**:
+     - O Mercado Livre separava os cards em `<div class="poly-card__portada">` (imagem) e `<div class="poly-card__content">` (link). A regex antiga fatiou o card ao meio, descartando as fotos dos cards. A nova segmentação delimita o container pai inteiro (`andes-card`, `poly-card--grid-card`), garantindo associação de 100% das fotos oficiais de produtos da vitrine social em alta resolução (2X JPG).
+  2. **Diferenciação Cirúrgica de Cupons (`isPublicacaoCupomPuro`)**:
+     - Ofertas reais de produtos que mencionam cupom (ex: "Blister Pokémon por R$ 27 usando cupom OFFMELI") não são mais penalizadas com remoção de foto. A regra de texto puro agora se aplica exclusivamente a comunicados de novos cupons que não possuem produto específico e foram postados como digitação pelo concorrente.
+  3. **Fallback Ativo de Mídia (WhatsApp Fallback)**:
+     - Caso a mensagem original contenha foto anexada mas o download do WhatsApp falhe no Baileys (timeout de rede ou expiração na Meta), a esteira agora aciona o scraper do link do anúncio como plano B, em vez de desistir e enviar apenas texto.
+  4. **Fallback Inteligente de Miniatura (`linkPreviewThumbnail`)**:
+     - O thumbnail do link preview gerado pelo WhatsApp é reaproveitado caso a foto HD sofra bloqueio anti-bot (`suspicious-traffic-frontend`), mantendo a postagem atraente visualmente.
+- **Motivo**: Eliminar postagens sem foto nos grupos de destino, garantindo presença visual mesmo quando o concorrente posta sem imagem ou quando os servidores do Mercado Livre ativam verificações anti-bot.
+
 ---
 
 ## Decisão 67 — Blindagem de Extração de Imagens e Eliminação de Banners Meli+

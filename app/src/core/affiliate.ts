@@ -144,6 +144,68 @@ export function normalizarFotoMl(url: string): string {
 }
 
 /**
+ * Extrai produtos e fotos oficiais a partir do HTML de vitrines e listas sociais do Mercado Livre (/social/)
+ */
+export function extrairProdutosVitrineSocial(
+  html: string,
+  textHint: string = ''
+): { url: string; slug: string; img?: string; pontos: number }[] {
+  if (!html) return [];
+
+  const ogTitleMatch = html.match(/<meta[^>]+(?:property|name)=["']og:title["'][^>]+content=["']([^"']+)["']/i);
+  const pageTitle = ogTitleMatch ? ogTitleMatch[1].trim() : '';
+
+  const isGenericVitrine = !pageTitle || /minhas listas|recomenda[çc][õo]es|vitrine|perfil/i.test(pageTitle);
+
+  let palavras = normalizarPalavras(textHint);
+  if (!isGenericVitrine) {
+    palavras = normalizarPalavras(`${pageTitle} ${textHint}`);
+  }
+
+  const candidatos: { url: string; slug: string; img?: string; pontos: number }[] = [];
+
+  // Delimita os cards inteiros pela classe do container (andes-card, poly-card--grid-card ou ui-search-layout__item)
+  // IMPORTANTE: NÃO fatiar por 'poly-card' genérico pois fatiaria o card entre portada e content!
+  const cardChunks = html.split(/(?=<div[^>]*class="[^"]*(?:andes-card|poly-card--grid-card)[^"]*"|<li[^>]*class="[^"]*ui-search-layout__item)/i);
+  for (const c of cardChunks) {
+    if (!c.includes('poly-card') && !c.includes('ui-search-layout__item')) continue;
+    const linkMatch = c.match(/href="(https?:\/\/(?:www\.)?mercadolivre\.com\.br\/[^\s"'<>]+?\/(?:p\/MLB\d+|up\/MLBU\d+|MLB-\d+)[^"]*)"/i);
+    const imgMatch = c.match(/(?:src|data-src|data-src-2x)="(https?:\/\/http2\.mlstatic\.com\/[^\s"']+\.(?:webp|jpe?g|png))"/i);
+    if (linkMatch) {
+      const cleanUrl = linkMatch[1].split('?')[0].split('#')[0];
+      const slugMatch = cleanUrl.match(/mercadolivre\.com\.br\/([^\s"'<>]+?)\/(?:p\/|up\/|MLB-)/i);
+      const slug = slugMatch ? slugMatch[1] : '';
+      const imgRaw = imgMatch ? imgMatch[1].replace(/\{sanitized_title\}/gi, '') : undefined;
+      const img = imgRaw && isImagemValidaProdutoMl(imgRaw) ? normalizarFotoMl(imgRaw) : undefined;
+      candidatos.push({
+        url: cleanUrl,
+        slug,
+        img,
+        pontos: pontuarSlug(slug, palavras)
+      });
+    }
+  }
+
+  // Fallback geral caso a estrutura não use andes-card/poly-card
+  if (candidatos.length === 0) {
+    const regex = /(?:https?:\/\/)?(?:www\.)?mercadolivre\.com\.br\/([^\s"'<>]+)\/(p\/MLB\d+|up\/MLBU\d+|MLB-\d+)/gi;
+    let match;
+    while ((match = regex.exec(html)) !== null) {
+      const full = match[0].startsWith('http') ? match[0] : 'https://' + match[0];
+      const slug = match[1];
+      const cleanUrl = full.split('#')[0].split('?')[0];
+      candidatos.push({
+        url: cleanUrl,
+        slug,
+        pontos: pontuarSlug(slug, palavras)
+      });
+    }
+  }
+
+  return candidatos;
+}
+
+/**
  * Segue redirecionamentos HTTP com GET (desencurta links como meli.la e extrai dados do anúncio)
  */
 export async function expandUrl(
@@ -206,66 +268,25 @@ export async function expandUrl(
     const ogImageMatch = lastHtml.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
     let ogImg = ogImageMatch ? ogImageMatch[1].trim().replace(/\{sanitized_title\}/gi, '') : '';
 
-    // Verifica se a página social compartilha um produto específico (ex: link com ref ou lista de produto)
     const isGenericVitrine = !pageTitle || /minhas listas|recomenda[çc][õo]es|vitrine|perfil/i.test(pageTitle);
 
-    let palavras = normalizarPalavras(textHint);
-    if (!isGenericVitrine) {
-      palavras = normalizarPalavras(`${pageTitle} ${textHint}`);
-      if (ogImg && isImagemValidaProdutoMl(ogImg)) {
-        productImageUrl = normalizarFotoMl(ogImg);
-      }
+    if (!isGenericVitrine && ogImg && isImagemValidaProdutoMl(ogImg)) {
+      productImageUrl = normalizarFotoMl(ogImg);
     }
 
-    const candidatos: { url: string; slug: string; img?: string; pontos: number }[] = [];
-
-    // Tenta extrair produtos e fotos específicas a partir dos cards da vitrine (poly-card)
-    // Secciona por limites de card (poly-card ou ui-search-layout__item) sem depender de <div id="
-    const cardChunks = lastHtml.split(/(?=<div[^>]*class="[^"]*poly-card|<li[^>]*class="[^"]*ui-search-layout__item)/i);
-    for (const c of cardChunks) {
-      if (!c.includes('poly-card') && !c.includes('ui-search-layout__item')) continue;
-      const linkMatch = c.match(/href="(https?:\/\/(?:www\.)?mercadolivre\.com\.br\/[^\s"'<>]+?\/(?:p\/MLB\d+|up\/MLBU\d+|MLB-\d+)[^"]*)"/i);
-      const imgMatch = c.match(/(?:src|data-src)="(https?:\/\/http2\.mlstatic\.com\/[^\s"']+\.(?:webp|jpe?g|png))"/i);
-      if (linkMatch) {
-        const cleanUrl = linkMatch[1].split('?')[0].split('#')[0];
-        const slugMatch = cleanUrl.match(/mercadolivre\.com\.br\/([^\s"'<>]+?)\/(?:p\/|up\/|MLB-)/i);
-        const slug = slugMatch ? slugMatch[1] : '';
-        const imgRaw = imgMatch ? imgMatch[1].replace(/\{sanitized_title\}/gi, '') : undefined;
-        const img = imgRaw && isImagemValidaProdutoMl(imgRaw) ? normalizarFotoMl(imgRaw) : undefined;
-        candidatos.push({
-          url: cleanUrl,
-          slug,
-          img,
-          pontos: pontuarSlug(slug, palavras)
-        });
-      }
-    }
-
-    // Se não encontrou por poly-card, usa o regex geral de URLs de produto no HTML
-    if (candidatos.length === 0) {
-      const regex = /(?:https?:\/\/)?(?:www\.)?mercadolivre\.com\.br\/([^\s"'<>]+)\/(p\/MLB\d+|up\/MLBU\d+|MLB-\d+)/gi;
-      let match;
-      while ((match = regex.exec(lastHtml)) !== null) {
-        const full = match[0].startsWith('http') ? match[0] : 'https://' + match[0];
-        const slug = match[1];
-        const cleanUrl = full.split('#')[0].split('?')[0];
-        candidatos.push({
-          url: cleanUrl,
-          slug,
-          pontos: pontuarSlug(slug, palavras)
-        });
-      }
-    }
+    const candidatos = extrairProdutosVitrineSocial(lastHtml, textHint);
 
     if (candidatos.length > 0) {
       candidatos.sort((a, b) => b.pontos - a.pontos);
       // Exige pontuação relevante para assumir que é o mesmo produto, ou adota se for o único candidato
       if (candidatos[0].pontos >= 2 || candidatos.length === 1) {
         currentUrl = candidatos[0].url;
-        // Se ainda não temos a foto do produto, adota a foto do card correspondente se for válida
         if (!productImageUrl && candidatos[0].img && isImagemValidaProdutoMl(candidatos[0].img)) {
           productImageUrl = candidatos[0].img;
         }
+      } else if (candidatos.length > 0 && !productImageUrl && candidatos[0].img && isImagemValidaProdutoMl(candidatos[0].img)) {
+        // Se há produtos listados na vitrine do concorrente, aproveita a imagem do card com melhor pontuação
+        productImageUrl = candidatos[0].img;
       }
     }
   }

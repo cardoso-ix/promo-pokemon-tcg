@@ -47,9 +47,16 @@ Verifique os seguintes pontos no feed de **Atividades (Logs)** do painel do Repl
 
 ## T4 — Imagem da postagem não saiu no grupo de destino
 
-**Causa: Tipo de encapsulamento especial de mídia**
-- A aplicação possui suporte nativo para desembrulhar mídias normais, efêmeras (`ephemeralMessage`), visualização única (`viewOnceMessageV2`) e enviadas por aparelhos conectados (`deviceSentMessage`).
-- Caso a postagem original contenha um link do Mercado Livre sem foto ou apenas texto, o scraper oficial coletará a imagem do produto (`og:image`) em alta resolução (2X) e enviará junto com o texto.
+**Causas e Recuperação Automática (4 Camadas de Resiliência)**
+1. **Mensagens com Foto no WhatsApp**:
+   - A esteira desempacota mídias normais, efêmeras (`ephemeralMessage`), visualização única (`viewOnceMessageV2`) e enviadas por aparelhos conectados (`deviceSentMessage`).
+   - Se o Baileys falhar ao baixar o arquivo por instabilidade temporária ou mídia expirada, a esteira ativa o **fallback de mídia**, buscando automaticamente a foto do anúncio no link do produto.
+2. **Postagens Apenas em Texto com Link do Mercado Livre**:
+   - Para links encurtados de vitrines e listas de concorrentes (`/social/...`), o parser segmenta os cards inteiros (`extrairProdutosVitrineSocial`), capturando a imagem do card e normalizando para 2X JPG.
+   - Caso a imagem em alta resolução sofra bloqueio anti-bot do Mercado Livre (`suspicious-traffic-frontend`), o sistema utiliza o **fallback de miniatura** (`linkPreviewThumbnail`) gerado pelo WhatsApp.
+3. **Postagens de Cupons vs Ofertas com Cupom**:
+   - Se for um **comunicado de novo cupom** sem produto específico vindo em digitação pura do concorrente, o envio é mantido em texto puro sem anexar fotos aleatórias.
+   - Se for uma **oferta de produto real que aceita cupom** (ex: Blister com cupom), a foto do produto é buscada e anexada normalmente.
 
 ---
 

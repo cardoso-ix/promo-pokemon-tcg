@@ -71,7 +71,44 @@ https://mercadolivre.com/sec/2rM6RPm`;
   const deveBuscar = deveBuscarFotoExterna({
     messageHasImage: false,
     isCupom: true,
-    tipoMensagem: tipo
+    tipoMensagem: tipo,
+    hasProdutoEspecifico: false
   });
   assert.strictEqual(deveBuscar, false);
 });
+
+test('deveBuscarFotoExterna - Oferta de produto específico COM cupom DEVE buscar foto oficial no ML', () => {
+  // Produto real que aceita cupom (ex: Blister Triplo com cupom OFFMELI)
+  const resultado = deveBuscarFotoExterna({
+    messageHasImage: false,
+    isCupom: true,
+    tipoMensagem: 'oferta',
+    hasProdutoEspecifico: true
+  });
+
+  assert.strictEqual(resultado, true, 'Deve buscar foto para produto específico mesmo que haja cupom na mensagem');
+});
+
+test('deveBuscarFotoExterna - Fallback quando download da imagem do WhatsApp falha', () => {
+  // Concorrente anexou foto no WhatsApp mas Baileys falhou ao baixar o buffer (timeout/mídia expirada)
+  const resultado = deveBuscarFotoExterna({
+    messageHasImage: true,
+    imageDownloadSuccess: false,
+    isCupom: false,
+    hasProdutoEspecifico: true
+  });
+
+  assert.strictEqual(resultado, true, 'Deve acionar fallback para buscar foto no link quando o download do WhatsApp falha');
+});
+
+test('deveBuscarFotoExterna - Download da imagem do WhatsApp com sucesso NÃO precisa buscar foto externa', () => {
+  const resultado = deveBuscarFotoExterna({
+    messageHasImage: true,
+    imageDownloadSuccess: true,
+    isCupom: false,
+    hasProdutoEspecifico: true
+  });
+
+  assert.strictEqual(resultado, false, 'Não deve buscar foto externa se o download do WhatsApp foi concluído com sucesso');
+});
+
