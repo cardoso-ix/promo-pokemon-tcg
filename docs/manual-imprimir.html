@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Manual de Operação e Engenharia — Promo Pokémon TCG</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 15mm 20mm 15mm;
+      @bottom-right {
+        content: counter(page);
+        font-size: 9pt;
+        color: #64748b;
+      }
+      @bottom-left {
+        content: "Promo Pokémon TCG — Manual de Operação & Regras";
+        font-size: 9pt;
+        color: #64748b;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 10pt;
+      line-height: 1.55;
+      color: #1e293b;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .cover-page {
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 92vh;
+      padding: 40px 20px 20px 20px;
+      border: 3px solid #0f172a;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    }
+
+    .cover-header {
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .cover-tag {
+      display: inline-block;
+      background-color: #0284c7;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 9pt;
+      padding: 6px 16px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 20px;
+    }
+
+    .cover-title {
+      font-size: 26pt;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.2;
+      margin: 0 0 15px 0;
+    }
+
+    .cover-subtitle {
+      font-size: 13pt;
+      font-weight: 500;
+      color: #475569;
+      max-width: 580px;
+      margin: 0 auto;
+      line-height: 1.4;
+    }
+
+    .cover-badge-container {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 30px;
+    }
+
+    .cover-badge {
+      border: 1px solid #cbd5e1;
+      padding: 10px 18px;
+      border-radius: 8px;
+      background: #ffffff;
+      font-size: 9pt;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .cover-meta {
+      border-top: 2px solid #e2e8f0;
+      padding-top: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      font-size: 9pt;
+      color: #475569;
+    }
+
+    .cover-meta strong {
+      color: #0f172a;
+    }
+
+    /* Estrutura de Capítulos */
+    .page-break {
+      page-break-before: always;
+    }
+
+    h1 {
+      font-size: 16pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 6px;
+      margin-top: 24px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h2 {
+      font-size: 12pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 18px;
+      margin-bottom: 8px;
+      border-left: 4px solid #0284c7;
+      padding-left: 8px;
+    }
+
+    h3 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #334155;
+      margin-top: 12px;
+      margin-bottom: 6px;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 10px;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 12px;
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    /* Tabelas */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px 0;
+      font-size: 9pt;
+    }
+
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 7px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+
+    /* Caixas de Alerta */
+    .box-info {
+      background-color: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-left: 4px solid #0284c7;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin: 12px 0;
+      font-size: 9pt;
+    }
+
+    .box-success {
+      background-color: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-left: 4px solid #16a34a;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin: 12px 0;
+      font-size: 9pt;
+    }
+
+    .box-warning {
+      background-color: #fffbeb;
+      border: 1px solid #fef3c7;
+      border-left: 4px solid #d97706;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin: 12px 0;
+      font-size: 9pt;
+    }
+
+    .box-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Blocos de Código e Tags */
+    code {
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 8.5pt;
+      background-color: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      padding: 2px 5px;
+      border-radius: 4px;
+      color: #0f172a;
+    }
+
+    pre {
+      background-color: #0f172a;
+      color: #f8fafc;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 8.5pt;
+      overflow-x: auto;
+      margin: 10px 0 14px 0;
+      line-height: 1.4;
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 12px 0;
+    }
+
+    .card-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fafafa;
+    }
+
+    .card-box strong {
+      color: #0f172a;
+      display: block;
+      margin-bottom: 4px;
+      font-size: 9.5pt;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CAPA DO MANUAL -->
+  <div class="cover-page">
+    <div class="cover-header">
+      <div class="cover-tag">DOCUMENTAÇÃO OFICIAL DE PRODUÇÃO 24/7</div>
+      <h1 class="cover-title">PROMO POKÉMON TCG</h1>
+      <div class="cover-subtitle">Manual Completo de Operação, Engenharia de Software, Regras de Negócio e Gestão de Afiliados</div>
+      
+      <div class="cover-badge-container">
+        <div class="cover-badge">🌊 Promo Réplica (:3000)</div>
+        <div class="cover-badge">🔥 Bot Disparador (:3333)</div>
+        <div class="cover-badge">⚙️ Coolify HostGator</div>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <div style="font-size: 11pt; font-weight: 700; color: #0f172a;">Plataforma Autônoma de Curadoria, Replicação e Disparo de Ofertas</div>
+      <div style="font-size: 9pt; color: #64748b; margin-top: 5px;">Ambiente de Produção: <code>http://108.174.145.77</code> · Stack: Node.js, TypeScript, Baileys & SQLite</div>
+    </div>
+
+    <div class="cover-meta">
+      <div>
+        <strong>Operador & Administrador:</strong> Eduardo<br>
+        <strong>Nicho de Atuação:</strong> Pokémon TCG & Colecionáveis Oficiais<br>
+        <strong>Monetização:</strong> Programa de Afiliados Mercado Livre
+      </div>
+      <div>
+        <strong>Versão do Sistema:</strong> 2.5.0 (Produção Estável)<br>
+        <strong>Data da Edição:</strong> Setembro / 2026<br>
+        <strong>Status de Disponibilidade:</strong> 🟢 24/7 Online na VPS
+      </div>
+    </div>
+  </div>
+
+  <!-- CAPÍTULO 1 -->
+  <h1>1. Visão Geral da Arquitetura do Sistema</h1>
+  <p>
+    O ecossistema <strong>Promo Pokémon TCG</strong> é uma suíte profissional de comércio eletrônico e automação para o WhatsApp desenvolvida sob medida para operar 24 horas por dia, 7 dias por semana na VPS HostGator (<code>108.174.145.77</code>). O objetivo central da plataforma é captar ofertas promocionais em tempo real de concorrentes, higienizar conteúdos, injetar links de afiliado comissionados do Mercado Livre, garantir imagens oficiais em alta definição e distribuir com visual de alta conversão para os membros da sua comunidade VIP.
+  </p>
+
+  <div class="card-grid">
+    <div class="card-box" style="border-top: 4px solid #0284c7;">
+      <strong>1. Promo Réplica (Cockpit Água — Porta 3000)</strong>
+      <p style="margin: 0; font-size: 8.5pt; color: #475569;">
+        Robô sentinela que monitora os grupos concorrentes no WhatsApp, filtra jogos de cartas oficiais, desencurta links <code>meli.la</code>, injeta suas tags de afiliado, baixa fotos HD da vitrine e replica para o grupo VIP.
+      </p>
+    </div>
+    <div class="card-box" style="border-top: 4px solid #dc2626;">
+      <strong>2. Bot Disparador & IA (Cockpit Fogo — Porta 3333)</strong>
+      <p style="margin: 0; font-size: 8.5pt; color: #475569;">
+        Motor de prospecção e vendas diretas. Dispara campanhas em massa para novos leads vindos de anúncios (Meta Ads), faz atendimento automático humanizado via IA (DeepSeek V4) e gerencia finanças/faturas de anúncios.
+      </p>
+    </div>
+  </div>
+
+  <h2>Comunicação em Malha Interna (Ponte de Ofertas)</h2>
+  <p>
+    Os dois sistemas comunicam-se nativamente através da rede interna isolada do Docker (<code>promo_network</code>). Sempre que uma promoção legítima de Pokémon TCG é postada pelo Replicador no grupo VIP, a esteira emite uma chamada interna para <code>http://bot-disparador:3333/api/internal/oferta</code> com validação de token seguro (<code>X-Internal-Token</code>). A oferta fica instantaneamente salva na aba <strong>Ofertas Recebidas</strong> do Disparador, permitindo que você a transforme em uma campanha de mensagens diretas no privado dos clientes com apenas 1 clique.
+  </p>
+
+  <div class="box-info">
+    <div class="box-title">🔒 Persistência Blindada de Sessão do WhatsApp</div>
+    Os dados da sessão do WhatsApp (chaves criptográficas do Baileys em <code>auth_baileys/</code>) e os bancos de dados SQLite (<code>replica.db</code> e <code>disparador.db</code>) estão armazenados em <strong>Named Volumes persistentes do Docker</strong> (<code>promo_replica_data</code> e <code>bot_disparador_data</code>). Atualizações de código, deploys e reinicializações de containers NÃO deslogam o seu WhatsApp.
+  </div>
+
+  <!-- CAPÍTULO 2 -->
+  <div class="page-break"></div>
+  <h1>2. Regras de Negócio e Filtros Inteligentes Ativos</h1>
+  <p>
+    O Replicador possui um pipeline sequencial de filtros rigorosos para garantir que nenhuma mensagem inadequada chegue ao seu grupo VIP:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Regra de Negócio</th>
+        <th style="width: 45%;">Comportamento no Sistema</th>
+        <th style="width: 30%;">Impacto Operacional</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Guardião de Nicho TCG</strong></td>
+        <td>Analisa o título, texto e slug do produto. Rejeita automaticamente eletrônicos, fraldas, vestuário ou utilidades domésticas. Só aprova itens relacionados a cartas Pokémon, boxes, boosters, latas, ETBs e Magic/Yu-Gi-Oh!.</td>
+        <td>Mantém o grupo 100% focado no hobby sem desvios de atenção.</td>
+      </tr>
+      <tr>
+        <td><strong>Filtro de Concorrentes</strong></td>
+        <td>Descarta imediatamente mensagens com links da Amazon, Shopee, Magalu e AliExpress caso <code>somente_mercadolivre=true</code>.</td>
+        <td>Monetização 100% canalizada no Mercado Livre Afiliados.</td>
+      </tr>
+      <tr>
+        <td><strong>Higienização Anti-Spam</strong></td>
+        <td>Remove tags de canais rivais (ex: <code>@rasgabooster</code>, <code>#rasgaboot</code>) e links de convite (<code>chat.whatsapp.com</code>) para comunidades alheias.</td>
+        <td>Sua comunidade recebe apenas o conteúdo limpo com a sua marca.</td>
+      </tr>
+      <tr>
+        <td><strong>Rodapé de Transparência</strong></td>
+        <td>Adiciona em todas as postagens o aviso legal fixo: <em>"Os preços e cupons podem sofrer alteração ou esgotar a qualquer momento. Verifique as condições no ato da compra."</em></td>
+        <td>Proteção jurídica, conformidade e profissionalismo.</td>
+      </tr>
+      <tr>
+        <td><strong>Pacing Anti-Rajada (8s)</strong></td>
+        <td>Força um espaçamento mínimo de 8 segundos entre disparos consecutivos para o grupo, além de delay configurável (5s a 10s).</td>
+        <td>Evita enxurrada de notificações e previne banimentos da Meta.</td>
+      </tr>
+      <tr>
+        <td><strong>Teto de Envios (Anti-Flood)</strong></td>
+        <td>Limita a no máximo 40 mensagens publicadas por hora.</td>
+        <td>Preserva o feed limpo e agradável aos membros.</td>
+      </tr>
+      <tr>
+        <td><strong>Abertura Matinal (07:00)</strong></td>
+        <td>Dispara às 07:00 da manhã (Horário de Brasília) uma saudação humanizada "de fã para fã", com rotação automática entre 4 modelos de curadoria a dedo.</td>
+        <td>Engajamento diário sem esforço manual.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Os 3 Templates Visuais de Postagem</h2>
+  <ul>
+    <li><strong>Template 1 — Oferta Regular:</strong> Destaque para o Título Pokémon com bandeira (🇧🇷 ou 🇺🇸), preço <s>DE</s>, preço <strong>POR</strong>, preço por booster unitário (ex: <em>R$ 27 CADA</em>), parcelamento sem juros e link encurtado <code>meli.la</code>.</li>
+    <li><strong>Template 2 — Alerta de Urgência:</strong> Acionado por termos de escassez (<em>últimas unidades</em>, <em>queima de estoque</em>, <em>urgente</em>), utiliza marcadores visuais vermelhos (🚨/🔥) para incentivar compra rápida.</li>
+    <li><strong>Template 3 — Cupons & Vitrine:</strong> Para cupons de desconto no app, exibe código limpo em caixa alta, valor mínimo de compra, regras de aplicação e link seguro da sua vitrine oficial.</li>
+  </ul>
+
+  <!-- CAPÍTULO 3 -->
+  <div class="page-break"></div>
+  <h1>3. Arquitetura Resiliente de Imagem em 4 Camadas</h1>
+  <p>
+    Para solucionar o problema de postagens saindo sem foto, foi implementada a <strong>Arquitetura Resiliente de Imagem em 4 Camadas</strong>, que assegura entrega visual em praticamente 100% dos cenários:
+  </p>
+
+  <div class="card-grid">
+    <div class="card-box">
+      <strong>1ª Camada: Mídia Nativa do WhatsApp</strong>
+      <p style="margin: 0; font-size: 8.5pt;">
+        Se a mensagem no grupo de origem vier com foto anexada, o Baileys desempacota o buffer (incluindo mídias temporárias e visualização única) e envia como imagem principal com legenda.
+      </p>
+    </div>
+    <div class="card-box">
+      <strong>2ª Camada: Parser de Vitrine Social (2X HD)</strong>
+      <p style="margin: 0; font-size: 8.5pt;">
+        Para links de vitrines e listas sociais (<code>/social/.../lists</code>), o parser segmenta os cards por container completo (<code>andes-card</code>), extrai a foto do produto e converte para alta resolução <strong>2X JPG</strong>.
+      </p>
+    </div>
+    <div class="card-box">
+      <strong>3ª Camada: Fallback de Download do WhatsApp</strong>
+      <p style="margin: 0; font-size: 8.5pt;">
+        Se o concorrente anexou foto mas o download do WhatsApp falhou por instabilidade da Meta ou mídia expirada, a esteira agora aciona o scraper do link do anúncio como plano B em vez de desistir.
+      </p>
+    </div>
+    <div class="card-box">
+      <strong>4ª Camada: Fallback de Miniatura do WhatsApp</strong>
+      <p style="margin: 0; font-size: 8.5pt;">
+        Caso a foto em alta definição sofra bloqueio anti-bot do Mercado Livre (<code>suspicious-traffic-frontend</code>), o sistema reaproveita a miniatura pré-renderizada pelo próprio WhatsApp (<code>jpegThumbnail</code>).
+      </p>
+    </div>
+  </div>
+
+  <div class="box-success">
+    <div class="box-title">✅ Diferenciação Inteligente: Ofertas com Cupom vs Comunicados</div>
+    <strong>Como era antes:</strong> Qualquer mensagem com a palavra "cupom" tinha sua foto zerada por engano.<br>
+    <strong>Como está agora:</strong> Se a mensagem contiver um <strong>produto específico real</strong> (ex: <em>"Blister Triplo por R$ 27 usando cupom OFFMELI"</em>), a foto oficial do produto é buscada e postada normalmente! Apenas comunicados genéricos de cupons sem produto que vierem em texto puro serão postados em texto puro.
+  </div>
+
+  <!-- CAPÍTULO 4 -->
+  <div class="page-break"></div>
+  <h1>4. Estratégia de Monitoramento Multi-Grupos (2 a 3 Grupos)</h1>
+  <p>
+    Uma dúvida frequente de operação é se você deve monitorar apenas 1 grupo por vez ou se pode monitorar 2 ou 3 grupos concorrentes em paralelo sem risco de duplicar ofertas.
+  </p>
+
+  <div class="box-success" style="font-size: 10pt;">
+    <div class="box-title" style="font-size: 11pt;">🎯 RECOMENDAÇÃO: Monitore 2 a 3 Grupos Simultaneamente!</div>
+    O sistema foi projetado e blindado no código <strong>especificamente para operar com múltiplos grupos de origem</strong>. Monitorar 2 ou 3 grupos é a melhor estratégia comercial para a sua comunidade por três motivos:
+    <ol style="margin-top: 6px; margin-bottom: 0;">
+      <li><strong>Velocidade Imbatível:</strong> Você sempre replica quem postar primeiro. Se o Grupo A for 3 minutos mais rápido que o Grupo B, a sua comunidade recebe primeiro com o seu link de afiliado.</li>
+      <li><strong>Catálogo Variado:</strong> Nenhum grupo posta tudo. Um grupo posta boosters avulsos, outro acha latas colecionáveis e o terceiro descobre reposições de ETBs e boxes.</li>
+      <li><strong>Zero Duplicidade:</strong> O robô descarta automaticamente qualquer repetição do mesmo produto ou cupom vindo dos outros grupos.</li>
+    </ol>
+  </div>
+
+  <h2>Mecanismo de Desduplicação Global Cross-Group</h2>
+  <p>
+    A desduplicação cross-group do Replicador funciona através de 3 travas matemáticas e temporais registradas no SQLite:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Trava de Desduplicação</th>
+        <th style="width: 45%;">Regra de Detecção</th>
+        <th style="width: 30%;">Resultado Prático</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. ID Canônico do Produto (MLB)</strong></td>
+        <td>O sistema extrai o código real do produto no Mercado Livre (ex: <code>MLB3891782390</code>), independente da URL ou do encurtador usado pelo concorrente. Consulta se o mesmo MLB ID foi postado nos últimos 30 minutos.</td>
+        <td>Se 3 grupos postarem o mesmo anúncio com textos diferentes, <strong>apenas o 1º é postado</strong>. Os outros 2 são ignorados.</td>
+      </tr>
+      <tr>
+        <td><strong>2. Exceção de Queda de Preço</strong></td>
+        <td>Se o primeiro grupo postou por R$ 150 e, 10 minutos depois, outro grupo achar o mesmo produto por R$ 120 (queda real superior a 5%).</td>
+        <td>O sistema entende que é uma oportunidade melhor e <strong>permite a republicação com o preço atualizado</strong>!</td>
+      </tr>
+      <tr>
+        <td><strong>3. Identificador Único de Cupom</strong></td>
+        <td>Se a mensagem for de cupom, o identificador vira <code>CUPOM_NOMEDOCUPOM</code> (ex: <code>CUPOM_OFFMELI</code>) com cooldown de 30 minutos.</td>
+        <td>Impede que o mesmo cupom seja disparado várias vezes se os concorrentes postarem o mesmo código em seguida.</td>
+      </tr>
+      <tr>
+        <td><strong>4. Hash Criptográfico de Conteúdo</strong></td>
+        <td>Gera um hash SHA-256 do texto limpo (sem pontuação e sem links) e compara com mensagens enviadas recentemente.</td>
+        <td>Bloqueia avisos, comunicados e textos idênticos.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- CAPÍTULO 5 -->
+  <div class="page-break"></div>
+  <h1>5. Guia Operacional Passo a Passo (Cockpits)</h1>
+
+  <h2>5.1. Cockpit do Replicador de Ofertas (Porta 3000)</h2>
+  <ol>
+    <li>
+      <strong>Conectar o WhatsApp:</strong>
+      Acesse <code>http://108.174.145.77:3000</code> ➔ Clique na aba <strong>📱 Conectar WhatsApp</strong> ➔ Aponte o celular no QR Code (<em>Aparelhos Conectados ➔ Conectar Aparelho</em>).
+    </li>
+    <li>
+      <strong>Configurar as Rotas de Replicação:</strong>
+      Acesse a aba <strong>Rotas de Replicação</strong>:
+      <ul>
+        <li>Em <strong>Grupos de Origem:</strong> Selecione os <strong>2 ou 3 grupos concorrentes</strong> que você deseja monitorar.</li>
+        <li>Em <strong>Grupos de Destino:</strong> Selecione o <strong>seu grupo VIP oficial de promoções</strong>.</li>
+        <li>Marque a rota como <strong>Ativa</strong> e salve.</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Definir Parâmetros de Segurança (Aba Configurações):</strong>
+      <ul>
+        <li><code>cooldown_duplicidade_minutos</code>: Mantenha em <code>30</code> (ou <code>60</code>) minutos.</li>
+        <li><code>delay_segundos</code>: Configure entre <code>5</code> e <code>10</code> segundos.</li>
+        <li><code>teto_hora</code>: Configure em <code>40</code> postagens por hora.</li>
+        <li><code>somente_mercadolivre</code>: <code>true</code> (ativa proteção contra outros marketplaces).</li>
+        <li><code>filtro_apenas_tcg</code>: <code>true</code> (ativa o Guardião de Nicho).</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Acompanhar o Feed em Tempo Real:</strong>
+      Na aba <strong>Feed de Mensagens</strong>, veja em tempo real as mensagens recebidas, os links convertidos para o seu afiliado e os status de cada postagem com selo de entrega dupla (✓✓).
+    </li>
+  </ol>
+
+  <h2>5.2. Cockpit do Bot Disparador & IA (Porta 3333)</h2>
+  <ol>
+    <li>
+      <strong>Ponte de Ofertas com 1 Clique:</strong>
+      Acesse <code>http://108.174.145.77:3333</code> ➔ Clique na aba <strong>Ofertas Recebidas</strong>. Todas as ofertas aprovadas pelo Replicador estão listadas com foto, preço e copy pronta. Clique em <strong>Criar Campanha</strong> para disparar no privado dos seus leads.
+    </li>
+    <li>
+      <strong>Importar Lista de Contatos/Leads:</strong>
+      Na aba <strong>Contatos</strong>, faça o upload de planilhas CSV ou Excel com os números dos leads que vieram dos seus anúncios do Instagram/Meta Ads.
+    </li>
+    <li>
+      <strong>Atendimento Automático com IA (DeepSeek V4):</strong>
+      Na aba <strong>Atendimento IA</strong>, a inteligência artificial conversa em linguagem natural, tira dúvidas sobre boosters, fichários e coleções, e entrega educadamente o link de convite do seu grupo VIP.
+    </li>
+    <li>
+      <strong>Módulo de Finanças de Tráfego:</strong>
+      Na aba <strong>Finanças</strong>, envie faturas em PDF de anúncios do Facebook/Meta Ads para arquivamento e consolidação de despesas de marketing.
+    </li>
+  </ol>
+
+  <!-- CAPÍTULO 6 -->
+  <div class="page-break"></div>
+  <h1>6. Guia de Infraestrutura, Nuvem e Troubleshooting</h1>
+
+  <h2>Acessos Oficiais em Produção (VPS HostGator)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Painel / Módulo</th>
+        <th>Endereço Web Oficial</th>
+        <th>Credenciais Padrão</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Promo Réplica</strong></td>
+        <td><code>http://108.174.145.77:3000</code></td>
+        <td>Usuário: <code>admin</code> · Senha: <code>promo2026</code></td>
+      </tr>
+      <tr>
+        <td><strong>Bot Disparador & IA</strong></td>
+        <td><code>http://108.174.145.77:3333</code></td>
+        <td>Usuário: <code>admin</code> · Senha: <code>promo2026</code></td>
+      </tr>
+      <tr>
+        <td><strong>Painel Coolify (Orquestrador)</strong></td>
+        <td><code>http://108.174.145.77:8000</code></td>
+        <td>Painel Administrativo da VPS</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Como Funciona o Deploy na VPS (CI/CD Automático)</h2>
+  <p>
+    Toda alteração aprovada no código-fonte é enviada para o repositório GitHub oficial (<code>cardoso-ix/promo-pokemon-tcg</code> na branch <code>main</code>). O deploy na VPS pode ser acionado instantaneamente via Webhook da API do Coolify com o comando:
+  </p>
+  <pre>curl -X POST "http://108.174.145.77:8000/api/v1/deploy?uuid=devvejts27nuuqhefh5gvwra" \
+  -H "Authorization: Bearer 1|mmJOTnEZkh8NikYsxDTj60AVgh9ZZ6j0tJ7X5PNk4c8fa5ed"</pre>
+
+  <h2>Resolução Rápida de Dúvidas (Troubleshooting)</h2>
+  <ul>
+    <li>
+      <strong>WhatsApp Desconectou ou Sessão Travou:</strong>
+      Acesse a aba <strong>📱 Conectar WhatsApp</strong> e clique no botão <strong>🔄 Reiniciar Sessão / Gerar Novo QR Code</strong>. O sistema realiza uma limpeza atômica das chaves locais em 2 segundos e gera um QR Code novo sem travar o servidor.
+    </li>
+    <li>
+      <strong>Link do Mercado Livre saiu longo (sem <code>meli.la</code>):</strong>
+      Significa que o cookie da sessão do Mercado Livre expirou. A esteira acionou o <strong>fallback de segurança</strong>, inserindo sua tag de afiliado diretamente no link para que você NÃO perca a comissão. Atualize o cookie na aba Configurações quando desejar.
+    </li>
+    <li>
+      <strong>A VPS foi reiniciada pela HostGator:</strong>
+      O Coolify possui reinicialização automática (<code>restart: unless-stopped</code>). Assim que o servidor liga, os containers sobem sozinhos e reconectam ao WhatsApp sem intervenção manual.
+    </li>
+  </ul>
+
+  <div style="margin-top: 40px; padding-top: 15px; border-top: 1px solid #cbd5e1; text-align: center; font-size: 8.5pt; color: #64748b;">
+    Manual Oficial de Engenharia e Operação — Sistema Promo Pokémon TCG · Desenvolvido com Antigravity IDE · 2026
+  </div>
+
+</body>
+</html>
