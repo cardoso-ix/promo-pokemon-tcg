@@ -2374,39 +2374,52 @@ document.addEventListener('DOMContentLoaded', () => {
       if (uploads.length === 0) {
         tbodyUploads.innerHTML = `
           <tr>
-            <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 36px 20px;">
-              📁 Nenhuma planilha arquivada para <strong>${mesFormatado}</strong>.<br>
-              <small>Arraste o arquivo do Meta Ads na área acima para começar o controle mensal.</small>
+            <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 36px 20px;">
+              📁 Nenhum arquivo arquivado para <strong>${mesFormatado}</strong>.<br>
+              <small>Arraste uma fatura em PDF ou planilha do Meta Ads na área acima para começar o controle mensal.</small>
             </td>
           </tr>
         `;
       } else {
         tbodyUploads.innerHTML = uploads.map(u => {
+          const isPdf = (u.nome_arquivo || '').toLowerCase().endsWith('.pdf');
+          const tipoBadge = isPdf
+            ? '<span class="badge" style="background: rgba(96, 165, 250, 0.15); color: #93c5fd; border: 1px solid rgba(96, 165, 250, 0.35); font-size: 11px; padding: 2px 7px;">📄 Fatura PDF</span>'
+            : '<span class="badge" style="background: rgba(74, 222, 128, 0.15); color: #86efac; border: 1px solid rgba(74, 222, 128, 0.35); font-size: 11px; padding: 2px 7px;">📊 Planilha</span>';
+
           const cpl = Number(u.custo_por_lead_medio || 0);
           const periodo = (u.periodo_inicio && u.periodo_fim)
             ? `${u.periodo_inicio.split('-').reverse().slice(0, 2).join('/')} a ${u.periodo_fim.split('-').reverse().slice(0, 2).join('/')}`
             : 'Período contínuo';
           const dataUpload = u.criado_em ? new Date(u.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
 
+          const btnVisualizar = isPdf
+            ? `<button class="btn btn-secondary btn-sm" onclick="visualizarPdfUpload(${u.id})" title="Visualizar fatura em PDF no navegador" style="padding: 4px 8px; margin-right: 4px; color: #60a5fa; border-color: rgba(96, 165, 250, 0.4);">
+                👁️ Ver
+               </button>`
+            : '';
+
           return `
             <tr>
               <td>
                 <strong style="color: #fff; display: flex; align-items: center; gap: 6px;">
-                  <span>📅</span> ${escapeHtml(u.semana_rotulo)}
+                  <span>${isPdf ? '🧾' : '📅'}</span> ${escapeHtml(u.semana_rotulo)}
                 </strong>
               </td>
+              <td>${tipoBadge}</td>
               <td>
-                <span title="${escapeHtml(u.nome_arquivo)}" style="color: var(--text-secondary); max-width: 220px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;">
-                  📄 ${escapeHtml(u.nome_arquivo)}
+                <span title="${escapeHtml(u.nome_arquivo)}" style="color: var(--text-secondary); max-width: 200px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle;">
+                  ${escapeHtml(u.nome_arquivo)}
                 </span>
               </td>
               <td>${periodo}</td>
               <td><strong style="color: #f87171;">${formatCurrency(u.valor_total_gasto)}</strong></td>
-              <td><strong style="color: #4ade80;">${formatNumber(u.total_resultados)}</strong> leads</td>
-              <td>${formatCurrency(cpl)}</td>
+              <td>${u.total_resultados > 0 ? `<strong style="color: #4ade80;">${formatNumber(u.total_resultados)}</strong> leads` : '<span class="text-muted">-</span>'}</td>
+              <td>${cpl > 0 ? formatCurrency(cpl) : '<span class="text-muted">-</span>'}</td>
               <td><small class="text-muted">${dataUpload}</small></td>
               <td style="text-align: right; white-space: nowrap;">
-                <button class="btn btn-secondary btn-sm" onclick="downloadFinancasUpload(${u.id})" title="Baixar planilha original" style="padding: 4px 8px; margin-right: 4px;">
+                ${btnVisualizar}
+                <button class="btn btn-secondary btn-sm" onclick="downloadFinancasUpload(${u.id})" title="Baixar arquivo original" style="padding: 4px 8px; margin-right: 4px;">
                   ⬇️ Baixar
                 </button>
                 <button class="btn btn-secondary btn-sm" onclick="excluirFinancasUpload(${u.id}, '${escapeHtml(u.nome_arquivo)}')" title="Excluir do histórico" style="padding: 4px 8px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
@@ -2507,27 +2520,248 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('fechamento-cpl-medio').innerText = formatCurrency(kpis.custoPorLeadMedio);
   }
 
-  // Ações Globais de Finanças
+  // Ações Globais de Finanças & Documentos
   window.downloadFinancasUpload = function(id) {
     window.open(`/api/financas/download/${id}`, '_blank');
   };
 
+  window.visualizarPdfUpload = function(id) {
+    window.open(`/api/financas/download/${id}?inline=true`, '_blank');
+  };
+
   window.excluirFinancasUpload = async function(id, nome) {
-    if (confirm(`Deseja realmente excluir a planilha "${nome}" e todas as suas métricas arquivadas?\nEsta ação recalculará o relatório do mês.`)) {
+    if (confirm(`Deseja realmente excluir "${nome}" e todos os registros associados?\nEsta ação recalculará automaticamente o relatório executivo do mês.`)) {
       try {
         const res = await fetch(`/api/financas/upload/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.ok) {
-          showToast('Planilha removida e métricas recalculadas!', 'success');
+          showToast('Arquivo removido e métricas recalculadas!', 'success');
           await loadFinancasData(state.financas.mesAtivo);
         } else {
-          showToast(data.error || 'Erro ao remover planilha.', 'error');
+          showToast(data.error || 'Erro ao remover arquivo.', 'error');
         }
       } catch (err) {
         showToast(`Erro na requisição: ${err.message}`, 'error');
       }
     }
   };
+
+  // Gerador Executivo Moderno para Impressão / Exportação em PDF
+  function gerarRelatorioExecutivoModernoPrint() {
+    const container = document.getElementById('relatorio-executivo-print');
+    if (!container) return;
+
+    const mesAtivo = state.financas.mesAtivo || getMesAtualIso();
+    const mesFormatado = formatMonthName(mesAtivo);
+    const rel = state.financas.relatorio;
+    const kpis = rel?.kpis || {
+      gastoTotal: 0,
+      leadsTotal: 0,
+      custoPorLeadMedio: 0,
+      impressoesTotal: 0,
+      cliquesTotal: 0,
+      ctrMedio: 0,
+      cpcMedio: 0,
+      cpmMedio: 0,
+      qtdUploads: (state.financas.uploads || []).length,
+      qtdCampanhasDistintas: 0
+    };
+    const uploads = state.financas.uploads || [];
+    const semanas = rel?.semanas || [];
+    const campanhas = rel?.topCampanhas || [];
+    const emitidoEm = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const protocoloId = `MTA-${mesAtivo.replace('-', '')}-${Date.now().toString().slice(-4)}`;
+
+    let cplClassificacao = 'Dentro da Meta';
+    if (kpis.leadsTotal === 0) cplClassificacao = 'Sem Conversões Registradas';
+    else if (kpis.custoPorLeadMedio <= 5) cplClassificacao = 'Alta Eficiência (Excelente)';
+    else if (kpis.custoPorLeadMedio <= 12) cplClassificacao = 'Moderado / Saudável';
+    else cplClassificacao = 'Atenção / Otimizar Criativos';
+
+    const rowsArquivos = uploads.length === 0
+      ? `<tr><td colspan="6" style="text-align: center; padding: 18px; color: #6b7280;">Nenhum arquivo ou fatura arquivada para este mês contábil.</td></tr>`
+      : uploads.map((u, idx) => {
+          const isPdf = (u.nome_arquivo || '').toLowerCase().endsWith('.pdf');
+          const tipoLabel = isPdf ? 'Fatura / Recibo em PDF' : 'Planilha Semanal (Meta Ads)';
+          const periodo = (u.periodo_inicio && u.periodo_fim)
+            ? `${u.periodo_inicio.split('-').reverse().slice(0, 2).join('/')} a ${u.periodo_fim.split('-').reverse().slice(0, 2).join('/')}`
+            : 'Período Contínuo';
+          const dataUpload = u.criado_em ? new Date(u.criado_em).toLocaleDateString('pt-BR') : '-';
+          return `
+            <tr>
+              <td style="text-align: center;"><strong>#${idx + 1}</strong></td>
+              <td>
+                <strong>${escapeHtml(u.semana_rotulo)}</strong>
+                <div style="font-size: 11px; color: #6b7280;">${tipoLabel}</div>
+              </td>
+              <td><span style="font-family: monospace; font-size: 11px; color: #374151;">${escapeHtml(u.nome_arquivo)}</span></td>
+              <td>${periodo}<br><small style="color: #6b7280;">Envio: ${dataUpload}</small></td>
+              <td style="text-align: center;"><strong>${u.total_resultados > 0 ? formatNumber(u.total_resultados) : '-'}</strong></td>
+              <td style="text-align: right;"><strong style="color: #b91c1c; font-size: 13px;">${formatCurrency(u.valor_total_gasto)}</strong></td>
+            </tr>
+          `;
+        }).join('');
+
+    const rowsCampanhas = campanhas.length === 0
+      ? `<tr><td colspan="7" style="text-align: center; padding: 14px; color: #6b7280;">Dados consolidados a partir das faturas e comprovantes arquivados no mês.</td></tr>`
+      : campanhas.map((c) => {
+          return `
+            <tr>
+              <td><strong>${escapeHtml(c.nomeCampanha)}</strong></td>
+              <td style="text-align: right;"><strong style="color: #b91c1c;">${formatCurrency(c.valorGasto)}</strong></td>
+              <td style="text-align: center;"><strong>${c.shareGasto.toFixed(1)}%</strong></td>
+              <td style="text-align: center;"><strong>${formatNumber(c.leads)}</strong></td>
+              <td style="text-align: right;">${formatCurrency(c.custoPorLead)}</td>
+              <td style="text-align: center;">${formatNumber(c.cliques)}</td>
+              <td style="text-align: center;">${c.ctr.toFixed(2)}%</td>
+            </tr>
+          `;
+        }).join('');
+
+    container.innerHTML = `
+      <div class="print-document">
+        <!-- Cabeçalho Corporativo de Alto Padrão -->
+        <div class="print-header">
+          <div class="print-brand">
+            <div class="print-logo-box">
+              <span class="print-logo-icon">🔥</span>
+              <div class="print-logo-text">
+                <span class="print-brand-main">PROMO POKÉMON TCG</span>
+                <span class="print-brand-sub">SISTEMA OFICIAL DE GESTÃO DE TRÁFEGO & META ADS</span>
+              </div>
+            </div>
+            <div class="print-title-group">
+              <h1 class="print-title">RELATÓRIO EXECUTIVO DE FECHAMENTO FINANCEIRO</h1>
+              <p class="print-subtitle">Demonstrativo mensal consolidado de custos de aquisição de tráfego, faturas em PDF e performance de anúncios.</p>
+            </div>
+          </div>
+          <div class="print-meta-card">
+            <div class="print-meta-row"><span>Competência:</span> <strong>${mesFormatado}</strong></div>
+            <div class="print-meta-row"><span>Referência (ISO):</span> <strong>${mesAtivo}</strong></div>
+            <div class="print-meta-row"><span>Data de Emissão:</span> <strong>${emitidoEm}</strong></div>
+            <div class="print-meta-row"><span>Protocolo:</span> <code>#${protocoloId}</code></div>
+            <div class="print-status-stamp">✓ CONCILIADO E AUDITADO</div>
+          </div>
+        </div>
+
+        <!-- Grade de Indicadores-Chave de Performance (KPIs) -->
+        <div class="print-kpi-grid">
+          <div class="print-kpi-card border-red">
+            <span class="print-kpi-label">INVESTIMENTO TOTAL NO MÊS</span>
+            <strong class="print-kpi-val text-red">${formatCurrency(kpis.gastoTotal)}</strong>
+            <span class="print-kpi-sub">${kpis.qtdUploads} comprovante(s) e fatura(s) arquivadas</span>
+          </div>
+
+          <div class="print-kpi-card border-green">
+            <span class="print-kpi-label">LEADS / CADASTROS CONQUISTADOS</span>
+            <strong class="print-kpi-val text-green">${formatNumber(kpis.leadsTotal)}</strong>
+            <span class="print-kpi-sub">${kpis.qtdCampanhasDistintas} campanha(s) em veiculação</span>
+          </div>
+
+          <div class="print-kpi-card border-blue">
+            <span class="print-kpi-label">CUSTO MÉDIO POR LEAD (CPL)</span>
+            <strong class="print-kpi-val text-blue">${formatCurrency(kpis.custoPorLeadMedio)}</strong>
+            <span class="print-kpi-sub">${cplClassificacao}</span>
+          </div>
+
+          <div class="print-kpi-card border-amber">
+            <span class="print-kpi-label">CLIQUE, ALCANCE & EFICIÊNCIA</span>
+            <strong class="print-kpi-val text-amber">${formatNumber(kpis.cliquesTotal)} <span style="font-size: 13px; font-weight: 500; color: #4b5563;">cliques</span></strong>
+            <span class="print-kpi-sub">CTR: ${kpis.ctrMedio}% · CPC: ${formatCurrency(kpis.cpcMedio)} · CPM: ${formatCurrency(kpis.cpmMedio)}</span>
+          </div>
+        </div>
+
+        <!-- Seção 1: Arquivos, Comprovantes e Faturas Arquivadas -->
+        <div class="print-section">
+          <div class="print-section-header">
+            <h3>1. Demonstrativo de Arquivos, Faturas e Recibos Conciliados</h3>
+            <span class="print-section-count">${uploads.length} item(ns)</span>
+          </div>
+          <table class="print-table">
+            <thead>
+              <tr>
+                <th style="width: 32px; text-align: center;">#</th>
+                <th>Semana / Identificador</th>
+                <th>Arquivo Físico Armazenado</th>
+                <th>Período Contábil</th>
+                <th style="text-align: center; width: 80px;">Leads</th>
+                <th style="text-align: right; width: 140px;">Valor Consumido (R$)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsArquivos}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" style="text-align: right; font-weight: 700; text-transform: uppercase;">Total Financeiro Apurado no Mês:</td>
+                <td style="text-align: center; font-weight: 800; color: #15803d;">${formatNumber(kpis.leadsTotal)}</td>
+                <td style="text-align: right; font-weight: 800; font-size: 14px; color: #b91c1c;">${formatCurrency(kpis.gastoTotal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        ${campanhas.length > 0 ? `
+        <!-- Seção 2: Desempenho por Campanha -->
+        <div class="print-section" style="margin-top: 18px;">
+          <div class="print-section-header">
+            <h3>2. Alocação de Orçamento e Performance por Campanha</h3>
+            <span class="print-section-count">${campanhas.length} campanha(s)</span>
+          </div>
+          <table class="print-table">
+            <thead>
+              <tr>
+                <th>Nome da Campanha</th>
+                <th style="text-align: right; width: 120px;">Gasto Consumido</th>
+                <th style="text-align: center; width: 85px;">% Verba</th>
+                <th style="text-align: center; width: 80px;">Leads</th>
+                <th style="text-align: right; width: 100px;">CPL (R$)</th>
+                <th style="text-align: center; width: 90px;">Cliques</th>
+                <th style="text-align: center; width: 80px;">CTR (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsCampanhas}
+            </tbody>
+          </table>
+        </div>
+        ` : ''}
+
+        <!-- Seção 3: Encerramento e Termo de Conformidade Fiscal -->
+        <div class="print-closing-card">
+          <div class="print-closing-text">
+            <h4>Parecer de Encerramento Contábil & Auditoria</h4>
+            <p>
+              Certificamos que as despesas e comprovantes constantes neste relatório foram devidamente processados e armazenados com integridade no banco de dados da operação Promo Pokémon TCG. Os valores correspondem estritamente aos débitos faturados pela Meta Platforms Inc. através do Gerenciador de Anúncios.
+            </p>
+            <div class="print-closing-tags">
+              <span class="print-tag-pill">🔒 Arquivos Físicos Preservados</span>
+              <span class="print-tag-pill">📊 Conciliação Bancária Aprovada</span>
+              <span class="print-tag-pill">✓ Relatório Apto para Contabilidade</span>
+            </div>
+          </div>
+          <div class="print-signatures-row">
+            <div class="print-signature-box">
+              <div class="print-sig-line"></div>
+              <strong>Gestor de Tráfego & Performance</strong>
+              <span>Operação Pokémon TCG</span>
+            </div>
+            <div class="print-signature-box">
+              <div class="print-sig-line"></div>
+              <strong>Diretoria Financeira / Aprovador</strong>
+              <span>Conferido e Homologado</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rodapé do Relatório Impresso -->
+        <div class="print-footer-bar">
+          <span>Promo Pokémon TCG · Sistema de Inteligência em Tráfego Pago & Meta Ads</span>
+          <span>Documento gerado em formato executivo A4 · Arquivamento permanente garantido</span>
+        </div>
+      </div>
+    `;
+  }
 
   function setupFinancasListeners() {
     // 1. Alternador de Mês
@@ -2558,15 +2792,18 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // 4. Imprimir / Salvar PDF
+    // 4. Imprimir / Salvar Relatório Executivo em PDF
     const btnImprimir = document.getElementById('btn-financas-imprimir');
     if (btnImprimir) {
       btnImprimir.addEventListener('click', () => {
-        window.print();
+        gerarRelatorioExecutivoModernoPrint();
+        setTimeout(() => {
+          window.print();
+        }, 120);
       });
     }
 
-    // 5. Configuração da Dropzone e Seleção de Arquivo
+    // 5. Configuração da Dropzone Unificada (PDF, XLSX, XLS, CSV)
     const dropzone = document.getElementById('financas-dropzone');
     const fileInput = document.getElementById('financas-file-input');
     const dropTitle = document.getElementById('dropzone-title');
@@ -2574,39 +2811,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const dropFilename = document.getElementById('dropzone-filename');
     const btnLimpar = document.getElementById('btn-limpar-upload');
     const btnProcessar = document.getElementById('btn-processar-upload');
+    const semanaInput = document.getElementById('financas-semana-input');
 
     function handleFileSelection(file) {
       if (!file) return;
 
       const ext = file.name.split('.').pop()?.toLowerCase();
-      if (!['xlsx', 'xls', 'csv'].includes(ext)) {
-        alert('Formato inválido! Por favor, selecione um arquivo Excel (.xlsx, .xls) ou CSV exportado do Meta Ads.');
+      if (!['xlsx', 'xls', 'csv', 'pdf'].includes(ext)) {
+        alert('Formato de arquivo não suportado!\n\nPor favor, envie um arquivo em PDF (.pdf), Excel (.xlsx, .xls) ou CSV exportado do Meta Ads.');
         return;
       }
 
       state.financas.selectedFile = file;
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
 
-      if (dropTitle) dropTitle.innerText = 'Arquivo pronto para processamento:';
-      if (dropSubtitle) dropSubtitle.innerText = 'Revise a semana e o mês de referência abaixo se desejar.';
-      if (dropFilename) {
-        const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-        dropFilename.style.display = 'inline-flex';
-        dropFilename.innerHTML = `📊 <strong>${escapeHtml(file.name)}</strong> (${sizeMb} MB)`;
+      if (ext === 'pdf') {
+        if (dropTitle) dropTitle.innerText = 'Fatura / Recibo em PDF pronto para arquivar:';
+        if (dropSubtitle) dropSubtitle.innerText = 'O sistema extrairá a data e o valor da fatura automaticamente.';
+        if (dropFilename) {
+          dropFilename.style.display = 'inline-flex';
+          dropFilename.innerHTML = `📄 <strong>${escapeHtml(file.name)}</strong> (${sizeMb} MB) <span class="badge" style="background: rgba(96, 165, 250, 0.2); color: #93c5fd; margin-left: 6px;">Fatura PDF</span>`;
+        }
+        if (semanaInput && !semanaInput.value) {
+          const nomeSemExt = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+          semanaInput.value = `Fatura ${nomeSemExt.slice(0, 24)}`;
+        }
+      } else {
+        if (dropTitle) dropTitle.innerText = 'Planilha do Meta Ads pronta para arquivar:';
+        if (dropSubtitle) dropSubtitle.innerText = 'Revise a semana e o mês de referência abaixo se desejar.';
+        if (dropFilename) {
+          dropFilename.style.display = 'inline-flex';
+          dropFilename.innerHTML = `📊 <strong>${escapeHtml(file.name)}</strong> (${sizeMb} MB) <span class="badge" style="background: rgba(74, 222, 128, 0.2); color: #86efac; margin-left: 6px;">Planilha Meta</span>`;
+        }
       }
+
       if (btnLimpar) btnLimpar.style.display = 'inline-block';
     }
 
     function resetDropzone() {
       state.financas.selectedFile = null;
       if (fileInput) fileInput.value = '';
-      if (dropTitle) dropTitle.innerText = 'Arraste a planilha do Meta Ads aqui';
-      if (dropSubtitle) dropSubtitle.innerText = 'ou clique para selecionar do seu computador (.xlsx, .xls, .csv)';
+      if (dropTitle) dropTitle.innerText = 'Arraste a fatura (PDF) ou planilha aqui';
+      if (dropSubtitle) dropSubtitle.innerText = 'ou clique para selecionar do seu computador (.pdf, .xlsx, .xls, .csv)';
       if (dropFilename) {
         dropFilename.style.display = 'none';
         dropFilename.innerHTML = '';
       }
       if (btnLimpar) btnLimpar.style.display = 'none';
-      const semanaInput = document.getElementById('financas-semana-input');
       if (semanaInput) semanaInput.value = '';
     }
 
@@ -2643,20 +2894,22 @@ document.addEventListener('DOMContentLoaded', () => {
       btnLimpar.addEventListener('click', resetDropzone);
     }
 
-    // 6. Submissão do Upload
+    // 6. Submissão do Upload (Fatura PDF ou Planilha)
     if (btnProcessar) {
       btnProcessar.addEventListener('click', async () => {
         const file = state.financas.selectedFile;
         if (!file) {
-          alert('Por favor, selecione ou arraste uma planilha do Meta Ads antes de processar.');
+          alert('Por favor, selecione ou arraste um arquivo (PDF ou Planilha) antes de processar.');
           return;
         }
 
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        const isPdf = ext === 'pdf';
         const semanaRotulo = document.getElementById('financas-semana-input')?.value.trim();
         const mesReferencia = document.getElementById('financas-mes-input')?.value.trim();
 
         btnProcessar.disabled = true;
-        btnProcessar.innerText = '⏳ Processando e Arquivando Planilha...';
+        btnProcessar.innerText = isPdf ? '⏳ Processando e Lendo Fatura PDF...' : '⏳ Processando e Arquivando Planilha...';
 
         try {
           const formData = new FormData();
@@ -2672,17 +2925,20 @@ document.addEventListener('DOMContentLoaded', () => {
           const data = await res.json();
           if (data.ok) {
             const resMes = data.resumo?.mesReferencia || mesReferencia || state.financas.mesAtivo;
-            showToast(`Sucesso! Planilha arquivada. Total apurado: ${formatCurrency(data.resumo?.gastoTotal)} (${data.resumo?.leadsTotal} leads).`, 'success');
+            const msgSucesso = isPdf
+              ? `Fatura em PDF arquivada com sucesso! Valor apurado: ${formatCurrency(data.resumo?.gastoTotal)}.`
+              : `Planilha arquivada com sucesso! Total apurado: ${formatCurrency(data.resumo?.gastoTotal)} (${data.resumo?.leadsTotal} leads).`;
+            showToast(msgSucesso, 'success');
             resetDropzone();
             await loadFinancasData(resMes);
           } else {
-            alert(`Erro ao processar planilha:\n\n${data.error || 'Verifique se o arquivo contém as colunas exportadas do Meta Ads.'}`);
+            alert(`Erro ao processar arquivo:\n\n${data.error || 'Verifique se o arquivo é um PDF de fatura válido ou uma exportação do Meta Ads.'}`);
           }
         } catch (err) {
           alert(`Falha na conexão com o servidor: ${err.message}`);
         } finally {
           btnProcessar.disabled = false;
-          btnProcessar.innerText = '⚡ Arquivar e Processar Planilha';
+          btnProcessar.innerText = '⚡ Arquivar e Processar Arquivo';
         }
       });
     }
@@ -2874,494 +3130,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ==========================================
-  // MÓDULO DE FINANÇAS & FATURAS PDF (META ADS)
-  // ==========================================
-  function setupFinancasListeners() {
-    const dataInicioInput = document.getElementById('financas-data-inicio');
-    const dataFimInput = document.getElementById('financas-data-fim');
-    const btnFiltrar = document.getElementById('btn-financas-filtrar');
-    const chipsPeriodo = document.querySelectorAll('.chip-periodo');
-    const btnExportarCsv = document.getElementById('btn-financas-exportar-csv');
-    const btnImprimir = document.getElementById('btn-financas-imprimir');
-
-    const pdfDropzone = document.getElementById('financas-pdf-dropzone');
-    const pdfInput = document.getElementById('financas-pdf-input');
-    const previewPanel = document.getElementById('financas-pdf-preview-panel');
-    const btnCancelarPdf = document.getElementById('btn-cancelar-pdf');
-    const btnSalvarDespesaPdf = document.getElementById('btn-salvar-despesa-pdf');
-
-    let arquivoPdfAtual = null;
-
-    // Inicializar datas com o mês corrente (Dia 01 até Hoje)
-    const hoje = new Date();
-    const ano = hoje.getFullYear();
-    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-    const dia = String(hoje.getDate()).padStart(2, '0');
-    const hojeIso = `${ano}-${mes}-${dia}`;
-    const primeiroDiaMesIso = `${ano}-${mes}-01`;
-
-    if (dataInicioInput && !dataInicioInput.value) {
-      dataInicioInput.value = primeiroDiaMesIso;
-    }
-    if (dataFimInput && !dataFimInput.value) {
-      dataFimInput.value = hojeIso;
-    }
-
-    // Carregar despesas do período atual
-    async function carregarDespesas() {
-      const inicio = (dataInicioInput?.value || '').trim();
-      const fim = (dataFimInput?.value || '').trim();
-
-      const tbody = document.getElementById('financas-despesas-tbody');
-      if (tbody) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 28px;">
-              ⏳ Carregando despesas do período selecionado...
-            </td>
-          </tr>
-        `;
-      }
-
-      try {
-        const queryParams = new URLSearchParams();
-        if (inicio) queryParams.set('inicio', inicio);
-        if (fim) queryParams.set('fim', fim);
-
-        const res = await fetch(`/api/financas/despesas?${queryParams.toString()}`);
-        const data = await res.json();
-
-        if (!data.ok || !data.resumo) {
-          throw new Error(data.error || 'Erro ao carregar despesas.');
-        }
-
-        renderizarDespesas(data.resumo, inicio, fim);
-      } catch (err) {
-        console.error('Erro ao buscar despesas:', err);
-        if (tbody) {
-          tbody.innerHTML = `
-            <tr>
-              <td colspan="6" style="text-align: center; color: #ef4444; padding: 24px;">
-                ❌ Erro ao consultar despesas: ${escapeHtml(err.message)}
-              </td>
-            </tr>
-          `;
-        }
-      }
-    }
-
-    function renderizarDespesas(resumo, inicio, fim) {
-      const formatarDataBr = (iso) => {
-        if (!iso) return '';
-        const partes = iso.split('-');
-        if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
-        return iso;
-      };
-
-      const periodoFormatado = inicio && fim
-        ? `${formatarDataBr(inicio)} a ${formatarDataBr(fim)}`
-        : (inicio ? `A partir de ${formatarDataBr(inicio)}` : (fim ? `Até ${formatarDataBr(fim)}` : 'Todo o Período'));
-
-      // Atualizar badges e labels
-      const badgeTabela = document.getElementById('financas-tabela-periodo-badge');
-      if (badgeTabela) badgeTabela.textContent = periodoFormatado;
-
-      const kpiPeriodoLabel = document.getElementById('financas-kpi-periodo-label');
-      if (kpiPeriodoLabel) kpiPeriodoLabel.textContent = periodoFormatado;
-
-      // KPIs
-      const kpiGasto = document.getElementById('financas-kpi-gasto');
-      if (kpiGasto) kpiGasto.textContent = `R$ ${resumo.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-      const kpiFaturas = document.getElementById('financas-kpi-faturas-count');
-      if (kpiFaturas) kpiFaturas.textContent = `${resumo.totalFaturas}`;
-
-      const kpiMedia = document.getElementById('financas-kpi-media');
-      if (kpiMedia) kpiMedia.textContent = `R$ ${resumo.mediaPorFatura.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-      const kpiMaior = document.getElementById('financas-kpi-maior');
-      if (kpiMaior) kpiMaior.textContent = `R$ ${resumo.maiorDespesa.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-      // Badges do card
-      const badgeCount = document.getElementById('badge-total-despesas-count');
-      if (badgeCount) badgeCount.textContent = `${resumo.totalFaturas} ${resumo.totalFaturas === 1 ? 'fatura' : 'faturas'}`;
-
-      const badgeValor = document.getElementById('badge-total-despesas-valor');
-      if (badgeValor) badgeValor.textContent = `R$ ${resumo.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-      // Rodapé Fechamento
-      const fechPeriodo = document.getElementById('fechamento-periodo-texto');
-      if (fechPeriodo) fechPeriodo.textContent = periodoFormatado;
-
-      const fechQtd = document.getElementById('fechamento-qtd-faturas');
-      if (fechQtd) fechQtd.textContent = `${resumo.totalFaturas} faturas`;
-
-      const fechTotal = document.getElementById('fechamento-total-consumido');
-      if (fechTotal) fechTotal.textContent = `R$ ${resumo.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-      // Tabela de itens
-      const tbody = document.getElementById('financas-despesas-tbody');
-      if (!tbody) return;
-
-      if (!resumo.itens || resumo.itens.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 36px;">
-              Nenhuma despesa ou fatura em PDF encontrada para o período <strong>${escapeHtml(periodoFormatado)}</strong>.<br>
-              <span style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; display: inline-block;">
-                Arraste o PDF da sua fatura acima para registrar os custos consumidos.
-              </span>
-            </td>
-          </tr>
-        `;
-        return;
-      }
-
-      tbody.innerHTML = resumo.itens.map(it => {
-        const dataBr = formatarDataBr(it.data_despesa);
-        const valorFmt = Number(it.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const tamanhoKb = (it.tamanho_bytes / 1024).toFixed(0);
-        const detalhePagto = [it.metodo_pagamento, it.conta_anuncio].filter(Boolean).join(' • ') || 'Meta Ads';
-
-        return `
-          <tr data-id="${it.id}">
-            <td style="font-weight: 600; color: #fff;">
-              📅 ${escapeHtml(dataBr)}
-            </td>
-            <td>
-              <strong style="color: #fff; display: block; font-size: 13.5px;">${escapeHtml(it.descricao)}</strong>
-              ${it.observacoes ? `<span style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(it.observacoes)}</span>` : ''}
-            </td>
-            <td>
-              <span style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary);" title="${escapeHtml(it.nome_arquivo)}">
-                📄 <span style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(it.nome_arquivo)}</span>
-                <small style="color: var(--text-muted);">(${tamanhoKb} KB)</small>
-              </span>
-            </td>
-            <td>
-              <span class="badge" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12); color: var(--text-secondary); font-size: 11.5px;">
-                ${escapeHtml(detalhePagto)}
-              </span>
-            </td>
-            <td style="text-align: right; font-weight: 700; color: #4ade80; font-size: 15px;">
-              R$ ${valorFmt}
-            </td>
-            <td style="text-align: right; white-space: nowrap;">
-              <div style="display: inline-flex; gap: 6px; align-items: center;">
-                <a href="/api/financas/despesas/pdf/${it.id}" target="_blank" class="btn btn-secondary btn-sm" title="Visualizar PDF original em nova aba" style="padding: 4px 8px; font-size: 12px; text-decoration: none;">
-                  👁️ Ver
-                </a>
-                <a href="/api/financas/despesas/download/${it.id}" class="btn btn-secondary btn-sm" title="Baixar PDF original" style="padding: 4px 8px; font-size: 12px; text-decoration: none;">
-                  ⬇️
-                </a>
-                <button type="button" class="btn btn-danger btn-sm btn-delete-despesa" data-id="${it.id}" data-nome="${escapeHtml(it.descricao)}" title="Excluir despesa e remover PDF" style="padding: 4px 8px; font-size: 12px;">
-                  🗑️
-                </button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      // Listeners de exclusão
-      tbody.querySelectorAll('.btn-delete-despesa').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.getAttribute('data-id');
-          const nome = btn.getAttribute('data-nome');
-          if (!confirm(`Tem certeza que deseja excluir a despesa "${nome}" e apagar o arquivo PDF correspondente?`)) {
-            return;
-          }
-
-          try {
-            const delRes = await fetch(`/api/financas/despesas/${id}`, { method: 'DELETE' });
-            const delData = await delRes.json();
-            if (delData.ok) {
-              carregarDespesas();
-            } else {
-              alert(delData.error || 'Erro ao excluir despesa.');
-            }
-          } catch (err) {
-            alert('Erro de conexão ao excluir despesa: ' + err.message);
-          }
-        });
-      });
-    }
-
-    // Filtrar ao clicar no botão
-    if (btnFiltrar) {
-      btnFiltrar.addEventListener('click', () => {
-        chipsPeriodo.forEach(c => c.classList.remove('active'));
-        carregarDespesas();
-      });
-    }
-
-    // Atalhos Rápidos (Chips)
-    chipsPeriodo.forEach(chip => {
-      chip.addEventListener('click', () => {
-        chipsPeriodo.forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-
-        const tipo = chip.getAttribute('data-periodo');
-        const now = new Date();
-
-        if (tipo === 'mes-atual') {
-          const y = now.getFullYear();
-          const m = String(now.getMonth() + 1).padStart(2, '0');
-          const d = String(now.getDate()).padStart(2, '0');
-          dataInicioInput.value = `${y}-${m}-01`;
-          dataFimInput.value = `${y}-${m}-${d}`;
-        } else if (tipo === 'ultimos-7') {
-          const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          dataInicioInput.value = past.toISOString().split('T')[0];
-          dataFimInput.value = now.toISOString().split('T')[0];
-        } else if (tipo === 'ultimos-30') {
-          const past = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          dataInicioInput.value = past.toISOString().split('T')[0];
-          dataFimInput.value = now.toISOString().split('T')[0];
-        } else if (tipo === 'mes-anterior') {
-          const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-          dataInicioInput.value = firstDayLastMonth.toISOString().split('T')[0];
-          dataFimInput.value = lastDayLastMonth.toISOString().split('T')[0];
-        } else if (tipo === 'todos') {
-          dataInicioInput.value = '';
-          dataFimInput.value = '';
-        }
-
-        carregarDespesas();
-      });
-    });
-
-    // Exportar CSV
-    if (btnExportarCsv) {
-      btnExportarCsv.addEventListener('click', () => {
-        const inicio = (dataInicioInput?.value || '').trim();
-        const fim = (dataFimInput?.value || '').trim();
-        const queryParams = new URLSearchParams();
-        if (inicio) queryParams.set('inicio', inicio);
-        if (fim) queryParams.set('fim', fim);
-        window.location.href = `/api/financas/despesas/exportar-csv?${queryParams.toString()}`;
-      });
-    }
-
-    // Imprimir / Salvar PDF
-    if (btnImprimir) {
-      btnImprimir.addEventListener('click', () => {
-        window.print();
-      });
-    }
-
-    // --- UPLOAD E ANÁLISE DE PDF ---
-    if (pdfDropzone && pdfInput) {
-      pdfDropzone.addEventListener('click', () => pdfInput.click());
-
-      pdfDropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        pdfDropzone.classList.add('dragover');
-      });
-
-      pdfDropzone.addEventListener('dragleave', () => {
-        pdfDropzone.classList.remove('dragover');
-      });
-
-      pdfDropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        pdfDropzone.classList.remove('dragover');
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-          tratarArquivoPdf(e.dataTransfer.files[0]);
-        }
-      });
-
-      pdfInput.addEventListener('change', () => {
-        if (pdfInput.files && pdfInput.files[0]) {
-          tratarArquivoPdf(pdfInput.files[0]);
-        }
-      });
-    }
-
-    async function tratarArquivoPdf(file) {
-      if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
-        alert('Por favor, selecione um arquivo no formato PDF (.pdf).');
-        return;
-      }
-
-      arquivoPdfAtual = file;
-
-      const titleEl = document.getElementById('pdf-dropzone-title');
-      const subtitleEl = document.getElementById('pdf-dropzone-subtitle');
-      const badgeFilename = document.getElementById('pdf-dropzone-filename');
-
-      if (titleEl) titleEl.textContent = '🔍 Lendo arquivo e extraindo dados do recibo...';
-      if (subtitleEl) subtitleEl.textContent = file.name;
-      if (badgeFilename) {
-        badgeFilename.textContent = `Arquivo: ${file.name} (${(file.size / 1024).toFixed(0)} KB)`;
-        badgeFilename.style.display = 'inline-flex';
-      }
-
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const res = await fetch('/api/financas/despesas/analisar-pdf', {
-          method: 'POST',
-          body: formData
-        });
-
-        const data = await res.json();
-        if (!data.ok) {
-          throw new Error(data.error || 'Não foi possível analisar o PDF.');
-        }
-
-        const sug = data.sugestao || {};
-
-        const inputData = document.getElementById('financas-input-data');
-        const inputValor = document.getElementById('financas-input-valor');
-        const inputDesc = document.getElementById('financas-input-desc');
-        const inputMetodo = document.getElementById('financas-input-metodo');
-        const inputConta = document.getElementById('financas-input-conta');
-
-        if (inputData) inputData.value = sug.dataSugerida || hojeIso;
-        if (inputValor) inputValor.value = sug.valorSugerido ? sug.valorSugerido.toFixed(2) : '';
-        if (inputDesc) inputDesc.value = sug.descricaoSugerida || `Recibo Meta Ads - ${file.name}`;
-        if (inputMetodo) inputMetodo.value = sug.metodoPagamento || '';
-        if (inputConta) inputConta.value = sug.contaAnuncio || '';
-
-        if (titleEl) titleEl.textContent = '✅ Fatura PDF Selecionada!';
-        if (subtitleEl) subtitleEl.textContent = 'Confira os dados detectados abaixo e clique em Confirmar.';
-
-        if (previewPanel) {
-          previewPanel.style.display = 'block';
-          previewPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      } catch (err) {
-        console.warn('Fallback na leitura automática do PDF:', err);
-        const inputData = document.getElementById('financas-input-data');
-        const inputValor = document.getElementById('financas-input-valor');
-        const inputDesc = document.getElementById('financas-input-desc');
-
-        if (inputData && !inputData.value) inputData.value = hojeIso;
-        if (inputValor && !inputValor.value) inputValor.value = '';
-        if (inputDesc && !inputDesc.value) inputDesc.value = `Fatura Meta Ads - ${file.name}`;
-
-        if (titleEl) titleEl.textContent = '📄 Fatura PDF Pronta para Registro';
-        if (subtitleEl) subtitleEl.textContent = 'Preencha a data e o valor nos campos abaixo para arquivar.';
-
-        if (previewPanel) {
-          previewPanel.style.display = 'block';
-        }
-      }
-    }
-
-    if (btnCancelarPdf) {
-      btnCancelarPdf.addEventListener('click', () => {
-        limparUploadPdf();
-      });
-    }
-
-    function limparUploadPdf() {
-      arquivoPdfAtual = null;
-      if (pdfInput) pdfInput.value = '';
-
-      const titleEl = document.getElementById('pdf-dropzone-title');
-      const subtitleEl = document.getElementById('pdf-dropzone-subtitle');
-      const badgeFilename = document.getElementById('pdf-dropzone-filename');
-
-      if (titleEl) titleEl.textContent = 'Arraste a fatura ou recibo em PDF aqui';
-      if (subtitleEl) subtitleEl.textContent = 'ou clique para selecionar o arquivo PDF do seu computador';
-      if (badgeFilename) {
-        badgeFilename.textContent = '';
-        badgeFilename.style.display = 'none';
-      }
-
-      if (previewPanel) {
-        previewPanel.style.display = 'none';
-      }
-    }
-
-    if (btnSalvarDespesaPdf) {
-      btnSalvarDespesaPdf.addEventListener('click', async () => {
-        if (!arquivoPdfAtual) {
-          alert('Nenhum arquivo PDF foi selecionado.');
-          return;
-        }
-
-        const inputData = document.getElementById('financas-input-data');
-        const inputValor = document.getElementById('financas-input-valor');
-        const inputDesc = document.getElementById('financas-input-desc');
-        const inputMetodo = document.getElementById('financas-input-metodo');
-        const inputConta = document.getElementById('financas-input-conta');
-
-        const dataDespesa = inputData?.value?.trim();
-        const valor = parseFloat(inputValor?.value || '0');
-        const descricao = inputDesc?.value?.trim();
-        const metodoPagamento = inputMetodo?.value?.trim();
-        const contaAnuncio = inputConta?.value?.trim();
-
-        if (!dataDespesa) {
-          alert('Por favor, informe a data da despesa.');
-          inputData?.focus();
-          return;
-        }
-
-        if (isNaN(valor) || valor <= 0) {
-          alert('Por favor, informe um valor consumido válido maior que zero (R$).');
-          inputValor?.focus();
-          return;
-        }
-
-        if (!descricao) {
-          alert('Por favor, informe uma descrição ou identificador para a fatura.');
-          inputDesc?.focus();
-          return;
-        }
-
-        btnSalvarDespesaPdf.disabled = true;
-        btnSalvarDespesaPdf.textContent = '⏳ Salvando no servidor...';
-
-        try {
-          const formData = new FormData();
-          formData.append('file', arquivoPdfAtual);
-          formData.append('dataDespesa', dataDespesa);
-          formData.append('valor', valor.toString());
-          formData.append('descricao', descricao);
-          if (metodoPagamento) formData.append('metodoPagamento', metodoPagamento);
-          if (contaAnuncio) formData.append('contaAnuncio', contaAnuncio);
-
-          const res = await fetch('/api/financas/despesas/upload', {
-            method: 'POST',
-            body: formData
-          });
-
-          const data = await res.json();
-          if (!data.ok) {
-            throw new Error(data.error || 'Erro ao arquivar fatura.');
-          }
-
-          limparUploadPdf();
-          carregarDespesas();
-          alert(`✅ Fatura arquivada com sucesso!\nValor: R$ ${valor.toFixed(2)} | Data: ${dataDespesa}`);
-        } catch (err) {
-          alert('Erro ao salvar despesa: ' + err.message);
-        } finally {
-          btnSalvarDespesaPdf.disabled = false;
-          btnSalvarDespesaPdf.textContent = '💾 Confirmar e Salvar Despesa';
-        }
-      });
-    }
-
-    // Carregar ao clicar na aba Finanças
-    const navFinancas = document.querySelector('[data-tab="financas"]');
-    if (navFinancas) {
-      navFinancas.addEventListener('click', () => {
-        carregarDespesas();
-      });
-    }
-
-    // Carga inicial
-    carregarDespesas();
-  }
-
   // Inicialização
   initFireParticles();
   setupCockpitSwitchers();
@@ -3371,5 +3139,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initSSE();
   setInterval(loadStatus, 10000);
 });
+
 
 

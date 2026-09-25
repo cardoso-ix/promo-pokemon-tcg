@@ -902,7 +902,7 @@ export async function createServer() {
     return reply.send(csvComBom);
   });
 
-  // Download do arquivo de planilha original arquivado
+  // Download ou visualização do arquivo original arquivado (XLSX, CSV ou PDF)
   app.get('/api/financas/download/:id', async (req: any, reply) => {
     const id = parseInt(req.params.id, 10);
     const upload = getFinancasUploadById(id);
@@ -911,8 +911,17 @@ export async function createServer() {
       return reply.status(404).send({ ok: false, error: 'Arquivo original não encontrado.' });
     }
 
+    const isPdf = upload.nome_arquivo.toLowerCase().endsWith('.pdf');
+    const isInline = req.query.inline === 'true' || req.query.view === 'true';
+
+    if (isPdf) {
+      reply.header('Content-Type', 'application/pdf');
+    }
+
+    const disposition = (isPdf && isInline) ? 'inline' : 'attachment';
+    reply.header('Content-Disposition', `${disposition}; filename="${encodeURIComponent(upload.nome_arquivo)}"`);
+
     const stream = fs.createReadStream(upload.caminho_arquivo);
-    reply.header('Content-Disposition', `attachment; filename="${encodeURIComponent(upload.nome_arquivo)}"`);
     return reply.send(stream);
   });
 

@@ -859,219 +859,299 @@
         <!-- Barra de Controle de Período & Ações Rápidas -->
         <div class="financas-header-bar">
           <div class="financas-header-left">
-            <div class="periodo-calendario-group">
-              <span class="periodo-icon" style="font-size: 16px;">📅</span>
-              <label for="financas-data-inicio" class="periodo-label">De:</label>
-              <input type="date" id="financas-data-inicio" class="input-field input-date-field" title="Data inicial do período">
-              
-              <label for="financas-data-fim" class="periodo-label">Até:</label>
-              <input type="date" id="financas-data-fim" class="input-field input-date-field" title="Data final do período">
-              
-              <button class="btn btn-primary btn-sm" id="btn-financas-filtrar" title="Filtrar despesas pelo período selecionado">
-                🔍 Filtrar
-              </button>
+            <div class="mes-selector-wrapper">
+              <label for="financas-mes-select" class="selector-label">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Mês de Referência:
+              </label>
+              <select id="financas-mes-select" class="input-field select-month-field">
+                <option value="">Carregando meses...</option>
+              </select>
             </div>
-
-            <!-- Chips de Atalhos Rápidos -->
-            <div class="financas-quick-chips">
-              <button type="button" class="chip-periodo active" data-periodo="mes-atual">Este Mês</button>
-              <button type="button" class="chip-periodo" data-periodo="ultimos-7">Últimos 7 dias</button>
-              <button type="button" class="chip-periodo" data-periodo="ultimos-30">Últimos 30 dias</button>
-              <button type="button" class="chip-periodo" data-periodo="mes-anterior">Mês Anterior</button>
-              <button type="button" class="chip-periodo" data-periodo="todos">Todo o Período</button>
-            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-financas-mes-atual" title="Ir para o mês corrente">
+              📅 Mês Atual
+            </button>
           </div>
 
           <div class="financas-header-actions">
-            <button class="btn btn-secondary btn-sm" id="btn-financas-exportar-csv" title="Exportar dados do período em CSV compatível com Excel">
+            <button class="btn btn-secondary btn-sm" id="btn-financas-exportar-csv" title="Exportar dados consolidados em formato compatível com Excel">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              Exportar CSV
+              Exportar CSV (Excel)
             </button>
-            <button class="btn btn-primary btn-sm btn-print-report" id="btn-financas-imprimir" title="Imprimir ou Salvar Relatório Consolidado em PDF">
+            <button class="btn btn-primary btn-sm btn-print-report" id="btn-financas-imprimir" title="Imprimir ou Salvar Relatório Executivo em PDF">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-              Imprimir / Relatório PDF
+              Imprimir / PDF
             </button>
           </div>
         </div>
 
-        <!-- Cards de Resumo Financeiro do Período (KPIs) -->
+        <!-- 4 Cards de Métricas Principais (Executive KPIs) -->
         <div class="metrics-grid financas-metrics-grid">
-          <!-- KPI 1: Gasto Total Consumido -->
+          <!-- KPI 1: Gasto Total -->
           <div class="metric-card kpi-card-fire">
             <div class="metric-icon red">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
             </div>
             <div class="metric-data">
-              <span class="metric-label">Total Consumido no Período</span>
+              <span class="metric-label">Investimento Total no Mês</span>
               <h3 class="metric-value font-fire" id="financas-kpi-gasto">R$ 0,00</h3>
-              <span class="metric-subtext" id="financas-kpi-periodo-label">Período selecionado</span>
+              <span class="metric-subtext" id="financas-kpi-uploads-count">0 planilhas/faturas arquivadas</span>
             </div>
           </div>
 
-          <!-- KPI 2: Faturas / Recibos Arquivados -->
-          <div class="metric-card kpi-card-blue">
-            <div class="metric-icon blue">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <!-- KPI 2: Total de Leads Conquistados -->
+          <div class="metric-card kpi-card-green">
+            <div class="metric-icon green">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             </div>
             <div class="metric-data">
-              <span class="metric-label">Faturas &amp; Recibos Arquivados</span>
-              <h3 class="metric-value" id="financas-kpi-faturas-count">0</h3>
-              <span class="metric-subtext" id="financas-kpi-faturas-sub">Arquivos em PDF armazenados</span>
+              <span class="metric-label">Leads / Resultados Conquistados</span>
+              <h3 class="metric-value" id="financas-kpi-leads">0</h3>
+              <span class="metric-subtext" id="financas-kpi-campanhas-count">0 campanhas analisadas</span>
             </div>
           </div>
 
-          <!-- KPI 3: Valor Médio por Fatura -->
+          <!-- KPI 3: Custo por Lead (CPL) -->
           <div class="metric-card kpi-card-orange">
             <div class="metric-icon orange">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
             </div>
             <div class="metric-data">
-              <span class="metric-label">Média por Cobrança / Recibo</span>
-              <h3 class="metric-value" id="financas-kpi-media">R$ 0,00</h3>
-              <span class="metric-subtext" id="financas-kpi-media-sub">Ticket médio por transação</span>
+              <span class="metric-label">Custo Médio por Lead (CPL)</span>
+              <h3 class="metric-value" id="financas-kpi-cpl">R$ 0,00</h3>
+              <span class="metric-subtext" id="financas-kpi-cpl-badge">Aguardando dados</span>
             </div>
           </div>
 
-          <!-- KPI 4: Maior Despesa Registrada -->
-          <div class="metric-card kpi-card-green">
-            <div class="metric-icon green">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <!-- KPI 4: Tráfego & Eficiência (Cliques / CTR) -->
+          <div class="metric-card kpi-card-blue">
+            <div class="metric-icon blue">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M16.2 7.8l-2 6.3-6.4 2 2-6.3z"></path></svg>
             </div>
             <div class="metric-data">
-              <span class="metric-label">Maior Cobrança do Período</span>
-              <h3 class="metric-value" id="financas-kpi-maior">R$ 0,00</h3>
-              <span class="metric-subtext" id="financas-kpi-maior-sub">Pico de consumo</span>
+              <span class="metric-label">Cliques &amp; Alcance</span>
+              <h3 class="metric-value" id="financas-kpi-cliques">0 cliques</h3>
+              <span class="metric-subtext" id="financas-kpi-ctr-cpc">CTR: 0% • CPC: R$ 0,00</span>
             </div>
           </div>
         </div>
 
-        <!-- Seção de Upload do Arquivo PDF -->
-        <div class="glass-card" style="margin-top: 20px;">
-          <div class="card-header">
-            <div>
-              <h3>📄 Inserir Fatura ou Recibo de Despesas (PDF)</h3>
-              <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">
-                Faça upload do PDF das faturas de anúncios/criativos emitidas pelo Meta Ads. O sistema armazena o arquivo permanente e extrai a data e o valor automaticamente.
-              </p>
+        <!-- Seção Superior Dividida: Upload de Arquivo (Planilha ou PDF) & Dicas -->
+        <div class="financas-split-grid">
+          <!-- Card de Upload Unificado: XLSX, XLS, CSV e PDF -->
+          <div class="glass-card">
+            <div class="card-header">
+              <div>
+                <h3>📥 Arquivar Nova Planilha ou Fatura (.xlsx, .csv, .pdf)</h3>
+                <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">
+                  Suba exportações de métricas (XLSX/CSV) ou faturas/recibos em PDF emitidos pelo Meta Ads. O sistema armazena o arquivo permanente e extrai automaticamente valores e métricas.
+                </p>
+              </div>
+            </div>
+            <div class="card-body">
+              <form id="form-upload-financas" onsubmit="return false;">
+                <!-- Drag and Drop Dropzone que aceita planilhas e PDFs -->
+                <div class="file-dropzone" id="financas-dropzone">
+                  <input type="file" id="financas-file-input" accept=".xlsx, .xls, .csv, .pdf, application/pdf" style="display: none;">
+                  <div class="dropzone-content">
+                    <div class="dropzone-icon" id="dropzone-main-icon">📑</div>
+                    <strong id="dropzone-title">Arraste a planilha ou fatura em PDF aqui</strong>
+                    <p id="dropzone-subtitle">ou clique para selecionar do seu computador (.xlsx, .xls, .csv, .pdf)</p>
+                    <span class="dropzone-badge" id="dropzone-filename" style="display: none;"></span>
+                  </div>
+                </div>
+
+                <div class="form-row" style="margin-top: 14px;">
+                  <div class="form-group flex-1">
+                    <label for="financas-semana-input">Rótulo da Semana / Fatura (Opcional):</label>
+                    <input type="text" id="financas-semana-input" class="input-field" placeholder="Ex: Semana 1, Recibo #12345 (ou auto)">
+                    <small>Se não preencher, detectamos automaticamente pelas datas do arquivo.</small>
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="financas-mes-input">Mês de Referência (YYYY-MM):</label>
+                    <input type="month" id="financas-mes-input" class="input-field">
+                    <small>Mês contábil onde esse gasto será consolidado.</small>
+                  </div>
+                </div>
+
+                <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 10px;">
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-limpar-upload" style="display: none;">
+                    Limpar
+                  </button>
+                  <button type="button" class="btn btn-primary" id="btn-processar-upload">
+                    ⚡ Arquivar e Processar Arquivo
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-          <div class="card-body">
-            <form id="form-upload-despesa-pdf" onsubmit="return false;">
-              <!-- Dropzone -->
-              <div class="file-dropzone pdf-dropzone" id="financas-pdf-dropzone">
-                <input type="file" id="financas-pdf-input" accept=".pdf,application/pdf" style="display: none;">
-                <div class="dropzone-content">
-                  <div class="dropzone-icon">📑</div>
-                  <strong id="pdf-dropzone-title">Arraste a fatura ou recibo em PDF aqui</strong>
-                  <p id="pdf-dropzone-subtitle">ou clique para selecionar o arquivo PDF do seu computador</p>
-                  <span class="dropzone-badge" id="pdf-dropzone-filename" style="display: none;"></span>
-                </div>
+
+          <!-- Card de Orientações & Boas Práticas do Meta Ads -->
+          <div class="glass-card financas-tips-card">
+            <div class="card-header">
+              <div>
+                <h3>💡 Como Baixar a Planilha ou Fatura no Meta Ads</h3>
+                <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">Guia rápido para extrair relatórios e recibos no Gerenciador de Anúncios.</p>
               </div>
-
-              <!-- Painel de Confirmação Rápida dos Dados Extraídos -->
-              <div id="financas-pdf-preview-panel" class="pdf-preview-panel" style="display: none; margin-top: 16px;">
-                <div class="preview-header">
-                  <span class="preview-title">🔍 Dados Detectados do PDF (Confira ou Ajuste):</span>
-                  <span class="badge badge-success" id="pdf-badge-status">PDF Lido com Sucesso</span>
-                </div>
-                
-                <div class="form-row" style="margin-top: 12px;">
-                  <div class="form-group flex-1">
-                    <label for="financas-input-data">Data da Despesa:*</label>
-                    <input type="date" id="financas-input-data" class="input-field" required>
+            </div>
+            <div class="card-body">
+              <ul class="financas-tips-list">
+                <li>
+                  <span class="tip-num">1</span>
+                  <div>
+                    <strong>Planilhas Semanais (.xlsx / .csv)</strong>
+                    <p>No Meta Ads Manager, selecione o período da semana, clique em <strong>Exportar > Exportar visualização da tabela</strong> (.xlsx ou .csv).</p>
                   </div>
-                  <div class="form-group flex-1">
-                    <label for="financas-input-valor">Valor Consumido (R$):*</label>
-                    <input type="number" id="financas-input-valor" class="input-field" step="0.01" min="0" placeholder="0.00" required>
+                </li>
+                <li>
+                  <span class="tip-num">2</span>
+                  <div>
+                    <strong>Faturas e Recibos em PDF (.pdf)</strong>
+                    <p>Em <em>Cobrança e Pagamentos</em>, selecione o pagamento desejado e baixe a fatura/recibo em <strong>PDF</strong>. Suba diretamente aqui!</p>
                   </div>
-                  <div class="form-group flex-2">
-                    <label for="financas-input-desc">Descrição / Identificador da Fatura:*</label>
-                    <input type="text" id="financas-input-desc" class="input-field" placeholder="Ex: Recibo Meta Ads #12345" required>
+                </li>
+                <li>
+                  <span class="tip-num">3</span>
+                  <div>
+                    <strong>Arquivamento &amp; Relatório Executivo</strong>
+                    <p>Todos os arquivos brutos ficam salvos permanentemente para auditoria, e o sistema compila os totais para o relatório executivo em PDF.</p>
                   </div>
-                </div>
-
-                <div class="form-row" style="margin-top: 8px;">
-                  <div class="form-group flex-1">
-                    <label for="financas-input-metodo">Método de Pagamento (Opcional):</label>
-                    <input type="text" id="financas-input-metodo" class="input-field" placeholder="Ex: Mastercard, Boleto, PIX">
-                  </div>
-                  <div class="form-group flex-1">
-                    <label for="financas-input-conta">Conta de Anúncios / Campanha (Opcional):</label>
-                    <input type="text" id="financas-input-conta" class="input-field" placeholder="Ex: act_998877 ou Promo Pokemon TCG">
-                  </div>
-                </div>
-
-                <div class="preview-actions" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 10px;">
-                  <button type="button" class="btn btn-secondary btn-sm" id="btn-cancelar-pdf">
-                    Cancelar
-                  </button>
-                  <button type="button" class="btn btn-primary" id="btn-salvar-despesa-pdf">
-                    💾 Confirmar e Salvar Despesa
-                  </button>
-                </div>
-              </div>
-            </form>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
-        <!-- Tabela de Faturas & Despesas no Período Selecionado -->
+        <!-- Histórico de Planilhas e Faturas Arquivadas no Mês -->
         <div class="glass-card" style="margin-top: 24px;">
           <div class="card-header">
             <div>
-              <h3>📋 Despesas Consumidas no Período (<span id="financas-tabela-periodo-badge">Carregando...</span>)</h3>
-              <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">
-                Histórico detalhado de faturas em PDF arquivadas no intervalo selecionado. Clique em Visualizar para abrir o PDF original no navegador.
-              </p>
+              <h3>📁 Arquivos e Faturas Arquivadas (<span id="financas-mes-badge-label">Mês Selecionado</span>)</h3>
+              <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">Histórico de todos os arquivos (.xlsx, .csv e .pdf) enviados para o mês. Visualize ou baixe o original a qualquer momento.</p>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center;">
-              <span class="badge badge-fire" id="badge-total-despesas-count">0 despesas</span>
-              <strong class="text-fire" style="font-size: 15px;" id="badge-total-despesas-valor">R$ 0,00</strong>
-            </div>
+            <span class="badge badge-fire" id="badge-total-arquivos">0 arquivos</span>
           </div>
           <div class="card-body">
             <div class="table-responsive">
-              <table class="data-table" id="financas-despesas-table">
+              <table class="data-table" id="financas-uploads-table">
                 <thead>
                   <tr>
-                    <th style="width: 110px;">Data</th>
-                    <th>Descrição / Referência</th>
-                    <th>Arquivo PDF</th>
-                    <th>Método / Conta</th>
-                    <th style="text-align: right; width: 130px;">Valor (R$)</th>
-                    <th style="text-align: right; width: 140px;">Ações</th>
+                    <th>Semana / Rótulo</th>
+                    <th>Tipo</th>
+                    <th>Nome do Arquivo Original</th>
+                    <th>Período Coberto</th>
+                    <th>Gasto Consumido</th>
+                    <th>Leads Gerados</th>
+                    <th>CPL</th>
+                    <th>Data do Envio</th>
+                    <th style="text-align: right;">Ações</th>
                   </tr>
                 </thead>
-                <tbody id="financas-despesas-tbody">
+                <tbody id="financas-uploads-tbody">
                   <tr>
-                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
-                      Nenhuma despesa encontrada para o período selecionado. Faça o upload de um PDF de fatura acima!
+                    <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                      Nenhum arquivo arquivado para este mês ainda. Faça seu primeiro upload acima!
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
 
-            <!-- Totalizador no Rodapé da Tabela -->
-            <div class="financas-fechamento-box" id="financas-fechamento-despesas" style="margin-top: 20px;">
+        <!-- Relatório Consolidado Executivo: Evolução Semanal & Performance por Campanha -->
+        <div class="glass-card report-printable" id="financas-relatorio-consolidado" style="margin-top: 24px;">
+          <div class="card-header">
+            <div>
+              <div class="report-badge-exec">RELATÓRIO MENSAL CONSOLIDADO · META ADS</div>
+              <h3 id="financas-relatorio-titulo">📊 Desempenho Financeiro e de Tráfego</h3>
+              <p class="text-muted" id="financas-relatorio-subtitulo" style="margin: 2px 0 0; font-size: 13px;">Visão executiva das campanhas, taxa de aquisição de leads e retorno de verba.</p>
+            </div>
+            <div class="report-watermark">Pokémon TCG Oficial</div>
+          </div>
+
+          <div class="card-body">
+            <!-- Evolução Semana a Semana / Faturas -->
+            <div class="report-section-block">
+              <h4 class="report-section-title">
+                <span>📅 1. Evolução Semana a Semana & Faturas</span>
+              </h4>
+              <div class="table-responsive">
+                <table class="data-table" id="financas-semanas-table">
+                  <thead>
+                    <tr>
+                      <th>Semana / Fatura</th>
+                      <th>Período</th>
+                      <th>Investimento (R$)</th>
+                      <th>Leads</th>
+                      <th>CPL Médio</th>
+                      <th>Cliques</th>
+                      <th>Impressões</th>
+                      <th>CTR (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="financas-semanas-tbody">
+                    <tr>
+                      <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                        Aguardando dados das planilhas ou faturas...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Performance por Campanha no Mês -->
+            <div class="report-section-block" style="margin-top: 28px;">
+              <h4 class="report-section-title">
+                <span>🎯 2. Performance Consolidada por Campanha</span>
+              </h4>
+              <div class="table-responsive">
+                <table class="data-table" id="financas-campanhas-table">
+                  <thead>
+                    <tr>
+                      <th>Nome da Campanha</th>
+                      <th>Gasto no Mês (R$)</th>
+                      <th>% da Verba</th>
+                      <th>Leads Gerados</th>
+                      <th>Custo por Lead (CPL)</th>
+                      <th>Cliques</th>
+                      <th>Impressões</th>
+                      <th>Eficiência</th>
+                    </tr>
+                  </thead>
+                  <tbody id="financas-campanhas-tbody">
+                    <tr>
+                      <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                        Aguardando dados das campanhas...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Resumo Financeiro de Fechamento -->
+            <div class="financas-fechamento-box" id="financas-fechamento-box" style="margin-top: 24px;">
               <div class="fechamento-item">
-                <span class="fechamento-label">Período Selecionado:</span>
-                <strong class="fechamento-val" id="fechamento-periodo-texto">--</strong>
+                <span class="fechamento-label">Investimento Total do Período:</span>
+                <strong class="fechamento-val text-fire" id="fechamento-total-gasto">R$ 0,00</strong>
               </div>
               <div class="fechamento-item">
-                <span class="fechamento-label">Quantidade de Faturas:</span>
-                <strong class="fechamento-val" id="fechamento-qtd-faturas">0 faturas</strong>
+                <span class="fechamento-label">Volume Total de Cadastros/Leads:</span>
+                <strong class="fechamento-val" id="fechamento-total-leads">0 contatos</strong>
               </div>
               <div class="fechamento-item">
-                <span class="fechamento-label">Total Consumido no Período:</span>
-                <strong class="fechamento-val text-fire" style="font-size: 19px;" id="fechamento-total-consumido">R$ 0,00</strong>
+                <span class="fechamento-label">CPL Médio do Mês:</span>
+                <strong class="fechamento-val text-green" id="fechamento-cpl-medio">R$ 0,00</strong>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Seção Imprimível Oculta (Acionada no botão Imprimir / PDF) -->
-        <div class="report-printable-area" id="financas-area-impressao" style="display: none;">
-          <!-- Conteúdo gerado dinamicamente para impressão limpa -->
+        <!-- CONTAINER EXECUTIVO PARA IMPRESSÃO / PDF (LAYOUT MODERNO & BONITO) -->
+        <div id="relatorio-executivo-print" class="relatorio-executivo-container" style="display: none;">
+          <!-- Conteúdo gerado dinamicamente para PDF com visual de alta classe -->
         </div>
       </section>
     </main>

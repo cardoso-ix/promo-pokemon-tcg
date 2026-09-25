@@ -982,18 +982,18 @@ export function salvarFinancasUpload(upload: FinancasUploadInput, itens: Financa
         uploadId,
         upload.mesReferencia,
         upload.semanaRotulo,
-        it.nomeCampanha,
+        it.nomeCampanha || 'Campanha Meta Ads',
         it.statusVeiculacao || 'ativa',
         it.orcamento ?? null,
         it.tipoOrcamento || null,
-        it.valorGasto,
-        it.leads,
-        it.custoPorLead,
-        it.impressoes,
-        it.cpm,
-        it.cliques,
-        it.ctr,
-        it.cpc,
+        it.valorGasto ?? 0,
+        it.leads ?? 0,
+        it.custoPorLead ?? 0,
+        it.impressoes ?? 0,
+        it.cpm ?? 0,
+        it.cliques ?? 0,
+        it.ctr ?? 0,
+        it.cpc ?? 0,
         it.dataInicio || null,
         it.dataFim || null,
         agora
@@ -1086,7 +1086,14 @@ export function obterConsolidadoMensalFinancas(mesReferencia: string): FinancasC
     `)
     .get(mes);
 
-  const gastoTotal = Number((aggGeral?.gasto_total || 0).toFixed(2));
+  const somaUploads: any = db
+    .prepare('SELECT COALESCE(SUM(valor_total_gasto), 0) AS total_uploads FROM financas_uploads WHERE mes_referencia = ?')
+    .get(mes);
+
+  const gastoTotal = Math.max(
+    Number((aggGeral?.gasto_total || 0).toFixed(2)),
+    Number((somaUploads?.total_uploads || 0).toFixed(2))
+  );
   const leadsTotal = Number(aggGeral?.leads_total || 0);
   const impressoesTotal = Number(aggGeral?.impressoes_total || 0);
   const cliquesTotal = Number(aggGeral?.cliques_total || 0);

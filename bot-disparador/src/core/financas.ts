@@ -378,7 +378,66 @@ export function parsePlanilhaMeta(
 }
 
 /**
+ * Faz o parsing inteligente de relatórios ou faturas em PDF do Meta Ads
+ */
+export async function parsePdfMeta(
+  buffer: Buffer,
+  nomeArquivoOriginal: string,
+  semanaRotuloManual?: string,
+  mesReferenciaManual?: string
+): Promise<PlanilhaProcessadaResult> {
+  const fatura = await extrairDadosPdfFatura(buffer, nomeArquivoOriginal);
+
+  const dataSugerida = fatura.dataSugerida || new Date().toISOString().substring(0, 10);
+  const mesCalc = mesReferenciaManual || dataSugerida.substring(0, 7);
+
+  const partesData = dataSugerida.split('-');
+  const dataBr = partesData.length === 3 ? `${partesData[2]}/${partesData[1]}/${partesData[0]}` : dataSugerida;
+  const semanaRotulo = semanaRotuloManual || `Fatura ${dataBr}`;
+
+  const gastoTotal = fatura.valorSugerido || 0;
+
+  // Cria um item de campanha correspondente à fatura para consolidar nas métricas
+  const itemFatura: FinancasItemInput = {
+    nomeCampanha: fatura.descricaoSugerida || `Fatura Meta Ads (${path.basename(nomeArquivoOriginal, '.pdf')})`,
+    valorGasto: gastoTotal,
+    impressoes: 0,
+    cliques: 0,
+    ctr: 0,
+    cpc: 0,
+    cpm: 0,
+    leads: 0,
+    custoPorLead: 0,
+    dataInicio: dataSugerida,
+    dataFim: dataSugerida,
+    mesReferencia: mesCalc
+  };
+
+  return {
+    resumo: {
+      nomeArquivo: nomeArquivoOriginal,
+      tamanhoBytes: buffer.length,
+      semanaRotulo,
+      periodoInicio: dataSugerida,
+      periodoFim: dataSugerida,
+      mesReferencia: mesCalc,
+      gastoTotal,
+      impressoesTotal: 0,
+      cliquesTotal: 0,
+      leadsTotal: 0,
+      ctrMedio: 0,
+      cpcMedio: 0,
+      cpmMedio: 0,
+      custoPorLeadMedio: 0,
+      qtdCampanhas: 1
+    },
+    itens: [itemFatura]
+  };
+}
+
+/**
  * Salva fisicamente o arquivo em /app/data/financas_uploads/ e grava registros no SQLite
+ * Suporta planilhas (XLSX, XLS, CSV) e faturas/relatórios em PDF nativamente.
  */
 export async function arquivarPlanilhaSemanal(
   buffer: Buffer,
@@ -386,7 +445,15 @@ export async function arquivarPlanilhaSemanal(
   semanaRotulo?: string,
   mesReferencia?: string
 ): Promise<{ uploadId: number; resumo: any }> {
-  const parsed = parsePlanilhaMeta(buffer, nomeArquivoOriginal, semanaRotulo, mesReferencia);
+  const isPdf = nomeArquivoOriginal.toLowerCase().endsWith('.pdf') || (buffer.length >= 4 && buffer.slice(0, 4).toString() === '%PDF');
+
+  let parsed: PlanilhaProcessadaResult;
+
+  if (isPdf) {
+    parsed = await parsePdfMeta(buffer, nomeArquivoOriginal, semanaRotulo, mesReferencia);
+  } else {
+    parsed = parsePlanilhaMeta(buffer, nomeArquivoOriginal, semanaRotulo, mesReferencia);
+  }
 
   const uploadsDir = path.join(DATA_DIR, 'financas_uploads');
   if (!fs.existsSync(uploadsDir)) {
@@ -421,6 +488,24 @@ export async function arquivarPlanilhaSemanal(
   };
 
   const uploadId = salvarFinancasUpload(uploadInput, parsed.itens);
+
+  // Se for PDF, sincroniza também na tabela de despesas em PDF
+  if (isPdf) {
+    try {
+      salvarDespesaPdf({
+        nomeArquivo: nomeArquivoOriginal,
+        caminhoArquivo: caminhoCompleto,
+        tamanhoBytes: buffer.length,
+        dataDespesa: parsed.resumo.periodoInicio || new Date().toISOString().substring(0, 10),
+        valor: parsed.resumo.gastoTotal,
+        descricao: parsed.itens[0]?.nomeCampanha || `Fatura Meta Ads - ${nomeArquivoOriginal}`,
+        contaAnuncio: 'Meta Ads',
+        metodoPagamento: 'Fatura'
+      });
+    } catch (e) {
+      console.warn('[Finanças] Aviso ao sincronizar com despesas PDF:', e);
+    }
+  }
 
   return {
     uploadId,

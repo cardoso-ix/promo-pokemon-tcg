@@ -60,13 +60,13 @@ npm test
    - Integração com o gateway OpenCode (`https://opencode.ai/zen/go/v1`) com modelos `deepseek-v4-pro` e `deepseek-v4-flash`.
    - Sandbox interativa para testar respostas da IA diretamente no navegador.
 
-5. **Gestão Financeira & Faturas PDF (Meta Ads):**
-   - **Upload Inteligente de Faturas em PDF:** Upload direto das faturas e recibos de cobrança do Meta Ads (`.pdf`) com armazenamento permanente no volume de dados.
-   - **Extração Automática com `pdf-parse`:** Leitura e detecção instantânea da data da despesa, valor total cobrado (R$), identificador da transação e método de pagamento.
-   - **Filtro de Período por Calendário Livre:** Seletor de Data Início (`De:`) e Data Fim (`Até:`) com atalhos rápidos (*Este Mês*, *Últimos 7 dias*, *Últimos 30 dias*, *Mês Anterior*, *Todo o Período*).
-   - **KPIs Executivos em Tempo Real:** Total consumido no período selecionado, quantidade de faturas arquivadas, gasto médio por fatura e maior despesa.
-   - **Ações Rápidas no PDF:** Botão para visualizar o PDF original inline no navegador, download direto e exclusão com remoção de arquivo físico.
-   - **Exportação & Impressão:** Exportação dos lançamentos em CSV (com UTF-8 BOM para Excel) e impressão de relatório executivo consolidado em PDF (`window.print`).
+5. **Gestão Financeira & Relatórios Meta Ads (Suporte Unificado PDF + Planilhas):**
+   - **Upload & Arquivamento Físico de PDFs e Planilhas:** Suporte direto no mesmo dropzone para faturas e recibos em PDF (`.pdf`) e exportações de relatórios do Gerenciador de Anúncios (`.xlsx`, `.xls`, `.csv`). Arquivos originais ficam preservados no volume persistente (`/app/data/financas_uploads`).
+   - **Leitura & Extração Inteligente:** Extração automática de valores, datas contábeis e métricas de desempenho tanto de arquivos PDF (via `pdf-parse`) quanto de planilhas Excel/CSV.
+   - **Controle por Competência Mensal:** Navegação fluida mês a mês com consolidação automática de investimentos, faturas e campanhas.
+   - **Ações Rápidas no Histórico:** Visualização direta do PDF em nova aba no leitor do navegador (`👁️ Ver`), download do arquivo original (`⬇️ Baixar`) e exclusão segura com recálculo automático.
+   - **Relatório Executivo Moderno (Folha A4 / Salvar como PDF):** Geração dinâmica de relatório de fechamento de altíssimo padrão executivo para impressão (`🖨️ Imprimir / PDF`), com cabeçalho corporativo, grade de 4 KPIs destacados, tabelas analíticas zebradas, termo de conciliação fiscal e conformidade contábil.
+   - **Exportação CSV (Excel):** Exportação dos dados consolidados com encoding BOM UTF-8 para abertura perfeita no Microsoft Excel.
 
 ---
 
