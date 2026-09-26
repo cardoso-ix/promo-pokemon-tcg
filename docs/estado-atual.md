@@ -22,8 +22,10 @@ Na raiz do projeto, opera um **Orquestrador Monorepo (NPM Workspaces)** que unif
 | **Bot Disparador & Leads** | TypeScript + Baileys + Spintax | 🟢 **Online 24/7 (Tema Fogo 🔥)** | Layout moderno com Sidebar limpa, cor vermelho rubi/âmbar e motor de partículas com brasas e fagulhas incandescentes 3D em 60fps. Extração de leads, disparos anti-ban e atendimento IA com DeepSeek. |
 | **Atendimento IA Privado** | DeepSeek V4 (OpenCode Gateway) | 🟢 **Online 24/7 (VPS HostGator)** | Responde clientes no privado imitando especialista amigável de Pokémon TCG com digitação humanizada. |
 | **Encurtador de Afiliados** | API Oficial Mercado Livre | 🟢 **Ativo (Sentinel 45m)** | Monitorado pelo Cookie Sentinel em tempo real, encurtador oficial `https://meli.la/xxxxxx` e fallback resiliente. |
+| **Mercado Livre Afiliados (Oficial)** | API Interna de Afiliados + Cache SQLite | 🟢 **Ativo (Sincronização 24/7)** | Ingestão automática de comissões no mês (`R$ 1.907,09`), ganhos diários, vendas geradas (`R$ 19.049,69`), cliques (1.882) e CVR (4,67%) com conciliação contábil no DRE. |
+| **Super Cockpit Unificado (React 19)** | Next/Vite + Tailwind v4 + Recharts | 🟢 **Online (Header Fluido Vercel Style)** | Design minimalista sem caixas pesadas, botões de ação rápida pill alinhados, visualização 360° com gráficos Recharts e Single Sign-On (SSO). |
 | **Bancos de Dados SQLite** | Better-SQLite3 (WAL Mode) | 🟢 **Ativo (Named Volumes)** | `replica.db` e `disparador.db` salvos com segurança em `/app/data` via volumes Docker `promo_replica_data` e `bot_disparador_data`. |
-| **Cockpits Web & Segurança** | Fastify + WebSockets + UI TCG | 🟢 **Online (Inter & Outfit)** | Interface temática com tipografia unificada `Inter` e `Outfit`, sem poluição, cards com `backdrop-filter: blur(16px)` e alternância rápida no Top Header. |
+| **Cockpits Web & Segurança** | Fastify + WebSockets + UI TCG | 🟢 **Online (Inter & Outfit)** | Interface temática com tipografia unificada `Inter` e `Outfit`, sem poluição, cards refinados e alternância rápida no Top Header. |
 | **Google Planilhas ("produtos tcg valores")** | Webhook Apps Script + Dual-Write Local | 🟢 **Ativo (Sincronização Contínua)** | Registra automaticamente cada oferta enviada nos grupos com Data/Hora, Nome do Produto, Valor Promocional (Por), Preço Original (De) e Link Afiliado. |
 | **Mensagem Diária de Abertura (07:00 AM)** | Scheduler Nativo (Fuso de Brasília) | 🟢 **Ativo (Anti-Duplicidade)** | Dispara automaticamente mensagem calorosa todas as manhãs às 07:00 AM com rotação entre 4 modelos de alta qualidade. |
 | **Gerador de Anúncios Reativo** | Fastify + Scraper ML + Preview ao Vivo | 🟢 **Ativo (Replicador)** | Puxa dados reais do produto via link, foto 2X, De/Por e permite disparo manual com 1 clique para os grupos selecionados. |
@@ -55,8 +57,8 @@ Ambos os serviços operam 24/7 na VPS HostGator:
 
 ## 4. Cobertura de Testes Automatizados
 
-- **Total de Testes:** **128 testes unitários** (100% aprovados, 0 falhas).
-  - `app` (Replicador): **90 testes aprovados**.
+- **Total de Testes:** **134 testes unitários e de integração** (100% aprovados, 0 falhas).
+  - `app` (Replicador): **96 testes aprovados**.
   - `bot-disparador`: **38 testes aprovados**.
 - Executável com um único comando na raiz do projeto: `npm test`.
 

@@ -48,14 +48,23 @@ O sistema divide-se em dois grandes serviços desacoplados:
 
 ## 3. Detalhamento dos Componentes
 
-### 3.1. Replicador de Ofertas (`app/`)
+### 3.1. Super Cockpit Unificado & Dashboard Executivo (`web-cockpit/` + `app/`)
+- **Frontend SPA Moderno**: React 19, Tailwind CSS v4, Recharts e Lucide Icons.
+- **Design Minimalista & Fluido**: Header estilo Linear/Vercel (borderless) sem caixas pesadas, botões de ação rápida em formato Pill horizontal, e micro-interações táteis em 60fps.
+- **Single Sign-On (SSO)**: Autenticação única via HMAC-SHA256 compartilhada entre todos os módulos com cookies de sessão seguros HTTP-Only.
+- **Ingestão Oficial de Afiliados do Mercado Livre**:
+  - Conexão nativa com a API interna `/affiliate-program/api/dashboard/*`.
+  - Ingestão em tempo real de comissões, faturamento bruto gerado, cliques, CVR e produtos comissionados de Pokémon TCG.
+  - Conciliação contábil no DRE: cálculo automático do Lucro Líquido Real abatendo gastos de tráfego (Meta Ads) e aplicação matemática da Regra dos 70% de Reinvestimento e 30% de Lucro dos Sócios.
+
+### 3.2. Replicador de Ofertas (`app/`)
 - **Engine**: TypeScript + Node.js 22 LTS.
 - **Protocolo WhatsApp**: `@whiskeysockets/baileys` Multi-Device.
 - **Encurtador ML**: Conecta em `https://www.mercadolivre.com.br/affiliate-program/api/v1/links` para produzir links curtos `https://meli.la/xxxxxx`.
 - **Desembrulho de Mídia**: Converte mensagens de visualização única (`viewOnceMessageV2`), efêmeras e anexos normais em buffers para reenvio fiel aos canais de destino.
 - **Armazenamento**: SQLite em modo WAL (`replica.db`).
 
-### 3.2. Bot Disparador & Prospecção (`bot-disparador/`)
+### 3.3. Bot Disparador & Prospecção (`bot-disparador/`)
 - **Captador de Membros**: Varre grupos conectados, normaliza JIDs e salva participantes em lote na tabela de contatos.
 - **Motor Spintax**: Avalia padrões `{A|B|C}` recursivamente e substitui tags `{nome}`, `{saudacao}`, `{grupo}` para garantir que nenhuma mensagem seja disparada idêntica no WhatsApp.
 - **Fila Anti-Ban Inteligente**:

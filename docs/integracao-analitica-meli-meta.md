@@ -217,7 +217,63 @@ CREATE TABLE IF NOT EXISTS daily_analytics_summary (
    $$\text{Blended ROAS} = \frac{\text{Faturamento Total (Mercado Livre)}}{\text{Investimento Total em Mídia (Meta Ads)}}$$
 2. **CAC do Marketplace (Custo de Aquisição de Clientes):**
    $$\text{CAC Médio} = \frac{\text{Investimento Total em Mídia (Meta Ads)}}{\text{Quantidade de Pedidos Realizados (Mercado Livre)}}$$
-3. **Margem Operacional Líquida Real:**
+3. **Margem Operacional Líquida Real (Vendedor):**
    $$\text{Margem Líquida} = \text{Faturamento Meli} - \text{Comissões Meli} - \text{Frete Meli} - \text{Investimento Meta}$$
 4. **Margem Percentual (%):**
    $$\text{Margem \%} = \left(\frac{\text{Margem Líquida}}{\text{Faturamento Meli}}\right) \times 100$$
+
+---
+
+## 5. Ingestão do Programa de Afiliados do Mercado Livre (Comissões Reais)
+
+Para contas que operam no modelo de **Afiliado Oficial (comissão por recomendação de produtos TCG)**, a plataforma conecta-se de forma contínua à API interna de afiliados do Mercado Livre através de sessão segura (`meli_cookie` da tag `caed1312314`):
+
+### Endpoints Disponíveis:
+- **`GET /api/dashboard/meli-affiliate`**: Retorna as métricas consolidadas em memória/cache SQLite com tempo de resposta sub-10ms. Aceita `?refresh=true` para forçar atualização em tempo real.
+- **`POST /api/integrations/meli-affiliate/sync`**: Força sincronização imediata contra os servidores do Mercado Livre e permite atualizar o cookie de sessão (`{ cookie: "..." }`).
+
+### Modelo de Dados de Afiliado:
+```typescript
+export interface MeliAffiliateOverview {
+  tag: string; // Ex: 'caed1312314'
+  totalClicks: number; // Ex: 1.882 cliques
+  totalBuyers: number; // Compradores únicos
+  totalRequests: number;
+  totalOrders: number; // Total de pedidos gerados
+  totalSales: number; // Volume bruto de vendas geradas (R$)
+  totalCommissions: number; // Total de comissões recebidas (R$)
+  cvr: number; // Taxa de conversão (ex: 0.0467 -> 4,67%)
+  commissionsToday: number; // Comissões de hoje (R$)
+  ordersToday: number; // Pedidos de hoje
+  recentSales: Array<{
+    id: string;
+    date: string;
+    productName: string;
+    productImage: string;
+    link: string;
+    storeName: string;
+    saleValue: number;
+    saleUnits: number;
+    commissionValue: number;
+    commissionPercentage: number;
+  }>;
+  dailyData: Array<{
+    date: string;
+    orders: number;
+    quantity: number;
+    earnings: number;
+    touchpoints: number;
+    cvr: number;
+  }>;
+  updatedAt: string;
+}
+```
+
+### Fórmulas do DRE de Afiliado (Conciliação Contábil Real):
+1. **Lucro Líquido Real da Operação:**
+   $$\text{Lucro Líquido} = \text{Comissões de Afiliado (Mercado Livre)} - \text{Gasto Total com Anúncios (Meta Ads)}$$
+2. **Regra dos 70% de Reinvestimento:**
+   $$\text{Reinvestimento em Tráfego (70\%)} = \text{Lucro Líquido} \times 0.70$$
+3. **Distribuição para Sócios / Retirada:**
+   $$\text{Retirada Sócios (30\%)} = \text{Lucro Líquido} \times 0.30$$
+
