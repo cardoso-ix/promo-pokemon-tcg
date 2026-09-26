@@ -60,10 +60,12 @@ chmod +x *.sh
 - **Objetivo:** Captação de membros de grupos em 1 clique, disparos em massa com proteção anti-ban e Spintax `{A|B|C}`, simulador oficial do WhatsApp ao vivo lado a lado, modelos prontos de alta conversão de Pokémon TCG e atendimento privado automático com **Inteligência Artificial DeepSeek V4 (OpenCode Gateway)**.
 - **🛡️ Meta Shield Anti-Ban:** Auditor heurístico em tempo real que pontua o risco de cada template (0-100) e sugere melhorias com IA.
 - **🏷️ Meta Cloud API & Utility Templates:** Suporte a disparo oficial via Meta Cloud API com templates categorizados como `UTILITY` (~R$ 0,18) aprovados pela Meta para evitar custos abusivos de `MARKETING`.
-- **💼 Módulo de Gestão Financeira, Balanço DRE & Meta Ads:**
-  - **Upload Semanal de Planilhas e PDFs:** Suporte a `.xlsx`, `.xls` e `.csv` exportados do Meta Ads Manager e upload de PDFs de faturas com arquivamento seguro em `/app/data/financas_uploads/`.
-  - **Dashboard com KPIs Executivos:** Investimento Total no Mês, Leads Gerados, Custo Médio por Lead (CPL com selo de eficiência), Volume de Cliques, Impressões, CTR, CPC e CPM.
-  - **Balanço Diário e DRE:** Lançamento diário de despesas de marketing vs faturamento/lucro bruto do dia.
+- **💼 Módulo de Gestão Financeira, Balanço DRE & Meta Ads Oficial:**
+  - **Sincronização Direta Meta Ads (Graph API v20.0):** Ingestão automática e sob demanda de gastos (`spend`), impressões, cliques, compras, CPC e CTR direto da API oficial do Meta Ads para contas `act_{id}`.
+  - **Banner Executivo & Modal de Conexão no Cockpit:** Gerenciamento do Token de Acesso de Sistema (`EAA...`) com armazenamento criptografado em **AES-256-GCM** e sincronização automática a cada hora.
+  - **Upload Semanal de Planilhas e PDFs:** Suporte alternativo a `.xlsx`, `.xls` e `.csv` exportados do Meta Ads Manager e upload de PDFs de faturas com arquivamento seguro em `/app/data/financas_uploads/`.
+  - **Dashboard com KPIs Executivos:** Investimento Total no Mês, Gasto Hoje, Cliques, Impressões, Custo por Clique (CPC), CTR e Campanhas Top Spend.
+  - **Balanço Diário e DRE:** Consolidação automática de gastos de marketing vs lucros brutos do Mercado Livre.
   - **Regra dos 70% de Reinvestimento:** Cálculo automático de 70% do lucro líquido mensal destinado para reinvestimento agressivo em tráfego e 30% para distribuição aos sócios.
 
 ---
