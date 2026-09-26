@@ -354,8 +354,11 @@ export class MeliIntegrationService {
     let totalProcessados = 0;
     let hasMore = true;
 
+    const userId = getConfig('meli_user_id', '') || process.env.MELI_USER_ID || '';
+    const sellerParam = userId ? `&seller=${userId}` : '';
+
     while (hasMore) {
-      const url = `${MELI_API_BASE}/orders/search?order.date_created.from=${encodeURIComponent(fromIso)}&order.date_created.to=${encodeURIComponent(toIso)}&offset=${offset}&limit=${limit}&sort=date_desc`;
+      const url = `${MELI_API_BASE}/orders/search?order.date_created.from=${encodeURIComponent(fromIso)}&order.date_created.to=${encodeURIComponent(toIso)}${sellerParam}&offset=${offset}&limit=${limit}&sort=date_desc`;
 
       const res = await fetch(url, {
         headers: {
