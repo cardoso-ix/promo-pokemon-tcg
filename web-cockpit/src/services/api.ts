@@ -113,6 +113,17 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ ativo })
     }),
+  saveRota: (dados: { id?: number; nome: string; ativa?: boolean; origens: string[]; destinos: string[] }) =>
+    request<{ ok: boolean; id: number }>('/api/rotas', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    }),
+  deleteRota: (id: number) =>
+    request<{ ok: boolean }>(`/api/rotas/${id}`, {
+      method: 'DELETE'
+    }),
+  getChats: () => request<Array<{ id: string; nome: string; total_membros?: number }>>('/api/chats'),
+  syncChats: () => request<{ ok: boolean; total: number; chats: Array<{ id: string; nome: string }> }>('/api/chats/sync', { method: 'POST' }),
   getReplicaConfig: () => request<Record<string, string>>('/api/configs'),
   saveReplicaConfig: (configs: Record<string, string>) =>
     request<{ ok: boolean }>('/api/configs', {
