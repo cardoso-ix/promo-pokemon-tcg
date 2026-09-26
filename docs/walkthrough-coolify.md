@@ -43,22 +43,25 @@ Concluímos a **varredura completa do ecossistema Promo Pokémon TCG**, corrigim
 
 Executamos as suítes de testes de ponta a ponta:
 
-| Módulo | Testes Passando | Novos Testes Criados | Status |
+| Módulo | Testes Passando | Suíte Automatizada | Status |
 |---|---|---|---|
-| **Replicador (`app/`)** | **60 / 60** | `internal_sync.test.ts` (Envio com token e resiliência) | 🟢 **Aprovado** |
-| **Bot Disparador (`bot-disparador/`)** | **28 / 28** | `internal_bridge.test.ts` (SQLite, token interno e endpoints) | 🟢 **Aprovado** |
-| **Total** | **88 / 88** | 4 novos cenários de integração | 🟢 **100% Verde** |
+| **Replicador & Gateway (`app/`)** | **90 / 90** | Testes de replicação, cupons, nicho TCG, parcerias e gateway | 🟢 **Aprovado** |
+| **Bot Disparador & IA (`bot-disparador/`)** | **38 / 38** | Testes de campanhas, Meta utility, Spintax, finanças e DeepSeek | 🟢 **Aprovado** |
+| **Total** | **128 / 128** | Suíte de ponta a ponta 100% verde | 🟢 **100% Aprovado** |
 
 ---
 
 ## 🌐 Status Atual em Produção na VPS HostGator (108.174.145.77)
 
-O deploy foi executado com sucesso diretamente pelo Coolify via API:
+O deploy da **nova versão SPA moderna com React 19, Tailwind CSS v4 e Recharts** foi executado com sucesso diretamente pelo Coolify via API:
 - **Status dos Contêineres:** 🟢 `running:healthy`
-- **Painel 1 (Replicador de Ofertas):** 👉 **`http://108.174.145.77:3000`**
-- **Painel 2 (Bot Disparador & IA):** 👉 **`http://108.174.145.77:3333`**
+- **Super Cockpit Unificado (Novo Frontend):** 👉 **`http://108.174.145.77:3000`**
+  - Chip 1 (Replicador): Conectado (`554998095955`) sem deslogar
+  - Cookie Mercado Livre: Válido e operacional (`meli.la` ativo)
+  - Ofertas replicadas em tempo real preservadas no SQLite NVMe
+- **Módulo Disparador & IA (Acesso Direto):** 👉 **`http://108.174.145.77:3333`**
 - **Painel Administrativo Coolify:** 👉 **`http://108.174.145.77:8000`**
 
 ### Credenciais Padrão de Acesso:
 - **Usuário:** `admin` (ou `eduardo`)
-- **Senha:** `promo2026` (ou a senha customizada que você definir no `.env`)
+- **Senha:** `promo2026`
