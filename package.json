@@ -5,15 +5,18 @@
   "private": true,
   "workspaces": [
     "app",
-    "bot-disparador"
+    "bot-disparador",
+    "web-cockpit"
   ],
   "scripts": {
     "setup": "npm run install:all && npm run build:all",
-    "install:all": "npm install --prefix app && npm install --prefix bot-disparador",
+    "install:all": "npm install --prefix app && npm install --prefix bot-disparador && npm install --prefix web-cockpit",
     "build": "npm run build:all",
-    "build:all": "npm run build --prefix app && npm run build --prefix bot-disparador",
+    "build:all": "npm run build --prefix app && npm run build --prefix bot-disparador && npm run build:web",
+    "build:web": "npm run build --prefix web-cockpit",
     "build:app": "npm run build --prefix app",
     "build:bot": "npm run build --prefix bot-disparador",
+    "dev:web": "npm run dev --prefix web-cockpit",
     "dev:app": "npm run dev --prefix app",
     "dev:bot": "npm run dev --prefix bot-disparador",
     "start:app": "npm start --prefix app",

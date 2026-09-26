@@ -32,16 +32,17 @@ chmod +x *.sh
 
 ## 📦 Plataforma Unificada em Produção
 
-### ⚡ Super Cockpit Unificado (`app/` — Porta 3000)
+### ⚡ Super Cockpit Unificado (`web-cockpit` + `app/` — Porta 3000)
 - **Status:** 🟢 **Online 24/7 (VPS HostGator + Coolify)**
 - **Painel em Produção:** 👉 **`http://108.174.145.77:3000`** | **Local:** 👉 **`http://localhost:3000`**
-- **Plataforma Única:** Centraliza 100% dos recursos em uma única aplicação web, sem exigir abertura de múltiplas abas nem logins duplicados:
-  - **Módulo Replicador (Água 💧):** Feed ao vivo, Rotas de transmissão, Gerador de Anúncios ML, Sentinel de Cookies e Agendador Matinal 07:00 AM.
-  - **Módulo Disparador & IA (Fogo 🔥):** Extração de grupos, Base de Leads, Campanhas Spintax anti-ban, Meta Cloud API oficial e atendimento humanizado com DeepSeek V4.
-  - **Módulo Finanças (Esmeralda 💼):** Upload de planilhas semanais do Meta Ads, faturas PDF, DRE contábil e meta dos 70% de reinvestimento.
+- **Arquitetura Moderna (SPA Nativa sem Iframes):**
+  - **Stack Visual de Ponta:** Desenvolvido em **React 19, Tailwind CSS v4, Recharts e Lucide Icons**.
+  - **Visão Geral 360° com Gráficos Reativos:** Dashboard executivo completo unificando gráficos de fluxo horário de ofertas e cliques, balanço DRE, distribuição da regra de 70% de reinvestimento e saúde dos chips em tempo real.
+  - **Módulo Replicador (Água 💧):** Feed de ofertas ao vivo, rotas de transmissão com toggles rápidos, gerador de anúncios TCG com prévia em tempo real e Sentinel do Mercado Livre.
+  - **Módulo Disparador & IA (Fogo 🔥):** Fila de campanhas com Spintax `{A|B|C}`, extração de leads de grupos em 1 clique, canal Meta Cloud oficial e simulador de atendimento com DeepSeek V4.
+  - **Módulo Finanças & DRE (Esmeralda 💼):** DRE consolidado, cálculo automático dos 70% de reinvestimento e upload de faturas PDF/XLSX.
 - **Single Sign-On (SSO):** Um único login autentica simultaneamente ambos os sistemas através de cookies de sessão seguros e Gateway reverso Fastify.
-- **Multi-Elemental Design System:** Transição visual inteligente de temas (Água 💧 / Fogo 🔥 / Finanças 💼) com partículas 3D aceleradas por GPU em 60fps.
-- **Monitoramento Duplo de Conexão:** Visualização em tempo real no Top Header do status de ambos os chips de WhatsApp e da sessão do Mercado Livre.
+- **Performance:** Zero sobrecarga de múltiplos iframes na memória; interface reativa com feedback instantâneo e tempo de carregamento sub-segundo.
 
 ---
 
