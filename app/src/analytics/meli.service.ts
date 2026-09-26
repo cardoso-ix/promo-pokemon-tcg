@@ -146,7 +146,7 @@ export class MeliIntegrationService {
     if (!cid) {
       throw new Error('Configure o App ID (Client ID) do Mercado Livre antes de iniciar o OAuth');
     }
-    const rUri = customRedirectUri || getConfig('meli_redirect_uri', '') || this.redirectUri;
+    const rUri = getConfig('meli_redirect_uri', '') || customRedirectUri || this.redirectUri || 'https://108-174-145-77.sslip.io/api/integrations/meli/callback';
     return `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${cid}&redirect_uri=${encodeURIComponent(rUri)}`;
   }
 
@@ -157,7 +157,7 @@ export class MeliIntegrationService {
     const cid = getConfig('meli_client_id', '') || this.clientId;
     const encSecret = getConfig('meli_client_secret', '');
     const cSecret = encSecret ? decryptToken(encSecret) : this.clientSecret;
-    const rUri = customRedirectUri || getConfig('meli_redirect_uri', '') || this.redirectUri;
+    const rUri = getConfig('meli_redirect_uri', '') || customRedirectUri || this.redirectUri || 'https://108-174-145-77.sslip.io/api/integrations/meli/callback';
 
     const params = new URLSearchParams({
       grant_type: 'authorization_code',

@@ -175,8 +175,7 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   // Gerar URL de Autorização OAuth
   app.get('/api/integrations/meli/auth-url', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
-      const host = `${req.protocol}://${req.hostname}`;
-      const redirectUri = `${host}/api/integrations/meli/callback`;
+      const redirectUri = 'https://108-174-145-77.sslip.io/api/integrations/meli/callback';
       const authUrl = meliService.getAuthUrl(redirectUri);
       return { ok: true, authUrl };
     } catch (err: unknown) {
@@ -188,8 +187,7 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   // Iniciar fluxo OAuth 2.0 (Redirecionamento direto)
   app.get('/api/integrations/meli/auth', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
-      const host = `${req.protocol}://${req.hostname}`;
-      const redirectUri = `${host}/api/integrations/meli/callback`;
+      const redirectUri = 'https://108-174-145-77.sslip.io/api/integrations/meli/callback';
       const authUrl = meliService.getAuthUrl(redirectUri);
       return reply.redirect(authUrl);
     } catch (err: unknown) {
@@ -203,16 +201,15 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
     const { code, error } = req.query as { code?: string; error?: string };
 
     if (error) {
-      return reply.redirect(`/?meli=error&error=${encodeURIComponent(error)}`);
+      return reply.redirect(`http://108.174.145.77:3000/?meli=error&error=${encodeURIComponent(error)}`);
     }
 
     if (!code) {
-      return reply.redirect('/?meli=missing_code');
+      return reply.redirect('http://108.174.145.77:3000/?meli=missing_code');
     }
 
     try {
-      const host = `${req.protocol}://${req.hostname}`;
-      const redirectUri = `${host}/api/integrations/meli/callback`;
+      const redirectUri = 'https://108-174-145-77.sslip.io/api/integrations/meli/callback';
       await meliService.exchangeCodeForToken(code, redirectUri);
 
       // Sincronizar pedidos dos últimos 30 dias automaticamente
@@ -222,10 +219,10 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
         console.warn('[Meli Sync Background] Falha na sincronização pós-oauth:', err);
       });
 
-      return reply.redirect('/?meli=connected');
+      return reply.redirect('http://108.174.145.77:3000/?meli=connected');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      return reply.redirect(`/?meli=error&error=${encodeURIComponent(msg)}`);
+      return reply.redirect(`http://108.174.145.77:3000/?meli=error&error=${encodeURIComponent(msg)}`);
     }
   });
 
