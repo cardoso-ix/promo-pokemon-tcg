@@ -133,6 +133,37 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
     return { ok: true, ...status };
   });
 
+  // Diagnóstico Detalhado da API do Mercado Livre
+  app.get('/api/integrations/meli/diagnostico', async (req: FastifyRequest) => {
+    try {
+      const accessToken = await meliService.getValidAccessToken();
+      const meRes = await fetch('https://api.mercadolibre.com/users/me', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const meData = await meRes.json() as any;
+
+      const sellerRes = await fetch(`https://api.mercadolibre.com/orders/search?seller=${meData.id}&sort=date_desc&limit=10`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const sellerData = await sellerRes.json() as any;
+
+      return {
+        ok: true,
+        user: { id: meData.id, nickname: meData.nickname, site_id: meData.site_id },
+        totalOrders: sellerData.paging?.total ?? 0,
+        recentOrders: sellerData.results?.slice(0, 5)?.map((o: any) => ({
+          id: o.id,
+          date_created: o.date_created,
+          total_amount: o.total_amount,
+          status: o.status
+        }))
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { ok: false, error: msg };
+    }
+  });
+
   // Salvar Credenciais do Mercado Livre
   app.post(
     '/api/integrations/meli/config',
