@@ -273,53 +273,52 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Banner de Boas-vindas com Glassmorphism e Ações Rápidas */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-950/80 via-slate-900/90 to-slate-950 border border-white/10 p-6 shadow-2xl backdrop-blur-xl">
-        <div className="absolute -right-10 -top-10 w-60 h-60 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute right-40 -bottom-10 w-60 h-60 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                <Sparkles className="w-3 h-3 text-cyan-400" />
-                Super Cockpit Unificado Ativo
-              </span>
-              <span className="text-xs text-slate-400 font-mono">
-                {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-              </span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-heading font-extrabold text-white tracking-tight">
-              Central de Comando <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Pokémon TCG</span>
-            </h2>
-            <p className="text-sm text-slate-300 max-w-2xl mt-1">
-              Monitore a conversão de afiliados do Mercado Livre, réplica automática de grupos e atendimento de leads com IA em tempo real.
-            </p>
+      {/* Header Minimalista & Fluido (Linear & Vercel Style) */}
+      <div className="pt-1 pb-2 flex flex-col lg:flex-row lg:items-center justify-between gap-5 border-b border-white/[0.06]">
+        <div>
+          <div className="flex items-center gap-2.5 mb-1.5">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className={`w-1.5 h-1.5 rounded-full ${isReplicaOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              {isReplicaOnline ? 'WhatsApp & Cockpit Online' : 'Cockpit Ativo'}
+            </span>
+            <span className="text-xs text-slate-400 font-mono">
+              {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              onClick={() => onNavigate('replica')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition-all shadow-lg shadow-cyan-500/25 active:scale-95"
-            >
-              <Droplets className="w-4 h-4" />
-              <span>Ver Replicador</span>
-            </button>
-            <button
-              onClick={() => onNavigate('disparador')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-orange-500 text-white hover:bg-orange-600 transition-all shadow-lg shadow-orange-500/25 active:scale-95"
-            >
-              <Flame className="w-4 h-4" />
-              <span>Disparar Campanha</span>
-            </button>
-            <button
-              onClick={() => onNavigate('financas')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white/10 text-white hover:bg-white/15 border border-white/10 transition-all active:scale-95"
-            >
-              <DollarSign className="w-4 h-4 text-emerald-400" />
-              <span>DRE & Finanças</span>
-            </button>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-white tracking-tight">
+            Central de Comando <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Pokémon TCG</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
+            Gestão unificada de afiliados Mercado Livre, réplica automática de grupos VIP e atendimento inteligente com IA em tempo real.
+          </p>
+        </div>
+
+        {/* Grupo de Ações Rápidas Alinhadas (Pill Action Group) */}
+        <div className="flex items-center gap-2 self-start lg:self-center flex-wrap">
+          <button
+            onClick={() => onNavigate('replica')}
+            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400/50 transition-all duration-200 active:scale-95 shadow-sm"
+          >
+            <Droplets className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+            <span>Ver Replicador</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('disparador')}
+            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 hover:border-orange-400/50 transition-all duration-200 active:scale-95 shadow-sm"
+          >
+            <Flame className="w-3.5 h-3.5 text-orange-400 group-hover:scale-110 transition-transform" />
+            <span>Disparar Campanha</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('financas')}
+            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:border-emerald-400/50 transition-all duration-200 active:scale-95 shadow-sm"
+          >
+            <DollarSign className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+            <span>DRE & Finanças</span>
+          </button>
         </div>
       </div>
 
