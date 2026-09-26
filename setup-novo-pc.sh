@@ -35,6 +35,8 @@ echo "  - Instalando dependencias em app/..."
 npm install --prefix app
 echo "  - Instalando dependencias em bot-disparador/..."
 npm install --prefix bot-disparador
+echo "  - Instalando dependencias em web-cockpit (React 19)..."
+npm install --prefix web-cockpit
 echo "[OK] Todas as dependencias instaladas com sucesso!"
 
 echo ""

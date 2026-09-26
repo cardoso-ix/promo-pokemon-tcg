@@ -58,6 +58,14 @@ if %errorlevel% neq 0 (
   pause
   exit /b 1
 )
+
+echo   - Instalando dependencias em web-cockpit (React 19)...
+call npm install --prefix web-cockpit
+if %errorlevel% neq 0 (
+  echo [ERRO] Falha ao instalar dependencias do web-cockpit.
+  pause
+  exit /b 1
+)
 echo [OK] Todas as dependencias instaladas com sucesso!
 
 echo.
