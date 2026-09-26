@@ -745,9 +745,10 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
               <label className="block text-slate-300 font-medium mb-1">Tag Matt Word (Mercado Livre):</label>
               <input
                 type="text"
-                value={configs['matt_word'] || ''}
-                onChange={e => setConfigs({ ...configs, matt_word: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50"
+                placeholder="Ex: caed1312314"
+                value={configs['affiliate_matt_word'] || configs['matt_word'] || configs['meli_tag'] || ''}
+                onChange={e => setConfigs({ ...configs, affiliate_matt_word: e.target.value, matt_word: e.target.value, meli_tag: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50 font-mono"
               />
             </div>
 
@@ -755,9 +756,10 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
               <label className="block text-slate-300 font-medium mb-1">Tag Matt Tool (Mercado Livre):</label>
               <input
                 type="text"
-                value={configs['matt_tool'] || ''}
-                onChange={e => setConfigs({ ...configs, matt_tool: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50"
+                placeholder="Opcional (Canal/Ferramenta do Mercado Livre)"
+                value={configs['affiliate_matt_tool'] || configs['matt_tool'] || ''}
+                onChange={e => setConfigs({ ...configs, affiliate_matt_tool: e.target.value, matt_tool: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50 font-mono"
               />
             </div>
 
