@@ -199,3 +199,11 @@ export interface LogSistema {
   criado_em: string;
 }
 
+export interface FluxoHorarioItem {
+  hora: string;
+  ofertas: number;
+  cliques: number;
+  leads: number;
+}
+
+

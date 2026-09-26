@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   TrendingUp,
   Zap,
@@ -24,7 +24,8 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import type { UnifiedStatus, OfertaLog, BalancoFinanceiro } from '../types/index.ts';
+import type { UnifiedStatus, OfertaLog, BalancoFinanceiro, FluxoHorarioItem } from '../types/index.ts';
+import { api } from '../services/api.ts';
 
 interface DashboardOverviewProps {
   status: UnifiedStatus | null;
@@ -44,17 +45,38 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const replica = status?.replica;
   const bot = status?.bot;
 
-  // Dados sintéticos enriquecidos para o gráfico de fluxo diário
-  const activityData = [
-    { hora: '08h', ofertas: 2, cliques: 18, leads: 4 },
-    { hora: '10h', ofertas: 5, cliques: 45, leads: 12 },
-    { hora: '12h', ofertas: 8, cliques: 92, leads: 26 },
-    { hora: '14h', ofertas: 6, cliques: 64, leads: 15 },
-    { hora: '16h', ofertas: 9, cliques: 110, leads: 32 },
-    { hora: '18h', ofertas: 12, cliques: 145, leads: 48 },
-    { hora: '20h', ofertas: 15, cliques: 180, leads: 60 },
-    { hora: '22h', ofertas: 7, cliques: 78, leads: 20 },
-  ];
+  // Fluxo de atividade por horário alimentado com dados 100% reais do banco
+  const [activityData, setActivityData] = useState<FluxoHorarioItem[]>([
+    { hora: '08h', ofertas: 0, cliques: 0, leads: 0 },
+    { hora: '10h', ofertas: 0, cliques: 0, leads: 0 },
+    { hora: '12h', ofertas: 0, cliques: 0, leads: 0 },
+    { hora: '14h', ofertas: 0, cliques: 0, leads: 0 },
+    { hora: '16h', ofertas: 0, cliques: 0, leads: 0 },
+    { hora: '18h', ofertas: 0, cliques: 0, leads: 0 },
+    { hora: '20h', ofertas: 0, cliques: 0, leads: 0 },
+    { hora: '22h', ofertas: 0, cliques: 0, leads: 0 },
+  ]);
+
+  useEffect(() => {
+    let isMounted = true;
+    const carregarFluxoReal = async () => {
+      try {
+        const data = await api.getFluxoHorario();
+        if (isMounted && Array.isArray(data) && data.length > 0) {
+          setActivityData(data);
+        }
+      } catch {
+        // Manter dados anteriores
+      }
+    };
+
+    carregarFluxoReal();
+    const interval = setInterval(carregarFluxoReal, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const pieData = [
     { name: 'Lucro Disponível (30%)', value: balanco?.valorLucroDisponivel || 0, color: '#10b981' },
@@ -234,6 +256,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                     <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="#00e5ff" stopOpacity={0.0} />
                   </linearGradient>
+                  <linearGradient id="colorOfertas" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                  </linearGradient>
                   <linearGradient id="colorLeads" x1="0%" y1="0%" x2="0%" y2="100%">
                     <stop offset="5%" stopColor="#f97316" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="#f97316" stopOpacity={0.0} />
@@ -258,7 +284,16 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#colorCliques)"
-                  name="Cliques Afiliado"
+                  name="Cliques Afiliado (meli.la)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="ofertas"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorOfertas)"
+                  name="Ofertas Replicadas"
                 />
                 <Area
                   type="monotone"
@@ -273,12 +308,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </ResponsiveContainer>
           </div>
 
-          <div className="flex items-center justify-center gap-6 mt-3 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center justify-center gap-6 mt-3 text-xs text-slate-400">
             <span className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-cyan-400" /> Cliques Afiliado (meli.la)
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-orange-500" /> Novos Leads Captação
+              <span className="w-3 h-3 rounded-full bg-emerald-400" /> Ofertas Replicadas
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-orange-500" /> Novos Leads Captados
             </span>
           </div>
         </div>

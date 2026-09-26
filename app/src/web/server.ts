@@ -16,6 +16,7 @@ import {
   getRecentLogs,
   getCachedChats,
   getPostsLastHour,
+  getFluxoHorarioHoje,
   insertLog,
   DEFAULT_MSG_ABERTURA,
   PRESET_MSGS_ABERTURA
@@ -527,6 +528,25 @@ export async function createServer() {
       motivo: l.motivo || null,
       criado_em: l.criado_em
     }));
+  });
+
+  // API REST: Fluxo Horário em Tempo Real para o Dashboard (Opção 1)
+  app.get('/api/dashboard/fluxo-horario', async () => {
+    let leadsPorHora: Record<string, number> = {};
+    try {
+      const res = await fetch(`${CONFIG.disparadorUrl.replace(/\/$/, '')}/api/contatos/stats-horario`, {
+        headers: { 'x-internal-token': CONFIG.internalApiKey }
+      });
+      if (res.ok) {
+        const data = await res.json() as any;
+        leadsPorHora = data.leadsPorHora || {};
+      }
+    } catch {
+      // Falha silenciosa defensiva
+    }
+
+    const fluxo = getFluxoHorarioHoje(leadsPorHora);
+    return { ok: true, data: fluxo };
   });
 
   // API REST: Desconectar WhatsApp

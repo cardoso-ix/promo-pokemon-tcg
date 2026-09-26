@@ -9,7 +9,8 @@ import type {
   UploadPlanilhaFinancas,
   MetaTemplate,
   WarmupStatus,
-  LogSistema
+  LogSistema,
+  FluxoHorarioItem
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro
@@ -36,8 +37,16 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  // Status Unificado da Plataforma
+  // Status Unificado da Plataforma & Fluxo Horário Real
   getUnifiedStatus: () => request<UnifiedStatus>('/api/unified-status'),
+  getFluxoHorario: async (): Promise<FluxoHorarioItem[]> => {
+    try {
+      const res = await request<{ ok: boolean; data: FluxoHorarioItem[] }>('/api/dashboard/fluxo-horario');
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
+    }
+  },
 
   // --- REPLICADOR DE OFERTAS ---
   getReplicaLogs: async (limit = 80): Promise<OfertaLog[]> => {

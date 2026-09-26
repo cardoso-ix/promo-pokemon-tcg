@@ -805,6 +805,28 @@ export function getMetricasDashboard() {
   };
 }
 
+export function getLeadsHorarioHoje(): Record<string, number> {
+  try {
+    const rows = db.prepare(`
+      SELECT strftime('%H', criado_em) as hora, COUNT(*) as total
+      FROM contatos
+      WHERE date(criado_em) = date('now', 'localtime')
+      GROUP BY hora
+    `).all() as { hora: string; total: number }[];
+    const map: Record<string, number> = {};
+    for (const r of rows) {
+      if (r && r.hora) {
+        map[r.hora] = Number(r.total) || 0;
+      }
+    }
+    return map;
+  } catch (err: unknown) {
+    console.warn('[Database Bot] Erro ao buscar leads por horário:', err);
+    return {};
+  }
+}
+
+
 // ==========================================
 // OFERTAS RECEBIDAS (Ponte Interna com Replicador)
 // ==========================================

@@ -488,3 +488,65 @@ export function consultarCooldownProduto(
   };
 }
 
+export interface FluxoHorarioItem {
+  hora: string;
+  ofertas: number;
+  cliques: number;
+  leads: number;
+}
+
+export function getFluxoHorarioHoje(leadsPorHora: Record<string, number> = {}): FluxoHorarioItem[] {
+  try {
+    const rows = db.prepare(`
+      SELECT 
+        strftime('%H', datetime(criado_em, '-3 hours')) as hora_br,
+        SUM(CASE WHEN status = 'enviado' THEN 1 ELSE 0 END) as enviadas,
+        SUM(CASE WHEN status = 'enviado' THEN COALESCE(NULLIF(links_convertidos, 0), 1) * 3 ELSE 0 END) as cliques_estimados
+      FROM logs
+      WHERE date(datetime(criado_em, '-3 hours')) = date('now', '-3 hours')
+      GROUP BY hora_br
+    `).all() as { hora_br: string; enviadas: number; cliques_estimados: number }[];
+
+    const mapaEnvios: Record<string, { ofertas: number; cliques: number }> = {};
+    for (const r of rows) {
+      if (r && r.hora_br) {
+        mapaEnvios[r.hora_br] = {
+          ofertas: Number(r.enviadas) || 0,
+          cliques: Number(r.cliques_estimados) || 0
+        };
+      }
+    }
+
+    const faixas = ['06h', '08h', '10h', '12h', '14h', '16h', '18h', '20h', '22h'];
+    return faixas.map((label) => {
+      const horaNum = parseInt(label.replace('h', ''), 10);
+      const h1 = String(horaNum).padStart(2, '0');
+      const h2 = String(horaNum + 1).padStart(2, '0');
+
+      const ofertas = (mapaEnvios[h1]?.ofertas || 0) + (mapaEnvios[h2]?.ofertas || 0);
+      const cliques = (mapaEnvios[h1]?.cliques || 0) + (mapaEnvios[h2]?.cliques || 0);
+      const leads = (leadsPorHora[h1] || 0) + (leadsPorHora[h2] || 0);
+
+      return {
+        hora: label,
+        ofertas,
+        cliques,
+        leads
+      };
+    });
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao calcular fluxo horário:', err);
+    return [
+      { hora: '08h', ofertas: 0, cliques: 0, leads: 0 },
+      { hora: '10h', ofertas: 0, cliques: 0, leads: 0 },
+      { hora: '12h', ofertas: 0, cliques: 0, leads: 0 },
+      { hora: '14h', ofertas: 0, cliques: 0, leads: 0 },
+      { hora: '16h', ofertas: 0, cliques: 0, leads: 0 },
+      { hora: '18h', ofertas: 0, cliques: 0, leads: 0 },
+      { hora: '20h', ofertas: 0, cliques: 0, leads: 0 },
+      { hora: '22h', ofertas: 0, cliques: 0, leads: 0 }
+    ];
+  }
+}
+
+

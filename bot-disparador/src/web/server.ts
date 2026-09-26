@@ -23,6 +23,7 @@ import {
   addItensFila,
   getLogsSistema,
   getMetricasDashboard,
+  getLeadsHorarioHoje,
   getWarmupStatus,
   resetWarmupStartDate,
   logSistema,
@@ -255,6 +256,10 @@ export async function createServer() {
   });
 
   // Contatos / Leads & Pastas
+  app.get('/api/contatos/stats-horario', async () => {
+    return { ok: true, leadsPorHora: getLeadsHorarioHoje() };
+  });
+
   app.get('/api/contatos/pastas', async () => {
     return { pastas: getPastasLeads() };
   });
