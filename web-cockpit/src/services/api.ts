@@ -12,7 +12,8 @@ import type {
   LogSistema,
   FluxoHorarioItem,
   MetaInsightsOverview,
-  MeliOrdersOverview
+  MeliOrdersOverview,
+  MeliAffiliateOverview
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro
@@ -97,6 +98,13 @@ export const api = {
     request<{ ok: boolean; totalProcessados: number; totalEncontrados: number }>('/api/integrations/meli/sync', {
       method: 'POST',
       body: JSON.stringify({ days })
+    }),
+  getMeliAffiliateMetrics: (refresh = false) =>
+    request<{ ok: boolean; connected?: boolean; data: MeliAffiliateOverview }>(`/api/dashboard/meli-affiliate${refresh ? '?refresh=true' : ''}`),
+  syncMeliAffiliate: (dados?: { cookie?: string }) =>
+    request<{ ok: boolean; connected?: boolean; message: string; data: MeliAffiliateOverview }>('/api/integrations/meli-affiliate/sync', {
+      method: 'POST',
+      body: JSON.stringify(dados || {})
     }),
 
   // --- REPLICADOR DE OFERTAS ---

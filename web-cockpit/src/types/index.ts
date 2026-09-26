@@ -276,6 +276,44 @@ export interface MeliOrdersOverview {
   };
 }
 
+export interface MeliAffiliateSale {
+  id: string;
+  date: string;
+  productName: string;
+  productImage: string;
+  link: string;
+  storeName: string;
+  saleValue: number;
+  saleUnits: number;
+  commissionValue: number;
+  commissionPercentage: number;
+}
+
+export interface MeliAffiliateDaily {
+  date: string;
+  orders: number;
+  quantity: number;
+  earnings: number;
+  touchpoints: number;
+  cvr: number;
+}
+
+export interface MeliAffiliateOverview {
+  tag: string;
+  totalClicks: number;
+  totalBuyers: number;
+  totalRequests: number;
+  totalOrders: number;
+  totalSales: number;
+  totalCommissions: number;
+  cvr: number;
+  commissionsToday: number;
+  ordersToday: number;
+  recentSales: MeliAffiliateSale[];
+  dailyData: MeliAffiliateDaily[];
+  updatedAt: string;
+}
+
 
 
 

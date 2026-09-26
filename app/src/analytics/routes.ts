@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { meliService } from './meli.service.js';
+import { meliAffiliateService } from './meli-affiliate.service.js';
 import { metaAdsService } from './meta.service.js';
 import { analyticsService } from './analytics.service.js';
 import { getMetaInsightsStats, getMeliOrdersStats } from '../db/database.js';
@@ -332,6 +333,43 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
         return {
           ok: true,
           data: overview
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.status(500).send({ ok: false, error: msg });
+      }
+    }
+  );
+
+  // ==========================================
+  // 4. MERCADO LIVRE AFILIADOS (OFICIAL & AUTOMÁTICO)
+  // ==========================================
+  app.get('/api/dashboard/meli-affiliate', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { refresh } = (req.query as { refresh?: string }) || {};
+      const connected = meliAffiliateService.isConnected();
+      const data = await meliAffiliateService.getMetrics(refresh === 'true');
+      return { ok: true, connected, data };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  });
+
+  app.post(
+    '/api/integrations/meli-affiliate/sync',
+    async (req: FastifyRequest<{ Body?: { cookie?: string } }>, reply: FastifyReply) => {
+      try {
+        const { cookie } = req.body || {};
+        if (cookie && cookie.trim().length > 10) {
+          meliAffiliateService.saveCookie(cookie.trim());
+        }
+        const data = await meliAffiliateService.fetchLiveMetrics();
+        return {
+          ok: true,
+          connected: true,
+          message: 'Comissões de Afiliado sincronizadas com sucesso!',
+          data
         };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
