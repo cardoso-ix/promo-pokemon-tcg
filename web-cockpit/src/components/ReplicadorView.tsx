@@ -51,14 +51,20 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
 
   const carregarDados = async () => {
     try {
-      const [logsData, rotasData, configsData] = await Promise.all([
+      const results = await Promise.allSettled([
         api.getReplicaLogs(80),
         api.getRotas(),
         api.getReplicaConfig()
       ]);
-      setLogs(logsData);
-      setRotas(rotasData);
-      setConfigs(configsData);
+      if (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) {
+        setLogs(results[0].value);
+      }
+      if (results[1].status === 'fulfilled' && Array.isArray(results[1].value)) {
+        setRotas(results[1].value);
+      }
+      if (results[2].status === 'fulfilled' && typeof results[2].value === 'object' && results[2].value !== null) {
+        setConfigs(results[2].value);
+      }
     } catch {
       // Ignorar falhas transitórias
     }
@@ -67,7 +73,7 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
   const handleToggleRota = async (id: number, ativoAtual: boolean) => {
     try {
       await api.toggleRota(id, !ativoAtual);
-      setRotas(prev => prev.map(r => (r.id === id ? { ...r, ativo: !ativoAtual } : r)));
+      setRotas(prev => prev.map(r => (r.id === id ? { ...r, ativo: !ativoAtual, ativa: !ativoAtual } : r)));
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Falha ao alterar rota');
     }
@@ -101,7 +107,7 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Falha ao gerar anúncio');
     } finally {
-      setGerando(false);
+      setLoading(false);
     }
   };
 
@@ -124,10 +130,10 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
   };
 
   const filteredLogs = logs.filter(log => {
-    const matchBusca =
-      !busca ||
-      log.texto.toLowerCase().includes(busca.toLowerCase()) ||
-      log.origem.toLowerCase().includes(busca.toLowerCase());
+    const texto = (log.texto || '').toLowerCase();
+    const origem = (log.origem || '').toLowerCase();
+    const termo = (busca || '').toLowerCase().trim();
+    const matchBusca = !termo || texto.includes(termo) || origem.includes(termo);
     const matchStatus = filtroStatus === 'todos' || log.status === filtroStatus;
     return matchBusca && matchStatus;
   });
@@ -351,46 +357,78 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {rotas.map(rota => (
-              <div
-                key={rota.id}
-                className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-cyan-500/30 transition-all flex items-center justify-between gap-3"
-              >
-                <div className="space-y-1 text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-white">{rota.origem_nome}</span>
-                    <span className="text-slate-500">→</span>
-                    <span className="font-semibold text-cyan-300">{rota.destino_nome}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 font-mono">
-                    ID Origem: {rota.origem_id.slice(0, 18)}...
-                  </p>
-                </div>
+          {rotas.length === 0 ? (
+            <div className="text-center py-12 text-slate-400 text-sm glass-panel rounded-xl border border-white/[0.04]">
+              Nenhuma rota configurada no momento.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {rotas.map(rota => {
+                const totalOrigens = rota.origens?.length || (rota.origem_id ? 1 : 0);
+                const totalDestinos = rota.destinos?.length || (rota.destino_id ? 1 : 0);
+                const isRotaAtiva = Boolean(rota.ativo ?? rota.ativa);
 
-                <button
-                  onClick={() => handleToggleRota(rota.id, rota.ativo)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    rota.ativo
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                      : 'bg-slate-800 text-slate-400 border border-white/10'
-                  }`}
-                >
-                  {rota.ativo ? (
-                    <>
-                      <ToggleRight className="w-4 h-4 text-emerald-400" />
-                      <span>Ativa</span>
-                    </>
-                  ) : (
-                    <>
-                      <ToggleLeft className="w-4 h-4 text-slate-500" />
-                      <span>Pausada</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            ))}
-          </div>
+                return (
+                  <div
+                    key={rota.id}
+                    className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] hover:border-cyan-500/30 transition-all flex items-center justify-between gap-3"
+                  >
+                    <div className="space-y-1.5 text-xs flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-sm">{rota.nome || rota.origem_nome}</span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            isRotaAtiva
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-slate-800 text-slate-400 border border-white/10'
+                          }`}
+                        >
+                          {isRotaAtiva ? '✓ Ativa' : '○ Pausada'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
+                        <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 font-medium">
+                          {totalOrigens} grupo(s) origem
+                        </span>
+                        <span>→</span>
+                        <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 font-medium">
+                          {totalDestinos} grupo(s) destino
+                        </span>
+                      </div>
+
+                      {rota.origem_id && (
+                        <p className="text-[10px] text-slate-500 font-mono">
+                          ID: {(rota.origem_id || '').slice(0, 22)}...
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleToggleRota(rota.id, isRotaAtiva)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
+                        isRotaAtiva
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+                          : 'bg-slate-800 text-slate-400 border border-white/10 hover:bg-slate-700'
+                      }`}
+                    >
+                      {isRotaAtiva ? (
+                        <>
+                          <ToggleRight className="w-4 h-4 text-emerald-400" />
+                          <span>Ativa</span>
+                        </>
+                      ) : (
+                        <>
+                          <ToggleLeft className="w-4 h-4 text-slate-500" />
+                          <span>Pausada</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

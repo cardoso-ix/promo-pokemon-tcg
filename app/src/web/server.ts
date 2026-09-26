@@ -406,48 +406,93 @@ export async function createServer() {
     return { ok: true, ...res };
   });
 
-  // API REST: Configurações
-  app.get('/api/configs', async () => {
+  // API REST: Configurações (suporte a /api/configs e alias /api/config)
+  const handleGetConfigs = async () => {
     return getAllConfigs();
-  });
+  };
+  app.get('/api/configs', handleGetConfigs);
+  app.get('/api/config', handleGetConfigs);
 
-  app.post<{ Body: { chave: string; valor: string } }>('/api/configs', async (req, reply) => {
-    const { chave, valor } = req.body;
-    if (!chave) return reply.status(400).send({ error: 'Chave obrigatória' });
-    setConfig(chave, String(valor));
-    broadcast('config_updated', { chave, valor });
+  const handlePostConfigs = async (req: any, reply: any) => {
+    const body = req.body;
+    if (!body || typeof body !== 'object') {
+      return reply.status(400).send({ error: 'Corpo da requisição obrigatório' });
+    }
 
-    if (chave === 'meli_cookie') {
+    if (typeof body.chave === 'string') {
+      const { chave, valor } = body;
+      setConfig(chave, String(valor));
+      broadcast('config_updated', { chave, valor });
+
+      if (chave === 'meli_cookie') {
+        setTimeout(async () => {
+          const res = await checkMeliCookieHealth();
+          broadcast('cookie_status', res);
+        }, 500);
+      }
+
+      return { ok: true, chave, valor };
+    }
+
+    let updatedCount = 0;
+    let hasMeliCookie = false;
+    for (const [k, v] of Object.entries(body)) {
+      if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+        setConfig(k, String(v));
+        updatedCount++;
+        if (k === 'meli_cookie') hasMeliCookie = true;
+      }
+    }
+
+    if (hasMeliCookie) {
       setTimeout(async () => {
         const res = await checkMeliCookieHealth();
         broadcast('cookie_status', res);
       }, 500);
     }
 
-    return { ok: true, chave, valor };
-  });
+    broadcast('configs_updated', getAllConfigs());
+    return { ok: true, updated: updatedCount };
+  };
+  app.post('/api/configs', handlePostConfigs);
+  app.post('/api/config', handlePostConfigs);
 
-  // API REST: Rotas
+  // API REST: Rotas (com enriquecimento para total compatibilidade com frontend legado e moderno)
   app.get('/api/rotas', async () => {
-    return getAllRotas();
+    const rotas = getAllRotas();
+    return rotas.map(r => ({
+      ...r,
+      ativo: r.ativa,
+      origem_id: r.origens[0] || '',
+      origem_nome: r.nome || 'Grupo de Origem',
+      destino_id: r.destinos[0] || '',
+      destino_nome: r.destinos.length > 1 ? `${r.destinos.length} grupos destino` : (r.destinos[0] || 'Destino')
+    }));
   });
 
   app.post<{
-    Body: { id?: number; nome: string; ativa: boolean; origens: string[]; destinos: string[] };
+    Body: { id?: number; nome: string; ativa?: boolean; ativo?: boolean; origens?: string[]; destinos?: string[] };
   }>('/api/rotas', async (req, reply) => {
-    const { nome, ativa, origens, destinos, id } = req.body;
+    const { nome, ativa, ativo, origens, destinos, id } = req.body;
     if (!nome) return reply.status(400).send({ error: 'Nome da rota é obrigatório' });
-    const rotaId = saveRota({ id, nome, ativa: Boolean(ativa), origens: origens || [], destinos: destinos || [] });
+    const isAtiva = ativa !== undefined ? Boolean(ativa) : (ativo !== undefined ? Boolean(ativo) : true);
+    const rotaId = saveRota({ id, nome, ativa: isAtiva, origens: origens || [], destinos: destinos || [] });
     broadcast('rotas_updated', getAllRotas());
     return { ok: true, id: rotaId };
   });
 
-  app.post<{ Params: { id: string }; Body: { ativa: boolean } }>('/api/rotas/:id/toggle', async (req) => {
+  // Toggle e atualização de rotas: suporte a POST /toggle, PATCH e PUT
+  const handleToggleRota = async (req: any) => {
     const id = parseInt(req.params.id, 10);
-    toggleRota(id, Boolean(req.body.ativa));
+    const body = req.body || {};
+    const ativo = body.ativa !== undefined ? Boolean(body.ativa) : (body.ativo !== undefined ? Boolean(body.ativo) : true);
+    toggleRota(id, ativo);
     broadcast('rotas_updated', getAllRotas());
-    return { ok: true };
-  });
+    return { ok: true, id, ativo };
+  };
+  app.post('/api/rotas/:id/toggle', handleToggleRota);
+  app.patch('/api/rotas/:id', handleToggleRota);
+  app.put('/api/rotas/:id', handleToggleRota);
 
   app.delete<{ Params: { id: string } }>('/api/rotas/:id', async (req) => {
     const id = parseInt(req.params.id, 10);
@@ -468,9 +513,20 @@ export async function createServer() {
     return { ok: true, total: chats.length, chats };
   });
 
-  // API REST: Logs recentes
-  app.get('/api/logs', async () => {
-    return getRecentLogs(50);
+  // API REST: Logs recentes com normalização DTO de campos
+  app.get<{ Querystring: { limit?: string } }>('/api/logs', async (req) => {
+    const limit = Math.min(parseInt(req.query?.limit || '60', 10) || 60, 200);
+    const logs = getRecentLogs(limit);
+    return logs.map(l => ({
+      ...l,
+      origem: l.origem_nome || l.origem_chat_id || 'Grupo Desconhecido',
+      destino: l.destino_chat_id || 'Destino',
+      texto: l.texto_publicado || l.texto_original || '',
+      foto_url: l.tem_foto ? '/foto' : null,
+      status: l.status === 'enviado' ? 'enviado' : 'ignorado',
+      motivo: l.motivo || null,
+      criado_em: l.criado_em
+    }));
   });
 
   // API REST: Desconectar WhatsApp

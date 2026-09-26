@@ -40,16 +40,53 @@ export const api = {
   getUnifiedStatus: () => request<UnifiedStatus>('/api/unified-status'),
 
   // --- REPLICADOR DE OFERTAS ---
-  getReplicaLogs: (limit = 60) => request<OfertaLog[]>(`/api/logs?limit=${limit}`),
-  getRotas: () => request<RotaGrupo[]>('/api/rotas'),
+  getReplicaLogs: async (limit = 80): Promise<OfertaLog[]> => {
+    try {
+      const raw = await request<any[]>(`/api/logs?limit=${limit}`);
+      if (!Array.isArray(raw)) return [];
+      return raw.map(l => ({
+        id: Number(l.id),
+        origem: String(l.origem || l.origem_nome || l.origem_chat_id || 'Grupo Desconhecido'),
+        destino: String(l.destino || l.destino_chat_id || 'Destino'),
+        texto: String(l.texto || l.texto_publicado || l.texto_original || ''),
+        foto_url: l.foto_url || (l.tem_foto ? '/foto' : null),
+        status: (l.status === 'enviado' ? 'enviado' : 'ignorado') as 'enviado' | 'ignorado',
+        motivo: l.motivo || l.motivo_ignorado || null,
+        criado_em: String(l.criado_em || l.timestamp || new Date().toISOString())
+      }));
+    } catch {
+      return [];
+    }
+  },
+  getRotas: async (): Promise<RotaGrupo[]> => {
+    try {
+      const raw = await request<any[]>('/api/rotas');
+      if (!Array.isArray(raw)) return [];
+      return raw.map(r => ({
+        id: Number(r.id),
+        nome: String(r.nome || `Rota #${r.id}`),
+        ativa: Boolean(r.ativa ?? r.ativo),
+        ativo: Boolean(r.ativa ?? r.ativo),
+        origens: Array.isArray(r.origens) ? r.origens : (r.origem_id ? [r.origem_id] : []),
+        destinos: Array.isArray(r.destinos) ? r.destinos : (r.destino_id ? [r.destino_id] : []),
+        origem_id: String(r.origem_id || (Array.isArray(r.origens) && r.origens[0]) || ''),
+        origem_nome: String(r.origem_nome || r.nome || 'Grupo de Origem'),
+        destino_id: String(r.destino_id || (Array.isArray(r.destinos) && r.destinos[0]) || ''),
+        destino_nome: String(r.destino_nome || (Array.isArray(r.destinos) && r.destinos.length > 1 ? `${r.destinos.length} destinos` : 'Destino')),
+        criada_em: String(r.criada_em || '')
+      }));
+    } catch {
+      return [];
+    }
+  },
   toggleRota: (id: number, ativo: boolean) =>
     request<{ ok: boolean }>(`/api/rotas/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ ativo })
     }),
-  getReplicaConfig: () => request<Record<string, string>>('/api/config'),
+  getReplicaConfig: () => request<Record<string, string>>('/api/configs'),
   saveReplicaConfig: (configs: Record<string, string>) =>
-    request<{ ok: boolean }>('/api/config', {
+    request<{ ok: boolean }>('/api/configs', {
       method: 'POST',
       body: JSON.stringify(configs)
     }),

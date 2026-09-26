@@ -62,13 +62,18 @@ export interface OfertaLog {
 
 export interface RotaGrupo {
   id: number;
+  nome?: string;
   origem_id: string;
   origem_nome: string;
   destino_id: string;
   destino_nome: string;
   ativo: boolean;
+  ativa?: boolean;
+  origens?: string[];
+  destinos?: string[];
   total_mensagens?: number;
   ultima_mensagem?: string | null;
+  criada_em?: string;
 }
 
 export interface LeadContact {
