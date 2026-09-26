@@ -57,9 +57,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   ];
 
   const pieData = [
-    { name: 'Lucro Disponível (30%)', value: balanco?.retirada_liquida_30 || 735, color: '#10b981' },
-    { name: 'Reinvestimento (70%)', value: balanco?.reinvestimento_sugerido_70 || 1715, color: '#00e5ff' },
-    { name: 'Meta Ads', value: balanco?.gastos_meta_ads || 1200, color: '#ef4444' }
+    { name: 'Lucro Disponível (30%)', value: balanco?.valorLucroDisponivel || 0, color: '#10b981' },
+    { name: 'Reinvestimento (70%)', value: balanco?.valorReinvestimentoCampanhas || 0, color: '#00e5ff' },
+    { name: 'Meta Ads', value: balanco?.totalGastoCampanhas || 0, color: '#ef4444' }
   ];
 
   const totalHoje = replica?.totalEnviadosHoje || recentLogs.filter(l => l.status === 'enviado').length;
@@ -197,11 +197,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-heading font-extrabold text-emerald-400 tracking-tight">
-              R$ {(balanco?.lucro_liquido || 2450).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              R$ {(balanco?.resultadoLiquido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
           <p className="text-xs text-cyan-300 mt-1 font-medium">
-            Reinvestir: R$ {(balanco?.reinvestimento_sugerido_70 || 1715).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (70%)
+            Reinvestir: R$ {(balanco?.valorReinvestimentoCampanhas || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (70%)
           </p>
           <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
             <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-1.5 rounded-full w-[70%]" />
@@ -336,7 +336,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" /> Reinvestimento (70%)
               </span>
               <span className="font-bold text-white font-mono">
-                R$ {(balanco?.reinvestimento_sugerido_70 || 1715).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {(balanco?.valorReinvestimentoCampanhas || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
             <div className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03]">
@@ -344,7 +344,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> Retirada (30%)
               </span>
               <span className="font-bold text-emerald-400 font-mono">
-                R$ {(balanco?.retirada_liquida_30 || 735).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {(balanco?.valorLucroDisponivel || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
           </div>

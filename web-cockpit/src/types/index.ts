@@ -74,52 +74,123 @@ export interface RotaGrupo {
 export interface LeadContact {
   id: number;
   jid: string;
+  numero?: string;
   nome: string;
-  pasta: string;
-  origem_grupo?: string | null;
+  grupo_nome?: string;
+  pasta?: string;
+  origem_tipo?: string;
+  ativo?: number;
   criado_em: string;
 }
 
 export interface Campanha {
   id: number;
   nome: string;
-  pasta: string;
-  template: string;
+  mensagem_template: string;
   canal_envio: 'baileys' | 'meta_cloud';
-  status: 'pendente' | 'em_andamento' | 'pausada' | 'concluida' | 'cancelada';
-  total_alvos: number;
+  meta_template_nome?: string | null;
+  status: 'criada' | 'executando' | 'pausada' | 'concluida' | 'cancelada';
+  total_destinatarios: number;
   enviados: number;
   falhas: number;
   criado_em: string;
+  iniciado_em?: string | null;
+  concluido_em?: string | null;
 }
 
 export interface BalancoFinanceiro {
-  mes: string;
-  faturamento_bruto: number;
-  gastos_meta_ads: number;
-  gastos_operacionais: number;
-  lucro_bruto: number;
-  lucro_liquido: number;
-  reinvestimento_sugerido_70: number;
-  retirada_liquida_30: number;
-  roi_percentual: number;
-  roas: number;
-  leads_gerados?: number;
-  custo_por_lead?: number;
+  mesReferencia: string;
+  totalGastoCampanhas: number;
+  totalLucroBruto: number;
+  resultadoLiquido: number;
+  status: 'lucro' | 'prejuizo' | 'neutro';
+  percentualReinvestimento: number;
+  valorReinvestimentoCampanhas: number;
+  valorLucroDisponivel: number;
+  margemLiquidaPercentual: number;
+  roiPercentual: number;
+  totalDiasLancados: number;
+  itens: LancamentoDiario[];
 }
 
 export interface LancamentoDiario {
   id: number;
-  data: string;
-  tipo: 'receita' | 'despesa_meta' | 'despesa_operacional';
-  descricao: string;
+  data_lancamento: string;
+  mes_referencia: string;
+  gasto_campanhas: number;
+  lucro_bruto: number;
+  descricao: string | null;
+  categoria: string;
+  criado_em: string;
+  atualizado_em?: string;
+}
+
+export interface FaturaDespesaPdf {
+  id: number;
+  nome_arquivo: string;
+  caminho_arquivo: string;
+  tamanho_bytes: number;
+  data_despesa: string;
   valor: number;
+  descricao: string;
+  conta_anuncio: string | null;
+  metodo_pagamento: string | null;
+  observacoes: string | null;
+  criado_em: string;
+}
+
+export interface ResumoDespesasPdf {
+  dataInicio: string | null;
+  dataFim: string | null;
+  totalGasto: number;
+  totalFaturas: number;
+  maiorDespesa: number;
+  mediaPorFatura: number;
+  itens: FaturaDespesaPdf[];
+}
+
+export interface UploadPlanilhaFinancas {
+  id: number;
+  nome_arquivo: string;
+  semana_rotulo: string;
+  mes_referencia: string;
+  gasto_total: number;
+  leads_gerados: number;
+  impressoes: number;
+  cliques: number;
+  ctr_medio: number;
+  cpc_medio: number;
   criado_em: string;
 }
 
 export interface MetaTemplate {
-  name: string;
-  category: 'MARKETING' | 'UTILITY';
-  status: string;
-  language: string;
+  id?: number;
+  meta_id?: string;
+  nome: string;
+  categoria: 'UTILITY' | 'MARKETING';
+  idioma: string;
+  status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'PAUSED';
+  motivo_rejeicao?: string;
+  corpo_texto: string;
+  exemplo_variaveis?: string;
+  sincronizado_em?: string;
 }
+
+export interface WarmupStatus {
+  dataInicio: string;
+  diasAquecimento: number;
+  limiteDiarioAtual: number;
+  enviadosHoje: number;
+  porcentagemHoje: number;
+  diasRestantes: number;
+  fase: string;
+}
+
+export interface LogSistema {
+  id: number;
+  nivel: 'info' | 'warn' | 'error';
+  categoria: string;
+  mensagem: string;
+  criado_em: string;
+}
+
