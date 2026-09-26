@@ -69,12 +69,19 @@ chmod +x *.sh
   - **Balanço Diário e DRE:** Consolidação automática de gastos de marketing vs lucros brutos do Mercado Livre.
   - **Regra dos 70% de Reinvestimento:** Cálculo automático de 70% do lucro líquido mensal destinado para reinvestimento agressivo em tráfego e 30% para distribuição aos sócios.
 
-### 3. 🟡 Módulo Mercado Livre em Tempo Real (Webhooks & Ingestão Financeira)
-- **Ingestão Push Instantânea:** Suporte a webhooks oficiais (`POST /api/webhooks/mercadolivre` e `POST /api/webhooks/meli`) para recebimento automático e em milissegundos de novas vendas (`orders_v2`).
-- **Autenticação OAuth 2.0 Oficial:** Fluxo completo de autorização (`/api/integrations/meli/auth`), troca de authorization code por access/refresh tokens e renovação automática de tokens.
-- **Persistência Híbrida & Segura:** Armazenamento seguro de credenciais com criptografia **AES-256-GCM** e persistência das ordens de venda no SQLite local (`meli_orders` em `replica.db`) e PostgreSQL com Drizzle ORM.
-- **Métricas Executivas ao Vivo:** Faturamento do Mês, Vendas Hoje, Contagem de Pedidos, Taxas e Comissões do Mercado Livre, Custo de Envio e Lucro Líquido Real das Vendas.
-- **DRE Consolidado Cruzado:** Cruzamento automático do Lucro Líquido do Mercado Livre contra o Investimento em Tráfego Pago do Meta Ads, alimentando dinamicamente a Regra dos 70% de Reinvestimento.
+### 3. 🟡 Módulo Mercado Livre Afiliados (Comissões & Métricas em Tempo Real)
+- **Ingestão Oficial da API de Afiliados:** Conexão nativa e contínua com a API interna do Programa de Afiliados do Mercado Livre (`/affiliate-program/api/dashboard/*`) através de sessão autenticada.
+- **Métricas Executivas ao Vivo:**
+  - **Comissões Confirmadas no Mês:** Total de ganhos auferidos com produtos promovidos (ex: `R$ 1.907,09`).
+  - **Comissões Hoje:** Ganhos e conversões gerados no dia atual em tempo real.
+  - **Vendas Brutas Geradas:** Volume financeiro gerado para o Mercado Livre através do link de afiliado (`meli.la`).
+  - **Cliques & Taxa de Conversão (CVR):** Monitoramento de cliques nos links comissionados e conversão percentual de vendas (ex: `1.882 cliques` e `4,67% CVR`).
+  - **Rastreamento de Produtos Comissionados:** Listagem detalhada dos últimos itens vendidos (título, foto oficial, valor de venda e comissão auferida).
+- **DRE Consolidado Cruzado (Afiliado vs Meta Ads):**
+  - Cruzamento em tempo real do Lucro Líquido das Comissões do Mercado Livre contra o Investimento em Tráfego Pago do Meta Ads.
+  - Exemplo Prático: `R$ 1.907,09 (Comissões ML) - R$ 560,24 (Meta Ads) = R$ 1.346,85 (Lucro Operação Real)`.
+  - **Regra dos 70% de Reinvestimento:** `R$ 942,79` reinvestidos no tráfego e `R$ 404,06` distribuídos para os sócios.
+- **Suporte Híbrido a Vendedores (Opcional):** Webhooks push instantâneos de pedidos (`orders_v2`) e OAuth 2.0 oficial para contas sellers com armazenamento criptografado em **AES-256-GCM**.
 
 ---
 
