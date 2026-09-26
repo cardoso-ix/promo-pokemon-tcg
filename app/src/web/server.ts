@@ -170,7 +170,7 @@ export async function createServer() {
       pathname === '/api/auth/login' ||
       pathname === '/login.html' ||
       pathname === '/favicon.svg' ||
-      pathname === '/api/webhooks/meli' ||
+      pathname.startsWith('/api/webhooks/') ||
       pathname.startsWith('/api/integrations/meli/callback') ||
       pathname.startsWith('/api/integrations/meli/auth') ||
       /\.(css|js|svg|png|jpg|jpeg|ico|woff2|woff|ttf|map)$/i.test(pathname)
