@@ -37,10 +37,10 @@ chmod +x *.sh
 - **Painel em Produção:** 👉 **`http://108.174.145.77:3000`** | **Local:** 👉 **`http://localhost:3000`**
 - **Arquitetura Moderna (SPA Nativa sem Iframes):**
   - **Stack Visual de Ponta:** Desenvolvido em **React 19, Tailwind CSS v4, Recharts e Lucide Icons**.
-  - **Visão Geral 360° com Gráficos Reativos:** Dashboard executivo completo unificando gráficos de fluxo horário de ofertas e cliques, balanço DRE, distribuição da regra de 70% de reinvestimento e saúde dos chips em tempo real.
+  - **Visão Geral 360° com Gráficos Reativos:** Dashboard executivo completo unificando gráficos de fluxo horário de ofertas e cliques, balanço DRE auditado com dados reais, distribuição da regra de 70% de reinvestimento e saúde dos chips em tempo real.
   - **Módulo Replicador (Água 💧):** Feed de ofertas ao vivo, rotas de transmissão com toggles rápidos, gerador de anúncios TCG com prévia em tempo real e Sentinel do Mercado Livre.
-  - **Módulo Disparador & IA (Fogo 🔥):** Fila de campanhas com Spintax `{A|B|C}`, extração de leads de grupos em 1 clique, canal Meta Cloud oficial e simulador de atendimento com DeepSeek V4.
-  - **Módulo Finanças & DRE (Esmeralda 💼):** DRE consolidado, cálculo automático dos 70% de reinvestimento e upload de faturas PDF/XLSX.
+  - **Módulo Disparador & IA (Fogo 🔥):** Unificação de 100% dos recursos legados: Campanhas de disparo multicanal (Baileys + Meta Cloud Oficial), captação de grupos, gestão de leads com exportação para Meta Ads Custom Audiences e Microsoft Excel, Anti-Ban com aquecimento diário (Warm Up), atendimento IA DeepSeek V4 e console de Logs ao Vivo.
+  - **Módulo Finanças & DRE (Esmeralda 💼):** Dados 100% reais e auditados de campanhas e lucros. Balanço DRE consolidado (Lucros Mercado Livre vs Gastos Meta Ads), cálculo matemático da Regra dos 70% de Reinvestimento, gestão completa de faturas PDF originais arquivadas com visualizador inline e processamento de planilhas semanais XLSX.
 - **Single Sign-On (SSO):** Um único login autentica simultaneamente ambos os sistemas através de cookies de sessão seguros e Gateway reverso Fastify.
 - **Performance:** Zero sobrecarga de múltiplos iframes na memória; interface reativa com feedback instantâneo e tempo de carregamento sub-segundo.
 
