@@ -52,6 +52,7 @@ chmod +x *.sh
 - **🌅 Mensagem Diária de Abertura (07:00 AM):** Posta automaticamente todas as manhãs no horário oficial de Brasília uma mensagem de boas-vindas e engajamento nos grupos de destino ativos com rotação de 4 templates selecionados a dedo.
 - **🛡️ Cookie Sentinel:** Validador em background a cada 45 minutos da integridade da sessão do Mercado Livre.
 - **⚡ Gerador de Anúncios Reativo:** Interface no painel para colar qualquer link do Mercado Livre, puxar título limpo, foto oficial 2X, preço De/Por, preencher cupom e disparar com 1 clique.
+- **🎛️ Gestão & Edição Visual de Rotas:** Modal intuitivo para criar, editar e excluir rotas com seleção de grupos de Origem (monitoramento) e Destino (publicação) a partir dos 170+ chats do WhatsApp em cache ou por inserção manual de JID.
 
 ---
 
