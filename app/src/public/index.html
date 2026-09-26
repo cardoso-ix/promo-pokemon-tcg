@@ -3,23 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Replica Promo · Cockpit Autônomo Pokémon TCG</title>
+  <title>Promo Pokémon TCG · Super Cockpit Unificado 24/7</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="apple-touch-icon" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=2.1">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 <body class="theme-water">
-  <!-- Canvas de Gotículas e Bolhas de Água (60fps GPU-Accelerated) -->
+  <!-- Canvas de Efeitos Elementais (Água 💧 / Fogo 🔥 / Finanças 💼) - 60fps GPU -->
   <canvas id="ambient-fx" class="ambient-canvas"></canvas>
 
   <div class="app-layout">
-    <!-- Sidebar / Navegação Principal -->
-    <aside class="sidebar">
+    <!-- Sidebar / Navegação Principal Unificada -->
+    <aside class="sidebar" id="sidebar">
       <div class="brand">
-        <div class="brand-logo water-ball" title="Pokéball Tipo Água TCG">
-          <svg class="pokeball-svg" viewBox="0 0 48 48" width="30" height="30">
+        <div class="brand-logo" id="brand-pokeball" title="Pokéball Elemental TCG">
+          <svg class="pokeball-svg" viewBox="0 0 48 48" width="32" height="32">
             <defs>
               <linearGradient id="waterTop" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stop-color="#0284c7"/>
@@ -29,57 +30,130 @@
                 <stop offset="0%" stop-color="#38bdf8"/>
                 <stop offset="100%" stop-color="#00e5ff"/>
               </linearGradient>
-              <linearGradient id="waterBottom" x1="0%" y1="0%" x2="100%" y2="100%">
+              <linearGradient id="fireTop" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#dc2626"/>
+                <stop offset="100%" stop-color="#991b1b"/>
+              </linearGradient>
+              <linearGradient id="fireEmber" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#f97316"/>
+                <stop offset="100%" stop-color="#f59e0b"/>
+              </linearGradient>
+              <linearGradient id="emeraldTop" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#059669"/>
+                <stop offset="100%" stop-color="#047857"/>
+              </linearGradient>
+              <linearGradient id="emeraldGold" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#10b981"/>
+                <stop offset="100%" stop-color="#f59e0b"/>
+              </linearGradient>
+              <linearGradient id="ballBottom" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stop-color="#f8fafc"/>
                 <stop offset="100%" stop-color="#cbd5e1"/>
               </linearGradient>
             </defs>
-            <circle cx="24" cy="24" r="22" fill="url(#waterBottom)" stroke="#082f49" stroke-width="2.5"/>
-            <path d="M 2 24 A 22 22 0 0 1 46 24 Z" fill="url(#waterTop)"/>
-            <path d="M 10 14 C 14 9, 19 7, 24 7 C 22 11, 20 16, 17 22 Z" fill="url(#waterCyan)"/>
-            <path d="M 38 14 C 34 9, 29 7, 24 7 C 26 11, 28 16, 31 22 Z" fill="url(#waterCyan)"/>
-            <line x1="2" y1="24" x2="46" y2="24" stroke="#082f49" stroke-width="3"/>
-            <circle cx="24" cy="24" r="7" fill="#082f49"/>
-            <circle cx="24" cy="24" r="4.5" fill="#ffffff" stroke="#38bdf8" stroke-width="1.5"/>
-            <circle cx="24" cy="24" r="2" fill="#00e5ff"/>
+            <circle cx="24" cy="24" r="22" fill="url(#ballBottom)" stroke="#0f172a" stroke-width="2.5"/>
+            <path id="svg-ball-top" d="M 2 24 A 22 22 0 0 1 46 24 Z" fill="url(#waterTop)"/>
+            <path id="svg-ball-left" d="M 10 14 C 14 9, 19 7, 24 7 C 22 11, 20 16, 17 22 Z" fill="url(#waterCyan)"/>
+            <path id="svg-ball-right" d="M 38 14 C 34 9, 29 7, 24 7 C 26 11, 28 16, 31 22 Z" fill="url(#waterCyan)"/>
+            <line x1="2" y1="24" x2="46" y2="24" stroke="#0f172a" stroke-width="3"/>
+            <circle cx="24" cy="24" r="7" fill="#0f172a"/>
+            <circle cx="24" cy="24" r="4.5" fill="#ffffff" stroke="#38bdf8" stroke-width="1.5" id="svg-ball-ring"/>
+            <circle cx="24" cy="24" r="2" fill="#00e5ff" id="svg-ball-dot"/>
           </svg>
         </div>
         <div class="brand-text">
-          <h2>Replica Promo</h2>
-          <span class="brand-badge badge-water">💧 Água · TCG 24/7</span>
+          <h2>Promo Pokémon</h2>
+          <span class="brand-badge badge-water" id="brand-badge">💧 Água · Replicador</span>
         </div>
       </div>
 
-      <nav class="nav-menu">
-        <button class="nav-item active tab-btn" data-tab="feed">
+      <!-- Navegação Lateral Categorizada -->
+      <nav class="nav-menu" id="unified-nav">
+        <!-- SEÇÃO 1: REPLICADOR DE OFERTAS (ÁGUA 💧) -->
+        <div class="nav-section-label">
+          <span>🌊 REPLICADOR DE OFERTAS</span>
+        </div>
+        <button class="nav-item active tab-btn" data-tab="feed" data-theme="water">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
           <span>Visão Geral & Feed</span>
         </button>
-        <button class="nav-item tab-btn" data-tab="rotas">
+        <button class="nav-item tab-btn" data-tab="rotas" data-theme="water">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
           <span style="flex: 1;">Rotas de Grupos</span>
           <span class="nav-badge" id="rotas-count">0</span>
         </button>
-        <button class="nav-item tab-btn" data-tab="anuncio">
+        <button class="nav-item tab-btn" data-tab="anuncio" data-theme="water">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
           <span>Gerador de Anúncios</span>
         </button>
-        <button class="nav-item tab-btn" data-tab="conectar">
+        <button class="nav-item tab-btn" data-tab="conectar" data-theme="water">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
-          <span>Conectar WhatsApp</span>
+          <span>Chip Replicador</span>
         </button>
-        <button class="nav-item tab-btn" data-tab="config">
+        <button class="nav-item tab-btn" data-tab="config" data-theme="water">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          <span>Configurações & Afiliado</span>
+          <span>Ajustes & Afiliado ML</span>
+        </button>
+
+        <!-- SEÇÃO 2: DISPARADOR & PROSPECÇÃO (FOGO 🔥) -->
+        <div class="nav-section-label">
+          <span>🔥 BOT DISPARADOR & IA</span>
+        </div>
+        <button class="nav-item tab-btn" data-tab="pane-dashboard" data-theme="fire">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>Visão Geral Disparador</span>
+        </button>
+        <button class="nav-item tab-btn" data-tab="pane-grupos" data-theme="fire">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          <span>Captação de Grupos</span>
+        </button>
+        <button class="nav-item tab-btn" data-tab="pane-contatos" data-theme="fire">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span>Base de Leads & Pastas</span>
+        </button>
+        <button class="nav-item tab-btn" data-tab="pane-campanhas" data-theme="fire">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          <span>Disparador em Massa</span>
+        </button>
+        <button class="nav-item tab-btn" data-tab="pane-meta-cloud" data-theme="fire">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+          <span>Meta Cloud (Oficial)</span>
+        </button>
+        <button class="nav-item tab-btn" data-tab="pane-deepseek" data-theme="fire">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 2a10 10 0 0 1 10 10h-10V2z"></path><path d="M12 12l8 8"></path></svg>
+          <span>Atendimento IA DeepSeek</span>
+        </button>
+        <button class="nav-item tab-btn" data-tab="pane-configuracoes" data-theme="fire">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Anti-Ban & Aquecimento</span>
+        </button>
+
+        <!-- SEÇÃO 3: FINANÇAS & LOGS (ESMERALDA 💼) -->
+        <div class="nav-section-label">
+          <span>💼 FINANÇAS META ADS & LOGS</span>
+        </div>
+        <button class="nav-item tab-btn" data-tab="pane-financas" data-theme="emerald">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          <span>💼 Finanças & DRE Meta Ads</span>
+        </button>
+        <button class="nav-item tab-btn" data-tab="pane-logs" data-theme="emerald">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+          <span>Logs ao Vivo</span>
         </button>
       </nav>
 
+      <!-- Sidebar Footer com Status Duplo dos Chips -->
       <div class="sidebar-footer">
-        <div class="status-indicator">
-          <span class="status-dot disconnected" id="sidebar-wa-dot"></span>
-          <div class="status-meta">
-            <span class="status-title" id="sidebar-wa-title">Desconectado</span>
-            <span class="status-sub" id="sidebar-wa-sub">Escaneie o QR Code</span>
+        <div class="dual-chip-status">
+          <div class="chip-status-line">
+            <span class="status-dot disconnected" id="sidebar-wa-dot"></span>
+            <span class="chip-name">💧 Replicador:</span>
+            <span class="chip-state" id="sidebar-wa-title">Desconectado</span>
+          </div>
+          <div class="chip-status-line">
+            <span class="status-dot disconnected" id="sidebar-bot-dot"></span>
+            <span class="chip-name">🔥 Disparador:</span>
+            <span class="chip-state" id="sidebar-bot-title">Desconectado</span>
           </div>
         </div>
       </div>
@@ -87,11 +161,16 @@
 
     <!-- Main Content Area -->
     <main class="main-content">
-      <!-- Top Header -->
+      <!-- Top Header Unificado -->
       <header class="top-header">
-        <div class="header-title">
-          <h1 id="page-title">Visão Geral & Feed</h1>
-          <p id="page-desc">Monitore ofertas replicadas, fluxo de mensagens e status do chip em tempo real.</p>
+        <div class="header-left-group">
+          <button class="btn-mobile-toggle" id="btn-mobile-menu" aria-label="Abrir Menu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+          <div class="header-title">
+            <h1 id="page-title">Visão Geral & Feed</h1>
+            <p id="page-desc">Monitore ofertas replicadas, fluxo de mensagens e status do chip em tempo real.</p>
+          </div>
         </div>
 
         <div class="header-actions">
@@ -101,17 +180,23 @@
             <span id="meli-status-text">meli.la Ativo</span>
           </div>
 
-          <!-- WhatsApp Status Badge -->
-          <div id="wa-status-badge" class="badge badge-disconnected">
+          <!-- WhatsApp Status Badges -->
+          <div id="wa-status-badge" class="badge badge-disconnected" title="Chip Replicador de Ofertas">
             <span class="indicator-dot"></span>
-            <span id="wa-status-text">Desconectado</span>
+            <span id="wa-status-text">💧 Replicador: Off</span>
           </div>
 
-          <!-- Botão Switch Disparador Pro -->
-          <a id="btn-switch-disparador" class="btn btn-secondary btn-sm" href="http://108.174.145.77:3333" target="_blank" title="Acessar Cockpit do Bot Disparador (Fogo 🔥)">
-            <span>🔥</span>
-            <span>Disparador Pro</span>
-          </a>
+          <div id="bot-wa-status-badge" class="badge badge-disconnected" title="Chip Disparador & IA">
+            <span class="indicator-dot"></span>
+            <span id="bot-wa-status-text">🔥 Disparador: Off</span>
+          </div>
+
+          <!-- Seletor Rápido de Tema Elemental -->
+          <div class="theme-quick-switch" title="Alternar Tema Visual Manualmente">
+            <button class="btn-theme-pill active" id="btn-theme-water" title="Tema Água (Oceano TCG)">💧</button>
+            <button class="btn-theme-pill" id="btn-theme-fire" title="Tema Fogo (Brasa TCG)">🔥</button>
+            <button class="btn-theme-pill" id="btn-theme-emerald" title="Tema Finanças (Esmeralda TCG)">💼</button>
+          </div>
 
           <!-- Sound Toggle -->
           <button id="btn-sound-toggle" class="btn btn-secondary btn-sm btn-sound" title="Alternar som de novas postagens">
@@ -119,679 +204,1573 @@
             <span id="sound-label">Som: ON</span>
           </button>
 
-          <!-- Master Switch -->
-          <div class="master-control">
-            <span class="control-label">RÉPLICA</span>
-            <label class="switch">
-              <input type="checkbox" id="master-toggle" checked>
-              <span class="slider round"></span>
-            </label>
-          </div>
-
-          <!-- Logout -->
-          <button id="btn-logout" class="btn btn-secondary btn-sm btn-logout" title="Sair da Sessão">
+          <!-- Logout Unificado -->
+          <button class="btn btn-secondary btn-sm btn-logout" id="btn-logout" title="Sair da Plataforma">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
             <span>Sair</span>
           </button>
         </div>
       </header>
 
-      <!-- Mercado Livre Cookie Sentinel Alert Banner -->
-      <div id="cookie-sentinel-banner" class="cookie-sentinel-banner" style="display: none;">
-        <div class="sentinel-content">
-          <div class="sentinel-icon-wrap">
-            <span class="sentinel-icon">💧</span>
-          </div>
-          <div class="sentinel-text">
-            <div class="sentinel-heading">
-              <strong id="sentinel-title">Alerta Sentinel · Encurtador meli.la</strong>
-              <span class="sentinel-tag">TCG SENTINEL</span>
-            </div>
-            <p id="sentinel-desc">O cookie de sessão do Mercado Livre expirou ou não foi configurado. Os links utilizarão o formato alternativo.</p>
-          </div>
-        </div>
-        <div class="sentinel-actions">
-          <button type="button" id="btn-recheck-cookie" class="btn btn-secondary btn-sm" title="Reverificar cookie agora">🔄 Reverificar</button>
-          <button type="button" id="btn-fix-cookie" class="btn btn-primary btn-sm" title="Ir para configurações de cookie">⚙️ Renovar Cookie</button>
-        </div>
-      </div>
-
+      <!-- ÁREA DE CONTEÚDO: ABAS DO REPLICADOR (ÁGUA 💧) -->
+      
       <!-- TAB 1: VISÃO GERAL & FEED -->
-      <section class="tab-pane tab-content active" id="tab-feed">
-        <!-- KPI Summary Cards com Design Glassmorphism Aquático -->
-        <div class="kpi-grid">
-          <div class="kpi-card water-card">
-            <div class="kpi-header">
-              <span class="kpi-title">ESTADO DO SISTEMA</span>
-              <span class="energy-pill energy-water" title="Tipo Água">💧</span>
-            </div>
-            <div id="kpi-status" class="kpi-value text-cyan">ATIVO</div>
-            <div class="kpi-sub" id="kpi-sub-status">Aguardando ofertas nos grupos</div>
-          </div>
+      <section class="tab-content active" id="tab-feed">
+        
+      </section>
 
-          <div class="kpi-card water-card">
-            <div class="kpi-header">
-              <span class="kpi-title">ENVIADOS HOJE</span>
-              <span class="energy-pill energy-electric" title="Tipo Elétrico">⚡</span>
-            </div>
-            <div id="kpi-today" class="kpi-value">0</div>
-            <div class="kpi-sub">Ofertas replicadas com sucesso</div>
-          </div>
+      <!-- TAB 2: ROTAS DE REPLICAÇÃO -->
+      <section class="tab-content" id="tab-rotas">
+        
+      </section>
 
-          <div class="kpi-card water-card">
-            <div class="kpi-header">
-              <span class="kpi-title">ENERGIA & FLUXO / HORA</span>
-              <span class="energy-pill energy-grass" title="Tipo Planta">🌿</span>
-            </div>
-            <div id="kpi-hour" class="kpi-value">0 <span class="kpi-limit">/ 40</span></div>
-            <div class="hp-meter-wrap" title="Medidor de HP e Quota Anti-Flood por Hora">
-              <div class="hp-meter-track">
-                <div id="hp-meter-fill" class="hp-meter-fill" style="width: 0%;"></div>
-              </div>
-              <div class="hp-meter-meta">
-                <span class="hp-label">⚡ HP DA SESSÃO</span>
-                <span id="hp-meter-percent" class="hp-val">0%</span>
-              </div>
-            </div>
-            <div class="kpi-sub" id="kpi-cap-sub">Anti-flood operacional</div>
-          </div>
+      <!-- TAB 3: GERADOR DE ANÚNCIOS REATIVO -->
+      <section class="tab-content" id="tab-anuncio">
+        
+      </section>
 
-          <div class="kpi-card water-card">
-            <div class="kpi-header">
-              <span class="kpi-title">WHATSAPP</span>
-              <span class="energy-pill energy-water" title="Status Conexão">📱</span>
-            </div>
-            <div id="kpi-wa" class="kpi-value text-cyan">DESCONECTADO</div>
-            <div class="kpi-sub" id="kpi-phone-sub">Abra a aba Conectar para ler o QR</div>
-          </div>
-        </div>
+      <!-- TAB 4: CONECTAR WHATSAPP (REPLICADOR) -->
+      <section class="tab-content" id="tab-conectar">
+        
+      </section>
 
-        <!-- Feed Toolbar & Container -->
-        <div class="feed-section-wrap">
-          <div class="section-toolbar feed-toolbar-wrap">
+      <!-- TAB 5: CONFIGURAÇÕES & REGRAS -->
+      <section class="tab-content" id="tab-config">
+        
+      </section>
+
+      <!-- ÁREA DE CONTEÚDO: ABAS DO BOT DISPARADOR & IA (FOGO 🔥) -->
+      <section class="tab-content" id="pane-dashboard">
+        <!-- Banner de Pausa em Bloco (Fator Humano) ou Limite Seguro -->
+        <div id="engine-pause-banner" style="display: none; margin-bottom: 20px; padding: 16px 20px; background: rgba(245, 158, 11, 0.12); border: 1px solid #f59e0b; border-radius: 12px; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 26px;" id="pause-banner-icon">⏸️</span>
             <div>
-              <h2>Feed de Atividades ao Vivo</h2>
-              <p class="section-desc">Acompanhe as ofertas capturadas e replicadas em tempo real nos seus grupos.</p>
+              <strong style="color: #f59e0b; font-size: 14px;" id="pause-banner-title">MOTOR EM PAUSA LONGA HUMANA (Descanso de Chip)</strong>
+              <p id="pause-banner-msg" style="margin: 2px 0 0; font-size: 13px; color: var(--text-secondary);">Descansando o chip para proteger seu número. Retoma automaticamente em breve.</p>
             </div>
-            
-            <div class="feed-controls">
-              <!-- Search box -->
-              <div class="search-box">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="feed-search" placeholder="Buscar por produto, texto ou grupo...">
-              </div>
+          </div>
+          <button class="btn btn-warning" id="btn-force-resume" onclick="handlePauseAction()" style="background: #f59e0b; color: #121212; font-weight: 700; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            ▶️ Retomar Envios Imediatamente
+          </button>
+        </div>
 
-              <!-- Filter chips -->
-              <div class="filter-group">
-                <button class="filter-chip active" data-filter="all">Todos</button>
-                <button class="filter-chip" data-filter="enviado">Enviados</button>
-                <button class="filter-chip" data-filter="ignorado">Ignorados / Filtro</button>
-              </div>
-
-              <span class="live-pill"><span class="pulse-dot"></span> TEMPO REAL</span>
+        <!-- Metric Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon blue">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Total de Leads Captados</span>
+              <h3 class="metric-value" id="stat-contatos">0</h3>
             </div>
           </div>
 
-          <div id="feed-list" class="feed-container">
-            <div class="empty-state">
-              <div class="empty-icon">🌊</div>
-              <h3>Aguardando mensagens...</h3>
-              <p>Quando alguém postar uma promoção em um grupo de origem monitorado, ela aparecerá aqui instantaneamente com o link convertido em meli.la.</p>
+          <div class="metric-card">
+            <div class="metric-icon purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Grupos Detectados</span>
+              <h3 class="metric-value" id="stat-grupos">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon green">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Disparos Enviados Hoje</span>
+              <h3 class="metric-value" id="stat-envios">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon cyan">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12l8 8"></path></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Respostas IA (DeepSeek)</span>
+              <h3 class="metric-value" id="stat-ia">0</h3>
+            </div>
+          </div>
+
+          <div class="metric-card" id="card-stat-warmup">
+            <div class="metric-icon orange">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label" id="stat-warmup-label">Aquecimento (Dia 1)</span>
+              <h3 class="metric-value" id="stat-warmup-val">0 / 20</h3>
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- TAB 2: ROTAS DE TRANSMISSÃO -->
-      <section class="tab-pane tab-content" id="tab-rotas">
-        <div class="section-toolbar">
-          <div>
-            <h2>Rotas de Transmissão</h2>
-            <p class="section-desc">Defina de quais grupos o robô copia e para quais grupos ele republica com seu link.</p>
-          </div>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <button id="btn-sync-chats" class="btn btn-secondary" title="Forçar busca de grupos novos que o WhatsApp acabou de entrar">🔄 Atualizar Grupos</button>
-            <button id="btn-nova-rota" class="btn btn-primary">+ Nova Rota</button>
-          </div>
-        </div>
-
-        <div id="rotas-list" class="rotas-grid">
-          <!-- Cards de rota inseridos via JS -->
-        </div>
-      </section>
-
-      <!-- TAB 3: GERADOR DE ANÚNCIOS POR LINK -->
-      <section class="tab-pane tab-content" id="tab-anuncio">
-        <div class="section-toolbar">
-          <div>
-            <h2>⚡ Gerador de Anúncios por Link</h2>
-            <p class="section-desc">Cole o link de afiliado ou produto do Mercado Livre. O sistema extrai a foto 2X HD, formata a copy com cupom e permite postar com 1 clique.</p>
-          </div>
-        </div>
-
-        <div class="anuncio-grid-layout">
-          <!-- Coluna 1: Entrada de Dados -->
-          <div class="card anuncio-card">
-            <div class="card-header-flex">
-              <h3>1. Dados da Oferta</h3>
-              <span class="badge badge-meli">Mercado Livre</span>
+        <!-- Connection Card & Quick Actions -->
+        <div class="dashboard-grid">
+          <div class="glass-card connection-card">
+            <div class="card-header">
+              <h3>Conexão com o WhatsApp</h3>
+              <span class="badge" id="card-badge-status">Desconectado</span>
             </div>
-
-            <div class="form-group">
-              <label class="form-label" for="anuncio-url">Link do Produto ou Afiliado *</label>
-              <input type="text" id="anuncio-url" class="input-field" placeholder="https://mercadolivre.com/sec/xxxx ou https://meli.la/xxxx ou link do produto">
-              <span class="form-hint">Aceita link curto oficial do app (sec/...), meli.la ou link completo do anúncio.</span>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="anuncio-cupom">🎟️ Cupom de Desconto (Auto ou Manual)</label>
-              <input type="text" id="anuncio-cupom" class="input-field" placeholder="Ex: APP10, 15% OFF, POKEMON15">
-              <span class="form-hint">Detectado automaticamente da página ou informado manualmente para calcular o desconto.</span>
-            </div>
-
-            <div class="price-grid">
-              <div class="form-group">
-                <label class="form-label" for="anuncio-preco-de">Preço DE (Original)</label>
-                <input type="text" id="anuncio-preco-de" class="input-field" placeholder="Ex: 180,00">
+            <div class="card-body">
+              <!-- QR Code Display -->
+              <div class="qr-container" id="qr-box">
+                <div class="qr-placeholder" id="qr-placeholder">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#5f6368" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                  <p>Inicie a conexão para gerar o QR Code ou Código de Pareamento</p>
+                </div>
+                <img id="qr-image" src="" alt="QR Code" style="display: none;">
               </div>
-              <div class="form-group">
-                <label class="form-label" for="anuncio-preco-por">Preço POR (A Pagar)</label>
-                <input type="text" id="anuncio-preco-por" class="input-field" placeholder="Ex: 122,00">
+
+              <!-- Pairing Code Display -->
+              <div class="pairing-code-box" id="pairing-code-container" style="display: none;">
+                <label>Código de Emparelhamento (8 dígitos):</label>
+                <div class="pairing-code-display" id="pairing-code-val">---- ----</div>
+                <small>Digite este código no seu WhatsApp em: Aparelhos Conectados &gt; Conectar com número de telefone.</small>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="anuncio-preco-cupom">Com Cupom (Final)</label>
-                <input type="text" id="anuncio-preco-cupom" class="input-field" placeholder="Ex: 103,70">
+
+              <!-- Connection Actions Form -->
+              <div class="connection-form">
+                <div class="form-row">
+                  <div class="form-group flex-1">
+                    <label for="pairing-phone-input">Número do Celular (Opcional p/ Pairing Code):</label>
+                    <input type="text" id="pairing-phone-input" placeholder="Ex: 5511999999999" class="input-field">
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button class="btn btn-primary" id="btn-connect-qr">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    Conectar WhatsApp
+                  </button>
+                  <button class="btn btn-danger" id="btn-disconnect" style="display: none;">
+                    Desconectar Sessão
+                  </button>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div class="anuncio-actions">
-              <button id="btn-gerar-anuncio" class="btn btn-primary btn-foil btn-large">
-                <span id="btn-gerar-spinner" class="spinner-small" style="display: none;"></span>
-                <span id="btn-gerar-label">⚡ Puxar Dados & Gerar Anúncio</span>
+          <!-- Quick Actions & Overview -->
+          <div class="glass-card">
+            <div class="card-header">
+              <h3>Painel de Ações Rápidas</h3>
+            </div>
+            <div class="card-body quick-actions-list">
+              <button class="quick-action-btn" data-action="go-grupos">
+                <div class="action-icon purple">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                </div>
+                <div class="action-text">
+                  <h4>Captar Membros de Grupos</h4>
+                  <p>Extraia contatos e números com 1 clique de todos os seus grupos.</p>
+                </div>
+                <span class="chevron">→</span>
               </button>
-              <button id="btn-limpar-anuncio" class="btn btn-secondary">Limpar</button>
-            </div>
-            <span id="anuncio-feedback" class="action-feedback"></span>
-          </div>
 
-          <!-- Coluna 2: Preview do Post & Publicação -->
-          <div class="card anuncio-card">
-            <div class="card-header-flex">
-              <h3>2. Preview & Publicação</h3>
-              <span id="anuncio-status-badge" class="badge badge-disconnected" style="display: none;">Aguardando Link</span>
-            </div>
-
-            <div id="anuncio-preview-box" class="anuncio-preview-box">
-              <!-- Imagem HD do Produto -->
-              <div class="anuncio-image-wrapper">
-                <div id="anuncio-image-placeholder" class="anuncio-image-placeholder">
-                  <div class="placeholder-icon">🖼️</div>
-                  <span>A foto oficial em 2X HD aparecerá aqui após gerar</span>
+              <button class="quick-action-btn" data-action="go-campanhas">
+                <div class="action-icon green">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon></svg>
                 </div>
-                <img id="anuncio-image-preview" class="anuncio-image-preview" style="display: none;" alt="Preview Produto">
-                <div id="anuncio-hd-badge" class="anuncio-hd-badge" style="display: none;">✨ FOTO 2X HD</div>
-              </div>
-
-              <!-- Editor da Copy -->
-              <div class="form-group" style="margin-top: 14px;">
-                <div class="card-header-flex">
-                  <label class="form-label" for="anuncio-texto-final">Mensagem Formatada (Editável):</label>
-                  <span id="anuncio-char-counter" class="char-counter">0 caracteres</span>
+                <div class="action-text">
+                  <h4>Nova Campanha de Disparo</h4>
+                  <p>Dispare ofertas personalizadas com Spintax anti-ban.</p>
                 </div>
-                <textarea id="anuncio-texto-final" class="textarea-field anuncio-textarea" rows="8" placeholder="A mensagem pronta com emojis, título, link e cupom aparecerá aqui..."></textarea>
-              </div>
+                <span class="chevron">→</span>
+              </button>
 
-              <!-- Seleção de Destinos -->
-              <div class="destinos-section">
-                <div class="card-header-flex" style="margin-bottom: 8px;">
-                  <label class="form-label">Grupos de Destino:</label>
-                  <button type="button" id="btn-select-all-destinos" class="btn-link">Marcar Todos os Destinos de Rotas</button>
+              <button class="quick-action-btn" onclick="openTestModal()">
+                <div class="action-icon blue">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </div>
-                <input type="text" id="anuncio-destinos-search" class="input-field" placeholder="🔍 Filtrar grupos de destino..." style="margin-bottom: 8px; padding: 7px 12px; font-size: 12.5px;">
-                <div id="anuncio-destinos-list" class="anuncio-destinos-list">
-                  <span class="text-muted">Carregando grupos disponíveis...</span>
+                <div class="action-text">
+                  <h4>Testar Disparo no Meu WhatsApp</h4>
+                  <p>Envie uma mensagem de teste imediata para verificar no seu aparelho.</p>
                 </div>
-              </div>
+                <span class="chevron">→</span>
+              </button>
 
-              <!-- Botões de Ação -->
-              <div class="anuncio-dispatch-actions">
-                <button id="btn-publicar-anuncio" class="btn btn-primary btn-large" style="flex: 1;" disabled>
-                  <span id="btn-publicar-spinner" class="spinner-small" style="display: none;"></span>
-                  <span id="btn-publicar-label">🚀 Publicar no WhatsApp</span>
-                </button>
-                <button id="btn-copiar-anuncio" class="btn btn-secondary" title="Copiar texto da mensagem">📋 Copiar</button>
-              </div>
-              <span id="anuncio-publish-status" class="action-feedback"></span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 4: CONECTAR WHATSAPP -->
-      <section class="tab-pane tab-content" id="tab-conectar">
-        <div class="conectar-container">
-          <div class="card card-center">
-            <h2>Pareamento do WhatsApp</h2>
-            <p class="conectar-desc">Escaneie o QR Code abaixo com o WhatsApp no seu smartphone em <strong>Aparelhos Conectados &gt; Conectar Aparelho</strong>.</p>
-
-            <div id="qr-box" class="qr-wrapper">
-              <div class="qr-placeholder">
-                <div class="spinner"></div>
-                <span>Carregando conexão...</span>
-              </div>
-            </div>
-
-            <div id="wa-connected-box" class="connected-info" style="display: none;">
-              <div class="success-icon">✅</div>
-              <h3>WhatsApp Conectado e Ativo!</h3>
-              <p id="wa-connected-phone">Número: 5511999999999</p>
-              <p class="success-hint">O robô já está escutando os grupos de origem e pronto para replicar.</p>
-              <button id="btn-wa-logout" class="btn btn-danger" style="margin-top: 14px;">Desconectar / Trocar Aparelho</button>
-            </div>
-
-            <div id="wa-disconnected-actions" style="margin-top: 18px; text-align: center;">
-              <button id="btn-wa-force-qr" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 8px 16px;">
-                🔄 Reiniciar Sessão / Gerar Novo QR Code
+              <button class="quick-action-btn" data-action="go-deepseek">
+                <div class="action-icon cyan">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path></svg>
+                </div>
+                <div class="action-text">
+                  <h4>Configurar Atendimento IA (DeepSeek)</h4>
+                  <p>Defina o tom de voz e instruções para o bot responder no privado.</p>
+                </div>
+                <span class="chevron">→</span>
               </button>
             </div>
+          </div>
+        </div>
+      </section>
+      <section class="tab-content" id="pane-grupos">
+        <div class="pane-header">
+          <div>
+            <h2>Grupos do WhatsApp Conectado</h2>
+            <p>Selecione um grupo para extrair instantaneamente os participantes e criar listas de leads.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-refresh-grupos">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            Sincronizar Grupos do Chip
+          </button>
+        </div>
 
-            <div class="conectar-tips">
-              <h4>💡 Dica de Segurança:</h4>
-              <p>Utilize um chip dedicado para réplicas de promoções, preservando seu número pessoal. O sistema possui proteção anti-ban e pacing automático.</p>
+        <!-- Search & Filter bar for Groups -->
+        <div class="filter-bar">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="grupos-search" placeholder="Buscar grupo por nome ou participantes..." class="input-field search-input">
+          </div>
+          <span class="filter-counter" id="grupos-counter"></span>
+        </div>
+
+        <div class="grupos-grid" id="grupos-list">
+          <div class="empty-state">
+            <p>Nenhum grupo sincronizado ainda. Conecte seu WhatsApp e clique em sincronizar.</p>
+          </div>
+        </div>
+      </section>
+      <section class="tab-content" id="pane-contatos">
+        <div class="pane-header">
+          <div>
+            <h2>Base de Leads e Destinatários</h2>
+            <p>Contatos captados automaticamente de grupos ou importados manualmente.</p>
+          </div>
+          <div class="header-btns">
+            <button class="btn btn-secondary" id="btn-export-excel" title="Baixar planilha de contatos em formato Excel (.CSV)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Exportar Excel
+            </button>
+            <button class="btn btn-secondary" id="btn-export-meta" title="Exportar lista pronta para subir no Meta Ads (Facebook & Instagram)" style="border-color: rgba(24, 119, 242, 0.4); color: #8ab4f8;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
+              Exportar Meta Ads
+            </button>
+            <button class="btn btn-secondary" id="btn-open-import">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              Importar Lista
+            </button>
+            <button class="btn btn-danger btn-outline" id="btn-clear-contatos">
+              Limpar Tudo
+            </button>
+          </div>
+        </div>
+
+        <!-- Pastas e Lotes de Leads -->
+        <div class="pastas-section">
+          <div class="pastas-header">
+            <div class="pastas-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Pastas e Lotes de Leads</span>
+            </div>
+            <span class="pastas-counter-info" id="pastas-counter-info">Carregando pastas...</span>
+          </div>
+
+          <div class="pastas-grid" id="pastas-container">
+            <div class="pasta-card active" data-pasta="todos">
+              <div class="pasta-top">
+                <span class="pasta-icon">📁</span>
+                <span class="pasta-badge">TODOS</span>
+              </div>
+              <strong class="pasta-name">Todas as Pastas</strong>
+              <span class="pasta-count" id="pasta-total-all">Carregando...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Search & Filter bar -->
+        <div class="filter-bar">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="contatos-search" placeholder="Buscar por nome, número ou grupo..." class="input-field search-input">
+          </div>
+          <span class="filter-counter" id="contatos-counter"></span>
+        </div>
+
+        <div class="glass-card table-card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Número</th>
+                <th>Nome</th>
+                <th>Grupo de Origem</th>
+                <th>Tipo</th>
+                <th>Data</th>
+                <th style="text-align: right; width: 60px;">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="contatos-tbody">
+              <tr>
+                <td colspan="6" class="text-center">Carregando contatos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section class="tab-content" id="pane-campanhas">
+        <div class="pane-header">
+          <div>
+            <h2>Campanhas de Disparo</h2>
+            <p>Crie e gerencie filas de envios em massa com Spintax inteligente e anti-ban.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-open-nova-campanha">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Nova Campanha
+          </button>
+        </div>
+
+        <!-- Search & Filter bar for Campaigns -->
+        <div class="filter-bar">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="campanhas-search" placeholder="Buscar campanhas por nome ou status..." class="input-field search-input">
+          </div>
+          <span class="filter-counter" id="campanhas-counter"></span>
+        </div>
+
+        <div class="campanhas-list" id="campanhas-container">
+          <div class="empty-state">
+            <p>Nenhuma campanha criada ainda. Clique em "Nova Campanha" para começar.</p>
+          </div>
+        </div>
+      </section>
+      <section class="tab-content" id="pane-meta-cloud">
+        <!-- Banner de Economia e Otimizador de Utilidade -->
+        <div class="meta-economy-card">
+          <div class="meta-economy-header">
+            <span class="meta-economy-badge">💡 METADE DO PREÇO POR DISPARO</span>
+            <span class="badge" style="background: rgba(129, 201, 149, 0.15); color: var(--google-green);">Tarifa Reduzida Meta Brasil</span>
+          </div>
+          <div class="meta-economy-body">
+            <div class="meta-economy-text">
+              <h3>Economize até 50% por envio com Templates de Utilidade (UTILITY)</h3>
+              <p>
+                Pela tabela oficial da Meta (WhatsApp Business Cloud API), mensagens na categoria <strong>UTILIDADE</strong> custam cerca de <strong>~R$ 0,18</strong> por conversa, enquanto mensagens de <strong>MARKETING</strong> custam <strong>~R$ 0,38</strong>.
+                Utilize nossos <strong>4 modelos pré-aprovados de Pokémon TCG</strong> ou nosso <strong>✨ Otimizador com IA</strong> para adequar seu texto como alerta/notificação de serviço, evitando que o algoritmo da Meta reclassifique seu disparo para a tarifa cara de marketing.
+              </p>
+            </div>
+            <div class="meta-price-comparison">
+              <div class="price-box utility">
+                <span class="price-title">UTILIDADE (UTILITY)</span>
+                <span class="price-val">~R$ 0,18</span>
+                <span class="price-desc">Notificações, status e alertas solicitados</span>
+              </div>
+              <div class="price-vs">VS</div>
+              <div class="price-box marketing">
+                <span class="price-title">MARKETING</span>
+                <span class="price-val">~R$ 0,38</span>
+                <span class="price-desc">Promoções e vendas diretas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Credenciais & Conexão Oficial Meta -->
+        <div class="glass-card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <div>
+              <h3>🔑 Credenciais da Meta Cloud API (WhatsApp Business Oficial)</h3>
+              <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">Conecte sua conta do WhatsApp Business através do Meta for Developers (Graph API).</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="badge" id="meta-connection-badge" style="background: rgba(154, 160, 166, 0.15); color: var(--text-secondary);">⚪ Não Verificado</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-test-meta-connection">⚡ Testar Conexão Oficial</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-save-meta-config">💾 Salvar Credenciais</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div style="margin-bottom: 16px;">
+              <label class="toggle-switch-label" style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <label class="toggle-switch">
+                  <input type="checkbox" id="meta-cloud-ativo-toggle">
+                  <span class="toggle-slider"></span>
+                </label>
+                <strong>Habilitar Envio via Meta Cloud API Oficial no Sistema</strong>
+              </label>
+            </div>
+
+            <div class="form-row" style="margin-bottom: 14px;">
+              <div class="form-group flex-1">
+                <label for="meta-token-input">Token de Acesso Permanente (System User Access Token):</label>
+                <input type="password" id="meta-token-input" class="input-field" placeholder="EAAB... (Cole aqui o token de sistema)">
+                <small>Gerado no Meta Business Manager &gt; Contas &gt; Usuários do Sistema com permissão <code>whatsapp_business_messaging</code>.</small>
+              </div>
+              <div class="form-group flex-1">
+                <label for="meta-waba-id-input">WhatsApp Business Account ID (WABA ID):</label>
+                <input type="text" id="meta-waba-id-input" class="input-field" placeholder="Ex: 104857291049281">
+                <small>Identificador da sua Conta do WhatsApp Business no painel Meta.</small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label for="meta-phone-id-input">Phone Number ID (ID do Número de Telefone):</label>
+                <input type="text" id="meta-phone-id-input" class="input-field" placeholder="Ex: 109283746501928">
+                <small>ID do telefone atribuído pela Meta na aba API Setup (diferente do número de telefone celular).</small>
+              </div>
+              <div class="form-group flex-1">
+                <label for="meta-api-version-input">Versão da Graph API:</label>
+                <input type="text" id="meta-api-version-input" class="input-field" placeholder="v21.0" value="v21.0">
+                <small>Versão estável recomendada: <code>v21.0</code>.</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela de Templates Meta -->
+        <div class="glass-card">
+          <div class="card-header">
+            <div>
+              <h3>📋 Templates de Mensagem Cadastrados na Meta</h3>
+              <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">Templates aprovados pela Meta podem ser disparados em massa com zero risco de bloqueio ou banimento.</p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-meta-templates">
+                🔄 Sincronizar com a Meta
+              </button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-open-meta-template-modal">
+                ➕ Submeter Novo Template
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" id="meta-templates-table">
+                <thead>
+                  <tr>
+                    <th>Nome do Template</th>
+                    <th>Categoria</th>
+                    <th>Idioma</th>
+                    <th>Status Meta</th>
+                    <th>Corpo do Template</th>
+                    <th style="text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="meta-templates-tbody">
+                  <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                      Clique em "Sincronizar com a Meta" para carregar os templates cadastrados.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </section>
-
-      <!-- TAB 5: CONFIGURAÇÕES & AFILIADO -->
-      <section class="tab-pane tab-content" id="tab-config">
-        <div class="config-grid">
-          <!-- Card Afiliado ML -->
-          <div class="card">
-            <h3>Afiliado Mercado Livre</h3>
-            <p class="card-desc">Suas identificações oficiais do painel de afiliados.</p>
-            
-            <div class="form-group">
-              <label for="cfg-matt-word">matt_word (Apelido)</label>
-              <input type="text" id="cfg-matt-word" class="input-field" placeholder="Ex: caed1312314">
-            </div>
-
-            <div class="form-group">
-              <label for="cfg-matt-tool">matt_tool (Etiqueta de Ferramenta)</label>
-              <input type="text" id="cfg-matt-tool" class="input-field" placeholder="Ex: 96097202">
-            </div>
-
-            <div class="form-group">
-              <label for="cfg-link-vitrine-curto">Link Curto da Lista de Compras / Vitrine (Cupons)</label>
-              <div style="display: flex; gap: 8px;">
-                <input type="text" id="cfg-link-vitrine-curto" class="input-field" placeholder="Ex: https://mercadolivre.com/sec/2rM6RPm">
-                <button type="button" id="btn-detectar-vitrine" class="btn btn-secondary" style="white-space: nowrap;">🔍 Buscar Oficial</button>
-              </div>
-              <span class="field-hint">Link curto oficial (<code>mercadolivre.com/sec/...</code> ou <code>meli.la/...</code>) da sua lista de compras/vitrine.</span>
-              <span id="vitrine-detect-feedback" class="action-feedback" style="display: block; margin-top: 4px;"></span>
-            </div>
+      <section class="tab-content" id="pane-deepseek">
+        <div class="pane-header">
+          <div>
+            <h2>Atendimento Inteligente com DeepSeek</h2>
+            <p>Configure a inteligência artificial para responder clientes no privado imitando o seu tom de voz.</p>
           </div>
+          <button class="btn btn-primary" id="btn-save-deepseek">
+            Salvar Configurações IA
+          </button>
+        </div>
 
-          <!-- Card Controles de Envio -->
-          <div class="card">
-            <h3>Controles de Envio & Pacing</h3>
-            <p class="card-desc">Ajustes de timing e proteção contra bloqueio do chip.</p>
-
-            <div class="form-group">
-              <label for="cfg-delay">Delay antes de postar (segundos)</label>
-              <input type="number" id="cfg-delay" class="input-field" min="1" max="60" value="5">
-              <span class="field-hint">Intervalo entre receber a promoção e enviar ao destino.</span>
+        <div class="deepseek-grid">
+          <!-- Settings Card -->
+          <div class="glass-card">
+            <div class="card-header">
+              <h3>Credenciais & Comportamento</h3>
             </div>
-
-            <div class="form-group">
-              <label for="cfg-teto">Teto de postagens por hora</label>
-              <input type="number" id="cfg-teto" class="input-field" min="5" max="100" value="40">
-              <span class="field-hint">Evita flood se vários grupos dispararem ao mesmo tempo.</span>
-            </div>
-
-            <div class="form-group">
-              <label for="cfg-max-delay">Atraso máximo da mensagem (segundos)</label>
-              <input type="number" id="cfg-max-delay" class="input-field" min="60" max="3600" value="600">
-              <span class="field-hint">Mensagens mais velhas que isso são ignoradas (ex: após reconexão).</span>
-            </div>
-
-            <div class="form-group" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <label for="cfg-somente-meli" style="font-weight: 600; color: var(--accent-water);">Postar Apenas Mercado Livre</label>
-                  <p class="field-hint" style="margin-top: 2px;">Ignora ofertas de concorrentes sem link do Mercado Livre.</p>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="cfg-somente-meli" checked>
-                  <span class="slider round"></span>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="toggle-label">
+                  <input type="checkbox" id="deepseek-ativo-toggle">
+                  <span class="toggle-text">Ativar Respostas Automáticas no Privado</span>
                 </label>
               </div>
 
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--border-subtle);">
-                <div>
-                  <label for="cfg-replicar-comunicados" style="font-weight: 600; color: var(--accent-water);">Replicar Comunicados Sem Link</label>
-                  <p class="field-hint" style="margin-top: 2px;">Desativado por padrão para evitar que mensagens aleatórias cruzem entre grupos.</p>
+              <div class="form-group">
+                <label for="deepseek-key-input">Chave de API do DeepSeek (API Key):</label>
+                <input type="password" id="deepseek-key-input" placeholder="sk-..." class="input-field">
+              </div>
+
+              <div class="form-group">
+                <label for="deepseek-url-input">URL Base da API (Endpoint):</label>
+                <input type="text" id="deepseek-url-input" value="https://opencode.ai/zen/go/v1" class="input-field">
+                <div class="tags-hint" style="margin-top: 6px;">
+                  <span>Gateways recomendados:</span>
+                  <code class="ai-gateway-quick" data-url="https://opencode.ai/zen/go/v1" title="Clique para selecionar">⚡ OpenCode Zen Go (Recomendado)</code>
+                  <code class="ai-gateway-quick" data-url="https://api.deepseek.com/v1" title="Clique para selecionar">🌐 DeepSeek Oficial</code>
                 </div>
-                <label class="switch">
-                  <input type="checkbox" id="cfg-replicar-comunicados">
-                  <span class="slider round"></span>
-                </label>
+              </div>
+
+              <div class="form-group">
+                <label for="deepseek-model-input">Modelo:</label>
+                <input type="text" id="deepseek-model-input" value="deepseek-flash" class="input-field" placeholder="Ex: deepseek-flash, deepseek-v4-flash, deepseek-v4-pro">
+                <div class="tags-hint" style="margin-top: 6px;">
+                  <span>Modelos OpenCode:</span>
+                  <code class="ai-model-quick" data-model="deepseek-flash" title="Clique para selecionar">⚡ deepseek-flash (Recomendado)</code>
+                  <code class="ai-model-quick" data-model="deepseek-v4-flash" title="Clique para selecionar">🚀 deepseek-v4-flash</code>
+                  <code class="ai-model-quick" data-model="deepseek-v4-pro" title="Clique para selecionar">🧠 deepseek-v4-pro</code>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group flex-1">
+                  <label>Tempo Mínimo Digitando (s):</label>
+                  <input type="number" id="deepseek-delay-min" value="3" class="input-field">
+                </div>
+                <div class="form-group flex-1">
+                  <label>Tempo Máximo Digitando (s):</label>
+                  <input type="number" id="deepseek-delay-max" value="6" class="input-field">
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Card Suíte Pro (Opção C) -->
-          <div class="card card-full" style="border: 1px solid rgba(56, 189, 248, 0.35); box-shadow: 0 4px 20px rgba(56, 189, 248, 0.08);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 1.4rem;">💧</span>
-                <h3 style="margin: 0;">Suíte de Réplica Pro (Templates & Anti-Duplicidade Global)</h3>
-              </div>
-              <span class="badge badge-meli">OPÇÃO C ATIVA</span>
+          <!-- Prompt & Persona Card -->
+          <div class="glass-card">
+            <div class="card-header">
+              <h3>Personalidade e Regras da IA (Prompt de Sistema)</h3>
             </div>
-            <p class="card-desc">Padronização de layout de marca, desduplicação canônica entre múltiplos grupos e guardião de nicho TCG.</p>
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 14px;">
+            <div class="card-body">
               <div class="form-group">
-                <label for="cfg-template-modo" style="font-weight: 600; color: var(--accent-water);">Padrão Visual de Postagem</label>
-                <select id="cfg-template-modo" class="input-field">
-                  <option value="padrao">⚡ Template Padronizado de Marca (Recomendado)</option>
-                  <option value="fiel">📄 Modo Fiel (Preserva texto do concorrente)</option>
+                <label for="deepseek-prompt-textarea">Instruções para a IA (Como ela deve falar):</label>
+                <textarea id="deepseek-prompt-textarea" rows="10" class="input-field textarea-field"></textarea>
+                <small>Diga como quer que ela responda, regras de Pokémon TCG, valores e links recomendados.</small>
+              </div>
+
+              <!-- Interactive Test Sandbox -->
+              <div class="test-sandbox">
+                <h4>Simulador de Conversa (Teste Rápido)</h4>
+                <div class="test-input-row">
+                  <input type="text" id="deepseek-test-input" placeholder="Digite uma pergunta de teste..." class="input-field">
+                  <button class="btn btn-secondary" id="btn-test-deepseek">Testar IA</button>
+                </div>
+                <div class="test-reply-box" id="deepseek-test-output" style="display: none;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="tab-content" id="pane-configuracoes">
+        <div class="pane-header">
+          <div>
+            <h2>Proteção Anti-Banimento & Fator Humano</h2>
+            <p>Ajuste delays variáveis, simulação de presença, aquecimento gradual (warm up) e pausas em blocos.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-save-configs">
+            Salvar Parâmetros
+          </button>
+        </div>
+
+        <!-- 1. Delay Variável -->
+        <div class="glass-card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <h3>⏱️ 1. Delay Variável entre Mensagens (Ritmo Humano)</h3>
+            <span class="badge" style="background: rgba(129, 201, 149, 0.15); color: var(--google-green);">Anti-Padrão Fixo</span>
+          </div>
+          <div class="card-body">
+            <p class="text-muted" style="margin-bottom: 14px; font-size: 13px;">Intervalos dinâmicos e aleatórios sorteados a cada mensagem enviada. O sistema garante matematicamente que nunca haverá um intervalo fixo ou metronômico.</p>
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Delay Mínimo (segundos):</label>
+                <input type="number" id="cfg-delay-min" class="input-field" min="5" placeholder="15">
+                <small>Recomendado: 15 segundos</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>Delay Máximo (segundos):</label>
+                <input type="number" id="cfg-delay-max" class="input-field" min="10" placeholder="45">
+                <small>Recomendado: 45 segundos</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Simulação de Digitação & Presença -->
+        <div class="glass-card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <h3>✍️ 2. Simulação de Presença ("Digitando..." / "Gravando Áudio...")</h3>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-simular-digitacao" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="card-body">
+            <p class="text-muted" style="margin-bottom: 14px; font-size: 13px;">Exibe o status de digitação ou gravação de áudio no WhatsApp do destinatário antes do envio. A velocidade é calculada de forma orgânica e proporcional ao tamanho do texto.</p>
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Tipo de Status de Presença:</label>
+                <select id="cfg-presenca-tipo" class="input-field">
+                  <option value="auto">Automático (Detecta mídia: texto = Digitando, áudio = Gravando)</option>
+                  <option value="composing">Sempre "Digitando..."</option>
+                  <option value="recording">Sempre "Gravando áudio..."</option>
                 </select>
-                <span class="field-hint">No modo padronizado, reescreve a oferta com visual profissional VIP, De/Por, % OFF, Cupons e link oficial.</span>
               </div>
-
-              <div class="form-group">
-                <label for="cfg-cooldown-duplicidade" style="font-weight: 600; color: var(--accent-water);">Janela Anti-Duplicidade Cross-Group (minutos)</label>
-                <input type="number" id="cfg-cooldown-duplicidade" class="input-field" min="1" max="1440" value="30">
-                <span class="field-hint">Tempo que um produto fica bloqueado para não repetir entre múltiplos grupos.</span>
+              <div class="form-group flex-1">
+                <label>Duração Mínima (segundos):</label>
+                <input type="number" id="cfg-digitacao-min" class="input-field" min="1" placeholder="3">
+              </div>
+              <div class="form-group flex-1">
+                <label>Duração Máxima (segundos):</label>
+                <input type="number" id="cfg-digitacao-max" class="input-field" min="3" placeholder="10">
               </div>
             </div>
+          </div>
+        </div>
 
-            <div class="form-group" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+        <!-- 3. Aquecimento Gradual (Warm Up) -->
+        <div class="glass-card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <h3>🚀 3. Volume Gradual e Aquecimento do Chip (Warm Up Automático)</h3>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cfg-aquecimento-ativo" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="card-body">
+            <!-- Box informativo do status do Warm Up -->
+            <div id="warmup-info-box" style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; background: rgba(251, 146, 60, 0.08); border: 1px solid rgba(251, 146, 60, 0.25); border-radius: 8px; padding: 14px 18px; flex-wrap: wrap; gap: 12px;">
               <div>
-                <label for="cfg-filtro-apenas-tcg" style="font-weight: 600; color: var(--accent-water);">Guardião de Nicho TCG (Filtro de Card Games)</label>
-                <p class="field-hint" style="margin-top: 2px;">Bloqueia automaticamente ofertas fora do nicho (panelas, roupas, celulares). Permite Pokémon, Yu-Gi-Oh!, Magic e afins.</p>
+                <strong style="color: #fb923c; font-size: 15px;" id="warmup-badge-day">Aquecimento Ativo: Dia 1</strong>
+                <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-secondary);" id="warmup-badge-desc">Cota de hoje: 20 disparos (0 enviados hoje • 20 restantes)</p>
               </div>
-              <label class="switch">
-                <input type="checkbox" id="cfg-filtro-apenas-tcg" checked>
-                <span class="slider round"></span>
-              </label>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-warmup" style="font-size: 12px;">🔄 Reiniciar Aquecimento para este Chip</button>
+            </div>
+
+            <p class="text-muted" style="margin-bottom: 14px; font-size: 13px;">Se o número for novo, o robô começa enviando poucas mensagens por dia e expande o volume aos poucos ao longo das semanas de forma 100% automática.</p>
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Volume Inicial no Dia 1 (msgs/dia):</label>
+                <input type="number" id="cfg-aquecimento-inicio" class="input-field" min="5" placeholder="20">
+                <small>Recomendado: 15 a 20 msgs</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>Incremento Diário (+msgs por dia):</label>
+                <input type="number" id="cfg-aquecimento-incremento" class="input-field" min="1" placeholder="5">
+                <small>Ex: +5 msgs/dia</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>Teto Diário Máximo (msgs/dia):</label>
+                <input type="number" id="cfg-aquecimento-teto" class="input-field" min="20" placeholder="100">
+                <small>Limite após aquecimento concluído</small>
+              </div>
+            </div>
+
+            <!-- Dica de ouro para aquecimento anti-spam -->
+            <div style="margin-top: 14px; padding: 12px 14px; background: rgba(251, 146, 60, 0.08); border-left: 3px solid #fb923c; border-radius: 4px;">
+              <strong style="color: #fb923c; font-size: 13px;">💡 Dica de Ouro Anti-Spam:</strong>
+              <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-secondary); line-height: 1.4;">
+                Ao aquecer um chip novo, <strong>evite disparar links externos diretamente</strong>. Use nossos <strong>5 Modelos de Aquecimento Seguro</strong> na criação de campanhas: eles utilizam Spintax rico e fazem perguntas amigáveis sobre Pokémon que fazem o contato responder. Quando o destinatário responde à mensagem, a pontuação do seu número no WhatsApp sobe expressivamente e o risco de ban cai para quase zero.
+              </p>
             </div>
           </div>
+        </div>
 
-          <!-- Card Encurtador meli.la & Cookies -->
-          <div class="card card-full">
-            <h3>Encurtador Oficial meli.la & Cookies do Mercado Livre</h3>
-            <p class="card-desc">Para que os links sejam encurtados oficialmente como <code>https://meli.la/...</code>, insira o cookie da sua sessão logada de afiliado.</p>
-
-            <div class="form-group">
-              <label for="cfg-meli-cookie">Cookie de Sessão do Mercado Livre</label>
-              <textarea id="cfg-meli-cookie" class="textarea-field" rows="3" placeholder="Cole aqui seu cookie completo do Mercado Livre (ex: ssid=...; _d2id=...;)"></textarea>
-              <span class="field-hint">💡 No computador, acesse o Mercado Livre logado, abra o F12 &gt; Rede ou Aplicativo &gt; Cookies, e copie o valor completo.</span>
-            </div>
-
-            <div class="form-group">
-              <label for="cfg-meli-tag">Tag de Rastreamento no Encurtador (opcional)</label>
-              <input type="text" id="cfg-meli-tag" class="input-field" placeholder="Ex: caed1312314">
-              <span class="field-hint">Deixe em branco para usar seu próprio apelido de afiliado.</span>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 12px; margin-top: 10px;">
-              <button type="button" id="btn-testar-cookie" class="btn btn-secondary">⚡ Testar Cookie do Mercado Livre</button>
-              <span id="cookie-test-feedback" class="action-feedback"></span>
+        <!-- 4. Pausas Longas em Blocos -->
+        <div class="glass-card" style="margin-bottom: 20px;">
+          <div class="card-header">
+            <h3>☕ 4. Pausas Longas em Blocos (Descanso Natural)</h3>
+          </div>
+          <div class="card-body">
+            <p class="text-muted" style="margin-bottom: 14px; font-size: 13px;">Após um bloco contínuo de disparos, o disparador faz uma pausa longa com tempo aleatório, simulando exatamente o descanso natural de um ser humano real.</p>
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Tamanho do Bloco (a cada N disparos):</label>
+                <input type="number" id="cfg-pausa-cada" class="input-field" min="5" placeholder="50">
+                <small>Padrão recomendado: 50 mensagens</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>Pausa Mínima (minutos):</label>
+                <input type="number" id="cfg-pausa-minutos-min" class="input-field" min="5" placeholder="30">
+                <small>Padrão: 30 minutos</small>
+              </div>
+              <div class="form-group flex-1">
+                <label>Pausa Máxima (minutos):</label>
+                <input type="number" id="cfg-pausa-minutos-max" class="input-field" min="10" placeholder="60">
+                <small>Padrão: 60 minutos</small>
+              </div>
             </div>
           </div>
+        </div>
 
-          <!-- Card Integração Google Planilhas -->
-          <div class="card card-full" style="border: 1px solid rgba(16, 185, 129, 0.35); box-shadow: 0 4px 20px rgba(16, 185, 129, 0.08);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 1.4rem;">📊</span>
-                <h3 style="margin: 0;">Google Planilhas — "produtos tcg valores"</h3>
+        <!-- 5. Janela de Horário e Limite Manual -->
+        <div class="glass-card">
+          <div class="card-header">
+            <h3>🕒 5. Janela de Horário Permitida & Fallback</h3>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group flex-1">
+                <label>Horário de Início dos Disparos:</label>
+                <input type="time" id="cfg-hora-inicio" class="input-field">
               </div>
-              <label class="switch" title="Ativar ou pausar sincronização automática com a planilha">
-                <input type="checkbox" id="cfg-sheets-ativo" checked>
-                <span class="slider round"></span>
-              </label>
+              <div class="form-group flex-1">
+                <label>Horário de Término dos Disparos:</label>
+                <input type="time" id="cfg-hora-fim" class="input-field">
+              </div>
             </div>
-            <p class="card-desc">
-              Registra automaticamente cada oferta enviada nos grupos em tempo real com Data/Hora, Nome, Preço Por/De, Link e Origem.
-            </p>
 
             <div class="form-group">
-              <label for="cfg-sheets-webhook">URL do Webhook do Google Apps Script</label>
-              <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="text" id="cfg-sheets-webhook" class="input-field" placeholder="https://script.google.com/macros/s/AKfycbx.../exec" style="flex: 1;">
-                <button type="button" id="btn-testar-sheets" class="btn btn-secondary" style="white-space: nowrap;">🧪 Testar Planilha</button>
-              </div>
-              <span id="sheets-test-feedback" class="action-feedback" style="display: block; margin-top: 6px;"></span>
+              <label>Limite Diário Fixo (usado apenas se o Aquecimento Gradual for desativado):</label>
+              <input type="number" id="cfg-limite-diario" class="input-field">
+              <small>Evita ultrapassar a cota se preferir limite constante sem incremento diário.</small>
             </div>
+          </div>
+        </div>
+      </section>
 
-            <details style="background: var(--bg-surface); border-radius: 8px; padding: 12px; margin-top: 10px; border: 1px solid var(--border-subtle);">
-              <summary style="cursor: pointer; font-weight: 600; color: #38bdf8;">
-                📋 Instruções Rápidas: Como Ativar a Planilha em 1 Minuto
-              </summary>
-              <div style="margin-top: 10px; font-size: 0.9rem; line-height: 1.6; color: var(--text-secondary);">
-                <ol style="margin-left: 20px; padding-left: 0;">
-                  <li>Abra o seu Google Planilhas e crie uma planilha chamada <strong>produtos tcg valores</strong>.</li>
-                  <li>Clique em <strong>Extensões &gt; Apps Script</strong>, apague o código e cole o script abaixo:</li>
-                </ol>
-                <div style="position: relative; margin: 10px 0;">
-                  <textarea id="sheets-script-code" class="textarea-field" rows="6" readonly style="font-family: monospace; font-size: 0.82rem;"></textarea>
-                  <button type="button" id="btn-copiar-script" class="btn btn-secondary btn-sm" style="position: absolute; top: 8px; right: 8px;">📋 Copiar Script</button>
-                </div>
-                <ol start="3" style="margin-left: 20px; padding-left: 0;">
-                  <li>Clique em <strong>Implantar &gt; Nova implantação</strong> (Tipo: App da Web, Quem tem acesso: Qualquer pessoa).</li>
-                  <li>Copie a URL gerada e cole no campo acima!</li>
-                </ol>
-              </div>
-            </details>
+      <!-- ÁREA DE CONTEÚDO: FINANÇAS & LOGS (ESMERALDA 💼) -->
+      <section class="tab-content" id="pane-financas">
+        <!-- Barra de Controle de Período & Ações Rápidas -->
+        <div class="financas-header-bar">
+          <div class="financas-header-left">
+            <div class="mes-selector-wrapper">
+              <label for="financas-mes-select" class="selector-label">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Mês de Referência:
+              </label>
+              <select id="financas-mes-select" class="input-field select-month-field">
+                <option value="">Carregando meses...</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btn-financas-mes-atual" title="Ir para o mês corrente">
+              📅 Mês Atual
+            </button>
           </div>
 
-          <!-- Card Mensagem Diária de Abertura (07:00 AM) -->
-          <div class="card card-full" style="border: 1px solid rgba(245, 158, 11, 0.35); box-shadow: 0 4px 20px rgba(245, 158, 11, 0.08);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 1.4rem;">🌅</span>
-                <h3 style="margin: 0;">Mensagem Diária de Abertura do Grupo</h3>
-              </div>
-              <label class="switch" title="Ativar ou pausar postagem diária automática de abertura">
-                <input type="checkbox" id="cfg-msg-abertura-ativo" checked>
-                <span class="slider round"></span>
-              </label>
-            </div>
-            <p class="card-desc">
-              Posta automaticamente todos os dias no horário configurado uma mensagem oficial de bom dia em todos os grupos de destino ativos.
-            </p>
+          <div class="financas-header-actions">
+            <button class="btn btn-primary btn-sm" id="btn-balanco-exportar-csv" title="Exportar Balanço de Lucro & Prejuízo com Reinvestimento em CSV (Excel)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              📊 Exportar Balanço (DRE / Excel)
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-financas-exportar-csv" title="Exportar dados de campanhas Meta em formato CSV">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Exportar Despesas (CSV)
+            </button>
+            <button class="btn btn-primary btn-sm btn-print-report" id="btn-financas-imprimir" title="Imprimir ou Salvar Relatório Executivo em PDF">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              Imprimir / PDF
+            </button>
+          </div>
+        </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 12px;">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label for="cfg-msg-abertura-horario">⏰ Horário de Envio (Horário de Brasília):</label>
-                <input type="time" id="cfg-msg-abertura-horario" class="input-field" value="07:00" style="font-size: 1.1rem; font-weight: 600;">
-                <span class="field-hint">Padrão: 07:00 da manhã.</span>
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
-                <label>Status do Agendador:</label>
-                <div id="msg-abertura-status-badge" style="padding: 0.6rem 0.8rem; background: var(--bg-surface); border-radius: 6px; border: 1px solid var(--border-subtle); font-size: 0.85rem; color: var(--text-secondary);">
-                  Carregando status...
-                </div>
-              </div>
-            </div>
-
-            <!-- Seletor Visual de Modelos (Flags Interativas) -->
-            <div style="margin-top: 10px; margin-bottom: 14px;">
-              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
-                <label style="font-weight: 600; font-size: 0.92rem; color: #fff; display: flex; align-items: center; gap: 6px;">
-                  <span>🏷️</span> Escolha o Modelo de Bom Dia para o Grupo:
-                </label>
-                <span style="font-size: 0.78rem; color: var(--text-secondary);">Clique na flag para alternar</span>
-              </div>
-
-              <div id="abertura-flags-container" class="abertura-flags-grid">
-                <!-- Flag Rotativo Diário -->
-                <div class="abertura-flag-card active" data-modelo="rotacao" id="flag-modelo-rotacao" title="Alternar diariamente entre todos os modelos humanizados">
-                  <div class="abertura-flag-title">
-                    <span>🔄 Alternância Automática</span>
-                    <span class="abertura-flag-badge badge-rotacao">Recomendado</span>
-                    <span class="abertura-flag-badge badge-ativo-status">✓ Ativo</span>
-                  </div>
-                  <p class="abertura-flag-desc">
-                    Revezamento inteligente: a cada dia da semana o grupo acorda com uma mensagem diferente, dinâmica e 100% humanizada.
-                  </p>
-                </div>
-
-                <!-- Flag Modelo 1 -->
-                <div class="abertura-flag-card" data-modelo="0" id="flag-modelo-0" title="Fixar Modelo 1">
-                  <div class="abertura-flag-title">
-                    <span>🌟 Modelo 1: Comunidade & Curadoria a Dedo</span>
-                    <span class="abertura-flag-badge badge-ativo-status">✓ Ativo</span>
-                  </div>
-                  <p class="abertura-flag-desc">
-                    Foco em gratidão, crescimento da comunidade e garimpo diário feito pessoalmente de fã para fã.
-                  </p>
-                </div>
-
-                <!-- Flag Modelo 2 -->
-                <div class="abertura-flag-card" data-modelo="1" id="flag-modelo-1" title="Fixar Modelo 2">
-                  <div class="abertura-flag-title">
-                    <span>🎯 Modelo 2: Garimpo Diário & Ofertas Reais</span>
-                    <span class="abertura-flag-badge badge-ativo-status">✓ Ativo</span>
-                  </div>
-                  <p class="abertura-flag-desc">
-                    Foco no tempo dedicado a caçar promoções reais, alertando sobre fakes, pegadinhas e preços abusivos.
-                  </p>
-                </div>
-
-                <!-- Flag Modelo 3 -->
-                <div class="abertura-flag-card" data-modelo="2" id="flag-modelo-2" title="Fixar Modelo 3">
-                  <div class="abertura-flag-title">
-                    <span>🃏 Modelo 3: Colecionador Raiz & Preço Justo</span>
-                    <span class="abertura-flag-badge badge-ativo-status">✓ Ativo</span>
-                  </div>
-                  <p class="abertura-flag-desc">
-                    Linguagem de colecionador experiente, separando o que vale a pena abrir ou guardar lacrado pelo melhor valor.
-                  </p>
-                </div>
-
-                <!-- Flag Modelo 4 -->
-                <div class="abertura-flag-card" data-modelo="3" id="flag-modelo-3" title="Fixar Modelo 4">
-                  <div class="abertura-flag-title">
-                    <span>🎟️ Modelo 4: Cupons & Achados Selecionados</span>
-                    <span class="abertura-flag-badge badge-ativo-status">✓ Ativo</span>
-                  </div>
-                  <p class="abertura-flag-desc">
-                    Foco em economia inteligente, garimpando cupons válidos, frete grátis e combos vantajosos do dia.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Área de Edição do Texto da Mensagem -->
-            <div class="form-group" style="margin-bottom: 12px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <label for="cfg-msg-abertura-texto" style="margin-bottom: 0; font-size: 0.88rem; font-weight: 600;">
-                  📝 Texto Oficial (Editável):
-                </label>
-                <span id="rotacao-hint" style="font-size: 0.8rem; color: #f59e0b; font-weight: 500;">
-                  🔄 Modo Alternância Ativo (envia um modelo a cada dia)
+        <!-- SEÇÃO PRINCIPAL: BALANÇO DE LUCRO, PREJUÍZO & REGRA DE REINVESTIMENTO (70%) -->
+        <div class="glass-card" style="margin-top: 18px; border: 1px solid rgba(234, 88, 12, 0.35); box-shadow: 0 4px 20px rgba(234, 88, 12, 0.08);">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 1.3rem;">💼</span>
+                <h3 style="margin: 0;">Balanço Financeiro Mensal (DRE) · <span id="balanco-dre-mes-nome">Mês Atual</span></h3>
+                <span class="badge" id="balanco-resumo-badge" style="background: rgba(74, 222, 128, 0.2); color: #86efac; border: 1px solid rgba(74, 222, 128, 0.4);">
+                  Aguardando lançamentos
                 </span>
               </div>
-              <textarea id="cfg-msg-abertura-texto" class="textarea-field" rows="7" style="font-family: inherit; line-height: 1.5; font-size: 0.88rem;"></textarea>
-              <span class="field-hint" style="margin-top: 4px; display: block;">
-                💡 <code>{dia_semana}</code> é substituído automaticamente pelo dia da semana real (ex: sexta-feira).
+              <p class="text-muted" style="margin: 3px 0 0; font-size: 13px;">
+                Demonstrativo de lucros diários, gastos com campanhas de tráfego pago e cálculo automático do fundo de reinvestimento.
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <span class="badge" style="background: rgba(234, 88, 12, 0.15); color: #fdba74; border: 1px solid rgba(234, 88, 12, 0.35); font-size: 12px; padding: 4px 10px;">
+                🎯 Meta Reinvestimento: <strong id="balanco-badge-pct-reinvest">70%</strong>
               </span>
             </div>
+          </div>
 
-            <!-- Simulador Visual do WhatsApp -->
-            <div class="wa-abertura-preview-container">
-              <div class="wa-abertura-preview-header">
-                <span style="font-size: 0.82rem; font-weight: 600; color: #8696a0; display: flex; align-items: center; gap: 6px;">
-                  <span>💬</span> Prévia no WhatsApp (como o membro verá):
+          <div class="card-body">
+            <!-- 5 KPIs do Balanço Mensal -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px;">
+              <!-- KPI 1: Lucro / Faturamento Bruto -->
+              <div style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(74, 222, 128, 0.25); border-radius: 10px; padding: 14px;">
+                <span style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #86efac; font-weight: 600;">
+                  🟢 Lucro / Receita Bruta
                 </span>
-                <span id="wa-preview-modelo-nome" style="font-size: 0.75rem; color: #00a884; font-weight: 600;">
-                  Rotativo Diário
-                </span>
+                <h3 style="margin: 6px 0 2px; font-size: 20px; font-weight: 700; color: #4ade80;" id="balanco-resumo-lucro-bruto">R$ 0,00</h3>
+                <span style="font-size: 11px; color: var(--text-muted);" id="balanco-resumo-dias-lucro">0 dia(s) registrados</span>
               </div>
-              <div id="wa-abertura-bubble" class="wa-bubble-sent-abertura">
-                Carregando prévia da mensagem...
+
+              <!-- KPI 2: Gasto em Campanhas -->
+              <div style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(248, 113, 113, 0.25); border-radius: 10px; padding: 14px;">
+                <span style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #fca5a5; font-weight: 600;">
+                  🔴 Gasto em Campanhas
+                </span>
+                <h3 style="margin: 6px 0 2px; font-size: 20px; font-weight: 700; color: #f87171;" id="balanco-resumo-gasto-campanhas">R$ 0,00</h3>
+                <span style="font-size: 11px; color: var(--text-muted);" id="balanco-resumo-roi-badge">ROI: 0%</span>
+              </div>
+
+              <!-- KPI 3: Resultado Líquido do Mês -->
+              <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(251, 191, 36, 0.35); border-radius: 10px; padding: 14px;">
+                <span style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #fde047; font-weight: 600;">
+                  💰 Resultado Líquido
+                </span>
+                <h3 style="margin: 6px 0 2px; font-size: 20px; font-weight: 800; color: #fbbf24;" id="balanco-resumo-resultado-liquido">R$ 0,00</h3>
+                <span style="font-size: 11px; color: var(--text-muted);" id="balanco-resumo-margem-badge">Margem Líquida: 0%</span>
+              </div>
+
+              <!-- KPI 4: Reinvestimento em Campanhas (ex: 70%) -->
+              <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 10px; padding: 14px;">
+                <span style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #7dd3fc; font-weight: 600;">
+                  🚀 Fundo para Campanhas (<span id="balanco-pct-campanhas-label">70%</span>)
+                </span>
+                <h3 style="margin: 6px 0 2px; font-size: 20px; font-weight: 700; color: #38bdf8;" id="balanco-resumo-reinvestimento">R$ 0,00</h3>
+                <span style="font-size: 11px; color: #94a3b8;">Verba para reinvestir no tráfego</span>
+              </div>
+
+              <!-- KPI 5: Lucro Líquido Real / Retirada -->
+              <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 10px; padding: 14px;">
+                <span style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #d8b4fe; font-weight: 600;">
+                  💵 Lucro Livre / Caixa (<span id="balanco-pct-livre-label">30%</span>)
+                </span>
+                <h3 style="margin: 6px 0 2px; font-size: 20px; font-weight: 700; color: #c084fc;" id="balanco-resumo-lucro-livre">R$ 0,00</h3>
+                <span style="font-size: 11px; color: #94a3b8;">Saldo líquido para retirada</span>
               </div>
             </div>
 
-            <!-- Barra de Ações Rápidas do Card -->
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.07);">
-              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                <button type="button" id="btn-salvar-msg-abertura" class="btn btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none; font-weight: 600;">
-                  💾 Salvar Configurações de Abertura
-                </button>
-                <button type="button" id="btn-testar-msg-abertura" class="btn btn-secondary">
-                  🚀 Testar Envio Agora no WhatsApp
-                </button>
-                <button type="button" id="btn-restaurar-msg-abertura" class="btn btn-sm btn-secondary" title="Restaura o texto para o modelo padrão">
-                  🔄 Restaurar Modelo 1
-                </button>
+            <!-- Card de Configuração da Flag de Reinvestimento -->
+            <div style="background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 10px; padding: 14px 18px; margin-bottom: 22px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                <div style="flex: 1; min-width: 260px;">
+                  <strong style="color: #fbbf24; font-size: 13.5px; display: flex; align-items: center; gap: 6px;">
+                    <span>⚙️</span> Flag de Destinação: % do Lucro Destinado a Novas Campanhas
+                  </strong>
+                  <p style="margin: 4px 0 0; font-size: 12px; color: #cbd5e1;" id="texto-explicativo-reinvestimento">
+                    Defina quanto do seu lucro líquido será automaticamente retido para acelerar anúncios no próximo período (padrão: 70%).
+                  </p>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <div style="position: relative; width: 120px;">
+                    <input type="number" id="cfg-percentual-reinvestimento" class="input-field" min="0" max="100" step="1" value="70" style="padding-right: 28px; text-align: center; font-weight: 700; font-size: 14px;">
+                    <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-weight: 700;">%</span>
+                  </div>
+                  <button type="button" class="btn btn-primary btn-sm" id="btn-salvar-flag-reinvestimento" style="white-space: nowrap;">
+                    💾 Salvar Meta
+                  </button>
+                </div>
               </div>
-              <span id="msg-abertura-feedback" class="action-feedback"></span>
+            </div>
+
+            <!-- Formulário de Lançamento Manual Diário -->
+            <div style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 18px; margin-bottom: 22px;">
+              <h4 style="margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px;">
+                <span>✍️</span> Lançamento Manual Diário (Gastos em Campanhas & Lucros do Dia)
+              </h4>
+
+              <form id="form-lancamento-diario" onsubmit="return false;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="lancamento-data" style="font-size: 12px; font-weight: 600;">Data do Lançamento:</label>
+                    <input type="date" id="lancamento-data" class="input-field" required>
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="lancamento-gasto" style="font-size: 12px; font-weight: 600; color: #fca5a5;">Gasto com Campanhas (R$):</label>
+                    <input type="number" id="lancamento-gasto" class="input-field" step="0.01" min="0" placeholder="0,00">
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="lancamento-lucro" style="font-size: 12px; font-weight: 600; color: #86efac;">Lucro / Receita Bruta (R$):</label>
+                    <input type="number" id="lancamento-lucro" class="input-field" step="0.01" min="0" placeholder="0,00">
+                  </div>
+
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label for="lancamento-categoria" style="font-size: 12px; font-weight: 600;">Canal / Categoria:</label>
+                    <select id="lancamento-categoria" class="input-field">
+                      <option value="meta_ads">Meta Ads (Facebook/Instagram)</option>
+                      <option value="google_ads">Google Ads</option>
+                      <option value="afiliado_ml">Afiliado Mercado Livre</option>
+                      <option value="venda_direta">Vendas Diretas Pokémon</option>
+                      <option value="geral" selected>Geral / Outros</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 0;">
+                    <label for="lancamento-descricao" style="font-size: 12px; font-weight: 600;">Descrição / Observações (Opcional):</label>
+                    <div style="display: flex; gap: 10px;">
+                      <input type="text" id="lancamento-descricao" class="input-field" placeholder="Ex: Anúncio Reels Blister Quádruplo + Comissões geradas no ML" style="flex: 1;">
+                      <button type="button" class="btn btn-primary" id="btn-gravar-lancamento" style="white-space: nowrap;">
+                        ➕ Gravar Lançamento
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            <!-- Tabela de Lançamentos Diários do Mês -->
+            <div style="margin-top: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #fff;">
+                  📋 Extrato dos Lançamentos do Mês (<span id="tabela-lancamentos-mes-nome">Mês</span>)
+                </h4>
+                <span class="badge badge-fire" id="badge-total-lancamentos">0 lançamentos</span>
+              </div>
+
+              <div class="table-responsive">
+                <table class="data-table" id="tabela-lancamentos-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 100px;">Data</th>
+                      <th>Gasto Campanhas</th>
+                      <th>Lucro / Receita</th>
+                      <th>Saldo do Dia</th>
+                      <th>Reinvestimento Sugerido</th>
+                      <th>Lucro Livre</th>
+                      <th>Canal / Categoria</th>
+                      <th>Descrição</th>
+                      <th style="text-align: right; width: 60px;">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tabela-lancamentos-tbody">
+                    <tr>
+                      <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                        Nenhum lançamento diário registrado para este mês ainda. Faça seu primeiro lançamento no formulário acima!
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 Cards de Métricas de Tráfego Meta Ads (Executive KPIs) -->
+        <div style="margin-top: 24px; margin-bottom: 10px;">
+          <h4 class="text-muted" style="font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">
+            📊 Métricas Granulares de Tráfego Meta Ads (Arquivos & Faturas)
+          </h4>
+        </div>
+
+        <div class="metrics-grid financas-metrics-grid">
+          <!-- KPI 1: Gasto Total -->
+          <div class="metric-card kpi-card-fire">
+            <div class="metric-icon red">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Investimento Total no Mês</span>
+              <h3 class="metric-value font-fire" id="financas-kpi-gasto">R$ 0,00</h3>
+              <span class="metric-subtext" id="financas-kpi-uploads-count">0 planilhas/faturas arquivadas</span>
             </div>
           </div>
 
-          <!-- Card Limpeza de Marcas Concorrentes -->
-          <div class="card card-full">
-            <h3>Limpeza de Marcas Concorrentes</h3>
-            <p class="card-desc">Textos, @arrobas e #hashtags de terceiros que serão removidos do texto copiado (um por linha).</p>
-            <textarea id="cfg-frases" class="textarea-field" rows="4" placeholder="@rasgabooster.tcg&#10;#rasgaboot"></textarea>
-            
-            <div class="card-actions" style="margin-top: 14px;">
-              <button id="btn-salvar-config" class="btn btn-primary">Salvar Todas as Configurações</button>
-              <span id="config-status-msg" class="action-feedback"></span>
+          <!-- KPI 2: Total de Leads Conquistados -->
+          <div class="metric-card kpi-card-green">
+            <div class="metric-icon green">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             </div>
+            <div class="metric-data">
+              <span class="metric-label">Leads / Resultados Conquistados</span>
+              <h3 class="metric-value" id="financas-kpi-leads">0</h3>
+              <span class="metric-subtext" id="financas-kpi-campanhas-count">0 campanhas analisadas</span>
+            </div>
+          </div>
+
+          <!-- KPI 3: Custo por Lead (CPL) -->
+          <div class="metric-card kpi-card-orange">
+            <div class="metric-icon orange">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Custo Médio por Lead (CPL)</span>
+              <h3 class="metric-value" id="financas-kpi-cpl">R$ 0,00</h3>
+              <span class="metric-subtext" id="financas-kpi-cpl-badge">Aguardando dados</span>
+            </div>
+          </div>
+
+          <!-- KPI 4: Tráfego & Eficiência (Cliques / CTR) -->
+          <div class="metric-card kpi-card-blue">
+            <div class="metric-icon blue">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M16.2 7.8l-2 6.3-6.4 2 2-6.3z"></path></svg>
+            </div>
+            <div class="metric-data">
+              <span class="metric-label">Cliques &amp; Alcance</span>
+              <h3 class="metric-value" id="financas-kpi-cliques">0 cliques</h3>
+              <span class="metric-subtext" id="financas-kpi-ctr-cpc">CTR: 0% • CPC: R$ 0,00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Seção Superior Dividida: Upload de Arquivo (Planilha ou PDF) & Dicas -->
+        <div class="financas-split-grid">
+          <!-- Card de Upload Unificado: XLSX, XLS, CSV e PDF -->
+          <div class="glass-card">
+            <div class="card-header">
+              <div>
+                <h3>📥 Arquivar Nova Planilha ou Fatura (.xlsx, .csv, .pdf)</h3>
+                <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">
+                  Suba exportações de métricas (XLSX/CSV) ou faturas/recibos em PDF emitidos pelo Meta Ads. O sistema armazena o arquivo permanente e extrai automaticamente valores e métricas.
+                </p>
+              </div>
+            </div>
+            <div class="card-body">
+              <form id="form-upload-financas" onsubmit="return false;">
+                <!-- Drag and Drop Dropzone que aceita planilhas e PDFs -->
+                <div class="file-dropzone" id="financas-dropzone">
+                  <input type="file" id="financas-file-input" accept=".xlsx, .xls, .csv, .pdf, application/pdf" style="display: none;">
+                  <div class="dropzone-content">
+                    <div class="dropzone-icon" id="dropzone-main-icon">📑</div>
+                    <strong id="dropzone-title">Arraste a planilha ou fatura em PDF aqui</strong>
+                    <p id="dropzone-subtitle">ou clique para selecionar do seu computador (.xlsx, .xls, .csv, .pdf)</p>
+                    <span class="dropzone-badge" id="dropzone-filename" style="display: none;"></span>
+                  </div>
+                </div>
+
+                <div class="form-row" style="margin-top: 14px;">
+                  <div class="form-group flex-1">
+                    <label for="financas-semana-input">Rótulo da Semana / Fatura (Opcional):</label>
+                    <input type="text" id="financas-semana-input" class="input-field" placeholder="Ex: Semana 1, Recibo #12345 (ou auto)">
+                    <small>Se não preencher, detectamos automaticamente pelas datas do arquivo.</small>
+                  </div>
+                  <div class="form-group flex-1">
+                    <label for="financas-mes-input">Mês de Referência (YYYY-MM):</label>
+                    <input type="month" id="financas-mes-input" class="input-field">
+                    <small>Mês contábil onde esse gasto será consolidado.</small>
+                  </div>
+                </div>
+
+                <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 10px;">
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-limpar-upload" style="display: none;">
+                    Limpar
+                  </button>
+                  <button type="button" class="btn btn-primary" id="btn-processar-upload">
+                    ⚡ Arquivar e Processar Arquivo
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Card de Orientações & Boas Práticas do Meta Ads -->
+          <div class="glass-card financas-tips-card">
+            <div class="card-header">
+              <div>
+                <h3>💡 Como Baixar a Planilha ou Fatura no Meta Ads</h3>
+                <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">Guia rápido para extrair relatórios e recibos no Gerenciador de Anúncios.</p>
+              </div>
+            </div>
+            <div class="card-body">
+              <ul class="financas-tips-list">
+                <li>
+                  <span class="tip-num">1</span>
+                  <div>
+                    <strong>Planilhas Semanais (.xlsx / .csv)</strong>
+                    <p>No Meta Ads Manager, selecione o período da semana, clique em <strong>Exportar > Exportar visualização da tabela</strong> (.xlsx ou .csv).</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="tip-num">2</span>
+                  <div>
+                    <strong>Faturas e Recibos em PDF (.pdf)</strong>
+                    <p>Em <em>Cobrança e Pagamentos</em>, selecione o pagamento desejado e baixe a fatura/recibo em <strong>PDF</strong>. Suba diretamente aqui!</p>
+                  </div>
+                </li>
+                <li>
+                  <span class="tip-num">3</span>
+                  <div>
+                    <strong>Arquivamento &amp; Relatório Executivo</strong>
+                    <p>Todos os arquivos brutos ficam salvos permanentemente para auditoria, e o sistema compila os totais para o relatório executivo em PDF.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Histórico de Planilhas e Faturas Arquivadas no Mês -->
+        <div class="glass-card" style="margin-top: 24px;">
+          <div class="card-header">
+            <div>
+              <h3>📁 Arquivos e Faturas Arquivadas (<span id="financas-mes-badge-label">Mês Selecionado</span>)</h3>
+              <p class="text-muted" style="margin: 2px 0 0; font-size: 13px;">Histórico de todos os arquivos (.xlsx, .csv e .pdf) enviados para o mês. Visualize ou baixe o original a qualquer momento.</p>
+            </div>
+            <span class="badge badge-fire" id="badge-total-arquivos">0 arquivos</span>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="data-table" id="financas-uploads-table">
+                <thead>
+                  <tr>
+                    <th>Semana / Rótulo</th>
+                    <th>Tipo</th>
+                    <th>Nome do Arquivo Original</th>
+                    <th>Período Coberto</th>
+                    <th>Gasto Consumido</th>
+                    <th>Leads Gerados</th>
+                    <th>CPL</th>
+                    <th>Data do Envio</th>
+                    <th style="text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="financas-uploads-tbody">
+                  <tr>
+                    <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                      Nenhum arquivo arquivado para este mês ainda. Faça seu primeiro upload acima!
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Relatório Consolidado Executivo: Evolução Semanal & Performance por Campanha -->
+        <div class="glass-card report-printable" id="financas-relatorio-consolidado" style="margin-top: 24px;">
+          <div class="card-header">
+            <div>
+              <div class="report-badge-exec">RELATÓRIO MENSAL CONSOLIDADO · META ADS</div>
+              <h3 id="financas-relatorio-titulo">📊 Desempenho Financeiro e de Tráfego</h3>
+              <p class="text-muted" id="financas-relatorio-subtitulo" style="margin: 2px 0 0; font-size: 13px;">Visão executiva das campanhas, taxa de aquisição de leads e retorno de verba.</p>
+            </div>
+            <div class="report-watermark">Pokémon TCG Oficial</div>
+          </div>
+
+          <div class="card-body">
+            <!-- Evolução Semana a Semana / Faturas -->
+            <div class="report-section-block">
+              <h4 class="report-section-title">
+                <span>📅 1. Evolução Semana a Semana & Faturas</span>
+              </h4>
+              <div class="table-responsive">
+                <table class="data-table" id="financas-semanas-table">
+                  <thead>
+                    <tr>
+                      <th>Semana / Fatura</th>
+                      <th>Período</th>
+                      <th>Investimento (R$)</th>
+                      <th>Leads</th>
+                      <th>CPL Médio</th>
+                      <th>Cliques</th>
+                      <th>Impressões</th>
+                      <th>CTR (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="financas-semanas-tbody">
+                    <tr>
+                      <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                        Aguardando dados das planilhas ou faturas...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Performance por Campanha no Mês -->
+            <div class="report-section-block" style="margin-top: 28px;">
+              <h4 class="report-section-title">
+                <span>🎯 2. Performance Consolidada por Campanha</span>
+              </h4>
+              <div class="table-responsive">
+                <table class="data-table" id="financas-campanhas-table">
+                  <thead>
+                    <tr>
+                      <th>Nome da Campanha</th>
+                      <th>Gasto no Mês (R$)</th>
+                      <th>% da Verba</th>
+                      <th>Leads Gerados</th>
+                      <th>Custo por Lead (CPL)</th>
+                      <th>Cliques</th>
+                      <th>Impressões</th>
+                      <th>Eficiência</th>
+                    </tr>
+                  </thead>
+                  <tbody id="financas-campanhas-tbody">
+                    <tr>
+                      <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 24px;">
+                        Aguardando dados das campanhas...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Resumo Financeiro de Fechamento -->
+            <div class="financas-fechamento-box" id="financas-fechamento-box" style="margin-top: 24px;">
+              <div class="fechamento-item">
+                <span class="fechamento-label">Investimento Total do Período:</span>
+                <strong class="fechamento-val text-fire" id="fechamento-total-gasto">R$ 0,00</strong>
+              </div>
+              <div class="fechamento-item">
+                <span class="fechamento-label">Volume Total de Cadastros/Leads:</span>
+                <strong class="fechamento-val" id="fechamento-total-leads">0 contatos</strong>
+              </div>
+              <div class="fechamento-item">
+                <span class="fechamento-label">CPL Médio do Mês:</span>
+                <strong class="fechamento-val text-green" id="fechamento-cpl-medio">R$ 0,00</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTAINER EXECUTIVO PARA IMPRESSÃO / PDF (LAYOUT MODERNO & BONITO) -->
+        <div id="relatorio-executivo-print" class="relatorio-executivo-container" style="display: none;">
+          <!-- Conteúdo gerado dinamicamente para PDF com visual de alta classe -->
+        </div>
+      </section>
+      <section class="tab-content" id="pane-logs">
+        <div class="pane-header">
+          <div>
+            <h2>Logs de Operação do Sistema</h2>
+            <p>Registro cronológico de disparos, respostas da IA e eventos do WhatsApp.</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-refresh-logs">Atualizar Logs</button>
+        </div>
+
+        <!-- Filter bar for Logs -->
+        <div class="filter-bar" style="margin-bottom: 16px;">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="logs-search" placeholder="Filtrar logs por palavra ou categoria (ia, disparo, error, warn)..." class="input-field search-input">
+          </div>
+        </div>
+
+        <div class="terminal-card">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="terminal-title">sistema.log — Tempo Real</span>
+          </div>
+          <div class="terminal-body" id="terminal-logs">
+            <div class="log-line info">[SISTEMA] Conectando ao fluxo de logs...</div>
           </div>
         </div>
       </section>
     </main>
   </div>
 
-  <!-- Modal Nova / Editar Rota -->
+  <!-- MODAIS COMPARTILHADOS -->
+  <!-- Modal Nova / Editar Rota (Replicador) -->
   <div id="modal-rota" class="modal-overlay" style="display: none;">
     <div class="modal-card">
       <div class="modal-header">
         <h3 id="modal-rota-title">Nova Rota de Promoções</h3>
         <button id="modal-rota-close" class="modal-close">&times;</button>
       </div>
-
       <div class="modal-body">
-        <input type="hidden" id="rota-edit-id" value="">
-
-        <div class="form-group">
-          <label for="rota-nome">Nome da Rota</label>
-          <input type="text" id="rota-nome" class="input-field" placeholder="Ex: TCG Promo Oficial">
-        </div>
-
-        <div class="form-group">
-          <label>Grupos de Origem (De onde copiar)</label>
-          <input type="text" id="origens-search" class="input-field" placeholder="🔍 Filtrar grupos de origem..." style="margin-bottom: 6px; padding: 7px 12px; font-size: 12.5px;">
-          <p class="field-hint">Selecione um ou mais grupos que enviam ofertas.</p>
-          <div id="origens-selector" class="chat-selector-box"></div>
-        </div>
-
-        <div class="form-group">
-          <label>Grupo de Destino (Onde postar)</label>
-          <input type="text" id="destinos-search" class="input-field" placeholder="🔍 Filtrar grupos de destino..." style="margin-bottom: 6px; padding: 7px 12px; font-size: 12.5px;">
-          <p class="field-hint">Selecione o seu grupo do WhatsApp que receberá a oferta.</p>
-          <div id="destinos-selector" class="chat-selector-box"></div>
-        </div>
+        <form id="form-rota">
+          <input type="hidden" id="rota-id">
+          <div class="form-group">
+            <label for="rota-nome">Nome Identificador da Rota:</label>
+            <input type="text" id="rota-nome" class="form-control" placeholder="Ex: Monitoramento Concorrentes ➔ VIP Principal" required>
+          </div>
+          <div class="form-group">
+            <label>Grupos de Origem (Onde capturar promoções):</label>
+            <div id="rota-origens-list" class="checkbox-group-container">
+              <span class="loading-hint">Carregando grupos conectados...</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Grupos de Destino (Onde postar com seu afiliado):</label>
+            <div id="rota-destinos-list" class="checkbox-group-container">
+              <span class="loading-hint">Carregando grupos conectados...</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="checkbox-inline">
+              <input type="checkbox" id="rota-ativa" checked>
+              <span>Rota Ativa Imediatamente</span>
+            </label>
+          </div>
+        </form>
       </div>
-
       <div class="modal-footer">
-        <button id="btn-cancelar-rota" class="btn btn-secondary">Cancelar</button>
-        <button id="btn-salvar-rota" class="btn btn-primary">Gravar Rota</button>
+        <button type="button" class="btn btn-secondary" id="btn-cancelar-rota">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-salvar-rota">Salvar Rota</button>
       </div>
     </div>
   </div>
 
-  <!-- Toast Notification Container -->
-  <div id="toast-container" class="toast-container"></div>
+  <!-- Modais do Bot Disparador -->
+  <div class="modal-overlay" id="modal-campanha" style="display: none;">
+    <div class="modal-dialog modal-dialog-large">
+      <div class="modal-header">
+        <div>
+          <h3>Criar Nova Campanha de Disparo</h3>
+          <p class="modal-subtitle">Configure o texto com Spintax e visualize ao vivo como o cliente receberá no WhatsApp.</p>
+        </div>
+        <button class="btn-close" id="btn-close-campanha-modal">&times;</button>
+      </div>
+      <div class="modal-body modal-split">
+        <!-- Coluna Esquerda: Formulário de Configuração -->
+        <div class="modal-col form-col">
+          <div class="form-group">
+            <label for="camp-nome">Nome da Campanha:</label>
+            <input type="text" id="camp-nome" placeholder="Ex: Ofertas Fichários Pokémon Fev" class="input-field">
+          </div>
 
-  <script src="app.js?v=2.1"></script>
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label for="camp-target" style="margin-bottom: 0;">Público-Alvo / Grupos:</label>
+              <span id="camp-target-counter" class="field-hint" style="margin: 0; font-size: 11.5px;"></span>
+            </div>
+            <input type="text" id="camp-target-search" class="input-field" placeholder="🔍 Pesquisar grupo ou pasta de leads..." style="margin-bottom: 8px; padding: 7px 12px; font-size: 12.5px;">
+            <select id="camp-target" class="input-field">
+              <option value="todos">Todos os Contatos da Base</option>
+            </select>
+          </div>
+
+          <!-- Seletor de Canal de Envio: Baileys vs Meta Cloud -->
+          <div class="form-group">
+            <label>Canal de Envio:</label>
+            <div class="channel-toggle-grid">
+              <label class="channel-card active" id="label-canal-baileys">
+                <input type="radio" name="camp-canal-envio" value="baileys" checked style="display: none;">
+                <div class="channel-card-top">
+                  <span class="channel-icon">📱</span>
+                  <span class="badge" style="background: rgba(138, 180, 248, 0.15); color: var(--google-blue);">Emulação Orgânica</span>
+                </div>
+                <strong>Chip Tradicional (Baileys)</strong>
+                <p>Envio humanizado com ritmo variável, simulação de digitação e warm up gradual.</p>
+              </label>
+
+              <label class="channel-card" id="label-canal-meta">
+                <input type="radio" name="camp-canal-envio" value="meta_cloud" style="display: none;">
+                <div class="channel-card-top">
+                  <span class="channel-icon">⚡</span>
+                  <span class="badge" style="background: rgba(129, 201, 149, 0.15); color: var(--google-green);">Zero Risco Ban</span>
+                </div>
+                <strong>Meta Cloud Oficial</strong>
+                <p>Disparos autenticados pelo WhatsApp Business da Meta com templates pré-validados.</p>
+              </label>
+            </div>
+          </div>
+
+          <!-- Bloco Exclusivo: Seleção de Template Meta Cloud -->
+          <div class="form-group" id="group-meta-template-selection" style="display: none;">
+            <label for="camp-meta-template-select">Selecione o Template Aprovado na Meta:</label>
+            <select id="camp-meta-template-select" class="input-field" style="border-color: rgba(129, 201, 149, 0.5);">
+              <option value="">-- Carregando templates aprovados... --</option>
+            </select>
+            <div id="camp-meta-template-details" style="margin-top: 8px; padding: 10px 14px; background: rgba(129, 201, 149, 0.08); border: 1px solid rgba(129, 201, 149, 0.25); border-radius: 8px; font-size: 12.5px; display: none;">
+            </div>
+          </div>
+
+          <!-- Bloco Exclusivo Chip Baileys: Spintax & Tags -->
+          <div class="form-group" id="group-baileys-template-editor">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label for="camp-template" style="margin-bottom: 0;">Mensagem com Spintax & Tags:</label>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-random-warmup" style="font-size: 11.5px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px; border-color: rgba(251, 146, 60, 0.4); color: #fb923c;">
+                🎲 Sortear Frase de Aquecimento
+              </button>
+            </div>
+            <textarea id="camp-template" rows="7" class="input-field textarea-field" placeholder="{Olá|Oi|Fala} {nome}! Tudo bem? Olha essa oportunidade especial no nosso grupo {grupo}..."></textarea>
+            <div class="tags-hint">
+              <span>Inserir tags:</span>
+              <code title="Nome do contato">{nome}</code>
+              <code title="Bom dia / Boa tarde / Boa noite">{saudacao}</code>
+              <code title="Grupo de origem">{grupo}</code>
+              <code title="Número do WhatsApp">{numero}</code>
+              <small>Spintax: <code>{Opção 1|Opção 2|Opção 3}</code></small>
+            </div>
+
+            <!-- Meta Shield: Validador de Diretrizes Anti-Ban -->
+            <div class="meta-shield-box" id="meta-shield-box">
+              <div class="meta-shield-header">
+                <div class="meta-shield-title">
+                  <span class="meta-shield-icon">🛡️</span>
+                  <div>
+                    <strong>Meta Shield — Auditor Anti-Ban</strong>
+                    <span class="meta-shield-badge badge-seguro" id="meta-shield-badge">🟢 Seguro (100%)</span>
+                  </div>
+                </div>
+                <div class="meta-shield-actions">
+                  <span class="meta-variations-count" id="meta-variations-count" title="Número de variações únicas geradas pelo Spintax">
+                    🎲 1 variação
+                  </span>
+                  <button type="button" class="btn btn-secondary btn-sm" id="btn-optimize-meta-ai" title="Reescrever template com IA para adequação às diretrizes anti-ban da Meta">
+                    ✨ Otimizar com IA
+                  </button>
+                </div>
+              </div>
+
+              <!-- Barra de Score de Risco -->
+              <div class="meta-score-track">
+                <div class="meta-score-fill score-high" id="meta-score-bar" style="width: 100%;"></div>
+              </div>
+
+              <!-- Lista Dinâmica de Alertas / Infrações -->
+              <div class="meta-infracoes-list" id="meta-infracoes-list" style="display: none;"></div>
+
+              <!-- Dica Pro Contextual -->
+              <div class="meta-dica-box" id="meta-dica-box">
+                <span id="meta-dica-text">💡 Dica Pro: Mensagens que parecem conversas naturais entre amigos possuem taxa de banimento próxima de zero.</span>
+              </div>
+            </div>
+          </div>
+  <div class="modal-overlay" id="modal-test-send" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h3>⚡ Testar Disparo no WhatsApp</h3>
+          <p class="modal-subtitle">Envie uma mensagem instantânea para comprovar o funcionamento no seu aparelho.</p>
+        </div>
+        <button class="btn-close" onclick="closeTestModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="test-phone-input">Número de Telefone (com DDD):</label>
+          <input type="text" id="test-phone-input" placeholder="Ex: 5586920026214 ou seu número" class="input-field">
+          <small>Você pode digitar seu próprio número conectado para ver a mensagem chegar em segundos.</small>
+        </div>
+        <div class="form-group">
+          <label for="test-message-input">Mensagem de Teste:</label>
+          <textarea id="test-message-input" rows="3" class="input-field textarea-field" placeholder="Digite uma mensagem de teste...">⚡ Olá! Este é um disparo de teste direto do seu Disparador Pro. A conexão com o WhatsApp está ativa e funcionando 100%!</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeTestModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btn-submit-test-send" onclick="sendTestMessage()">🚀 Disparar Teste Agora</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-import" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h3>Importar Contatos & Criar Pasta</h3>
+          <p class="modal-subtitle">Suba uma planilha ou cole números para criar uma nova pasta de leads.</p>
+        </div>
+        <button class="btn-close" id="btn-close-import-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="import-grupo-nome">Nome da Pasta de Leads:</label>
+          <input type="text" id="import-grupo-nome" placeholder="Ex: Clientes VIP Feira Fev 2026" class="input-field">
+        </div>
+        <div class="form-group">
+          <label for="import-file">Upload de Planilha (.CSV ou .TXT):</label>
+          <input type="file" id="import-file" accept=".csv,.txt" class="input-field" style="padding: 7px;">
+          <small>Se preferir subir um arquivo, o sistema lê automaticamente os números.</small>
+        </div>
+        <div class="form-group">
+          <label for="import-textarea">Ou cole a lista manualmente (um por linha):</label>
+          <textarea id="import-textarea" rows="6" class="input-field textarea-field" placeholder="5511999999999&#10;5521988888888, Carlos&#10;+55 31 97777-7777, Mariana"></textarea>
+          <small>Formato: <code>5511999999999</code> ou <code>5511999999999, Nome</code>.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-import">Cancelar</button>
+        <button class="btn btn-primary" id="btn-confirm-import">Importar e Criar Pasta</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="modal-meta-template" style="display: none;">
+    <div class="modal-dialog modal-dialog-large">
+      <div class="modal-header">
+        <div>
+          <h3>Submeter Template para Validação na Meta</h3>
+          <p class="modal-subtitle">Envie seu template para aprovação oficial da Meta. Após aprovado, você pode disparar sem risco de banimento.</p>
+        </div>
+        <button class="btn-close" id="btn-close-meta-template-modal">&times;</button>
+      </div>
+      <div class="modal-body modal-split">
+        <!-- Coluna Esquerda: Formulário -->
+        <div class="modal-col form-col">
+          <!-- Seletor de Presets Prontos -->
+          <div class="form-group">
+            <label style="color: var(--google-blue); font-weight: 600;">⚡ Modelos Prontos de Utilidade (Pokémon TCG - 50% Mais Barato):</label>
+            <select id="meta-preset-selector" class="input-field" style="border-color: rgba(138, 180, 248, 0.4);">
+              <option value="">-- Selecione um modelo pronto para carregar --</option>
+              <option value="alerta_notificacao_estoque">1. Alerta de Notificação / Monitoramento de Estoque (UTILITY)</option>
+              <option value="atualizacao_comunidade_vip">2. Atualização de Acesso à Comunidade VIP (UTILITY)</option>
+              <option value="confirmacao_solicitacao_link">3. Confirmação de Solicitação de Link Solicitado (UTILITY)</option>
+              <option value="alerta_oportunidade_pokemon">4. Alerta de Oportunidade e Disponibilidade (UTILITY)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="meta-tpl-name">Nome do Template (apenas letras minúsculas e _):</label>
+              <input type="text" id="meta-tpl-name" class="input-field" placeholder="ex: notificacao_estoque_pokemon">
+              <small>Apenas letras minúsculas, números e underline.</small>
+            </div>
+            <div class="form-group flex-1">
+              <label for="meta-tpl-category">Categoria Meta:</label>
+              <select id="meta-tpl-category" class="input-field">
+                <option value="UTILITY" selected>UTILIDADE (UTILITY) — ~R$ 0,18 (Recomendado)</option>
+                <option value="MARKETING">MARKETING — ~R$ 0,38 (Comercial)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label for="meta-tpl-body" style="margin-bottom: 0;">Corpo da Mensagem (Texto do Template):</label>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-meta-optimize-utility" style="font-size: 11.5px; padding: 4px 10px; color: var(--google-blue); border-color: rgba(138, 180, 248, 0.4);">
+                ✨ Converter para Utilidade com IA
+              </button>
+            </div>
+            <textarea id="meta-tpl-body" rows="6" class="input-field textarea-field" placeholder="Olá {{1}}, aviso informativo da Comunidade Pokémon TCG: a disponibilidade dos itens monitorados foi atualizada no link oficial: {{2}}"></textarea>
+            <div class="tags-hint">
+              <span>Variáveis oficiais da Meta:</span>
+              <code title="Nome do destinatário">{{1}}</code>
+              <code title="Link ou informação extra">{{2}}</code>
+              <small>A Meta exige formato numérico duplo: <code>{{1}}</code>, <code>{{2}}</code></small>
+            </div>
+
+            <!-- Caixa de Auditoria de Utilidade em Tempo Real -->
+            <div id="meta-utility-safety-audit" style="margin-top: 10px; padding: 12px 14px; border-radius: 8px; font-size: 12px; display: none;"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="meta-tpl-example">Exemplo de Valores das Variáveis (Exigido pela Meta para aprovação):</label>
+            <input type="text" id="meta-tpl-example" class="input-field" placeholder="Carlos, https://chat.whatsapp.com/exemplo">
+            <small>Separe por vírgula se houver mais de uma variável: ex. <code>Carlos, https://link.com</code></small>
+          </div>
+        </div>
+
+        <!-- Coluna Direita: Preview WhatsApp Oficial -->
+        <div class="modal-col preview-col">
+          <div class="preview-header-bar">
+            <span class="preview-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+              Prévia do Template Oficial Meta
+            </span>
+          </div>
+
+          <div class="whatsapp-phone-frame">
+            <div class="wa-header">
+              <div class="wa-header-left">
+                <span class="wa-back-btn">‹</span>
+                <div class="wa-avatar"><span>🏢</span></div>
+                <div class="wa-contact-info">
+                  <span class="wa-name">Pokémon TCG Oficial</span>
+                  <span class="wa-status" style="color: var(--google-blue);">Conta Comercial Oficial ✓</span>
+                </div>
+              </div>
+            </div>
+            <div class="wa-chat-body">
+              <div class="wa-date-pill">HOJE</div>
+              <div class="wa-bubble-sent" id="wa-meta-preview-bubble">
+                <div class="wa-message-text" id="wa-meta-preview-text">
+                  Digite o texto ao lado para visualizar a formatação do template oficial...
+                </div>
+                <div class="wa-message-meta">
+                  <span class="wa-time">12:00</span>
+                  <span class="wa-ticks">✓✓</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="wa-bottom-bar">
+              <span class="wa-input-mock">Mensagem</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-meta-template">Cancelar</button>
+        <button class="btn btn-primary" id="btn-submit-meta-template">🚀 Submeter para a Meta</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="app-toast"></div>
+
+  <script src="/disparador.js?v=3.0"></script>
+  <script src="/app.js?v=3.0"></script>
 </body>
 </html>

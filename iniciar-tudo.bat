@@ -26,8 +26,9 @@ start "Bot Disparador - Porta 3333" cmd /k "cd /d %~dp0bot-disparador && node di
 
 echo.
 echo [OK] Servidores iniciados com sucesso!
-echo   - Promo Replica:    http://localhost:3000
-echo   - Bot Disparador:   http://localhost:3333
+echo   - ⚡ Super Cockpit Unificado: http://localhost:3000 (Plataforma Única Integrada)
+echo   - 💧 Replicador de Ofertas:  http://localhost:3000
+echo   - 🔥 Disparador com IA:      http://localhost:3333 (ou integrado na porta 3000)
 echo.
 echo Para desenvolvimento com Hot Reload, utilize iniciar-dev.bat.
 echo Para finalizar os servidores, execute parar.bat.

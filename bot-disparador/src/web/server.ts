@@ -119,14 +119,15 @@ export async function createServer() {
       return;
     }
 
-    // Rotas internas entre serviços (protegidas por token X-Internal-Token)
-    if (pathname.startsWith('/api/internal/')) {
-      const internalToken = req.headers['x-internal-token'];
-      const expectedToken = process.env.INTERNAL_API_KEY || getConfig('internal_api_key', 'promo-internal-key-2026');
-      if (!internalToken || internalToken !== expectedToken) {
-        return reply.status(401).send({ ok: false, error: 'Acesso interno não autorizado. Token inválido.' });
-      }
+    // Autorização para Gateway Unificado ou chamadas internas protegidas por token
+    const internalToken = req.headers['x-internal-token'];
+    const expectedToken = process.env.INTERNAL_API_KEY || getConfig('internal_api_key', 'promo-internal-key-2026');
+    if (internalToken && internalToken === expectedToken) {
       return;
+    }
+
+    if (pathname.startsWith('/api/internal/')) {
+      return reply.status(401).send({ ok: false, error: 'Acesso interno não autorizado. Token inválido.' });
     }
 
     // Validação de token de sessão

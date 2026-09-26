@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
+import fastifyHttpProxy from '@fastify/http-proxy';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG } from '../config.js';
@@ -86,6 +87,21 @@ export async function createServer() {
     }
   });
 
+  // Gateway Proxy Unificado para o Bot Disparador & IA (:3333)
+  await app.register(fastifyHttpProxy, {
+    upstream: CONFIG.disparadorUrl,
+    prefix: '/api/bot',
+    rewritePrefix: '/api',
+    replyOptions: {
+      rewriteRequestHeaders: (originalReq, headers) => {
+        return {
+          ...headers,
+          'x-internal-token': CONFIG.internalApiKey
+        };
+      }
+    }
+  });
+
   // Hook de Autenticação Global
   app.addHook('onRequest', async (req, reply) => {
     const url = req.raw.url || '';
@@ -134,7 +150,7 @@ export async function createServer() {
     return { status: 'ok', time: new Date().toISOString() };
   });
 
-  // Endpoints de Autenticação
+  // Endpoints de Autenticação com SSO Unificado
   app.post('/api/auth/login', async (req, reply) => {
     const { username, password } = (req.body as any) || {};
     if (!verifyCredentials(username, password)) {
@@ -142,12 +158,18 @@ export async function createServer() {
     }
 
     const token = createSessionToken(username);
-    reply.header('Set-Cookie', buildSessionCookie(token));
+    reply.header('Set-Cookie', [
+      buildSessionCookie(token),
+      `promo_disparador_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+    ]);
     return { ok: true, message: 'Login realizado com sucesso' };
   });
 
   app.post('/api/auth/logout', async (req, reply) => {
-    reply.header('Set-Cookie', buildClearCookie());
+    reply.header('Set-Cookie', [
+      buildClearCookie(),
+      'promo_disparador_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax'
+    ]);
     return { ok: true, message: 'Logout realizado com sucesso' };
   });
 
@@ -155,6 +177,42 @@ export async function createServer() {
     const token = extractSessionToken(req);
     const auth = verifySessionToken(token);
     return { ok: auth.valid, username: auth.username };
+  });
+
+  // API REST: Status Unificado da Plataforma (Replicador + Disparador + Meli)
+  app.get('/api/unified-status', async () => {
+    let botStatus: { online: boolean; whatsapp: string; metricas?: Record<string, unknown> } = {
+      online: false,
+      whatsapp: 'disconnected'
+    };
+    try {
+      const res = await fetch(`${CONFIG.disparadorUrl.replace(/\/$/, '')}/api/status`, {
+        headers: { 'x-internal-token': CONFIG.internalApiKey },
+        signal: AbortSignal.timeout(2000)
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { whatsapp?: string; metricas?: Record<string, unknown> };
+        botStatus = {
+          online: true,
+          whatsapp: data.whatsapp || 'disconnected',
+          metricas: data.metricas
+        };
+      }
+    } catch {
+      // Disparador pode estar inicializando
+    }
+
+    return {
+      replica: {
+        whatsapp: whatsAppManager.getState(),
+        isAtivo: getConfig('ativo', 'true') === 'true',
+        postsLastHour: getPostsLastHour(),
+        totalEnviadosHoje: getRecentLogs(100).filter((l) => l.status === 'enviado').length,
+        cookieStatus: currentCookieStatus
+      },
+      bot: botStatus,
+      timestamp: new Date().toISOString()
+    };
   });
 
   // Conjunto de conexões WebSocket ativas

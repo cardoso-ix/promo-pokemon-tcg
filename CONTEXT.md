@@ -10,21 +10,20 @@ A **Promo Pokémon TCG** é um ecossistema profissional em **Node.js 22 LTS e Ty
 
 A plataforma opera **24/7 em produção na VPS HostGator (`108.174.145.77`) gerenciada pelo Coolify**, composta por dois sistemas desacoplados que trabalham em harmonia:
 
-1. **Replicador de Ofertas (`app/` — Porta 3000):**
-   - **Tema Visual:** 🌊 Tipo Água (Azul Cyan, Pokéball Água, Gotículas/Bolhas 3D animadas em 60fps).
-   - **Função:** Monitora grupos de ofertas concorrentes, intercepta links, higieniza mensagens, encurta links com a API oficial do Mercado Livre (`https://meli.la/xxxxxx`), baixa fotos oficiais em 2X e replica nos grupos VIP de destino.
-   - **Integração Google Planilhas:** Registra automaticamente na planilha *"produtos tcg valores"* cada oferta postada via Webhook Google Apps Script.
-   - **Mensagem Matinal de Abertura:** Posta automaticamente às 07:00 AM (Horário de Brasília) mensagem de bom dia com rotação de 4 templates.
-   - **Gerador de Anúncios Reativo:** Extração por link de anúncio do ML com preview ao vivo e publicação direta.
+1. **Super Cockpit Unificado (`app/` — Porta 3000):**
+   - **Plataforma Única Integrada:** Centraliza tanto o Replicador de Ofertas quanto o Bot Disparador, Prospecção, Atendimento IA e Módulo Financeiro em um único painel coeso, sem necessidade de logins duplicados nem abertura de abas separadas.
+   - **Multi-Elemental Design System:** Alternância dinâmica entre **Tema Água 💧** (Ofertas e Replicação), **Tema Fogo 🔥** (Prospecção e Disparos) e **Tema Esmeralda 💼** (Finanças & DRE Meta Ads).
+   - **Gateway Proxy de Alto Rendimento:** O servidor Fastify na porta 3000 atua como Gateway reverso para o Bot Disparador (em `/api/bot/*`), com Single Sign-On (SSO) transparente via token interno.
+   - **Monitoramento Duplo em Tempo Real:** Visualização simultânea no Top Header do status de conexão dos dois chips de WhatsApp independentes (Replicador e Disparador) e do sentinel do encurtador Mercado Livre (`meli.la`).
 
 2. **Bot Disparador, Prospecção & Atendimento IA (`bot-disparador/` — Porta 3333):**
-   - **Tema Visual:** 🔥 Tipo Fogo (Vermelho/Laranja, Pokéball Fogo, Brasas & Fagulhas incandescentes 3D em 60fps).
    - **Função:** Extração de participantes de grupos em 1 clique, disparos em massa com proteção anti-ban (Spintax `{A|B|C}` e tags dinâmicas), simulador WhatsApp ao vivo e atendimento privado humanizado com **DeepSeek V4 via OpenCode Gateway**.
    - **Módulo Financeiro & Meta Ads:** Upload e auditoria de planilhas semanais do Meta Ads e faturas em PDF, cálculo de CPL, CTR, CPC, CPM, Ranking de Campanhas, DRE contábil diário e aplicação automática da regra de reinvestimento (70% do lucro para novas campanhas / 30% distribuição).
    - **Meta Cloud API & Utility Templates:** Disparo oficial via Cloud API com templates de serviço (`UTILITY` a ~R$ 0,18).
+   - **Acesso Direto Retrocompatível:** Continua operando na porta 3333 para chamadas diretas e integração com o Gateway.
 
-3. **Ponte Interna Docker (`promo_network`):**
-   - Comunicação autenticada via token (`X-Internal-Token`) enviando ofertas replicadas diretamente para a esteira do Bot Disparador (`/api/internal/oferta`).
+3. **Ponte Interna Docker & Gateway Unificado (`promo_network`):**
+   - Comunicação autenticada via token (`X-Internal-Token`) enviando ofertas replicadas diretamente para a esteira do Bot Disparador (`/api/internal/oferta`) e viabilizando o Gateway reverso unificado na porta 3000.
 
 ---
 
@@ -32,9 +31,10 @@ A plataforma opera **24/7 em produção na VPS HostGator (`108.174.145.77`) gere
 
 | Módulo | URL em Produção | Tema Visual | Credenciais Padrão |
 | :--- | :--- | :--- | :--- |
-| **Réplica Promo Cockpit** | [http://108.174.145.77:3000](http://108.174.145.77:3000) | 🌊 Tipo Água (Azul + Gotículas 3D) | Usuário: `admin`<br>Senha: `promo2026` |
-| **Disparador Pro & IA** | [http://108.174.145.77:3333](http://108.174.145.77:3333) | 🔥 Tipo Fogo (Vermelho + Brasas 3D) | Usuário: `admin`<br>Senha: `promo2026` |
-| **Painel Coolify** | [http://108.174.145.77:8000](http://108.174.145.77:8000) | ⚙️ Gestão de Containers | Autenticado por Token |
+| **⚡ Super Cockpit Unificado** | [http://108.174.145.77:3000](http://108.174.145.77:3000) | 🌊 / 🔥 / 💼 Multi-Elemental | Usuário: `admin`<br>Senha: `promo2026` |
+| **💧 Réplica Promo (Módulo)** | [http://108.174.145.77:3000](http://108.174.145.77:3000) | 🌊 Tipo Água (Azul + Gotículas 3D) | Usuário: `admin`<br>Senha: `promo2026` |
+| **🔥 Disparador Pro & IA (Direto)** | [http://108.174.145.77:3333](http://108.174.145.77:3333) | 🔥 Tipo Fogo (Vermelho + Brasas 3D) | Usuário: `admin`<br>Senha: `promo2026` |
+| **⚙️ Painel Coolify** | [http://108.174.145.77:8000](http://108.174.145.77:8000) | ⚙️ Gestão de Containers | Autenticado por Token |
 
 > **Webhook de Deploy Contínuo (Coolify):**
 > `POST http://108.174.145.77:8000/api/v1/deploy?uuid=devvejts27nuuqhefh5gvwra`  
@@ -44,16 +44,17 @@ A plataforma opera **24/7 em produção na VPS HostGator (`108.174.145.77`) gere
 
 ## 🎨 3. Design System & Identidade Visual
 
-Ambos os cockpits seguem uma estética dark moderna inspirada nos elementos do Pokémon TCG:
+A plataforma unificada segue uma estética dark moderna com Glassmorphism multi-elemental:
 - **Tipografia Unificada:**
   - **Títulos e Headings:** `Outfit` (pesos 400, 500, 600, 700).
   - **Corpo e Dados:** `Inter` (pesos 300 a 700).
+  - **Código e Dados Técnicos:** `Fira Code`.
 - **Glassmorphism & Legibilidade:**
   - Todos os cards, modais e cabeçalhos possuem fundo semi-opaco com `backdrop-filter: blur(16px)` para garantir contraste e legibilidade perfeita.
-  - O canvas de partículas opera em `z-index: 0` com `pointer-events: none` e `mix-blend-mode: screen`, sem poluição visual.
-- **Navegação Sem Duplicidade:**
-  - O botão de alternância entre sistemas (`[🔥 Disparador Pro]` no Réplica e `[💧 Replicador Pro]` no Disparador) está posicionado no Top Header à direita, resolvendo dinamicamente o protocolo e hostname atual.
-  - A barra lateral (Sidebar) é estritamente reservada à navegação interna de cada módulo.
+  - O motor gráfico Canvas 2D em 60fps acelerado por GPU alterna dinamicamente entre Gotículas/Bolhas Cristalinas (Módulo Água 💧), Brasas Incandescentes (Módulo Fogo 🔥) e Partículas Douradas/Esmeralda (Módulo Finanças 💼).
+- **Navegação Centralizada Unificada:**
+  - Sidebar categorizada com seções claras para Ofertas, Disparos e Finanças.
+  - Header superior com monitoramento simultâneo dos 2 chips de WhatsApp e do encurtador Mercado Livre.
 
 ---
 

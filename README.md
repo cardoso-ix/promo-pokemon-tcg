@@ -30,12 +30,22 @@ chmod +x *.sh
 
 ---
 
-## 📦 Módulos do Sistema em Produção
+## 📦 Plataforma Unificada em Produção
 
-### 1. 🌊 Replicador de Ofertas (`app/` — Porta 3000)
+### ⚡ Super Cockpit Unificado (`app/` — Porta 3000)
 - **Status:** 🟢 **Online 24/7 (VPS HostGator + Coolify)**
 - **Painel em Produção:** 👉 **`http://108.174.145.77:3000`** | **Local:** 👉 **`http://localhost:3000`**
-- **Tema Visual:** **Tipo Água Pokémon TCG** (Azul Cyan `#00e5ff`, Pokéball Água, Gotículas & Bolhas 3D animadas em 60fps com fundo atmosférico).
+- **Plataforma Única:** Centraliza 100% dos recursos em uma única aplicação web, sem exigir abertura de múltiplas abas nem logins duplicados:
+  - **Módulo Replicador (Água 💧):** Feed ao vivo, Rotas de transmissão, Gerador de Anúncios ML, Sentinel de Cookies e Agendador Matinal 07:00 AM.
+  - **Módulo Disparador & IA (Fogo 🔥):** Extração de grupos, Base de Leads, Campanhas Spintax anti-ban, Meta Cloud API oficial e atendimento humanizado com DeepSeek V4.
+  - **Módulo Finanças (Esmeralda 💼):** Upload de planilhas semanais do Meta Ads, faturas PDF, DRE contábil e meta dos 70% de reinvestimento.
+- **Single Sign-On (SSO):** Um único login autentica simultaneamente ambos os sistemas através de cookies de sessão seguros e Gateway reverso Fastify.
+- **Multi-Elemental Design System:** Transição visual inteligente de temas (Água 💧 / Fogo 🔥 / Finanças 💼) com partículas 3D aceleradas por GPU em 60fps.
+- **Monitoramento Duplo de Conexão:** Visualização em tempo real no Top Header do status de ambos os chips de WhatsApp e da sessão do Mercado Livre.
+
+---
+
+### 1. 🌊 Módulo Replicador de Ofertas
 - **Objetivo:** Monitora grupos de ofertas concorrentes 24/7, intercepta links de produtos, higieniza mensagens removendo assinaturas de terceiros, gera links de afiliados oficiais com encurtamento `meli.la`, preserva/baixa fotos oficiais em 2X HD e replica nos seus grupos VIP.
 - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script.
 - **🌅 Mensagem Diária de Abertura (07:00 AM):** Posta automaticamente todas as manhãs no horário oficial de Brasília uma mensagem de boas-vindas e engajamento nos grupos de destino ativos com rotação de 4 templates selecionados a dedo.
@@ -44,37 +54,29 @@ chmod +x *.sh
 
 ---
 
-### 2. 🔥 Bot Disparador, Prospecção & Atendimento IA (`bot-disparador/` — Porta 3333)
-- **Status:** 🟢 **Online 24/7 (VPS HostGator + Coolify)**
-- **Painel em Produção:** 👉 **`http://108.174.145.77:3333`** | **Local:** 👉 **`http://localhost:3333`**
-- **Tema Visual:** **Tipo Fogo Pokémon TCG** (Vermelho Rubi `#ef4444`, Laranja Brasa `#f97316`, Pokéball Fogo, Brasas Incandescentes 3D em 60fps com fundo atmosférico).
+### 2. 🔥 Módulo Bot Disparador, Prospecção, Finanças & IA
+- **Acesso Direto (Opcional):** 👉 **`http://108.174.145.77:3333`** | **Local:** 👉 **`http://localhost:3333`**
 - **Objetivo:** Captação de membros de grupos em 1 clique, disparos em massa com proteção anti-ban e Spintax `{A|B|C}`, simulador oficial do WhatsApp ao vivo lado a lado, modelos prontos de alta conversão de Pokémon TCG e atendimento privado automático com **Inteligência Artificial DeepSeek V4 (OpenCode Gateway)**.
 - **🛡️ Meta Shield Anti-Ban:** Auditor heurístico em tempo real que pontua o risco de cada template (0-100) e sugere melhorias com IA.
-- **🔍 Filtro de Grupos em Tempo Real:** Campo de pesquisa instantânea ao selecionar grupos para criação e disparo de campanhas.
 - **🏷️ Meta Cloud API & Utility Templates:** Suporte a disparo oficial via Meta Cloud API com templates categorizados como `UTILITY` (~R$ 0,18) aprovados pela Meta para evitar custos abusivos de `MARKETING`.
 - **💼 Módulo de Gestão Financeira, Balanço DRE & Meta Ads:**
   - **Upload Semanal de Planilhas e PDFs:** Suporte a `.xlsx`, `.xls` e `.csv` exportados do Meta Ads Manager e upload de PDFs de faturas com arquivamento seguro em `/app/data/financas_uploads/`.
-  - **Parser Inteligente:** Detecção flexível de cabeçalhos (pt-BR e en-US), conversão de moedas (`R$ 1.234,56`), separadores de milhar e datas.
   - **Dashboard com KPIs Executivos:** Investimento Total no Mês, Leads Gerados, Custo Médio por Lead (CPL com selo de eficiência), Volume de Cliques, Impressões, CTR, CPC e CPM.
   - **Balanço Diário e DRE:** Lançamento diário de despesas de marketing vs faturamento/lucro bruto do dia.
   - **Regra dos 70% de Reinvestimento:** Cálculo automático de 70% do lucro líquido mensal destinado para reinvestimento agressivo em tráfego e 30% para distribuição aos sócios.
-  - **Exportação & Impressão Executiva:** Download consolidado em `.csv` (com BOM UTF-8 para Excel) e impressão/salvar em PDF com layout profissional otimizado (`@media print`).
 
 ---
 
-### 3. 🌉 Ponte Interna Docker (Rede Segura)
-Os dois módulos conversam através da rede interna (`promo_network`):
+### 3. 🌉 Gateway Reverso & Ponte Interna
+- O servidor Fastify na porta 3000 atua como Gateway para as rotas `/api/bot/*`, viabilizando comunicação sem atritos e sem CORS.
 - Sempre que uma oferta é postada no grupo VIP pelo Replicador, ela é transmitida com token seguro para `http://bot-disparador:3333/api/internal/oferta`.
-- A oferta cai na aba **Ofertas Recebidas** do Bot Disparador pronta para ser disparada aos leads com 1 clique!
 
 ---
 
 ## 🎨 Design System Unificado
-Ambos os cockpits seguem rigorosamente os mesmos princípios de alta performance e elegância:
-- **Tipografia:** `Outfit` (títulos e headings) e `Inter` (corpo e formulários).
+- **Tipografia:** `Outfit` (títulos e headings), `Inter` (corpo e formulários) e `Fira Code` (dados técnicos).
 - **Glassmorphism de Alta Proteção:** Cards, modais e cabeçalhos com `backdrop-filter: blur(16px)` garantindo 100% de nitidez e legibilidade sobre os efeitos de fundo.
-- **Alternância Entre Cockpits:** Botão dinâmico no Top Header que detecta o IP/host automaticamente e permite navegar entre Replicador (`:3000`) e Disparador (`:3333`) com 1 clique.
-- **Credenciais Padrão:** Usuário: `admin` | Senha: `promo2026` (Sessão criptografada HMAC válida por 30 dias).
+- **Credenciais Padrão:** Usuário: `admin` | Senha: `promo2026` (Sessão criptografada HMAC válida por 30 dias com SSO Unificado).
 
 ---
 

@@ -16,8 +16,9 @@ echo.
 echo [OK] Servidores em modo desenvolvimento iniciados em janelas separadas!
 echo   Qualquer alteracao em src/ recarregara o servidor automaticamente.
 echo.
-echo   - Replicador (Tema Agua):     http://localhost:3000
-echo   - Disparador (Tema Fogo):     http://localhost:3333
+echo   - ⚡ Super Cockpit Unificado: http://localhost:3000 (Tudo em 1 só lugar!)
+echo   - 💧 Módulo Replicador:      http://localhost:3000
+echo   - 🔥 Módulo Disparador & IA: http://localhost:3333 (ou via Cockpit Unificado)
 echo.
 echo Para encerrar os servidores, feche as janelas ou execute parar.bat.
 echo.
