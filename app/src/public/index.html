@@ -156,7 +156,14 @@
       border-radius: 20px;
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(255, 255, 255, 0.08);
-      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s ease;
+    }
+
+    .chip-badge:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-1px);
     }
 
     .chip-badge .dot {
@@ -174,6 +181,16 @@
     .chip-badge.connected .dot {
       background: #10b981;
       box-shadow: 0 0 6px #10b981;
+    }
+
+    .chip-badge.warning {
+      color: #fbbf24;
+      border-color: rgba(251, 191, 36, 0.35);
+      background: rgba(251, 191, 36, 0.08);
+    }
+    .chip-badge.warning .dot {
+      background: #f59e0b;
+      box-shadow: 0 0 6px #f59e0b;
     }
 
     .chip-badge.disconnected .dot {
@@ -351,19 +368,53 @@
           // 1. Replicador WA
           const waBadge = document.getElementById('badge-wa-replica');
           const waText = document.getElementById('badge-wa-replica-text');
-          const isReplicaConnected = data.replica && data.replica.whatsapp === 'connected';
+          const repWa = data.replica && data.replica.whatsapp;
+          const repStatus = typeof repWa === 'object' ? (repWa && repWa.status) : repWa;
+
           if (waBadge && waText) {
-            waText.textContent = isReplicaConnected ? '💧 Replicador: Online' : '💧 Replicador: Off';
-            waBadge.className = 'chip-badge ' + (isReplicaConnected ? 'connected' : 'disconnected');
+            if (repStatus === 'connected') {
+              waText.textContent = '💧 Replicador: Online';
+              waBadge.className = 'chip-badge connected';
+              waBadge.title = 'Chip do Replicador conectado e monitorando grupos';
+            } else if (repStatus === 'qr') {
+              waText.textContent = '💧 Replicador: Escanear QR';
+              waBadge.className = 'chip-badge warning';
+              waBadge.title = 'Clique para abrir e escanear o QR Code no seu celular';
+            } else if (repStatus === 'connecting') {
+              waText.textContent = '💧 Replicador: Conectando...';
+              waBadge.className = 'chip-badge warning';
+              waBadge.title = 'Estabelecendo conexão com o WhatsApp...';
+            } else {
+              waText.textContent = '💧 Replicador: Desconectado';
+              waBadge.className = 'chip-badge disconnected';
+              waBadge.title = 'Clique para conectar o Chip do Replicador';
+            }
           }
 
           // 2. Disparador WA
           const botBadge = document.getElementById('badge-wa-bot');
           const botText = document.getElementById('badge-wa-bot-text');
-          const isBotConnected = data.bot && data.bot.whatsapp === 'connected';
+          const bWa = data.bot && data.bot.whatsapp;
+          const bStatus = typeof bWa === 'object' ? (bWa && bWa.status) : bWa;
+
           if (botBadge && botText) {
-            botText.textContent = isBotConnected ? '🔥 Disparador: Online' : '🔥 Disparador: Off';
-            botBadge.className = 'chip-badge ' + (isBotConnected ? 'connected' : 'disconnected');
+            if (bStatus === 'connected') {
+              botText.textContent = '🔥 Disparador: Online';
+              botBadge.className = 'chip-badge connected';
+              botBadge.title = 'Chip do Disparador conectado e pronto para envios';
+            } else if (bStatus === 'qr') {
+              botText.textContent = '🔥 Disparador: Escanear QR';
+              botBadge.className = 'chip-badge warning';
+              botBadge.title = 'Clique para abrir e escanear o QR Code do Disparador';
+            } else if (bStatus === 'connecting') {
+              botText.textContent = '🔥 Disparador: Conectando...';
+              botBadge.className = 'chip-badge warning';
+              botBadge.title = 'Estabelecendo conexão do Disparador...';
+            } else {
+              botText.textContent = '🔥 Disparador: Desconectado';
+              botBadge.className = 'chip-badge disconnected';
+              botBadge.title = 'Clique para abrir o módulo do Disparador';
+            }
           }
 
           // 3. Mercado Livre Sentinel
@@ -371,14 +422,58 @@
           const meliText = document.getElementById('badge-meli-text');
           const meliValid = data.replica && data.replica.cookieStatus && data.replica.cookieStatus.status === 'valid';
           if (meliBadge && meliText) {
-            meliText.textContent = meliValid ? '🛒 meli.la Ativo' : '⚠️ meli.la Alerta';
-            meliBadge.className = 'chip-badge ' + (meliValid ? 'connected' : 'disconnected');
+            if (meliValid) {
+              meliText.textContent = '🛒 meli.la Ativo';
+              meliBadge.className = 'chip-badge connected';
+              meliBadge.title = 'Cookie do Mercado Livre operacional';
+            } else {
+              meliText.textContent = '⚠️ meli.la: Renovar Cookie';
+              meliBadge.className = 'chip-badge warning';
+              meliBadge.title = 'Clique para renovar o cookie de afiliado Mercado Livre';
+            }
           }
         }
       } catch (err) {
         // Ignorar falhas transitórias de conexão
       }
     }
+
+    // Ações de clique direto nos badges para facilitar a operação
+    document.getElementById('badge-wa-replica').addEventListener('click', () => {
+      switchModule('replica');
+      try {
+        const frame = document.getElementById('frame-replica');
+        const doc = frame.contentDocument || frame.contentWindow.document;
+        if (doc) {
+          const tabBtn = doc.querySelector('[data-tab="conectar"]');
+          if (tabBtn) tabBtn.click();
+        }
+      } catch (e) {}
+    });
+
+    document.getElementById('badge-wa-bot').addEventListener('click', () => {
+      switchModule('bot');
+      try {
+        const frame = document.getElementById('frame-bot');
+        const doc = frame.contentDocument || frame.contentWindow.document;
+        if (doc) {
+          const tabBtn = doc.querySelector('[data-tab="dashboard"]');
+          if (tabBtn) tabBtn.click();
+        }
+      } catch (e) {}
+    });
+
+    document.getElementById('badge-meli').addEventListener('click', () => {
+      switchModule('replica');
+      try {
+        const frame = document.getElementById('frame-replica');
+        const doc = frame.contentDocument || frame.contentWindow.document;
+        if (doc) {
+          const btnCookie = doc.getElementById('btn-open-cookie-modal') || doc.querySelector('[id*="cookie"]');
+          if (btnCookie) btnCookie.click();
+        }
+      } catch (e) {}
+    });
 
     updateSuperHeaderStatus();
     setInterval(updateSuperHeaderStatus, 5000);
