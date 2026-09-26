@@ -3,13 +3,12 @@ title Iniciar Todos os Servidores (Modo Producao Local)
 chcp 65001 >nul
 
 echo ========================================================
-echo   ⚡ PROMO POKÉMON TCG - INICIALIZANDO SERVIÇOS
+echo   PROMO POKEMON TCG - INICIALIZANDO SERVICOS
 echo   - Replicador de Ofertas (Porta 3000)
 echo   - Bot Disparador com IA  (Porta 3333)
 echo ========================================================
 echo.
 
-rem Verificar se o build existe, se não, compilar automaticamente
 if not exist "%~dp0app\dist\index.js" (
   echo [INFO] Build do Replicador nao encontrado. Compilando automaticamente...
   call npm run build:app
@@ -26,11 +25,11 @@ start "Bot Disparador - Porta 3333" cmd /k "cd /d %~dp0bot-disparador && node di
 
 echo.
 echo [OK] Servidores iniciados com sucesso!
-echo   - ⚡ Super Cockpit Unificado: http://localhost:3000 (Plataforma Única Integrada)
-echo   - 💧 Replicador de Ofertas:  http://localhost:3000
-echo   - 🔥 Disparador com IA:      http://localhost:3333 (ou integrado na porta 3000)
+echo   - Super Cockpit Unificado: http://localhost:3000
+echo   - Replicador de Ofertas:  http://localhost:3000
+echo   - Disparador com IA:      http://localhost:3333
 echo.
 echo Para desenvolvimento com Hot Reload, utilize iniciar-dev.bat.
 echo Para finalizar os servidores, execute parar.bat.
 echo.
-timeout /t 4 >nul
+ping 127.0.0.1 -n 3 >nul

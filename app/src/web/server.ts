@@ -87,11 +87,11 @@ export async function createServer() {
     }
   });
 
-  // Gateway Proxy Unificado para o Bot Disparador & IA (:3333)
+  // 1. Proxy para o frontend estático do Bot Disparador
   await app.register(fastifyHttpProxy, {
     upstream: CONFIG.disparadorUrl,
-    prefix: '/api/bot',
-    rewritePrefix: '/api',
+    prefix: '/bot',
+    rewritePrefix: '',
     replyOptions: {
       rewriteRequestHeaders: (originalReq, headers) => {
         return {
@@ -101,6 +101,56 @@ export async function createServer() {
       }
     }
   });
+
+  // 2. Gateway Proxies para APIs do Bot Disparador
+  const botDirectApiPrefixes = [
+    '/api/grupos',
+    '/api/contatos',
+    '/api/campanhas',
+    '/api/financas',
+    '/api/meta',
+    '/api/ofertas-recebidas',
+    '/api/deepseek',
+    '/api/warmup',
+    '/api/engine',
+    '/api/events',
+    '/api/templates',
+    '/api/bot'
+  ];
+
+  for (const prefix of botDirectApiPrefixes) {
+    await app.register(fastifyHttpProxy, {
+      upstream: CONFIG.disparadorUrl,
+      prefix: prefix,
+      rewritePrefix: prefix === '/api/bot' ? '/api' : prefix,
+      replyOptions: {
+        rewriteRequestHeaders: (originalReq, headers) => {
+          return {
+            ...headers,
+            'x-internal-token': CONFIG.internalApiKey
+          };
+        }
+      }
+    });
+  }
+
+  // 3. Encaminhamento de rotas de WhatsApp exclusivas do disparador
+  const botWaActions = ['connect', 'disconnect', 'test-send'];
+  for (const action of botWaActions) {
+    await app.register(fastifyHttpProxy, {
+      upstream: CONFIG.disparadorUrl,
+      prefix: `/api/whatsapp/${action}`,
+      rewritePrefix: `/api/whatsapp/${action}`,
+      replyOptions: {
+        rewriteRequestHeaders: (originalReq, headers) => {
+          return {
+            ...headers,
+            'x-internal-token': CONFIG.internalApiKey
+          };
+        }
+      }
+    });
+  }
 
   // Hook de Autenticação Global
   app.addHook('onRequest', async (req, reply) => {

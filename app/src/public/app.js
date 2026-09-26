@@ -192,171 +192,39 @@
     }, duration);
   }
 
-  // Tabs & Sidebar Navigation Unificada (Multi-Elemental)
+  // Tabs & Sidebar Navigation
   const tabBtns = document.querySelectorAll('.tab-btn, .nav-item[data-tab]');
   const tabContents = document.querySelectorAll('.tab-content, .tab-pane');
   const pageTitle = document.getElementById('page-title');
   const pageDesc = document.getElementById('page-desc');
 
   const tabMeta = {
-    // 🌊 REPLICADOR DE OFERTAS
     feed: {
       title: 'Visão Geral & Feed',
-      desc: 'Monitore ofertas replicadas, fluxo de mensagens e status do chip em tempo real.',
-      theme: 'water'
+      desc: 'Monitore ofertas replicadas, fluxo de mensagens e status do chip em tempo real.'
     },
     rotas: {
       title: 'Rotas de Transmissão',
-      desc: 'Defina de quais grupos o robô monitora e para quais canais VIP ele replica com seu link.',
-      theme: 'water'
+      desc: 'Defina de quais grupos o robô copia e para quais grupos ele republica com seu link.'
     },
     anuncio: {
-      title: 'Gerador de Anúncios Reativo',
-      desc: 'Cole o link de afiliado ou produto do Mercado Livre, puxe a foto oficial 2X HD e publique.',
-      theme: 'water'
+      title: 'Gerador de Anúncios por Link',
+      desc: 'Cole o link de afiliado ou produto do Mercado Livre, puxe a foto 2X HD e publique.'
     },
     conectar: {
-      title: 'Chip Replicador de Ofertas (WhatsApp)',
-      desc: 'Escaneie o QR Code abaixo com seu smartphone dedicado à replicação de promoções.',
-      theme: 'water'
+      title: 'Conectar WhatsApp',
+      desc: 'Escaneie o QR Code abaixo com seu smartphone para ativar as réplicas automáticas.'
     },
     config: {
-      title: 'Configurações do Replicador & Afiliados',
-      desc: 'Ajustes de encurtamento meli.la, cookies do Mercado Livre, planilhas e mensagem diária.',
-      theme: 'water'
-    },
-    // 🔥 BOT DISPARADOR & IA
-    'pane-dashboard': {
-      title: 'Painel de Prospecção & Campanhas',
-      desc: 'Monitore métricas de conversão, aquecimento do chip de disparos e status do motor anti-ban.',
-      theme: 'fire'
-    },
-    'pane-grupos': {
-      title: 'Captação de Membros em Grupos',
-      desc: 'Varra grupos de Pokémon TCG e extraia contatos qualificados em 1 clique.',
-      theme: 'fire'
-    },
-    'pane-contatos': {
-      title: 'Base de Leads & Gestão de Pastas',
-      desc: 'Organize contatos por pastas, importe novos números e exporte para Meta Ads ou Excel.',
-      theme: 'fire'
-    },
-    'pane-campanhas': {
-      title: 'Disparador em Massa Anti-Ban',
-      desc: 'Envie campanhas com Spintax {A|B|C}, simulação de digitação e prévia oficial WhatsApp ao vivo.',
-      theme: 'fire'
-    },
-    'pane-meta-cloud': {
-      title: 'WhatsApp Business Cloud API Oficial',
-      desc: 'Dispare templates homologados pela Meta na tarifa reduzida de serviço (UTILITY ~R$ 0,18).',
-      theme: 'fire'
-    },
-    'pane-deepseek': {
-      title: 'Atendimento Humanizado com IA (DeepSeek V4)',
-      desc: 'Respostas inteligentes como especialista amigável de Pokémon TCG com simulação de presença humana.',
-      theme: 'fire'
-    },
-    'pane-configuracoes': {
-      title: 'Ajustes Anti-Ban & Aquecimento Seguro',
-      desc: 'Parâmetros de delays randômicos (35s-70s), pausas de descanso de 5 min e regras de envio.',
-      theme: 'fire'
-    },
-    // 💼 FINANÇAS & METAS
-    'pane-financas': {
-      title: '💼 Finanças, Faturas PDF & DRE Meta Ads',
-      desc: 'Auditoria semanal de planilhas do Meta Ads, cálculo de CPL/CTR/CPM, faturas e reinvestimento (70/30).',
-      theme: 'emerald'
-    },
-    'pane-logs': {
-      title: 'Console de Logs do Sistema ao Vivo',
-      desc: 'Histórico de eventos, interações da IA, disparos realizados e diagnósticos operacionais.',
-      theme: 'emerald'
+      title: 'Configurações & Afiliado',
+      desc: 'Ajustes de encurtamento meli.la, cookies do Mercado Livre, planilhas e mensagem diária.'
     }
   };
 
-  // Alternador de Temas Elementais
-  let currentElementalTheme = 'water';
-  const brandBadge = document.getElementById('brand-badge');
-  const svgBallTop = document.getElementById('svg-ball-top');
-  const svgBallLeft = document.getElementById('svg-ball-left');
-  const svgBallRight = document.getElementById('svg-ball-right');
-  const svgBallRing = document.getElementById('svg-ball-ring');
-  const svgBallDot = document.getElementById('svg-ball-dot');
-
-  const btnThemeWater = document.getElementById('btn-theme-water');
-  const btnThemeFire = document.getElementById('btn-theme-fire');
-  const btnThemeEmerald = document.getElementById('btn-theme-emerald');
-
-  function setElementalTheme(theme) {
-    currentElementalTheme = theme;
-    document.body.className = `theme-${theme}`;
-
-    // Atualizar pílulas do seletor
-    [btnThemeWater, btnThemeFire, btnThemeEmerald].forEach(btn => {
-      if (btn) btn.classList.remove('active');
-    });
-
-    if (theme === 'water') {
-      if (btnThemeWater) btnThemeWater.classList.add('active');
-      if (brandBadge) {
-        brandBadge.className = 'brand-badge badge-water';
-        brandBadge.innerText = '💧 Água · Replicador';
-      }
-      if (svgBallTop) svgBallTop.setAttribute('fill', 'url(#waterTop)');
-      if (svgBallLeft) svgBallLeft.setAttribute('fill', 'url(#waterCyan)');
-      if (svgBallRight) svgBallRight.setAttribute('fill', 'url(#waterCyan)');
-      if (svgBallRing) svgBallRing.setAttribute('stroke', '#38bdf8');
-      if (svgBallDot) svgBallDot.setAttribute('fill', '#00e5ff');
-    } else if (theme === 'fire') {
-      if (btnThemeFire) btnThemeFire.classList.add('active');
-      if (brandBadge) {
-        brandBadge.className = 'brand-badge badge-fire';
-        brandBadge.innerText = '🔥 Fogo · Disparador';
-      }
-      if (svgBallTop) svgBallTop.setAttribute('fill', 'url(#fireTop)');
-      if (svgBallLeft) svgBallLeft.setAttribute('fill', 'url(#fireEmber)');
-      if (svgBallRight) svgBallRight.setAttribute('fill', 'url(#fireEmber)');
-      if (svgBallRing) svgBallRing.setAttribute('stroke', '#ef4444');
-      if (svgBallDot) svgBallDot.setAttribute('fill', '#f97316');
-    } else if (theme === 'emerald') {
-      if (btnThemeEmerald) btnThemeEmerald.classList.add('active');
-      if (brandBadge) {
-        brandBadge.className = 'brand-badge badge-emerald';
-        brandBadge.innerText = '💼 Esmeralda · Finanças';
-      }
-      if (svgBallTop) svgBallTop.setAttribute('fill', 'url(#emeraldTop)');
-      if (svgBallLeft) svgBallLeft.setAttribute('fill', 'url(#emeraldGold)');
-      if (svgBallRight) svgBallRight.setAttribute('fill', 'url(#emeraldGold)');
-      if (svgBallRing) svgBallRing.setAttribute('stroke', '#10b981');
-      if (svgBallDot) svgBallDot.setAttribute('fill', '#f59e0b');
-    }
-
-    if (window.updateAmbientFxTheme) {
-      window.updateAmbientFxTheme(theme);
-    }
-  }
-
-  if (btnThemeWater) btnThemeWater.addEventListener('click', () => setElementalTheme('water'));
-  if (btnThemeFire) btnThemeFire.addEventListener('click', () => setElementalTheme('fire'));
-  if (btnThemeEmerald) btnThemeEmerald.addEventListener('click', () => setElementalTheme('emerald'));
-
-  // Mobile Drawer Toggle
-  const btnMobileMenu = document.getElementById('btn-mobile-menu');
-  const sidebarEl = document.getElementById('sidebar');
-  if (btnMobileMenu && sidebarEl) {
-    btnMobileMenu.addEventListener('click', () => {
-      sidebarEl.classList.toggle('mobile-open');
-    });
-  }
-
-  // Troca de Abas
   tabBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const tabId = btn.dataset.tab;
       if (!tabId) return;
-
-      // Fechar menu mobile se estiver aberto
-      if (sidebarEl) sidebarEl.classList.remove('mobile-open');
 
       tabBtns.forEach((b) => {
         if (b.dataset.tab === tabId) {
@@ -367,7 +235,7 @@
       });
 
       tabContents.forEach((c) => {
-        if (c.id === `tab-${tabId}` || c.id === tabId) {
+        if (c.id === `tab-${tabId}`) {
           c.classList.add('active');
         } else {
           c.classList.remove('active');
@@ -377,13 +245,12 @@
       if (tabMeta[tabId]) {
         if (pageTitle) pageTitle.textContent = tabMeta[tabId].title;
         if (pageDesc) pageDesc.textContent = tabMeta[tabId].desc;
-        setElementalTheme(tabMeta[tabId].theme);
       }
     });
   });
 
-  // Motor Gráfico Elemental Adaptativo (Água 💧 / Fogo 🔥 / Finanças 💼) - 60fps GPU
-  function initAmbientFx() {
+  // Motor Gráfico de Gotículas & Bolhas de Água (Canvas 60fps GPU)
+  function initWaterParticles() {
     const canvas = document.getElementById('ambient-fx');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -397,40 +264,34 @@
       height = canvas.height = window.innerHeight;
     });
 
-    const count = 50;
+    const count = 55;
     const particles = [];
-    let currentMode = 'water';
 
-    window.updateAmbientFxTheme = function(mode) {
-      currentMode = mode;
-      for (let i = 0; i < count; i++) {
-        particles[i] = createParticle(Math.random() * height);
-      }
-    };
-
-    function createParticle(customY = null) {
-      const isSpecial = Math.random() > 0.4;
-      const r = isSpecial ? (Math.random() * 3.5 + 2.0) : (Math.random() * 2.0 + 1.0);
+    function createParticle(initial = false) {
+      const isBubble = Math.random() > 0.35;
+      const r = isBubble ? (Math.random() * 3.8 + 2.4) : (Math.random() * 2.2 + 1.2);
       return {
         x: Math.random() * width,
-        y: customY !== null ? customY : height + Math.random() * 20,
+        y: initial ? Math.random() * height : height + Math.random() * 20,
         r: r,
-        speedY: -(Math.random() * 0.75 + 0.35),
-        speedX: (Math.random() - 0.5) * 0.4,
+        speedY: isBubble ? -(Math.random() * 0.75 + 0.35) : (Math.random() * 0.85 + 0.45),
+        speedX: (Math.random() - 0.5) * 0.35,
         wobbleSpeed: Math.random() * 0.035 + 0.015,
         wobbleAmp: Math.random() * 1.8 + 0.6,
         wobbleAngle: Math.random() * Math.PI * 2,
-        alpha: Math.random() * 0.4 + 0.3,
-        shimmer: Math.random() * Math.PI * 2,
-        isSpecial: isSpecial
+        alpha: Math.random() * 0.35 + 0.35,
+        isBubble: isBubble,
+        shimmer: Math.random() * Math.PI * 2
       };
     }
 
     for (let i = 0; i < count; i++) {
-      particles.push(createParticle(Math.random() * height));
+      particles.push(createParticle(true));
     }
 
+    let animId = null;
     let isRunning = true;
+
     function render() {
       if (!isRunning) return;
       ctx.clearRect(0, 0, width, height);
@@ -439,40 +300,23 @@
         const p = particles[i];
         p.wobbleAngle += p.wobbleSpeed;
         p.shimmer += 0.04;
-        p.x += p.speedX + Math.sin(p.wobbleAngle) * p.wobbleAmp * 0.12;
+        const currentSpeedX = p.speedX + Math.sin(p.wobbleAngle) * p.wobbleAmp * 0.12;
+        p.x += currentSpeedX;
         p.y += p.speedY;
 
+        // Reset ao sair da tela
         if (p.y < -15 || p.y > height + 25) {
-          particles[i] = createParticle();
+          particles[i] = createParticle(false);
           continue;
         }
         if (p.x < -15) p.x = width + 15;
         if (p.x > width + 15) p.x = -15;
 
-        const pulseAlpha = Math.min(1, Math.max(0.15, p.alpha + Math.sin(p.shimmer) * 0.1));
+        const pulseAlpha = Math.min(1, Math.max(0.2, p.alpha + Math.sin(p.shimmer) * 0.12));
 
-        if (currentMode === 'fire') {
-          // 🔥 BRASA & FAGULHA INCANDESCENTE
-          const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 1.8);
-          grad.addColorStop(0, `rgba(255, 255, 200, ${pulseAlpha * 0.9})`);
-          grad.addColorStop(0.3, `rgba(249, 115, 22, ${pulseAlpha * 0.7})`);
-          grad.addColorStop(1, `rgba(220, 38, 38, 0)`);
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r * 1.8, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (currentMode === 'emerald') {
-          // 💼 ESMERALDA & OURO CONTÁBIL
-          const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 1.8);
-          grad.addColorStop(0, `rgba(255, 255, 255, ${pulseAlpha * 0.8})`);
-          grad.addColorStop(0.4, `rgba(16, 185, 129, ${pulseAlpha * 0.6})`);
-          grad.addColorStop(1, `rgba(245, 158, 11, 0)`);
-          ctx.fillStyle = grad;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r * 1.8, 0, Math.PI * 2);
-          ctx.fill();
-        } else {
-          // 💧 BOLHA CRISTALINA & GOTÍCULA DE ÁGUA
+        if (p.isBubble) {
+          // Bolha Cristalina com Borda Luminosa Cyan e Reflexo Especular
+          // 1. Halo difuso externo sutil
           const haloGrad = ctx.createRadialGradient(p.x, p.y, p.r * 0.5, p.x, p.y, p.r * 1.7);
           haloGrad.addColorStop(0, `rgba(56, 189, 248, ${pulseAlpha * 0.3})`);
           haloGrad.addColorStop(1, 'rgba(2, 132, 199, 0)');
@@ -481,19 +325,51 @@
           ctx.arc(p.x, p.y, p.r * 1.7, 0, Math.PI * 2);
           ctx.fill();
 
-          ctx.strokeStyle = `rgba(0, 229, 255, ${pulseAlpha * 0.8})`;
-          ctx.lineWidth = 1;
+          // 2. Corpo da bolha translúcido (não bloqueia leitura de dados)
+          const bodyGrad = ctx.createRadialGradient(
+            p.x - p.r * 0.35,
+            p.y - p.r * 0.35,
+            p.r * 0.1,
+            p.x,
+            p.y,
+            p.r
+          );
+          bodyGrad.addColorStop(0, `rgba(255, 255, 255, ${pulseAlpha * 0.55})`);
+          bodyGrad.addColorStop(0.5, `rgba(56, 189, 248, ${pulseAlpha * 0.22})`);
+          bodyGrad.addColorStop(1, `rgba(0, 229, 255, ${pulseAlpha * 0.5})`);
+
+          ctx.fillStyle = bodyGrad;
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 3. Contorno refinado cristalino
+          ctx.strokeStyle = `rgba(186, 230, 253, ${pulseAlpha * 0.75})`;
+          ctx.lineWidth = 0.9;
           ctx.stroke();
+
+          // 4. Reflexo especular 3D (highlight branco)
+          ctx.fillStyle = `rgba(255, 255, 255, ${pulseAlpha * 0.95})`;
+          ctx.beginPath();
+          ctx.arc(p.x - p.r * 0.35, p.y - p.r * 0.35, Math.max(0.6, p.r * 0.25), 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Micro-gota d'água / Orbe Luminescente
+          const dropGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 2);
+          dropGrad.addColorStop(0, `rgba(255, 255, 255, ${pulseAlpha * 0.85})`);
+          dropGrad.addColorStop(0.35, `rgba(56, 189, 248, ${pulseAlpha * 0.65})`);
+          dropGrad.addColorStop(0.8, `rgba(2, 132, 199, ${pulseAlpha * 0.25})`);
+          dropGrad.addColorStop(1, 'rgba(2, 132, 199, 0)');
+
+          ctx.fillStyle = dropGrad;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * 2, 0, Math.PI * 2);
+          ctx.fill();
         }
       }
 
-      requestAnimationFrame(render);
+      animId = requestAnimationFrame(render);
     }
-
-    render();
-  }
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
@@ -509,7 +385,7 @@
   }
 
   // Iniciar partículas de água imediatamente
-  initAmbientFx();
+  initWaterParticles();
 
   // Conexão WebSocket
   function connectWebSocket() {
@@ -2171,53 +2047,5 @@ Tenham todos uma excelente {dia_semana} e um dia cheio de bons pulls! 🔥`;
   }
 
   // Iniciar WebSocket
-  
-  // Poller de Status Unificado da Plataforma
-  async function pollUnifiedStatus() {
-    try {
-      const res = await fetch('/api/unified-status');
-      if (res.ok) {
-        const data = await res.json();
-        // Atualizar Bot Disparador
-        const botBadge = document.getElementById('bot-wa-status-badge');
-        const botText = document.getElementById('bot-wa-status-text');
-        const sideBotDot = document.getElementById('sidebar-bot-dot');
-        const sideBotTitle = document.getElementById('sidebar-bot-title');
-
-        const botConnected = data.bot && data.bot.whatsapp === 'connected';
-        const botConnecting = data.bot && data.bot.whatsapp === 'connecting';
-
-        if (botBadge && botText) {
-          botText.textContent = botConnected ? '🔥 Disparador: Online' : botConnecting ? '🔥 Disparador: Conectando...' : '🔥 Disparador: Off';
-          botBadge.className = 'badge ' + (botConnected ? 'badge-connected' : botConnecting ? 'badge-warning' : 'badge-disconnected');
-        }
-        if (sideBotDot && sideBotTitle) {
-          sideBotDot.className = 'status-dot ' + (botConnected ? 'connected' : botConnecting ? 'connecting' : 'disconnected');
-          sideBotTitle.textContent = botConnected ? 'Conectado' : botConnecting ? 'Conectando...' : 'Desconectado';
-        }
-      }
-    } catch {
-      // Ignorar erros ocasionais de rede
-    }
-  }
-
-  // Executar imediatamente e a cada 5 segundos
-  pollUnifiedStatus();
-  setInterval(pollUnifiedStatus, 5000);
-
-  // Logout Unificado
-  const btnLogoutAll = document.getElementById('btn-logout');
-  if (btnLogoutAll) {
-    btnLogoutAll.addEventListener('click', async () => {
-      if (confirm('Deseja realmente sair da plataforma?')) {
-        try {
-          await fetch('/api/auth/logout', { method: 'POST' });
-        } finally {
-          window.location.href = '/login.html';
-        }
-      }
-    });
-  }
-
   connectWebSocket();
 })();
