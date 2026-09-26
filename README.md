@@ -81,15 +81,15 @@ chmod +x *.sh
 
 ---
 
-## 🧪 Cobertura de Testes Automatizados (128 Testes — 100% Verde)
+## 🧪 Cobertura de Testes Automatizados (134 Testes — 100% Verde)
 
 A plataforma conta com uma suíte de testes unitários e de integração abrangente:
 
 | Módulo | Qtd Testes | Foco de Validação | Status |
 | :--- | :--- | :--- | :--- |
-| **Replicador (`app/`)** | **90 testes** | Desduplicação cross-group, parsing de preços/cupons, extração de anúncios ML, nicho TCG, rotação 07:00 AM, ponte interna | 🟢 100% Aprovado |
+| **Replicador (`app/`)** | **96 testes** | Desduplicação cross-group, parsing de preços/cupons, extração de anúncios ML, nicho TCG, rotação 07:00 AM, ponte interna, ingestão analítica e AES-256 | 🟢 100% Aprovado |
 | **Disparador (`bot-disparador/`)** | **38 testes** | Spintax, Meta Shield, OpenCode/DeepSeek V4, Parser Meta Ads, DRE financeiro, faturas PDF, templates utility | 🟢 100% Aprovado |
-| **Total do Projeto** | **128 testes** | **Zero falhas em ambos os módulos** | 🟢 **100% VERDE** |
+| **Total do Projeto** | **134 testes** | **Zero falhas em ambos os módulos** | 🟢 **100% VERDE** |
 
 Para executar todos os testes da raiz:
 ```bash
