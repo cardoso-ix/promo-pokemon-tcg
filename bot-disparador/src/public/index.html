@@ -4,12 +4,42 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Disparador Pro & IA DeepSeek — Pokémon TCG</title>
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <link rel="apple-touch-icon" href="/favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="apple-touch-icon" href="./favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="./style.css">
+  <script>
+    // Se o bot estiver rodando no Hub sob /bot/, direciona chamadas de API para /api/bot/
+    if (window.location.pathname.startsWith('/bot')) {
+      const _origFetch = window.fetch;
+      window.fetch = function(input, init) {
+        if (typeof input === 'string') {
+          if (input.startsWith('/api/') && !input.startsWith('/api/bot/')) {
+            input = '/api/bot' + input.slice(4);
+          }
+        } else if (input instanceof Request) {
+          const url = input.url;
+          const parsed = new URL(url, window.location.origin);
+          if (parsed.pathname.startsWith('/api/') && !parsed.pathname.startsWith('/api/bot/')) {
+            input = new Request('/api/bot' + parsed.pathname.slice(4) + parsed.search, input);
+          }
+        }
+        return _origFetch.call(this, input, init);
+      };
+
+      if (window.EventSource) {
+        const _OrigEventSource = window.EventSource;
+        window.EventSource = function(url, opts) {
+          if (typeof url === 'string' && url.startsWith('/api/') && !url.startsWith('/api/bot/')) {
+            url = '/api/bot' + url.slice(4);
+          }
+          return new _OrigEventSource(url, opts);
+        };
+      }
+    }
+  </script>
 </head>
 <body class="theme-fire">
   <!-- Canvas de Brasas & Fagulhas de Fogo (60fps GPU-Accelerated) -->
@@ -1808,6 +1838,6 @@
 
   <div class="toast" id="app-toast"></div>
 
-  <script src="/app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>

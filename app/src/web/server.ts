@@ -157,12 +157,18 @@ export async function createServer() {
     const url = req.raw.url || '';
     const pathname = url.split('?')[0];
 
-    // Rotas públicas que não requerem autenticação
+    // Normalização: /bot deve ter barra final para resolução correta de assets relativos
+    if (pathname === '/bot') {
+      return reply.redirect('/bot/', 301);
+    }
+
+    // Rotas públicas e assets estáticos que não requerem autenticação
     if (
       pathname === '/health' ||
       pathname === '/api/auth/login' ||
       pathname === '/login.html' ||
-      pathname === '/favicon.svg'
+      pathname === '/favicon.svg' ||
+      /\.(css|js|svg|png|jpg|jpeg|ico|woff2|woff|ttf|map)$/i.test(pathname)
     ) {
       if (pathname === '/login.html') {
         const token = extractSessionToken(req);
