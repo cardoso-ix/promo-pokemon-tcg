@@ -57,6 +57,7 @@ import {
   buildSessionCookie,
   buildClearCookie
 } from './auth.js';
+import { setupAnalyticsModule } from '../analytics/index.js';
 
 import fs from 'node:fs';
 
@@ -168,6 +169,9 @@ export async function createServer() {
       pathname === '/api/auth/login' ||
       pathname === '/login.html' ||
       pathname === '/favicon.svg' ||
+      pathname === '/api/webhooks/meli' ||
+      pathname.startsWith('/api/integrations/meli/callback') ||
+      pathname.startsWith('/api/integrations/meli/auth') ||
       /\.(css|js|svg|png|jpg|jpeg|ico|woff2|woff|ttf|map)$/i.test(pathname)
     ) {
       if (pathname === '/login.html') {
@@ -876,6 +880,9 @@ export async function createServer() {
       return reply.status(400).send({ ok: false, motivo: res.motivo, error: msg });
     }
   });
+
+  // Módulo de Ingestão Analítica (Mercado Livre + Meta Ads + PostgreSQL Drizzle)
+  await setupAnalyticsModule(app);
 
   return app;
 }
