@@ -1,7 +1,8 @@
 import { eq, sql } from 'drizzle-orm';
 import { getAnalyticsDb } from './db.js';
 import { integrationTokens, metaAdInsights } from './schema.js';
-import { decryptToken } from './security.js';
+import { encryptToken, decryptToken } from './security.js';
+import { getConfig, setConfig, saveMetaInsightSqlite } from '../db/database.js';
 
 const GRAPH_API_BASE = 'https://graph.facebook.com/v20.0';
 
@@ -47,36 +48,114 @@ export class MetaAdsIntegrationService {
   }
 
   /**
+   * Salva configurações do Meta Ads com criptografia AES-256
+   */
+  async saveConfig(token: string, accountId: string): Promise<void> {
+    const trimmedToken = token.trim();
+    const cleanAccountId = accountId.trim().replace(/^act_/, '');
+
+    if (trimmedToken) {
+      const encrypted = encryptToken(trimmedToken);
+      setConfig('meta_access_token', encrypted);
+    }
+
+    if (cleanAccountId) {
+      setConfig('meta_ad_account_id', cleanAccountId);
+      this.adAccountId = cleanAccountId;
+    }
+
+    const db = getAnalyticsDb();
+    if (db && trimmedToken) {
+      try {
+        const encrypted = encryptToken(trimmedToken);
+        await db
+          .insert(integrationTokens)
+          .values({
+            provider: 'meta_ads',
+            accessToken: encrypted,
+            metadata: { accountId: cleanAccountId },
+            updatedAt: new Date()
+          })
+          .onConflictDoUpdate({
+            target: integrationTokens.provider,
+            set: {
+              accessToken: encrypted,
+              metadata: { accountId: cleanAccountId },
+              updatedAt: new Date()
+            }
+          });
+      } catch (err: unknown) {
+        console.warn('[Meta Ads Service] Aviso ao salvar no PostgreSQL:', err);
+      }
+    }
+  }
+
+  /**
+   * Obtém status de configuração do Meta Ads
+   */
+  async getConfigStatus(): Promise<{ configured: boolean; accountId: string; source: string }> {
+    const sqliteToken = getConfig('meta_access_token', '');
+    const sqliteAccountId = getConfig('meta_ad_account_id', '') || this.adAccountId || process.env.META_AD_ACCOUNT_ID || '';
+    const envToken = process.env.META_ACCESS_TOKEN || process.env.META_CLOUD_TOKEN || '';
+
+    if (sqliteToken) {
+      return { configured: true, accountId: sqliteAccountId, source: 'sqlite_vault' };
+    }
+
+    if (envToken) {
+      return { configured: true, accountId: sqliteAccountId, source: 'environment' };
+    }
+
+    const db = getAnalyticsDb();
+    if (db) {
+      try {
+        const record = await db.query.integrationTokens.findFirst({
+          where: eq(integrationTokens.provider, 'meta_ads')
+        });
+        if (record && record.accessToken) {
+          const meta = (record.metadata as any) || {};
+          return { configured: true, accountId: meta.accountId || sqliteAccountId, source: 'postgresql' };
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    return { configured: false, accountId: sqliteAccountId, source: 'none' };
+  }
+
+  /**
    * Obtém token de acesso válido para Meta Ads
    */
   async getValidAccessToken(): Promise<string> {
+    const sqliteToken = getConfig('meta_access_token', '');
+    if (sqliteToken) {
+      return decryptToken(sqliteToken);
+    }
+
     const envToken = process.env.META_ACCESS_TOKEN || process.env.META_CLOUD_TOKEN;
     const db = getAnalyticsDb();
 
-    if (!db) {
-      if (envToken) return envToken;
-      throw new Error('Nenhum banco ou META_ACCESS_TOKEN configurado no .env');
-    }
-
-    const record = await db.query.integrationTokens.findFirst({
-      where: eq(integrationTokens.provider, 'meta_ads')
-    });
-
-    if (record && record.accessToken) {
-      return decryptToken(record.accessToken);
+    if (db) {
+      const record = await db.query.integrationTokens.findFirst({
+        where: eq(integrationTokens.provider, 'meta_ads')
+      });
+      if (record && record.accessToken) {
+        return decryptToken(record.accessToken);
+      }
     }
 
     if (envToken) return envToken;
-    throw new Error('Meta Ads não autenticado. Configure META_ACCESS_TOKEN no .env ou cadastre o token');
+    throw new Error('Meta Ads não autenticado. Configure o Token de Acesso do Meta no painel ou no .env');
   }
 
   /**
    * Formata identificador de conta de anúncios para act_{ID}
    */
   private formatAccountId(accountId?: string): string {
-    const id = accountId || this.adAccountId;
+    const id = accountId || getConfig('meta_ad_account_id', '') || this.adAccountId || process.env.META_AD_ACCOUNT_ID || '';
     if (!id) {
-      throw new Error('ID da conta de anúncios da Meta não configurado (META_AD_ACCOUNT_ID).');
+      throw new Error('ID da conta de anúncios da Meta não configurado. Informe o ID no painel ou via META_AD_ACCOUNT_ID.');
     }
     return id.startsWith('act_') ? id : `act_${id}`;
   }
@@ -125,9 +204,6 @@ export class MetaAdsIntegrationService {
     customAccountId?: string
   ): Promise<{ totalSincronizados: number; period: { since: string; until: string } }> {
     const db = getAnalyticsDb();
-    if (!db) {
-      throw new Error('PostgreSQL indisponível para sincronização de dados do Meta Ads');
-    }
 
     const token = await this.getValidAccessToken();
     const actId = this.formatAccountId(customAccountId);
@@ -197,35 +273,56 @@ export class MetaAdsIntegrationService {
         const purchases = this.extractPurchases(item.actions);
         const purchaseValue = this.extractPurchaseValue(item.action_values);
 
-        await db
-          .insert(metaAdInsights)
-          .values({
-            date: dateStr,
-            campaignId: item.campaign_id,
-            campaignName: item.campaign_name || 'Campanha Sem Nome',
-            spend: spend.toFixed(2),
-            impressions,
-            clicks,
-            ctr: (ctr / 100).toFixed(4), // Normaliza porcentagem
-            cpc: cpc.toFixed(2),
-            purchases,
-            purchaseValue: purchaseValue.toFixed(2),
-            updatedAt: new Date()
-          })
-          .onConflictDoUpdate({
-            target: [metaAdInsights.date, metaAdInsights.campaignId],
-            set: {
-              campaignName: item.campaign_name || 'Campanha Sem Nome',
-              spend: spend.toFixed(2),
-              impressions,
-              clicks,
-              ctr: (ctr / 100).toFixed(4),
-              cpc: cpc.toFixed(2),
-              purchases,
-              purchaseValue: purchaseValue.toFixed(2),
-              updatedAt: new Date()
-            }
-          });
+        // 1. Salvar no SQLite local
+        saveMetaInsightSqlite({
+          date: dateStr,
+          campaign_id: item.campaign_id,
+          campaign_name: item.campaign_name || 'Campanha Sem Nome',
+          spend,
+          impressions,
+          clicks,
+          ctr: ctr / 100,
+          cpc,
+          purchases,
+          purchase_value: purchaseValue
+        });
+
+        // 2. Se o PostgreSQL estiver ativo, salva em paralelo
+        if (db) {
+          try {
+            await db
+              .insert(metaAdInsights)
+              .values({
+                date: dateStr,
+                campaignId: item.campaign_id,
+                campaignName: item.campaign_name || 'Campanha Sem Nome',
+                spend: spend.toFixed(2),
+                impressions,
+                clicks,
+                ctr: (ctr / 100).toFixed(4),
+                cpc: cpc.toFixed(2),
+                purchases,
+                purchaseValue: purchaseValue.toFixed(2),
+                updatedAt: new Date()
+              })
+              .onConflictDoUpdate({
+                target: [metaAdInsights.date, metaAdInsights.campaignId],
+                set: {
+                  campaignName: item.campaign_name || 'Campanha Sem Nome',
+                  spend: spend.toFixed(2),
+                  impressions,
+                  clicks,
+                  ctr: (ctr / 100).toFixed(4),
+                  cpc: cpc.toFixed(2),
+                  purchases,
+                  purchaseValue: purchaseValue.toFixed(2),
+                  updatedAt: new Date()
+                }
+              });
+          } catch (errDb: unknown) {
+            console.warn('[Meta Ads Service] Aviso ao persistir no PostgreSQL:', errDb);
+          }
+        }
 
         totalSincronizados++;
       }

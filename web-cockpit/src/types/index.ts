@@ -206,4 +206,39 @@ export interface FluxoHorarioItem {
   leads: number;
 }
 
+export interface MetaCampaignInsight {
+  campaign_id: string;
+  campaign_name: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  purchases: number;
+}
+
+export interface MetaInsightsDaily {
+  date: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  purchases: number;
+}
+
+export interface MetaInsightsOverview {
+  configured: boolean;
+  accountId: string;
+  data: {
+    totalSpend: number;
+    spendToday: number;
+    totalImpressions: number;
+    totalClicks: number;
+    avgCpc: number;
+    avgCtr: number;
+    totalPurchases: number;
+    totalPurchaseValue: number;
+    topCampaigns: MetaCampaignInsight[];
+    dailyData: MetaInsightsDaily[];
+  };
+}
+
+
 

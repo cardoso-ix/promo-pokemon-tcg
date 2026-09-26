@@ -10,7 +10,10 @@ import {
   ShieldCheck,
   ExternalLink,
   MessageSquare,
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  Settings,
+  X
 } from 'lucide-react';
 import {
   AreaChart,
@@ -24,7 +27,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import type { UnifiedStatus, OfertaLog, BalancoFinanceiro, FluxoHorarioItem } from '../types/index.ts';
+import type { UnifiedStatus, OfertaLog, BalancoFinanceiro, FluxoHorarioItem, MetaInsightsOverview } from '../types/index.ts';
 import { api } from '../services/api.ts';
 
 interface DashboardOverviewProps {
@@ -45,6 +48,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const replica = status?.replica;
   const bot = status?.bot;
 
+  // Estados do Meta Ads
+  const [metaData, setMetaData] = useState<MetaInsightsOverview | null>(null);
+  const [showMetaModal, setShowMetaModal] = useState(false);
+  const [metaTokenInput, setMetaTokenInput] = useState('');
+  const [metaAccountIdInput, setMetaAccountIdInput] = useState('');
+  const [savingMeta, setSavingMeta] = useState(false);
+  const [syncingMeta, setSyncingMeta] = useState(false);
+
   // Fluxo de atividade por horário alimentado com dados 100% reais do banco
   const [activityData, setActivityData] = useState<FluxoHorarioItem[]>([
     { hora: '08h', ofertas: 0, cliques: 0, leads: 0 },
@@ -56,6 +67,20 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     { hora: '20h', ofertas: 0, cliques: 0, leads: 0 },
     { hora: '22h', ofertas: 0, cliques: 0, leads: 0 },
   ]);
+
+  const carregarMetaInsights = async () => {
+    try {
+      const res = await api.getMetaInsights();
+      if (res && res.data) {
+        setMetaData(res);
+        if (res.accountId && !metaAccountIdInput) {
+          setMetaAccountIdInput(res.accountId);
+        }
+      }
+    } catch {
+      // Silencioso
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -71,12 +96,54 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     };
 
     carregarFluxoReal();
-    const interval = setInterval(carregarFluxoReal, 15000);
+    carregarMetaInsights();
+    const interval = setInterval(() => {
+      carregarFluxoReal();
+      carregarMetaInsights();
+    }, 15000);
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
   }, []);
+
+  const handleSaveMetaConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!metaTokenInput && !metaAccountIdInput) {
+      return alert('Informe ao menos o Token de Acesso ou o ID da Conta.');
+    }
+    setSavingMeta(true);
+    try {
+      const res = await api.saveMetaAdsConfig({
+        accessToken: metaTokenInput,
+        accountId: metaAccountIdInput,
+        syncNow: true
+      });
+      alert(res.message || 'Configurações do Meta Ads salvas com sucesso!');
+      setShowMetaModal(false);
+      setMetaTokenInput('');
+      await carregarMetaInsights();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Falha ao salvar Meta Ads');
+    } finally {
+      setSavingMeta(false);
+    }
+  };
+
+  const handleSyncMetaNow = async () => {
+    setSyncingMeta(true);
+    try {
+      const hoje = new Date().toISOString().split('T')[0];
+      const trintaDiasAtras = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const res = await api.syncMetaInsights(trintaDiasAtras, hoje);
+      alert(`Sincronização concluída com sucesso! ${res.totalSincronizados} registros de gastos atualizados.`);
+      await carregarMetaInsights();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Falha na sincronização do Meta Ads');
+    } finally {
+      setSyncingMeta(false);
+    }
+  };
 
   const pieData = [
     { name: 'Lucro Disponível (30%)', value: balanco?.valorLucroDisponivel || 0, color: '#10b981' },
@@ -229,6 +296,111 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-1.5 rounded-full w-[70%]" />
           </div>
         </div>
+      </div>
+
+      {/* Banner / Card Executivo de Gastos do Meta Ads (Opção 1) */}
+      <div className="glass-panel rounded-2xl p-5 border border-blue-500/20 bg-gradient-to-r from-blue-950/40 via-slate-900/60 to-purple-950/30 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-lg">
+              f
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-heading font-bold text-base text-white">Meta Ads · Gastos & Tráfego Pago</h3>
+                <span
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${
+                    metaData?.configured
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                  }`}
+                >
+                  {metaData?.configured ? `● Conectado (${metaData.accountId || 'Conta Ativa'})` : '○ Não Conectado'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Sincronização oficial de gastos de campanhas, impressões e cliques via Marketing API Graph v20.0
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSyncMetaNow}
+              disabled={syncingMeta || !metaData?.configured}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                metaData?.configured
+                  ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/40'
+                  : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
+              }`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncingMeta ? 'animate-spin' : ''}`} />
+              <span>{syncingMeta ? 'Sincronizando...' : 'Sincronizar Gastos'}</span>
+            </button>
+
+            <button
+              onClick={() => setShowMetaModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white border border-white/10 transition-all"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>{metaData?.configured ? 'Ajustar Token' : 'Conectar Meta Ads'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Mini Cards de Métricas Reais do Meta Ads */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-white/[0.06]">
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[11px] text-slate-400 uppercase font-medium">Investimento no Mês</span>
+            <p className="text-lg font-heading font-extrabold text-blue-400 mt-0.5">
+              R$ {(metaData?.data?.totalSpend || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[11px] text-slate-400 uppercase font-medium">Gasto Hoje</span>
+            <p className="text-lg font-heading font-extrabold text-white mt-0.5">
+              R$ {(metaData?.data?.spendToday || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[11px] text-slate-400 uppercase font-medium">Cliques nos Anúncios</span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-lg font-heading font-extrabold text-cyan-300">
+                {(metaData?.data?.totalClicks || 0).toLocaleString('pt-BR')}
+              </span>
+              <span className="text-[10px] text-slate-400">CPC R$ {(metaData?.data?.avgCpc || 0).toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[11px] text-slate-400 uppercase font-medium">Impressões / Alcance</span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-lg font-heading font-extrabold text-purple-300">
+                {(metaData?.data?.totalImpressions || 0).toLocaleString('pt-BR')}
+              </span>
+              <span className="text-[10px] text-slate-400">CTR {(metaData?.data?.avgCtr || 0).toFixed(2)}%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Top Campanhas (se houver) */}
+        {metaData?.data?.topCampaigns && metaData.data.topCampaigns.length > 0 && (
+          <div className="pt-2 border-t border-white/[0.06]">
+            <span className="text-xs font-semibold text-slate-300">Top Campanhas por Investimento:</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+              {metaData.data.topCampaigns.slice(0, 3).map((camp) => (
+                <div key={camp.campaign_id} className="p-2.5 rounded-lg bg-black/20 border border-white/5 text-xs flex justify-between items-center">
+                  <span className="truncate font-medium text-slate-200 pr-2">{camp.campaign_name}</span>
+                  <span className="font-mono text-cyan-400 font-bold whitespace-nowrap">
+                    R$ {camp.spend.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Seção Principal de Gráficos Recharts */}
@@ -540,6 +712,100 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal de Conexão e Configuração do Meta Ads */}
+      {showMetaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-panel w-full max-w-lg rounded-2xl border border-white/10 p-6 space-y-6 bg-slate-900/90 shadow-2xl relative">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-lg">
+                  f
+                </div>
+                <div>
+                  <h3 className="font-heading font-bold text-lg text-white">Conexão Meta Ads</h3>
+                  <p className="text-xs text-slate-400">Marketing API Graph v20.0 · Gastos e Tráfego</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMetaModal(false)}
+                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMetaConfig} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">
+                  ID da Conta de Anúncios (Ad Account ID)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: act_1234567890 ou 1234567890"
+                  value={metaAccountIdInput}
+                  onChange={(e) => setMetaAccountIdInput(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/60 font-mono"
+                  required
+                />
+                <p className="text-[11px] text-slate-500">
+                  Localize no Gerenciador de Anúncios do Meta (identificador numérico da conta).
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">
+                  Token de Acesso do Meta (System User / Graph API)
+                </label>
+                <textarea
+                  placeholder="Cole aqui o token de acesso (EAA...)"
+                  value={metaTokenInput}
+                  onChange={(e) => setMetaTokenInput(e.target.value)}
+                  rows={3}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/60 font-mono resize-none"
+                  required={!metaData?.configured}
+                />
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  {metaData?.configured
+                    ? 'Já existe um token salvo com segurança criptografada AES-256-GCM. Deixe em branco caso queira manter o mesmo.'
+                    : 'Token gerado no Meta for Developers com permissões ads_read e read_insights.'}
+                </p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200/90 space-y-1">
+                <p className="font-semibold text-blue-300">Segurança & Criptografia</p>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Os tokens são salvos com criptografia AES-256-GCM tanto no banco local quanto na nuvem, e sincronizados a cada hora pelo Worker.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMetaModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingMeta}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/25 transition-all disabled:opacity-50"
+                >
+                  {savingMeta ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Salvando & Sincronizando...</span>
+                    </>
+                  ) : (
+                    <span>Salvar & Sincronizar Agora</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

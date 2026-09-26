@@ -10,7 +10,8 @@ import type {
   MetaTemplate,
   WarmupStatus,
   LogSistema,
-  FluxoHorarioItem
+  FluxoHorarioItem,
+  MetaInsightsOverview
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro
@@ -47,6 +48,25 @@ export const api = {
       return [];
     }
   },
+
+  // --- META ADS: GASTOS & INSIGHTS ---
+  getMetaInsights: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return request<MetaInsightsOverview>(`/api/dashboard/meta-insights${query}`);
+  },
+  saveMetaAdsConfig: (dados: { accessToken: string; accountId: string; syncNow?: boolean }) =>
+    request<{ ok: boolean; message: string; sync?: any }>('/api/integrations/meta/config', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    }),
+  syncMetaInsights: (since?: string, until?: string, accountId?: string) =>
+    request<{ ok: boolean; totalSincronizados: number }>('/api/integrations/meta/sync', {
+      method: 'POST',
+      body: JSON.stringify({ since, until, accountId })
+    }),
 
   // --- REPLICADOR DE OFERTAS ---
   getReplicaLogs: async (limit = 80): Promise<OfertaLog[]> => {

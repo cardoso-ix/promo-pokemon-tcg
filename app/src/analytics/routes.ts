@@ -2,8 +2,70 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { meliService } from './meli.service.js';
 import { metaAdsService } from './meta.service.js';
 import { analyticsService } from './analytics.service.js';
+import { getMetaInsightsStats } from '../db/database.js';
 
 export async function registerAnalyticsRoutes(app: FastifyInstance) {
+  // Rotas de Configuração e Status do Meta Ads
+  app.get('/api/integrations/meta/config', async () => {
+    const status = await metaAdsService.getConfigStatus();
+    return { ok: true, ...status };
+  });
+
+  app.post(
+    '/api/integrations/meta/config',
+    async (
+      req: FastifyRequest<{
+        Body: { accessToken: string; accountId: string; syncNow?: boolean };
+      }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { accessToken, accountId, syncNow } = req.body || {};
+        if (!accessToken && !accountId) {
+          return reply.status(400).send({ ok: false, error: 'Informe ao menos o Token de Acesso ou o ID da Conta de Anúncios.' });
+        }
+
+        await metaAdsService.saveConfig(accessToken || '', accountId || '');
+
+        let syncResult = null;
+        if (syncNow) {
+          const hoje = new Date().toISOString().split('T')[0];
+          const trintaDiasAtras = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          syncResult = await metaAdsService.syncMetaInsights(trintaDiasAtras, hoje, accountId);
+          await analyticsService.consolidateRange(trintaDiasAtras, hoje);
+        }
+
+        return {
+          ok: true,
+          message: 'Configurações do Meta Ads salvas com sucesso!',
+          sync: syncResult
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.status(500).send({ ok: false, error: msg });
+      }
+    }
+  );
+
+  // Métricas Consolidadas do Meta Ads para o Dashboard
+  app.get(
+    '/api/dashboard/meta-insights',
+    async (
+      req: FastifyRequest<{
+        Querystring: { startDate?: string; endDate?: string };
+      }>
+    ) => {
+      const { startDate, endDate } = req.query || {};
+      const stats = getMetaInsightsStats(startDate, endDate);
+      const config = await metaAdsService.getConfigStatus();
+      return {
+        ok: true,
+        configured: config.configured,
+        accountId: config.accountId,
+        data: stats
+      };
+    }
+  );
   // 1. Rota para iniciar o fluxo OAuth 2.0 do Mercado Livre
   app.get('/api/integrations/meli/auth', async (req: FastifyRequest, reply: FastifyReply) => {
     const appId = process.env.MELI_APP_ID || process.env.MELI_CLIENT_ID || '';

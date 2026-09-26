@@ -156,10 +156,27 @@ export function initDatabase() {
       criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS meta_ad_insights (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      date TEXT NOT NULL,
+      campaign_id TEXT NOT NULL,
+      campaign_name TEXT NOT NULL,
+      spend REAL NOT NULL DEFAULT 0.0,
+      impressions INTEGER NOT NULL DEFAULT 0,
+      clicks INTEGER NOT NULL DEFAULT 0,
+      ctr REAL NOT NULL DEFAULT 0.0,
+      cpc REAL NOT NULL DEFAULT 0.0,
+      purchases INTEGER NOT NULL DEFAULT 0,
+      purchase_value REAL NOT NULL DEFAULT 0.0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(date, campaign_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_logs_hash ON logs(hash_conteudo);
     CREATE INDEX IF NOT EXISTS idx_logs_criado ON logs(criado_em);
     CREATE INDEX IF NOT EXISTS idx_logs_status ON logs(status);
     CREATE INDEX IF NOT EXISTS idx_prod_rec ON produtos_replicados(produto_id, criado_em);
+    CREATE INDEX IF NOT EXISTS idx_meta_insights_date ON meta_ad_insights(date);
   `);
 
   // Semear valores padrão se não existirem
@@ -548,5 +565,157 @@ export function getFluxoHorarioHoje(leadsPorHora: Record<string, number> = {}): 
     ];
   }
 }
+
+export interface MetaInsightSqliteItem {
+  date: string;
+  campaign_id: string;
+  campaign_name: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  cpc: number;
+  purchases: number;
+  purchase_value: number;
+}
+
+export function saveMetaInsightSqlite(item: MetaInsightSqliteItem): void {
+  try {
+    db.prepare(`
+      INSERT INTO meta_ad_insights (
+        date, campaign_id, campaign_name, spend, impressions, clicks, ctr, cpc, purchases, purchase_value, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(date, campaign_id) DO UPDATE SET
+        campaign_name = excluded.campaign_name,
+        spend = excluded.spend,
+        impressions = excluded.impressions,
+        clicks = excluded.clicks,
+        ctr = excluded.ctr,
+        cpc = excluded.cpc,
+        purchases = excluded.purchases,
+        purchase_value = excluded.purchase_value,
+        updated_at = datetime('now')
+    `).run(
+      item.date,
+      item.campaign_id,
+      item.campaign_name || 'Campanha Sem Nome',
+      Number(item.spend) || 0,
+      Number(item.impressions) || 0,
+      Number(item.clicks) || 0,
+      Number(item.ctr) || 0,
+      Number(item.cpc) || 0,
+      Number(item.purchases) || 0,
+      Number(item.purchase_value) || 0
+    );
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao salvar insight do Meta no SQLite:', err);
+  }
+}
+
+export function getMetaInsightsStats(startDate?: string, endDate?: string) {
+  try {
+    let whereClause = '';
+    const params: any[] = [];
+    if (startDate && endDate) {
+      whereClause = 'WHERE date >= ? AND date <= ?';
+      params.push(startDate, endDate);
+    } else if (startDate) {
+      whereClause = 'WHERE date >= ?';
+      params.push(startDate);
+    }
+
+    const totalsRow = db.prepare(`
+      SELECT 
+        COALESCE(SUM(spend), 0) as total_spend,
+        COALESCE(SUM(impressions), 0) as total_impressions,
+        COALESCE(SUM(clicks), 0) as total_clicks,
+        COALESCE(SUM(purchases), 0) as total_purchases,
+        COALESCE(SUM(purchase_value), 0) as total_purchase_value
+      FROM meta_ad_insights
+      ${whereClause}
+    `).get(...params) as any;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayRow = db.prepare(`
+      SELECT COALESCE(SUM(spend), 0) as spend_today
+      FROM meta_ad_insights
+      WHERE date = ?
+    `).get(todayStr) as any;
+
+    const topCampaigns = db.prepare(`
+      SELECT 
+        campaign_id,
+        campaign_name,
+        SUM(spend) as spend,
+        SUM(impressions) as impressions,
+        SUM(clicks) as clicks,
+        SUM(purchases) as purchases
+      FROM meta_ad_insights
+      ${whereClause}
+      GROUP BY campaign_id, campaign_name
+      ORDER BY spend DESC
+      LIMIT 10
+    `).all(...params) as any[];
+
+    const dailyData = db.prepare(`
+      SELECT 
+        date,
+        SUM(spend) as spend,
+        SUM(impressions) as impressions,
+        SUM(clicks) as clicks,
+        SUM(purchases) as purchases
+      FROM meta_ad_insights
+      ${whereClause}
+      GROUP BY date
+      ORDER BY date ASC
+    `).all(...params) as any[];
+
+    const totalSpend = Number(totalsRow?.total_spend) || 0;
+    const totalClicks = Number(totalsRow?.total_clicks) || 0;
+    const totalImpressions = Number(totalsRow?.total_impressions) || 0;
+    const avgCpc = totalClicks > 0 ? totalSpend / totalClicks : 0;
+    const avgCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
+
+    return {
+      totalSpend,
+      spendToday: Number(todayRow?.spend_today) || 0,
+      totalImpressions,
+      totalClicks,
+      avgCpc: Number(avgCpc.toFixed(2)),
+      avgCtr: Number(avgCtr.toFixed(2)),
+      totalPurchases: Number(totalsRow?.total_purchases) || 0,
+      totalPurchaseValue: Number(totalsRow?.total_purchase_value) || 0,
+      topCampaigns: topCampaigns.map(c => ({
+        ...c,
+        spend: Number(c.spend) || 0,
+        impressions: Number(c.impressions) || 0,
+        clicks: Number(c.clicks) || 0,
+        purchases: Number(c.purchases) || 0
+      })),
+      dailyData: dailyData.map(d => ({
+        ...d,
+        spend: Number(d.spend) || 0,
+        impressions: Number(d.impressions) || 0,
+        clicks: Number(d.clicks) || 0,
+        purchases: Number(d.purchases) || 0
+      }))
+    };
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao obter estatísticas de Meta Ads:', err);
+    return {
+      totalSpend: 0,
+      spendToday: 0,
+      totalImpressions: 0,
+      totalClicks: 0,
+      avgCpc: 0,
+      avgCtr: 0,
+      totalPurchases: 0,
+      totalPurchaseValue: 0,
+      topCampaigns: [],
+      dailyData: []
+    };
+  }
+}
+
 
 
