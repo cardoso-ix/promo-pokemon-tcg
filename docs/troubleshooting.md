@@ -1,10 +1,10 @@
 # Troubleshooting — Diagnóstico e Resolução de Problemas
 
-Guia para solução rápida de incidentes na plataforma Promo Pokémon TCG (VPS HostGator + Coolify).
+Guia para solução rápida de incidentes na plataforma Promo Pokémon TCG tanto em produção na nuvem (VPS HostGator + Coolify) quanto no ambiente local ou novo computador.
 
 ---
 
-## T1 — O Painel Web não abre ou retorna erro 502 / Connection Refused
+## T1 — O Painel Web não abre ou retorna erro 502 / Connection Refused (Na Nuvem)
 
 **Causa 1: Container ainda inicializando no Coolify após deploy**
 - O build das imagens Docker e a inicialização levam em média de 1 a 2 minutos após um deploy.
@@ -66,3 +66,53 @@ Verifique os seguintes pontos no feed de **Atividades (Logs)** do painel do Repl
 - Quando o cookie expira, o encurtador aciona o **fallback de segurança** para garantir que a comissão não seja perdida, gerando um link parametrizado com `matt_word` e `matt_tool`.
 - O **Cookie Sentinel** emitirá um alerta no topo do painel.
 - **Solução**: Obtenha um cookie atualizado seguindo as instruções em **Configurações > Cookie Mercado Livre**.
+
+---
+
+## T6 — Erro no Novo Computador: Porta 3000 ou 3333 Ocupada (`EADDRINUSE`)
+
+**Causa**: Um processo anterior do Node.js ou outro aplicativo ficou travado em segundo plano usando a porta 3000 ou 3333.
+- **Solução no Windows**:
+  - Dê dois cliques em **`parar.bat`**. O script identifica automaticamente os PIDs que estão ouvindo nas portas 3000 e 3333 e os finaliza via `taskkill`.
+- **Solução no Linux / macOS**:
+  - Execute `./parar.sh` ou manualmente no terminal:
+    ```bash
+    lsof -ti:3000 | xargs kill -9
+    lsof -ti:3333 | xargs kill -9
+    ```
+
+---
+
+## T7 — Erro no Novo Computador: "Cannot find module dist/index.js"
+
+**Causa**: O código TypeScript ainda não foi compilado para JavaScript na máquina atual.
+- **Solução**:
+  - Dê dois cliques em `setup-novo-pc.bat` ou rode no terminal:
+    ```bash
+    npm run build:all
+    ```
+  - Ou execute via modo desenvolvimento diretamente com hot reload:
+    ```bash
+    iniciar-dev.bat
+    ```
+
+---
+
+## T8 — Falha no `npm install` com `better-sqlite3` no Novo Computador
+
+**Causa**: O `better-sqlite3` requer Node.js moderno. Se o computador tiver uma versão muito antiga (ex: Node 14 ou 16) ou Node 23 instável, pode falhar.
+- **Solução**:
+  - Certifique-se de instalar o **Node.js v20 LTS** ou **v22 LTS** oficial via [nodejs.org](https://nodejs.org/).
+  - O instalador oficial do Node.js já acompanha os prebuilts binários prontos para Windows x64.
+  - No Windows, se o Node foi instalado via NVM, certifique-se de executar `nvm use 20` ou `nvm use 22`.
+
+---
+
+## T9 — Permissão de Script no Linux / macOS (`Permission Denied`)
+
+**Causa**: Os arquivos `.sh` foram clonados do Git sem a flag executável.
+- **Solução**:
+  ```bash
+  chmod +x *.sh
+  ./setup-novo-pc.sh
+  ```

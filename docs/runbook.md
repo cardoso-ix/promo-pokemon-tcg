@@ -1,6 +1,6 @@
 # Runbook — Manual de Operação e Manutenção
 
-Guia prático para a operação diária, manutenção e gerenciamento das duas aplicações em produção na nuvem (VPS HostGator + Coolify).
+Guia prático para a operação diária, manutenção, gerenciamento em produção na nuvem (VPS HostGator + Coolify) e continuidade do desenvolvimento em máquina local ou novo computador.
 
 ---
 
@@ -18,7 +18,7 @@ Tanto o **Replicador de Ofertas** quanto o **Bot Disparador & Atendimento IA** r
 ### 1.2. Painel do Bot Disparador & Atendimento IA
 - **Acesso Online**: 👉 **`http://108.174.145.77:3333`**
 - **Tema Visual**: 🔥 **Tipo Fogo Pokémon TCG** (Vermelho/Laranja, Brasas 3D, Fundo Atmosférico).
-- **Função**: Extração de leads de grupos com 1 clique, disparos automáticos em massa com proteção anti-ban (Spintax), simulador WhatsApp ao vivo e atendimento privado automático com DeepSeek V4.
+- **Função**: Extração de leads de grupos com 1 clique, disparos automáticos em massa com proteção anti-ban (Spintax), simulador WhatsApp ao vivo, atendimento privado automático com DeepSeek V4 e gestão financeira com faturas de tráfego pago.
 - **Autenticação**: Protegido por login e senha. Sessão criptografada persistente de 30 dias.
 
 ### 1.3. Credenciais de Acesso (Login & Senha)
@@ -26,7 +26,6 @@ Ambos os painéis utilizam controle de acesso por credenciais seguras e tokens a
 - **Usuário padrão**: `admin`
 - **Senha padrão**: `promo2026`
 - **Duração da Sessão**: 30 dias em cookie seguro (`HttpOnly; SameSite=Lax`).
-- **Botão Sair**: Disponível na barra superior de ambos os painéis para encerramento imediato de sessão.
 
 ### 1.4. Gerador Manual de Anúncios por Link (No Painel Replicador)
 - **Acesso**: Aba **⚡ Gerador de Anúncios** no Cockpit do Replicador.
@@ -35,32 +34,61 @@ Ambos os painéis utilizam controle de acesso por credenciais seguras e tokens a
   2. Ao colar o link (ou clicar em **⚡ Puxar Dados & Gerar Anúncio**), o sistema extrai **automaticamente**:
      - O **título limpo** do produto (imune a títulos genéricos);
      - A **foto oficial em 2X HD** do produto;
-     - O **Preço real do item** diretamente do objeto de dados do anúncio principal (imune a carrosséis de produtos recomendados ou patrocinados);
-     - O **Preço De** (apenas quando o produto realmente possui preço riscado anterior diferente do preço atual);
+     - O **Preço real do item** diretamente do anúncio principal;
+     - O **Preço De** (apenas quando o produto realmente possui preço riscado anterior);
      - O **Cupom de Desconto** ativo (se houver).
-  3. **Edição Reativa em Tempo Real**: Ao digitar ou alterar o Cupom ou o Valor com Cupom no formulário, a mensagem formatada no preview atualiza **instantaneamente**, sem necessidade de clicar novamente em puxar dados.
-  4. **Estrutura Estrita e Limpa da Copy**: A mensagem contém apenas as informações essenciais para máxima conversão:
-     - 📦 Nome do Produto
-     - ❌ ~De~ e 👉 *Por apenas* (ou apenas *Por apenas* se for valor único)
-     - 🎟️ Cupom e 🔥 *Com cupom* (se informados)
-     - 👉 Link de afiliado limpo direto
-     - ⚠️ Rodapé: *Preço e estoque promocional sujeitos a alteração a qualquer momento.*
-     *(Sem slogans ou frases genéricas extras intermediárias).*
-  5. Marque os grupos de destino desejados (com auxílio da barra de busca de grupos).
-  6. Clique em **🚀 Publicar no WhatsApp** para disparar a foto com a legenda com 1 clique!
+  3. **Edição Reativa em Tempo Real**: Ao alterar Cupom ou Valor com Cupom, o preview atualiza instantaneamente.
+  4. Marque os grupos de destino e clique em **🚀 Publicar no WhatsApp**.
 
-### 1.5. Protocolo de Reativação Rápida em 30s (Pelo Celular ou Computador)
-Se o WhatsApp desconectar ou se você trocar de aparelho, você pode restabelecer tudo em **menos de 30 segundos** diretamente pelo celular:
-1. Abra no navegador do seu smartphone:  
-   👉 **`http://108.174.145.77:3000`** (ou `:3333` para o disparador).
-2. Se o status no topo indicar 🔴 **Desconectado** ou 🟡 **Aguardando QR**:
-   * Toque na aba **📱 Conectar WhatsApp**.
-   * Se o QR Code estiver visível, aponte a câmera do WhatsApp (**Aparelhos Conectados ➔ Conectar Aparelho**).
-   * Se a sessão parecer travada ou o WhatsApp não conectar de primeira: toque no botão **🔄 Reiniciar Sessão / Gerar Novo QR Code**. O robô faz a limpeza das chaves no servidor e gera um QR novo em 2 segundos.
+### 1.5. Módulo de Finanças & Gestão de Tráfego Pago Meta Ads
+- **Acesso**: Aba **📊 Finanças** no Cockpit do Disparador (`:3333`).
+- **Upload de Relatórios Meta Ads**:
+  1. No Gerenciador de Anúncios da Meta, exporte o relatório da semana em `.xlsx`, `.xls` ou `.csv`.
+  2. No painel, selecione o Mês de Referência (ex: `2026-09`) e o rótulo da semana (ex: `Semana 1`).
+  3. Faça o upload. O sistema calcula automaticamente: Investimento Total, Leads Gerados, CPL com selo de eficiência, CTR, CPC, CPM e Ranking das melhores campanhas.
+- **Lançamentos Diários & DRE (Regra 70% Reinvestimento)**:
+  1. Na seção **Lançamento Diário**, informe os gastos com anúncios do dia e o faturamento/lucro bruto apurado.
+  2. O DRE consolida o resultado líquido: 70% reservado para reinvestimento em campanhas de escala e 30% reservado para distribuição livre aos sócios.
+  3. Clique em **Exportar Balanço** para gerar o arquivo `.csv` ou **Imprimir / PDF** para o relatório contábil executivo formatado.
+
+### 1.6. Protocolo de Reativação Rápida em 30s (Pelo Celular)
+1. Abra no navegador do smartphone: **`http://108.174.145.77:3000`** (ou `:3333`).
+2. Se indicar 🔴 **Desconectado** ou 🟡 **Aguardando QR**:
+   - Toque em **📱 Conectar WhatsApp**.
+   - Se o QR Code estiver visível, leia com a câmera no WhatsApp.
+   - Se a sessão parecer travada: toque no botão **🔄 Reiniciar Sessão / Gerar Novo QR Code**. O sistema limpa as chaves antigas e emite um QR novo em 2 segundos.
 
 ---
 
-## 2. Deploy Contínuo via Coolify (CI/CD)
+## 2. Operação e Desenvolvimento em Novo Computador (Turnkey)
+
+Para continuar o desenvolvimento, criar novas melhorias ou rodar localmente em outro computador:
+
+Consulte o checklist detalhado: [GUIA_MIGRACAO_NOVO_PC.md](../GUIA_MIGRACAO_NOVO_PC.md).
+
+### 2.1. Configuração Inicial Rápida
+- **Windows:** Duplo clique em `setup-novo-pc.bat`.
+- **Linux/macOS:** `./setup-novo-pc.sh`
+- **Via Terminal (Monorepo):** `npm run setup`
+
+### 2.2. Modo Desenvolvimento com Hot Reload
+- **Windows:** Duplo clique em `iniciar-dev.bat`.
+- **Linux/macOS:** `./iniciar-dev.sh`
+- **Via Terminal:** `npm run dev:app` e `npm run dev:bot` em terminais separados.
+- *Qualquer alteração de código TypeScript recarrega a aplicação imediatamente.*
+
+### 2.3. Execução dos Testes Automatizados (128 Testes)
+```bash
+npm test
+```
+
+### 2.4. Finalização Segura dos Processos
+- **Windows:** Duplo clique em `parar.bat` (finaliza portas 3000 e 3333).
+- **Linux/macOS:** `./parar.sh`
+
+---
+
+## 3. Deploy Contínuo via Coolify (CI/CD)
 
 - Repositório GitHub Oficial: `https://github.com/cardoso-ix/promo-pokemon-tcg` (Branch: `main`).
 - Após realizar `git push origin main`, acione o deploy instantâneo na VPS via Webhook:
@@ -68,17 +96,4 @@ Se o WhatsApp desconectar ou se você trocar de aparelho, você pode restabelece
 curl -X POST "http://108.174.145.77:8000/api/v1/deploy?uuid=devvejts27nuuqhefh5gvwra" \
   -H "Authorization: Bearer 1|mmJOTnEZkh8NikYsxDTj60AVgh9ZZ6j0tJ7X5PNk4c8fa5ed"
 ```
-- O Coolify recompila as imagens Docker, aplica as novas alterações e reativa os serviços sem derrubar as sessões do WhatsApp.
-
----
-
-## 3. Operação Local no Notebook
-
-Caso queira realizar testes offline ou trabalhar em novas funcionalidades locais:
-
-| Ação | Comando / Script | Acesso Local |
-| --- | --- | --- |
-| Iniciar Ambos os Módulos | `iniciar-tudo.bat` | Portas 3000 e 3333 |
-| Iniciar Apenas Replicador | `cd app && npm run dev` | `http://localhost:3000` |
-| Iniciar Apenas Disparador | `cd bot-disparador && npm run dev` | `http://localhost:3333` |
-| Executar Testes Automatizados | `npm test --prefix app` e `npm test --prefix bot-disparador` | Terminal |
+- O Coolify recompila as imagens Docker, aplica as novas alterações e reativa os serviços sem derrubar as sessões ativas do WhatsApp.

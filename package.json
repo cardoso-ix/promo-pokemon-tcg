@@ -1,0 +1,36 @@
+{
+  "name": "promo-pokemon-tcg-monorepo",
+  "version": "1.0.0",
+  "description": "Plataforma Completa de Automação Promo Pokémon TCG (Replicador de Ofertas e Bot Disparador com IA)",
+  "private": true,
+  "workspaces": [
+    "app",
+    "bot-disparador"
+  ],
+  "scripts": {
+    "setup": "npm run install:all && npm run build:all",
+    "install:all": "npm install --prefix app && npm install --prefix bot-disparador",
+    "build": "npm run build:all",
+    "build:all": "npm run build --prefix app && npm run build --prefix bot-disparador",
+    "build:app": "npm run build --prefix app",
+    "build:bot": "npm run build --prefix bot-disparador",
+    "dev:app": "npm run dev --prefix app",
+    "dev:bot": "npm run dev --prefix bot-disparador",
+    "start:app": "npm start --prefix app",
+    "start:bot": "npm start --prefix bot-disparador",
+    "test": "npm run test:all",
+    "test:all": "npm test --prefix app && npm test --prefix bot-disparador",
+    "test:app": "npm test --prefix app",
+    "test:bot": "npm test --prefix bot-disparador"
+  },
+  "keywords": [
+    "pokemon-tcg",
+    "whatsapp",
+    "afiliados",
+    "mercadolivre",
+    "meta-ads",
+    "deepseek"
+  ],
+  "author": "Eduardo Cardoso",
+  "license": "MIT"
+}
