@@ -69,9 +69,16 @@ chmod +x *.sh
   - **Balanço Diário e DRE:** Consolidação automática de gastos de marketing vs lucros brutos do Mercado Livre.
   - **Regra dos 70% de Reinvestimento:** Cálculo automático de 70% do lucro líquido mensal destinado para reinvestimento agressivo em tráfego e 30% para distribuição aos sócios.
 
+### 3. 🟡 Módulo Mercado Livre em Tempo Real (Webhooks & Ingestão Financeira)
+- **Ingestão Push Instantânea:** Suporte a webhooks oficiais (`POST /api/webhooks/mercadolivre` e `POST /api/webhooks/meli`) para recebimento automático e em milissegundos de novas vendas (`orders_v2`).
+- **Autenticação OAuth 2.0 Oficial:** Fluxo completo de autorização (`/api/integrations/meli/auth`), troca de authorization code por access/refresh tokens e renovação automática de tokens.
+- **Persistência Híbrida & Segura:** Armazenamento seguro de credenciais com criptografia **AES-256-GCM** e persistência das ordens de venda no SQLite local (`meli_orders` em `replica.db`) e PostgreSQL com Drizzle ORM.
+- **Métricas Executivas ao Vivo:** Faturamento do Mês, Vendas Hoje, Contagem de Pedidos, Taxas e Comissões do Mercado Livre, Custo de Envio e Lucro Líquido Real das Vendas.
+- **DRE Consolidado Cruzado:** Cruzamento automático do Lucro Líquido do Mercado Livre contra o Investimento em Tráfego Pago do Meta Ads, alimentando dinamicamente a Regra dos 70% de Reinvestimento.
+
 ---
 
-### 3. 🌉 Gateway Reverso & Ponte Interna
+### 4. 🌉 Gateway Reverso & Ponte Interna
 - O servidor Fastify na porta 3000 atua como Gateway para as rotas `/api/bot/*`, viabilizando comunicação sem atritos e sem CORS.
 - Sempre que uma oferta é postada no grupo VIP pelo Replicador, ela é transmitida com token seguro para `http://bot-disparador:3333/api/internal/oferta`.
 

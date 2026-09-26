@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { getAnalyticsDb } from './db.js';
 import { integrationTokens, meliOrders } from './schema.js';
 import { encryptToken, decryptToken } from './security.js';
+import { getConfig, setConfig, saveMeliOrderSqlite, getMeliOrdersStats } from '../db/database.js';
 
 const MELI_AUTH_URL = 'https://api.mercadolibre.com/oauth/token';
 const MELI_API_BASE = 'https://api.mercadolibre.com';
@@ -33,7 +34,7 @@ export interface MeliPayment {
 }
 
 export interface MeliOrderPayload {
-  id: number;
+  id: number | string;
   date_created: string;
   date_closed?: string | null;
   total_amount: number;
@@ -67,15 +68,103 @@ export class MeliIntegrationService {
   }
 
   /**
+   * Salva configurações e credenciais do Mercado Livre
+   */
+  async saveConfig(dados: {
+    clientId?: string;
+    clientSecret?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    userId?: number;
+    redirectUri?: string;
+  }): Promise<void> {
+    if (dados.clientId?.trim()) {
+      const trimmed = dados.clientId.trim();
+      setConfig('meli_client_id', trimmed);
+      this.clientId = trimmed;
+    }
+    if (dados.clientSecret?.trim()) {
+      const trimmed = dados.clientSecret.trim();
+      setConfig('meli_client_secret', encryptToken(trimmed));
+      this.clientSecret = trimmed;
+    }
+    if (dados.redirectUri?.trim()) {
+      const trimmed = dados.redirectUri.trim();
+      setConfig('meli_redirect_uri', trimmed);
+      this.redirectUri = trimmed;
+    }
+    if (dados.userId) {
+      setConfig('meli_user_id', String(dados.userId));
+    }
+    if (dados.accessToken?.trim()) {
+      const enc = encryptToken(dados.accessToken.trim());
+      setConfig('meli_access_token', enc);
+      setConfig('meli_token_expires_at', new Date(Date.now() + 6 * 3600 * 1000).toISOString());
+    }
+    if (dados.refreshToken?.trim()) {
+      const enc = encryptToken(dados.refreshToken.trim());
+      setConfig('meli_refresh_token', enc);
+    }
+
+    // Salvar no PostgreSQL se conectado
+    const db = getAnalyticsDb();
+    if (db && dados.accessToken?.trim()) {
+      try {
+        const encAccess = encryptToken(dados.accessToken.trim());
+        const encRefresh = dados.refreshToken ? encryptToken(dados.refreshToken.trim()) : null;
+        await db
+          .insert(integrationTokens)
+          .values({
+            provider: 'mercadolivre',
+            accessToken: encAccess,
+            refreshToken: encRefresh,
+            tokenExpiresAt: new Date(Date.now() + 6 * 3600 * 1000),
+            metadata: { userId: dados.userId, clientId: dados.clientId },
+            updatedAt: new Date()
+          })
+          .onConflictDoUpdate({
+            target: integrationTokens.provider,
+            set: {
+              accessToken: encAccess,
+              refreshToken: encRefresh,
+              tokenExpiresAt: new Date(Date.now() + 6 * 3600 * 1000),
+              metadata: { userId: dados.userId, clientId: dados.clientId },
+              updatedAt: new Date()
+            }
+          });
+      } catch (err: unknown) {
+        console.warn('[Meli Service] Aviso ao salvar no PostgreSQL:', err);
+      }
+    }
+  }
+
+  /**
+   * Gera a URL oficial de autorização OAuth do Mercado Livre
+   */
+  getAuthUrl(customRedirectUri?: string): string {
+    const cid = getConfig('meli_client_id', '') || this.clientId;
+    if (!cid) {
+      throw new Error('Configure o App ID (Client ID) do Mercado Livre antes de iniciar o OAuth');
+    }
+    const rUri = customRedirectUri || getConfig('meli_redirect_uri', '') || this.redirectUri;
+    return `https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=${cid}&redirect_uri=${encodeURIComponent(rUri)}`;
+  }
+
+  /**
    * Troca authorization code por access_token e refresh_token
    */
-  async exchangeCodeForToken(code: string): Promise<MeliTokenResponse> {
+  async exchangeCodeForToken(code: string, customRedirectUri?: string): Promise<MeliTokenResponse> {
+    const cid = getConfig('meli_client_id', '') || this.clientId;
+    const encSecret = getConfig('meli_client_secret', '');
+    const cSecret = encSecret ? decryptToken(encSecret) : this.clientSecret;
+    const rUri = customRedirectUri || getConfig('meli_redirect_uri', '') || this.redirectUri;
+
     const params = new URLSearchParams({
       grant_type: 'authorization_code',
-      client_id: this.clientId,
-      client_secret: this.clientSecret,
+      client_id: cid,
+      client_secret: cSecret,
       code,
-      redirect_uri: this.redirectUri
+      redirect_uri: rUri
     });
 
     const res = await fetch(MELI_AUTH_URL, {
@@ -95,47 +184,53 @@ export class MeliIntegrationService {
   }
 
   /**
-   * Salva os tokens no banco com criptografia
+   * Salva os tokens no banco com criptografia (SQLite + PostgreSQL)
    */
   async saveTokens(tokens: MeliTokenResponse): Promise<void> {
-    const db = getAnalyticsDb();
-    if (!db) {
-      console.warn('[Meli Service] Banco não conectado. Tokens não foram persistidos no PostgreSQL.');
-      return;
-    }
-
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
     const encAccess = encryptToken(tokens.access_token);
     const encRefresh = encryptToken(tokens.refresh_token);
 
-    await db
-      .insert(integrationTokens)
-      .values({
-        provider: 'mercadolivre',
-        accessToken: encAccess,
-        refreshToken: encRefresh,
-        tokenExpiresAt: expiresAt,
-        metadata: {
-          userId: tokens.user_id,
-          scope: tokens.scope,
-          tokenType: tokens.token_type
-        },
-        updatedAt: new Date()
-      })
-      .onConflictDoUpdate({
-        target: integrationTokens.provider,
-        set: {
-          accessToken: encAccess,
-          refreshToken: encRefresh,
-          tokenExpiresAt: expiresAt,
-          metadata: {
-            userId: tokens.user_id,
-            scope: tokens.scope,
-            tokenType: tokens.token_type
-          },
-          updatedAt: new Date()
-        }
-      });
+    setConfig('meli_access_token', encAccess);
+    setConfig('meli_refresh_token', encRefresh);
+    setConfig('meli_token_expires_at', expiresAt.toISOString());
+    setConfig('meli_user_id', String(tokens.user_id));
+
+    const db = getAnalyticsDb();
+    if (db) {
+      try {
+        await db
+          .insert(integrationTokens)
+          .values({
+            provider: 'mercadolivre',
+            accessToken: encAccess,
+            refreshToken: encRefresh,
+            tokenExpiresAt: expiresAt,
+            metadata: {
+              userId: tokens.user_id,
+              scope: tokens.scope,
+              tokenType: tokens.token_type
+            },
+            updatedAt: new Date()
+          })
+          .onConflictDoUpdate({
+            target: integrationTokens.provider,
+            set: {
+              accessToken: encAccess,
+              refreshToken: encRefresh,
+              tokenExpiresAt: expiresAt,
+              metadata: {
+                userId: tokens.user_id,
+                scope: tokens.scope,
+                tokenType: tokens.token_type
+              },
+              updatedAt: new Date()
+            }
+          });
+      } catch (err: unknown) {
+        console.warn('[Meli Service] Erro ao persistir tokens no PostgreSQL:', err);
+      }
+    }
 
     console.log(`[Meli Service] Tokens do Mercado Livre persistidos (Expira em: ${expiresAt.toISOString()})`);
   }
@@ -144,49 +239,60 @@ export class MeliIntegrationService {
    * Obtém token de acesso válido, renovando automaticamente se estiver prestes a expirar
    */
   async getValidAccessToken(): Promise<string> {
-    const db = getAnalyticsDb();
+    // 1. Tentar SQLite Vault (Criptografado com AES-256-GCM)
+    const encSqliteToken = getConfig('meli_access_token', '');
+    if (encSqliteToken) {
+      const expiresAtIso = getConfig('meli_token_expires_at', '');
+      const expiresAt = expiresAtIso ? new Date(expiresAtIso).getTime() : 0;
+      const now = Date.now();
+      const marginMs = 15 * 60 * 1000; // 15 minutos
 
-    // Fallback: Token estático direto de variável de ambiente (se fornecido)
-    const envToken = process.env.MELI_ACCESS_TOKEN;
-    if (!db) {
-      if (envToken) return envToken;
-      throw new Error('Nenhum banco ou MELI_ACCESS_TOKEN configurado no .env');
-    }
-
-    const record = await db.query.integrationTokens.findFirst({
-      where: eq(integrationTokens.provider, 'mercadolivre')
-    });
-
-    if (!record) {
-      if (envToken) return envToken;
-      throw new Error('Mercado Livre não autenticado. Realize a autorização em /api/integrations/meli/auth');
-    }
-
-    const expiresAt = record.tokenExpiresAt ? new Date(record.tokenExpiresAt).getTime() : 0;
-    const now = Date.now();
-    // Renova se faltar menos de 10 minutos para expirar
-    const marginMs = 10 * 60 * 1000;
-
-    if (now + marginMs >= expiresAt) {
-      console.log('[Meli Service] Access token expirado ou próximo de expirar. Renovando com refresh_token...');
-      const decryptedRefresh = decryptToken(record.refreshToken || '');
-      if (!decryptedRefresh) {
-        throw new Error('Refresh token indisponível para renovação automática do Mercado Livre');
+      if (expiresAt > 0 && now + marginMs >= expiresAt) {
+        const encRefresh = getConfig('meli_refresh_token', '');
+        if (encRefresh) {
+          console.log('[Meli Service] Access token expirado ou próximo de expirar. Renovando automaticamente...');
+          const decryptedRefresh = decryptToken(encRefresh);
+          if (decryptedRefresh) {
+            return this.refreshAccessToken(decryptedRefresh);
+          }
+        }
       }
-      return this.refreshAccessToken(decryptedRefresh);
+
+      const decrypted = decryptToken(encSqliteToken);
+      if (decrypted) return decrypted;
     }
 
-    return decryptToken(record.accessToken);
+    // 2. Tentar variável de ambiente
+    const envToken = process.env.MELI_ACCESS_TOKEN;
+    if (envToken) return envToken;
+
+    // 3. Tentar PostgreSQL (se conectado)
+    const db = getAnalyticsDb();
+    if (db) {
+      const record = await db.query.integrationTokens.findFirst({
+        where: eq(integrationTokens.provider, 'mercadolivre')
+      });
+      if (record) {
+        const decrypted = decryptToken(record.accessToken);
+        if (decrypted) return decrypted;
+      }
+    }
+
+    throw new Error('Mercado Livre não autenticado. Realize a autorização ou informe o Access Token.');
   }
 
   /**
    * Renova o access_token usando o refresh_token
    */
   async refreshAccessToken(refreshToken: string): Promise<string> {
+    const cid = getConfig('meli_client_id', '') || this.clientId;
+    const encSecret = getConfig('meli_client_secret', '');
+    const cSecret = encSecret ? decryptToken(encSecret) : this.clientSecret;
+
     const params = new URLSearchParams({
       grant_type: 'refresh_token',
-      client_id: this.clientId,
-      client_secret: this.clientSecret,
+      client_id: cid,
+      client_secret: cSecret,
       refresh_token: refreshToken
     });
 
@@ -207,14 +313,37 @@ export class MeliIntegrationService {
   }
 
   /**
+   * Obtém status da integração do Mercado Livre
+   */
+  async getConfigStatus(currentHost = 'http://localhost:3000'): Promise<{
+    configured: boolean;
+    userId: string;
+    clientId: string;
+    webhookUrl: string;
+    tokenExpiresAt: string;
+  }> {
+    const encToken = getConfig('meli_access_token', '');
+    const userId = getConfig('meli_user_id', '') || process.env.MELI_USER_ID || '';
+    const clientId = getConfig('meli_client_id', '') || this.clientId || '';
+    const tokenExpiresAt = getConfig('meli_token_expires_at', '');
+    const envToken = process.env.MELI_ACCESS_TOKEN || '';
+
+    const configured = Boolean(encToken || envToken);
+    const webhookUrl = `${currentHost}/api/webhooks/mercadolivre`;
+
+    return {
+      configured,
+      userId,
+      clientId,
+      webhookUrl,
+      tokenExpiresAt
+    };
+  }
+
+  /**
    * Consulta e extrai pedidos por intervalo de data com paginação
    */
   async syncMeliOrders(dateFrom: Date, dateTo: Date): Promise<{ totalEncontrados: number; totalProcessados: number }> {
-    const db = getAnalyticsDb();
-    if (!db) {
-      throw new Error('PostgreSQL indisponível para sincronização de pedidos do Mercado Livre');
-    }
-
     const accessToken = await this.getValidAccessToken();
     const fromIso = dateFrom.toISOString();
     const toIso = dateTo.toISOString();
@@ -259,7 +388,7 @@ export class MeliIntegrationService {
   }
 
   /**
-   * Consulta um pedido específico por ID e realiza upsert
+   * Consulta um pedido específico por ID e realiza upsert imediato
    */
   async fetchAndSaveOrderById(orderId: string | number): Promise<void> {
     const accessToken = await this.getValidAccessToken();
@@ -274,7 +403,7 @@ export class MeliIntegrationService {
 
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`[Meli Fetch Order] Falha ao buscar pedido ${orderId} (${res.status}): ${err}`);
+      throw new Error(`[Meli Fetch Order] Falha ao buscar pedido #${orderId} (${res.status}): ${err}`);
     }
 
     const order = (await res.json()) as MeliOrderPayload;
@@ -282,21 +411,17 @@ export class MeliIntegrationService {
   }
 
   /**
-   * Realiza o upsert de um pedido no PostgreSQL calculando taxas de venda e frete
+   * Realiza o upsert de um pedido no SQLite e PostgreSQL calculando taxas de venda e frete
    */
   async upsertOrder(order: MeliOrderPayload): Promise<void> {
-    const db = getAnalyticsDb();
-    if (!db) return;
-
     const orderIdStr = String(order.id);
-    const dateCreated = new Date(order.date_created);
-    const dateClosed = order.date_closed ? new Date(order.date_closed) : null;
-    const totalAmount = order.total_amount || 0;
+    const dateCreatedStr = order.date_created || new Date().toISOString();
+    const dateClosedStr = order.date_closed || null;
+    const totalAmount = Number(order.total_amount) || 0;
 
-    // 1. Calcula paidAmount somando pagamentos aprovados
     let paidAmount = 0;
     let marketplaceFee = 0;
-    let shippingCost = order.shipping?.cost || 0;
+    let shippingCost = Number(order.shipping?.cost) || 0;
 
     if (order.payments && Array.isArray(order.payments)) {
       for (const p of order.payments) {
@@ -312,7 +437,6 @@ export class MeliIntegrationService {
       }
     }
 
-    // 2. Se marketplace_fee não vier nos payments, calcula via order_items.sale_fee
     if (marketplaceFee === 0 && order.order_items && Array.isArray(order.order_items)) {
       for (const item of order.order_items) {
         if (item.sale_fee) {
@@ -322,55 +446,82 @@ export class MeliIntegrationService {
     }
 
     const buyerId = order.buyer?.id ? String(order.buyer.id) : null;
+    const buyerNickname = order.buyer?.nickname || null;
     const currencyId = order.currency_id || 'BRL';
 
-    await db
-      .insert(meliOrders)
-      .values({
-        orderId: orderIdStr,
-        dateCreated,
-        dateClosed,
-        totalAmount: totalAmount.toFixed(2),
-        paidAmount: paidAmount > 0 ? paidAmount.toFixed(2) : totalAmount.toFixed(2),
-        marketplaceFee: marketplaceFee.toFixed(2),
-        shippingCost: shippingCost.toFixed(2),
-        status: order.status,
-        buyerId,
-        currencyId,
-        rawData: order,
-        updatedAt: new Date()
-      })
-      .onConflictDoUpdate({
-        target: meliOrders.orderId,
-        set: {
-          dateClosed,
-          totalAmount: totalAmount.toFixed(2),
-          paidAmount: paidAmount > 0 ? paidAmount.toFixed(2) : totalAmount.toFixed(2),
-          marketplaceFee: marketplaceFee.toFixed(2),
-          shippingCost: shippingCost.toFixed(2),
-          status: order.status,
-          buyerId,
-          rawData: order,
-          updatedAt: new Date()
-        }
-      });
+    // 1. Salvar no SQLite local (replica.db)
+    saveMeliOrderSqlite({
+      order_id: orderIdStr,
+      date_created: dateCreatedStr,
+      date_closed: dateClosedStr,
+      total_amount: totalAmount,
+      paid_amount: paidAmount > 0 ? paidAmount : totalAmount,
+      marketplace_fee: marketplaceFee,
+      shipping_cost: shippingCost,
+      status: order.status || 'confirmed',
+      buyer_id: buyerId,
+      buyer_nickname: buyerNickname,
+      currency_id: currencyId,
+      raw_data: order
+    });
+
+    // 2. Salvar no PostgreSQL (se disponível)
+    const db = getAnalyticsDb();
+    if (db) {
+      try {
+        await db
+          .insert(meliOrders)
+          .values({
+            orderId: orderIdStr,
+            dateCreated: new Date(dateCreatedStr),
+            dateClosed: dateClosedStr ? new Date(dateClosedStr) : null,
+            totalAmount: totalAmount.toFixed(2),
+            paidAmount: (paidAmount > 0 ? paidAmount : totalAmount).toFixed(2),
+            marketplaceFee: marketplaceFee.toFixed(2),
+            shippingCost: shippingCost.toFixed(2),
+            status: order.status || 'confirmed',
+            buyerId,
+            currencyId,
+            rawData: order,
+            updatedAt: new Date()
+          })
+          .onConflictDoUpdate({
+            target: meliOrders.orderId,
+            set: {
+              dateClosed: dateClosedStr ? new Date(dateClosedStr) : null,
+              totalAmount: totalAmount.toFixed(2),
+              paidAmount: (paidAmount > 0 ? paidAmount : totalAmount).toFixed(2),
+              marketplaceFee: marketplaceFee.toFixed(2),
+              shippingCost: shippingCost.toFixed(2),
+              status: order.status || 'confirmed',
+              buyerId,
+              rawData: order,
+              updatedAt: new Date()
+            }
+          });
+      } catch (err: unknown) {
+        console.warn('[Meli Service] Erro ao sincronizar pedido no PostgreSQL:', err);
+      }
+    }
   }
 
   /**
-   * Processador de eventos de Webhook do Mercado Livre
+   * Processador de eventos de Webhook do Mercado Livre em Tempo Real
    */
-  async handleWebhook(body: { topic?: string; resource?: string; user_id?: number }): Promise<void> {
+  async handleWebhook(body: { topic?: string; resource?: string; user_id?: number }): Promise<{ processed: boolean; orderId?: string }> {
     const topic = body.topic || '';
     const resource = body.resource || '';
 
-    // Notificações de pedidos: topic "orders_v2" ou resource contendo "/orders/"
     if (topic === 'orders_v2' || resource.startsWith('/orders/')) {
       const orderId = resource.replace('/orders/', '').trim();
       if (orderId && /^\d+$/.test(orderId)) {
-        console.log(`[Meli Webhook] Notificação recebida para o pedido #${orderId}. Atualizando dados...`);
+        console.log(`[Meli Webhook] Nova notificação em tempo real para o pedido #${orderId}! Processando...`);
         await this.fetchAndSaveOrderById(orderId);
+        return { processed: true, orderId };
       }
     }
+
+    return { processed: false };
   }
 }
 

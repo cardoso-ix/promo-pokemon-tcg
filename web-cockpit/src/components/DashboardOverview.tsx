@@ -13,7 +13,8 @@ import {
   Sparkles,
   RefreshCw,
   Settings,
-  X
+  X,
+  ShoppingBag
 } from 'lucide-react';
 import {
   AreaChart,
@@ -27,7 +28,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import type { UnifiedStatus, OfertaLog, BalancoFinanceiro, FluxoHorarioItem, MetaInsightsOverview } from '../types/index.ts';
+import type { UnifiedStatus, OfertaLog, BalancoFinanceiro, FluxoHorarioItem, MetaInsightsOverview, MeliOrdersOverview } from '../types/index.ts';
 import { api } from '../services/api.ts';
 
 interface DashboardOverviewProps {
@@ -56,6 +57,16 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [savingMeta, setSavingMeta] = useState(false);
   const [syncingMeta, setSyncingMeta] = useState(false);
 
+  // Estados do Mercado Livre (Vendas em Tempo Real via Webhook & API Oficial)
+  const [meliData, setMeliData] = useState<MeliOrdersOverview | null>(null);
+  const [showMeliModal, setShowMeliModal] = useState(false);
+  const [meliClientIdInput, setMeliClientIdInput] = useState('');
+  const [meliClientSecretInput, setMeliClientSecretInput] = useState('');
+  const [meliTokenInput, setMeliTokenInput] = useState('');
+  const [savingMeli, setSavingMeli] = useState(false);
+  const [syncingMeli, setSyncingMeli] = useState(false);
+  const [meliWebhookUrl, setMeliWebhookUrl] = useState('');
+
   // Fluxo de atividade por horário alimentado com dados 100% reais do banco
   const [activityData, setActivityData] = useState<FluxoHorarioItem[]>([
     { hora: '08h', ofertas: 0, cliques: 0, leads: 0 },
@@ -82,6 +93,18 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     }
   };
 
+  const carregarMeliInsights = async () => {
+    try {
+      const res = await api.getMeliInsights();
+      if (res && res.data) {
+        setMeliData(res);
+        if (res.webhookUrl) setMeliWebhookUrl(res.webhookUrl);
+      }
+    } catch {
+      // Silencioso
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
     const carregarFluxoReal = async () => {
@@ -97,9 +120,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
     carregarFluxoReal();
     carregarMetaInsights();
+    carregarMeliInsights();
     const interval = setInterval(() => {
       carregarFluxoReal();
       carregarMetaInsights();
+      carregarMeliInsights();
     }, 15000);
     return () => {
       isMounted = false;
@@ -145,10 +170,64 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     }
   };
 
+  const handleSaveMeliConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!meliClientIdInput && !meliTokenInput) {
+      return alert('Informe ao menos o App ID (Client ID) ou o Token de Acesso do Mercado Livre.');
+    }
+    setSavingMeli(true);
+    try {
+      const res = await api.saveMeliConfig({
+        clientId: meliClientIdInput,
+        clientSecret: meliClientSecretInput,
+        accessToken: meliTokenInput,
+        syncNow: true
+      });
+      alert(res.message || 'Configurações do Mercado Livre salvas com sucesso!');
+      setShowMeliModal(false);
+      setMeliTokenInput('');
+      setMeliClientSecretInput('');
+      await carregarMeliInsights();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Falha ao salvar Mercado Livre');
+    } finally {
+      setSavingMeli(false);
+    }
+  };
+
+  const handleSyncMeliNow = async () => {
+    setSyncingMeli(true);
+    try {
+      const res = await api.syncMeliOrders(30);
+      alert(`Sincronização concluída com sucesso! ${res.totalProcessados} pedidos processados.`);
+      await carregarMeliInsights();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Falha na sincronização do Mercado Livre');
+    } finally {
+      setSyncingMeli(false);
+    }
+  };
+
+  const handleIniciarOAuthMeli = () => {
+    window.location.href = '/api/integrations/meli/auth';
+  };
+
+  // Consolidação Financeira Unificada em Tempo Real (Mercado Livre vs Meta Ads)
+  const totalVendasMeli = meliData?.data?.totalRevenue || balanco?.totalLucroBruto || 0;
+  const vendasHojeMeli = meliData?.data?.revenueToday || 0;
+  const pedidosHojeMeli = meliData?.data?.ordersToday || 0;
+  const totalTaxasMeli = meliData?.data?.totalFees || 0;
+  const totalFreteMeli = meliData?.data?.totalShipping || 0;
+  const lucroLiquidoVendas = meliData?.data?.netProfit || balanco?.totalLucroBruto || 0;
+  const gastoMetaAds = metaData?.data?.totalSpend || balanco?.totalGastoCampanhas || 0;
+  const lucroOperacaoReal = Math.max(0, lucroLiquidoVendas - gastoMetaAds);
+  const reinvestir70 = lucroOperacaoReal * 0.70;
+  const disponivel30 = lucroOperacaoReal * 0.30;
+
   const pieData = [
-    { name: 'Lucro Disponível (30%)', value: balanco?.valorLucroDisponivel || 0, color: '#10b981' },
-    { name: 'Reinvestimento (70%)', value: balanco?.valorReinvestimentoCampanhas || 0, color: '#00e5ff' },
-    { name: 'Meta Ads', value: balanco?.totalGastoCampanhas || 0, color: '#ef4444' }
+    { name: 'Lucro Disponível (30%)', value: disponivel30 || balanco?.valorLucroDisponivel || 0, color: '#10b981' },
+    { name: 'Reinvestimento (70%)', value: reinvestir70 || balanco?.valorReinvestimentoCampanhas || 0, color: '#00e5ff' },
+    { name: 'Meta Ads', value: gastoMetaAds || balanco?.totalGastoCampanhas || 0, color: '#ef4444' }
   ];
 
   const totalHoje = replica?.totalEnviadosHoje || recentLogs.filter(l => l.status === 'enviado').length;
@@ -279,21 +358,106 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* KPI 4: Faturamento & Regra 70% */}
         <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Lucro Líquido (Mês)</span>
+            <span className="text-xs font-medium uppercase tracking-wider">Lucro Líquido Real</span>
             <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-heading font-extrabold text-emerald-400 tracking-tight">
-              R$ {(balanco?.resultadoLiquido || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              R$ {(lucroOperacaoReal > 0 ? lucroOperacaoReal : (balanco?.resultadoLiquido || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
           <p className="text-xs text-cyan-300 mt-1 font-medium">
-            Reinvestir: R$ {(balanco?.valorReinvestimentoCampanhas || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (70%)
+            Reinvestir: R$ {(reinvestir70 > 0 ? reinvestir70 : (balanco?.valorReinvestimentoCampanhas || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (70%)
           </p>
           <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
             <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-1.5 rounded-full w-[70%]" />
+          </div>
+        </div>
+      </div>
+
+      {/* Banner / Card Executivo de Vendas do Mercado Livre (Tempo Real via Webhook) */}
+      <div className="glass-panel rounded-2xl p-5 border border-amber-500/25 bg-gradient-to-r from-amber-950/40 via-slate-900/70 to-yellow-950/30 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg">
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-heading font-bold text-base text-white">Mercado Livre · Vendas & Faturamento em Tempo Real</h3>
+                <span
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold ${
+                    meliData?.configured
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                  }`}
+                >
+                  {meliData?.configured ? '● Webhook Push Ativo (Tempo Real)' : '○ Aguardando Conexão'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Notificações push instantâneas por webhook e conciliação contábil de pedidos, taxas de marketplace e fretes
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSyncMeliNow}
+              disabled={syncingMeli || !meliData?.configured}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                meliData?.configured
+                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40'
+                  : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
+              }`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncingMeli ? 'animate-spin' : ''}`} />
+              <span>{syncingMeli ? 'Sincronizando...' : 'Sincronizar Vendas'}</span>
+            </button>
+
+            <button
+              onClick={() => setShowMeliModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white border border-white/10 transition-all"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>{meliData?.configured ? 'Ajustar Meli' : 'Conectar Mercado Livre'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Mini Cards de Métricas do Mercado Livre */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-white/[0.06]">
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[11px] text-slate-400 uppercase font-medium">Faturamento no Mês</span>
+            <p className="text-lg font-heading font-extrabold text-amber-400 mt-0.5">
+              R$ {totalVendasMeli.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[11px] text-slate-400 uppercase font-medium">Vendas Hoje</span>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <p className="text-lg font-heading font-extrabold text-white">
+                R$ {vendasHojeMeli.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </p>
+              <span className="text-[10px] text-slate-400">({pedidosHojeMeli} pedidos)</span>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[11px] text-slate-400 uppercase font-medium">Taxas & Frete ML</span>
+            <p className="text-lg font-heading font-extrabold text-red-400 mt-0.5">
+              R$ {(totalTaxasMeli + totalFreteMeli).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[11px] text-slate-400 uppercase font-medium">Lucro Líquido das Vendas</span>
+            <p className="text-lg font-heading font-extrabold text-emerald-400 mt-0.5">
+              R$ {lucroLiquidoVendas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </p>
           </div>
         </div>
       </div>
@@ -799,6 +963,149 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                     </>
                   ) : (
                     <span>Salvar & Sincronizar Agora</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Conexão e Configuração do Mercado Livre */}
+      {showMeliModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-panel w-full max-w-lg rounded-2xl border border-white/10 p-6 space-y-6 bg-slate-900/90 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg">
+                  <ShoppingBag className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-bold text-lg text-white">Conexão Mercado Livre</h3>
+                  <p className="text-xs text-slate-400">Vendas em Tempo Real · Webhook Push & API Oficial</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMeliModal(false)}
+                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Destaque 1: Webhook Push em Tempo Real */}
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  URL do Webhook (Tempo Real)
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  Push 24/7 Ativo
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Cole esta URL no painel de desenvolvedor do Mercado Livre (tópico <strong>orders_v2</strong>) para receber as vendas em menos de 1 segundo:
+              </p>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  readOnly
+                  value={meliWebhookUrl || 'http://108.174.145.77:3000/api/webhooks/mercadolivre'}
+                  className="w-full px-3 py-1.5 rounded-lg bg-black/40 border border-white/10 text-xs font-mono text-amber-200 select-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(meliWebhookUrl || 'http://108.174.145.77:3000/api/webhooks/mercadolivre');
+                    alert('URL do Webhook copiada para a área de transferência!');
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs font-bold whitespace-nowrap border border-amber-500/40"
+                >
+                  Copiar URL
+                </button>
+              </div>
+            </div>
+
+            {/* Destaque 2: Login Oficial com 1 Clique */}
+            <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-3">
+              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                Opção Recomendada: Conectar com 1 Clique
+              </span>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Autorize diretamente na sua conta do Mercado Livre para renovar os tokens automaticamente sem expirar.
+              </p>
+              <button
+                type="button"
+                onClick={handleIniciarOAuthMeli}
+                className="w-full py-2.5 rounded-xl font-bold bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>Autorizar no Mercado Livre Oficial</span>
+              </button>
+            </div>
+
+            {/* Destaque 3: Formulário para Inserção Manual */}
+            <form onSubmit={handleSaveMeliConfig} className="space-y-4 pt-1 border-t border-white/[0.08]">
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
+                Ou configure com credenciais de desenvolvedor
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">App ID (Client ID)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 842194819..."
+                    value={meliClientIdInput}
+                    onChange={(e) => setMeliClientIdInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500/60 font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">Client Secret</label>
+                  <input
+                    type="password"
+                    placeholder="Secret do App"
+                    value={meliClientSecretInput}
+                    onChange={(e) => setMeliClientSecretInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500/60 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-300">Token de Acesso Manual (Opcional)</label>
+                <textarea
+                  placeholder="Cole aqui o Bearer token do Mercado Livre (se já tiver um gerado)"
+                  value={meliTokenInput}
+                  onChange={(e) => setMeliTokenInput(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-amber-500/60 font-mono resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMeliModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingMeli}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold shadow-lg shadow-amber-500/25 transition-all disabled:opacity-50"
+                >
+                  {savingMeli ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <span>Salvar Configurações</span>
                   )}
                 </button>
               </div>

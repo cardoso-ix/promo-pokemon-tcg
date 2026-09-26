@@ -11,7 +11,8 @@ import type {
   WarmupStatus,
   LogSistema,
   FluxoHorarioItem,
-  MetaInsightsOverview
+  MetaInsightsOverview,
+  MeliOrdersOverview
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro
@@ -66,6 +67,36 @@ export const api = {
     request<{ ok: boolean; totalSincronizados: number }>('/api/integrations/meta/sync', {
       method: 'POST',
       body: JSON.stringify({ since, until, accountId })
+    }),
+
+  // --- MERCADO LIVRE: VENDAS, PEDIDOS & WEBHOOK EM TEMPO REAL ---
+  getMeliInsights: (startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return request<MeliOrdersOverview>(`/api/dashboard/meli-insights${query}`);
+  },
+  getMeliConfig: () =>
+    request<{ ok: boolean; configured: boolean; userId: string; clientId: string; webhookUrl: string; tokenExpiresAt: string }>('/api/integrations/meli/config'),
+  saveMeliConfig: (dados: {
+    clientId?: string;
+    clientSecret?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    userId?: number;
+    syncNow?: boolean;
+  }) =>
+    request<{ ok: boolean; message: string; sync?: any }>('/api/integrations/meli/config', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    }),
+  getMeliAuthUrl: () =>
+    request<{ ok: boolean; authUrl: string }>('/api/integrations/meli/auth-url'),
+  syncMeliOrders: (days = 30) =>
+    request<{ ok: boolean; totalProcessados: number; totalEncontrados: number }>('/api/integrations/meli/sync', {
+      method: 'POST',
+      body: JSON.stringify({ days })
     }),
 
   // --- REPLICADOR DE OFERTAS ---

@@ -240,5 +240,42 @@ export interface MetaInsightsOverview {
   };
 }
 
+export interface MeliOrder {
+  order_id: string;
+  date_created: string;
+  total_amount: number;
+  paid_amount: number;
+  marketplace_fee: number;
+  shipping_cost: number;
+  status: string;
+  buyer_nickname: string;
+}
+
+export interface MeliOrdersDaily {
+  date: string;
+  orders: number;
+  revenue: number;
+  fees: number;
+}
+
+export interface MeliOrdersOverview {
+  configured: boolean;
+  userId: string;
+  webhookUrl: string;
+  data: {
+    totalRevenue: number;
+    revenueToday: number;
+    totalOrders: number;
+    ordersToday: number;
+    totalFees: number;
+    totalShipping: number;
+    netProfit: number;
+    avgTicket: number;
+    recentOrders: MeliOrder[];
+    dailyData: MeliOrdersDaily[];
+  };
+}
+
+
 
 

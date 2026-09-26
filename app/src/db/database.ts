@@ -172,11 +172,29 @@ export function initDatabase() {
       UNIQUE(date, campaign_id)
     );
 
+    CREATE TABLE IF NOT EXISTS meli_orders (
+      order_id TEXT PRIMARY KEY,
+      date_created TEXT NOT NULL,
+      date_closed TEXT,
+      total_amount REAL NOT NULL DEFAULT 0.0,
+      paid_amount REAL NOT NULL DEFAULT 0.0,
+      marketplace_fee REAL NOT NULL DEFAULT 0.0,
+      shipping_cost REAL NOT NULL DEFAULT 0.0,
+      status TEXT NOT NULL,
+      buyer_id TEXT,
+      buyer_nickname TEXT,
+      currency_id TEXT DEFAULT 'BRL',
+      raw_data TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_logs_hash ON logs(hash_conteudo);
     CREATE INDEX IF NOT EXISTS idx_logs_criado ON logs(criado_em);
     CREATE INDEX IF NOT EXISTS idx_logs_status ON logs(status);
     CREATE INDEX IF NOT EXISTS idx_prod_rec ON produtos_replicados(produto_id, criado_em);
     CREATE INDEX IF NOT EXISTS idx_meta_insights_date ON meta_ad_insights(date);
+    CREATE INDEX IF NOT EXISTS idx_meli_orders_date ON meli_orders(date_created);
+    CREATE INDEX IF NOT EXISTS idx_meli_orders_status ON meli_orders(status);
   `);
 
   // Semear valores padrão se não existirem
@@ -712,6 +730,178 @@ export function getMetaInsightsStats(startDate?: string, endDate?: string) {
       totalPurchases: 0,
       totalPurchaseValue: 0,
       topCampaigns: [],
+      dailyData: []
+    };
+  }
+}
+
+export interface MeliOrderSqlitePayload {
+  order_id: string;
+  date_created: string;
+  date_closed?: string | null;
+  total_amount: number;
+  paid_amount: number;
+  marketplace_fee: number;
+  shipping_cost: number;
+  status: string;
+  buyer_id?: string | null;
+  buyer_nickname?: string | null;
+  currency_id?: string;
+  raw_data?: any;
+}
+
+export function saveMeliOrderSqlite(order: MeliOrderSqlitePayload): void {
+  const rawDataStr = typeof order.raw_data === 'string' ? order.raw_data : JSON.stringify(order.raw_data || {});
+
+  db.prepare(`
+    INSERT INTO meli_orders (
+      order_id,
+      date_created,
+      date_closed,
+      total_amount,
+      paid_amount,
+      marketplace_fee,
+      shipping_cost,
+      status,
+      buyer_id,
+      buyer_nickname,
+      currency_id,
+      raw_data,
+      updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(order_id) DO UPDATE SET
+      date_closed = excluded.date_closed,
+      total_amount = excluded.total_amount,
+      paid_amount = excluded.paid_amount,
+      marketplace_fee = excluded.marketplace_fee,
+      shipping_cost = excluded.shipping_cost,
+      status = excluded.status,
+      buyer_id = excluded.buyer_id,
+      buyer_nickname = excluded.buyer_nickname,
+      currency_id = excluded.currency_id,
+      raw_data = excluded.raw_data,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(
+    String(order.order_id),
+    order.date_created,
+    order.date_closed || null,
+    Number(order.total_amount) || 0,
+    Number(order.paid_amount) || 0,
+    Number(order.marketplace_fee) || 0,
+    Number(order.shipping_cost) || 0,
+    String(order.status || 'confirmed'),
+    order.buyer_id || null,
+    order.buyer_nickname || null,
+    order.currency_id || 'BRL',
+    rawDataStr
+  );
+}
+
+export function getMeliOrdersStats(startDate?: string, endDate?: string) {
+  try {
+    let whereClause = '';
+    const params: any[] = [];
+
+    if (startDate && endDate) {
+      whereClause = 'WHERE date(date_created) >= date(?) AND date(date_created) <= date(?)';
+      params.push(startDate, endDate);
+    } else if (startDate) {
+      whereClause = 'WHERE date(date_created) >= date(?)';
+      params.push(startDate);
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const totalsRow = db.prepare(`
+      SELECT 
+        COUNT(*) as total_orders,
+        SUM(paid_amount) as total_revenue,
+        SUM(marketplace_fee) as total_fees,
+        SUM(shipping_cost) as total_shipping
+      FROM meli_orders
+      ${whereClause ? whereClause + " AND status != 'cancelled'" : "WHERE status != 'cancelled'"}
+    `).get(...params) as any;
+
+    const todayRow = db.prepare(`
+      SELECT 
+        COUNT(*) as orders_today,
+        SUM(paid_amount) as revenue_today,
+        SUM(marketplace_fee) as fees_today
+      FROM meli_orders
+      WHERE date(date_created) = date(?) AND status != 'cancelled'
+    `).get(todayStr) as any;
+
+    const recentOrders = db.prepare(`
+      SELECT 
+        order_id,
+        date_created,
+        total_amount,
+        paid_amount,
+        marketplace_fee,
+        shipping_cost,
+        status,
+        buyer_nickname
+      FROM meli_orders
+      ORDER BY date_created DESC
+      LIMIT 10
+    `).all() as any[];
+
+    const dailyData = db.prepare(`
+      SELECT 
+        date(date_created) as date,
+        COUNT(*) as orders,
+        SUM(paid_amount) as revenue,
+        SUM(marketplace_fee) as fees
+      FROM meli_orders
+      ${whereClause ? whereClause + " AND status != 'cancelled'" : "WHERE status != 'cancelled'"}
+      GROUP BY date(date_created)
+      ORDER BY date(date_created) ASC
+    `).all(...params) as any[];
+
+    const totalRevenue = Number(totalsRow?.total_revenue) || 0;
+    const totalOrders = Number(totalsRow?.total_orders) || 0;
+    const totalFees = Number(totalsRow?.total_fees) || 0;
+    const totalShipping = Number(totalsRow?.total_shipping) || 0;
+    const netProfit = totalRevenue - totalFees - totalShipping;
+    const avgTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    return {
+      totalRevenue: Number(totalRevenue.toFixed(2)),
+      revenueToday: Number((Number(todayRow?.revenue_today) || 0).toFixed(2)),
+      totalOrders,
+      ordersToday: Number(todayRow?.orders_today) || 0,
+      totalFees: Number(totalFees.toFixed(2)),
+      totalShipping: Number(totalShipping.toFixed(2)),
+      netProfit: Number(netProfit.toFixed(2)),
+      avgTicket: Number(avgTicket.toFixed(2)),
+      recentOrders: recentOrders.map(o => ({
+        order_id: String(o.order_id),
+        date_created: String(o.date_created),
+        total_amount: Number(o.total_amount) || 0,
+        paid_amount: Number(o.paid_amount) || 0,
+        marketplace_fee: Number(o.marketplace_fee) || 0,
+        shipping_cost: Number(o.shipping_cost) || 0,
+        status: String(o.status),
+        buyer_nickname: o.buyer_nickname ? String(o.buyer_nickname) : 'Cliente ML'
+      })),
+      dailyData: dailyData.map(d => ({
+        date: String(d.date),
+        orders: Number(d.orders) || 0,
+        revenue: Number(d.revenue) || 0,
+        fees: Number(d.fees) || 0
+      }))
+    };
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao obter estatísticas do Mercado Livre:', err);
+    return {
+      totalRevenue: 0,
+      revenueToday: 0,
+      totalOrders: 0,
+      totalFees: 0,
+      totalShipping: 0,
+      netProfit: 0,
+      avgTicket: 0,
+      recentOrders: [],
       dailyData: []
     };
   }
