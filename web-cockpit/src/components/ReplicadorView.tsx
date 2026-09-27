@@ -228,12 +228,12 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
     }
   };
 
-  const handleAbrirExtrato = async (produto: string) => {
-    setProdutoExtrato(produto);
+  const handleAbrirExtrato = async (termoOuChave: string, nomeExibicao?: string) => {
+    setProdutoExtrato(nomeExibicao || termoOuChave);
     setExtratoAberto(true);
     setCarregandoExtrato(true);
     try {
-      const res = await api.getExtratoProdutoValores(produto, 100);
+      const res = await api.getExtratoProdutoValores(termoOuChave, 100);
       if (res.ok) {
         setRegistrosExtrato(res.registros || []);
       }
@@ -1281,12 +1281,24 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
 
                         return (
                           <tr
-                            key={p.produto_limpo + idx}
+                            key={p.chave_canonica || (p.produto_limpo + idx)}
                             className="hover:bg-white/[0.03] transition-colors group"
                           >
                             {/* Nome do Produto */}
                             <td className="py-3 px-4">
-                              <div className="space-y-0.5">
+                              <div className="space-y-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {p.formato_nome && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                                      {p.formato_nome}
+                                    </span>
+                                  )}
+                                  {p.colecao_nome && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-medium">
+                                      {p.colecao_nome}
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="font-semibold text-white group-hover:text-emerald-300 transition-colors line-clamp-2">
                                   {p.produto}
                                 </p>
@@ -1367,7 +1379,7 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                                 </button>
 
                                 <button
-                                  onClick={() => handleAbrirExtrato(p.produto_limpo)}
+                                  onClick={() => handleAbrirExtrato(p.chave_canonica || p.produto_limpo, p.produto)}
                                   className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] text-slate-300 transition-colors"
                                   title="Ver todas as postagens históricas deste produto"
                                 >

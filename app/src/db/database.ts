@@ -193,6 +193,7 @@ export function initDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       produto TEXT NOT NULL,
       produto_limpo TEXT NOT NULL,
+      chave_canonica TEXT,
       preco_por REAL NOT NULL,
       preco_de REAL,
       preco_unitario REAL,
@@ -294,9 +295,18 @@ export function initDatabase() {
 
   // Migração retroativa dos logs para a tabela de histórico de valores de produtos
   try {
+    // Garantir que a coluna chave_canonica existe em bancos legados
+    try {
+      db.exec("ALTER TABLE historico_produtos_valores ADD COLUMN chave_canonica TEXT;");
+    } catch {}
+    try {
+      db.exec("CREATE INDEX IF NOT EXISTS idx_hist_prod_canonico ON historico_produtos_valores(chave_canonica);");
+    } catch {}
+
     migrarLogsParaHistoricoProdutos();
+    reprocessarChavesCanonicasHistorico();
   } catch (errHist: unknown) {
-    console.warn('[Database Migration] Aviso ao migrar histórico de produtos:', errHist);
+    console.warn('[Database Migration] Aviso ao migrar/reprocessar histórico de produtos:', errHist);
   }
 }
 
@@ -931,12 +941,25 @@ export function getMeliOrdersStats(startDate?: string, endDate?: string) {
 }
 
 // ==========================================
-// MÓDULO: BASE DE PREÇOS TCG & BENCHMARK
 // ==========================================
+// MÓDULO: BASE DE PREÇOS TCG & CANONICALIZAÇÃO
+// ==========================================
+
+export interface IdentidadeCanonicaTCG {
+  chaveCanonica: string;
+  nomePadronizado: string;
+  formatoId?: string;
+  formatoNome?: string;
+  colecaoId?: string;
+  colecaoNome?: string;
+}
 
 export interface ProdutoValorConsolidado {
   produto: string;
   produto_limpo: string;
+  chave_canonica?: string;
+  formato_nome?: string;
+  colecao_nome?: string;
   menor_preco: number;
   maior_preco: number;
   ultimo_preco: number;
@@ -955,6 +978,7 @@ export interface RegistroHistoricoProduto {
   id: number;
   produto: string;
   produto_limpo: string;
+  chave_canonica?: string;
   preco_por: number;
   preco_de?: number;
   preco_unitario?: number;
@@ -967,6 +991,7 @@ export interface RegistroHistoricoProduto {
 export interface BenchmarkPrecoProduto {
   encontrado: boolean;
   termoBuscado?: string;
+  chaveCanonica?: string;
   produto?: string;
   produto_limpo?: string;
   menorPreco?: number;
@@ -991,6 +1016,130 @@ export function normalizarNomeProduto(nome: string): string {
     .replace(/[^\w\s]/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Extrai a identidade canônica de um item TCG (Formato + Coleção)
+ * Elimina duplicidades geradas por variações de títulos de vendedores
+ */
+export function extrairIdentidadeCanonicaTCG(nomeOriginal: string): IdentidadeCanonicaTCG {
+  const limpo = normalizarNomeProduto(nomeOriginal);
+  if (!limpo) {
+    return {
+      chaveCanonica: 'desconhecido',
+      nomePadronizado: nomeOriginal || 'Item Desconhecido'
+    };
+  }
+
+  // 1. Coleções / Expansões TCG
+  const colecoes: { id: string; nome: string; regex: RegExp }[] = [
+    { id: 'escuridao_absoluta', nome: 'Escuridão Absoluta', regex: /\b(?:escuridao\s*absoluta|darkness\s*ablaze|me\s*05|me05|me-05)\b/i },
+    { id: 'evolucoes_prismaticas', nome: 'Evoluções Prismáticas', regex: /\b(?:evolucoes\s*prismaticas?|prismatic\s*evolutions?|sv\s*8\.5|sv8\.5|sv08\.5)\b/i },
+    { id: 'faiscas_volumosas', nome: 'Faíscas Volumosas', regex: /\b(?:faiscas?\s*volumosas?|surging\s*sparks?|sv\s*8|sv8|sv08)\b/i },
+    { id: 'coroa_estelar', nome: 'Coroa Estelar', regex: /\b(?:coroa\s*estelar|stellar\s*crown|sv\s*7|sv7|sv07)\b/i },
+    { id: 'mascaras_do_crepusculo', nome: 'Máscaras do Crepúsculo', regex: /\b(?:mascaras?\s*do\s*crepusculo|twilight\s*masquerade|sv\s*6|sv6|sv06)\b/i },
+    { id: 'forca_temporal', nome: 'Força Temporal', regex: /\b(?:forca\s*temporal|temporal\s*forces|sv\s*5|sv5|sv05)\b/i },
+    { id: 'destinos_de_paldea', nome: 'Destinos de Paldea', regex: /\b(?:destinos?\s*de\s*paldea|paldean\s*fates|sv\s*4\.5|sv4\.5|sv04\.5)\b/i },
+    { id: 'fenda_paradoxal', nome: 'Fenda Paradoxal', regex: /\b(?:fenda\s*paradoxal|paradox\s*rift|sv\s*4|sv4|sv04)\b/i },
+    { id: '151', nome: '151', regex: /\b(?:pokemon\s*151|colecao\s*151|\b151\b|sv\s*3\.5|sv3\.5|sv03\.5)\b/i },
+    { id: 'chamas_obsidianas', nome: 'Chamas Obsidianas', regex: /\b(?:chamas?\s*obsidianas?|obsidian\s*flames|sv\s*3|sv3|sv03)\b/i },
+    { id: 'evolucoes_em_paldea', nome: 'Evoluções em Paldea', regex: /\b(?:evolucoes\s*em\s*paldea|paldea\s*evolved|sv\s*2|sv2|sv02)\b/i },
+    { id: 'escarlate_e_violeta_base', nome: 'Escarlate e Violeta (Base)', regex: /\b(?:escarlate\s*e\s*violeta\s*base|escarlate\s*e\s*violeta|scarlet\s*(?:and|&)\s*violet|sv\s*1|sv1|sv01)\b/i },
+    { id: 'cenit_dos_coroados', nome: 'Cênit dos Coroados', regex: /\b(?:cenit\s*dos\s*coroados|zenite\s*dos\s*coroados|crown\s*zenith|swsh\s*12\.5|swsh12\.5)\b/i },
+    { id: 'tempestade_prateada', nome: 'Tempestade Prateada', regex: /\b(?:tempestade\s*prateada|silver\s*tempest|swsh\s*12|swsh12)\b/i },
+    { id: 'origem_perdida', nome: 'Origem Perdida', regex: /\b(?:origem\s*perdida|lost\s*origin|swsh\s*11|swsh11)\b/i },
+    { id: 'astros_reluzentes', nome: 'Astros Reluzentes', regex: /\b(?:astros?\s*reluzentes?|brilliant\s*stars|swsh\s*09|swsh9|swsh09)\b/i },
+    { id: 'golpe_fusao', nome: 'Golpe Fusão', regex: /\b(?:golpe\s*fusao|fusion\s*strike|swsh\s*08|swsh8|swsh08)\b/i },
+    { id: 'ceus_em_evolucao', nome: 'Céus em Evolução', regex: /\b(?:ceus?\s*em\s*evolucao|evolving\s*skies|swsh\s*07|swsh7|swsh07)\b/i },
+    { id: 'reinado_arrepiante', nome: 'Reinado Arrepiante', regex: /\b(?:reinado\s*arrepiante|chilling\s*reign|swsh\s*06|swsh6|swsh06)\b/i },
+    { id: 'estilos_de_batalha', nome: 'Estilos de Batalha', regex: /\b(?:estilos?\s*de\s*batalha|battle\s*styles|swsh\s*05|swsh5|swsh05)\b/i },
+    { id: 'voltagem_vivida', nome: 'Voltagem Vívida', regex: /\b(?:voltagem\s*vivida|vivid\s*voltage|swsh\s*04|swsh4|swsh04)\b/i },
+    { id: 'pokemon_go', nome: 'Pokémon GO', regex: /\bpokemon\s*go\b/i },
+    { id: 'celebracoes_25', nome: 'Celebrações 25 Anos', regex: /\b(?:celebracoes|celebrations|25\s*anos)\b/i },
+    { id: '30_anos', nome: '30 Anos', regex: /\b(?:30\s*anos|colecao\s*30\s*anos)\b/i }
+  ];
+
+  let colecaoEncontrada: { id: string; nome: string } | undefined;
+  for (const c of colecoes) {
+    if (c.regex.test(limpo)) {
+      colecaoEncontrada = { id: c.id, nome: c.nome };
+      break;
+    }
+  }
+
+  // 2. Formatos TCG (ordenados por especificidade)
+  const formatos: { id: string; nome: string; regex: RegExp }[] = [
+    { id: 'blister_triplo', nome: 'Blister Triplo (3 Boosters)', regex: /\b(?:blister\s*triplo|triplo\s*blister|triple\s*blister|3\s*boosters?|3\s*pacotes?|pack\s*com\s*3|tripack|tri-pack)\b/i },
+    { id: 'blister_quad', nome: 'Blister Quádruplo (Quadpack 4 Boosters)', regex: /\b(?:blister\s*quadruplo|quadruplo\s*blister|quadpack|quad-pack|quad\s*pack|4\s*boosters?|4\s*pacotes?|pack\s*com\s*4)\b/i },
+    { id: 'booster_box', nome: 'Booster Box (Display 36)', regex: /\b(?:booster\s*box|box\s*booster|box\s*display|display\s*box|display\s*36|36\s*boosters?|36\s*pacotes?|caixa\s*display|\bdisplay\b)\b/i },
+    { id: 'etb', nome: 'Elite Trainer Box (ETB)', regex: /\b(?:elite\s*trainer\s*box|\betb\b|caixa\s*(?:de\s*)?treinador\s*avancado|treinador\s*avancado)\b/i },
+    { id: 'bundle_poster', nome: 'Coleção Pôster', regex: /\b(?:colecao\s*(?:com\s*)?poster|poster\s*collection)\b/i },
+    { id: 'colecao_especial', nome: 'Coleção Especial / UPC', regex: /\b(?:colecao\s*(?:de\s*)?ilustracao\s*especial|ultra\s*premium\s*collection|colecao\s*ultra\s*premium|\bupc\b|colecao\s*especial|caixa\s*especial|caixa\s*premium|colecao\s*premium)\b/i },
+    { id: 'blister_unitario', nome: 'Blister Unitário (1 Booster)', regex: /\b(?:blister\s*unitario|blister\s*individual|blister\s*simples|booster\s*avulso|booster\s*individual|pacotinho\s*booster|pacote\s*booster|1\s*booster)\b/i },
+    { id: 'lata', nome: 'Lata Colecionável (Tin)', regex: /\b(?:mini\s*tin|\blata\b|\btin\b|latinha)\b/i },
+    { id: 'fichario', nome: 'Fichário / Álbum Colecionador', regex: /\b(?:fichario|pasta\s*(?:de\s*)?cartas?|pasta\s*colecionador|\bbinder\b|album)\b/i },
+    { id: 'deck', nome: 'Deck de Batalha (Baralho)', regex: /\b(?:battle\s*deck|deck\s*de\s*batalha|deluxe\s*battle\s*deck|baralho\s*(?:de\s*)?batalha|\bdeck\s*ex\b|\bdeck\b|\bbaralho\b)\b/i },
+    { id: 'bundle', nome: 'Booster Bundle / Kit', regex: /\b(?:booster\s*bundle|\bbundle\b|\bcombo\b|\bkit\b)\b/i },
+    { id: 'acessorio_sleeves', nome: 'Sleeves Protetores', regex: /\b(?:sleeves?|shields?|protetores?\s*de\s*cartas?)\b/i },
+    { id: 'acessorio_toploader', nome: 'Toploaders Protetores', regex: /\b(?:toploaders?|top-loader|top\s*loader)\b/i }
+  ];
+
+  let formatoEncontrado: { id: string; nome: string } | undefined;
+  for (const f of formatos) {
+    if (f.regex.test(limpo)) {
+      formatoEncontrado = { id: f.id, nome: f.nome };
+      break;
+    }
+  }
+
+  // 3. Montagem da Chave Canônica e Nome Padronizado
+  if (colecaoEncontrada && formatoEncontrado) {
+    return {
+      chaveCanonica: `${formatoEncontrado.id}__${colecaoEncontrada.id}`,
+      nomePadronizado: `Pokémon TCG: ${formatoEncontrado.nome} - ${colecaoEncontrada.nome}`,
+      formatoId: formatoEncontrado.id,
+      formatoNome: formatoEncontrado.nome,
+      colecaoId: colecaoEncontrada.id,
+      colecaoNome: colecaoEncontrada.nome
+    };
+  }
+
+  if (colecaoEncontrada && !formatoEncontrado) {
+    return {
+      chaveCanonica: `tcg_colecao__${colecaoEncontrada.id}`,
+      nomePadronizado: `Pokémon TCG: ${colecaoEncontrada.nome}`,
+      colecaoId: colecaoEncontrada.id,
+      colecaoNome: colecaoEncontrada.nome
+    };
+  }
+
+  // Remover ruídos de marketing e títulos de anúncios
+  const palavrasRuido = [
+    'pokemon', 'tcg', 'copag', 'original', 'oficial', 'lacrado', 'lacrada', 'novo', 'nova',
+    'pronta', 'entrega', 'envio', 'imediato', 'brasil', 'br', 'frete', 'gratis', 'promo',
+    'promocao', 'oferta', 'barato', 'para', 'com', 'do', 'da', 'de', 'e'
+  ];
+
+  const termosSemRuido = limpo
+    .split(' ')
+    .filter(t => t.length >= 2 && !palavrasRuido.includes(t))
+    .join('_');
+
+  const slugFinal = termosSemRuido || limpo.replace(/\s+/g, '_');
+
+  if (formatoEncontrado) {
+    return {
+      chaveCanonica: `${formatoEncontrado.id}__${slugFinal}`,
+      nomePadronizado: `Pokémon TCG: ${formatoEncontrado.nome} (${slugFinal.replace(/_/g, ' ')})`,
+      formatoId: formatoEncontrado.id,
+      formatoNome: formatoEncontrado.nome
+    };
+  }
+
+  return {
+    chaveCanonica: `gen__${slugFinal}`,
+    nomePadronizado: nomeOriginal.replace(/[\*_~]/g, '').trim()
+  };
 }
 
 /**
@@ -1035,13 +1184,16 @@ export function inserirOfertaHistorico(item: {
     const precoDe = item.precoDe ? parseMoedaParaNumero(item.precoDe) : undefined;
     const precoUnitario = item.precoUnitario ? parseMoedaParaNumero(item.precoUnitario) : undefined;
 
+    const canonico = extrairIdentidadeCanonicaTCG(nomeOriginal);
+    const chaveCanonica = canonico.chaveCanonica;
+
     // Evitar duplicidade idêntica nos últimos 5 minutos
     const existente = db.prepare(`
       SELECT id FROM historico_produtos_valores 
-      WHERE produto_limpo = ? AND preco_por = ? 
+      WHERE (chave_canonica = ? OR produto_limpo = ?) AND preco_por = ? 
         AND criado_em >= datetime('now', '-5 minutes')
       LIMIT 1
-    `).get(nomeLimpo, precoPor);
+    `).get(chaveCanonica, nomeLimpo, precoPor);
 
     if (existente) {
       return false;
@@ -1050,11 +1202,12 @@ export function inserirOfertaHistorico(item: {
     if (item.criadoEm) {
       db.prepare(`
         INSERT INTO historico_produtos_valores (
-          produto, produto_limpo, preco_por, preco_de, preco_unitario, link, grupo, origem, criado_em
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          produto, produto_limpo, chave_canonica, preco_por, preco_de, preco_unitario, link, grupo, origem, criado_em
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         nomeOriginal,
         nomeLimpo,
+        chaveCanonica,
         precoPor,
         precoDe || null,
         precoUnitario || null,
@@ -1066,11 +1219,12 @@ export function inserirOfertaHistorico(item: {
     } else {
       db.prepare(`
         INSERT INTO historico_produtos_valores (
-          produto, produto_limpo, preco_por, preco_de, preco_unitario, link, grupo, origem
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          produto, produto_limpo, chave_canonica, preco_por, preco_de, preco_unitario, link, grupo, origem
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         nomeOriginal,
         nomeLimpo,
+        chaveCanonica,
         precoPor,
         precoDe || null,
         precoUnitario || null,
@@ -1089,6 +1243,7 @@ export function inserirOfertaHistorico(item: {
 
 /**
  * Retorna os produtos consolidados com Menor Preço e Maior Preço histórico
+ * Agrupa por Chave Canônica TCG para eliminar duplicidades
  */
 export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, offset = 0): {
   itens: ProdutoValorConsolidado[];
@@ -1100,12 +1255,12 @@ export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, of
 
     if (busca && busca.trim()) {
       const termoLimpo = `%${normalizarNomeProduto(busca)}%`;
-      whereClause = 'WHERE h.produto_limpo LIKE ? OR h.produto LIKE ?';
-      params.push(termoLimpo, `%${busca.trim()}%`);
+      whereClause = 'WHERE h.produto_limpo LIKE ? OR h.produto LIKE ? OR h.chave_canonica LIKE ?';
+      params.push(termoLimpo, `%${busca.trim()}%`, termoLimpo);
     }
 
     const totalRow = db.prepare(`
-      SELECT COUNT(DISTINCT produto_limpo) as total 
+      SELECT COUNT(DISTINCT COALESCE(h.chave_canonica, h.produto_limpo)) as total 
       FROM historico_produtos_valores h
       ${whereClause}
     `).get(...params) as { total?: number } | undefined;
@@ -1114,8 +1269,10 @@ export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, of
 
     const rows = db.prepare(`
       SELECT 
+        COALESCE(h.chave_canonica, h.produto_limpo) as chave_grupo,
+        h.chave_canonica,
         h.produto_limpo,
-        (SELECT h2.produto FROM historico_produtos_valores h2 WHERE h2.produto_limpo = h.produto_limpo ORDER BY h2.criado_em DESC, h2.id DESC LIMIT 1) as produto,
+        (SELECT h2.produto FROM historico_produtos_valores h2 WHERE COALESCE(h2.chave_canonica, h2.produto_limpo) = COALESCE(h.chave_canonica, h.produto_limpo) ORDER BY h2.criado_em DESC, h2.id DESC LIMIT 1) as produto_recente,
         MIN(h.preco_por) as menor_preco,
         MAX(h.preco_por) as maior_preco,
         ROUND(AVG(h.preco_por), 2) as preco_medio,
@@ -1124,12 +1281,12 @@ export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, of
         COUNT(*) as total_postagens,
         MIN(h.criado_em) as primeira_postagem,
         MAX(h.criado_em) as ultima_postagem,
-        (SELECT h3.preco_por FROM historico_produtos_valores h3 WHERE h3.produto_limpo = h.produto_limpo ORDER BY h3.criado_em DESC, h3.id DESC LIMIT 1) as ultimo_preco,
-        (SELECT h4.link FROM historico_produtos_valores h4 WHERE h4.produto_limpo = h.produto_limpo ORDER BY h4.criado_em DESC, h4.id DESC LIMIT 1) as ultimo_link,
-        (SELECT h5.grupo FROM historico_produtos_valores h5 WHERE h5.produto_limpo = h.produto_limpo ORDER BY h5.criado_em DESC, h5.id DESC LIMIT 1) as grupo_recente
+        (SELECT h3.preco_por FROM historico_produtos_valores h3 WHERE COALESCE(h3.chave_canonica, h3.produto_limpo) = COALESCE(h.chave_canonica, h.produto_limpo) ORDER BY h3.criado_em DESC, h3.id DESC LIMIT 1) as ultimo_preco,
+        (SELECT h4.link FROM historico_produtos_valores h4 WHERE COALESCE(h4.chave_canonica, h4.produto_limpo) = COALESCE(h.chave_canonica, h.produto_limpo) ORDER BY h4.criado_em DESC, h4.id DESC LIMIT 1) as ultimo_link,
+        (SELECT h5.grupo FROM historico_produtos_valores h5 WHERE COALESCE(h5.chave_canonica, h5.produto_limpo) = COALESCE(h.chave_canonica, h.produto_limpo) ORDER BY h5.criado_em DESC, h5.id DESC LIMIT 1) as grupo_recente
       FROM historico_produtos_valores h
       ${whereClause}
-      GROUP BY h.produto_limpo
+      GROUP BY COALESCE(h.chave_canonica, h.produto_limpo)
       ORDER BY ultima_postagem DESC
       LIMIT ? OFFSET ?
     `).all(...params, limite, offset) as any[];
@@ -1141,9 +1298,14 @@ export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, of
         ? Number((((maior - menor) / maior) * 100).toFixed(1))
         : 0;
 
+      const canonico = extrairIdentidadeCanonicaTCG(r.produto_recente || r.produto_limpo);
+
       return {
-        produto: String(r.produto || r.produto_limpo),
+        produto: canonico.nomePadronizado || String(r.produto_recente || r.produto_limpo),
         produto_limpo: String(r.produto_limpo),
+        chave_canonica: String(r.chave_grupo || r.chave_canonica || r.produto_limpo),
+        formato_nome: canonico.formatoNome,
+        colecao_nome: canonico.colecaoNome,
         menor_preco: menor,
         maior_preco: maior,
         ultimo_preco: Number(r.ultimo_preco) || menor,
@@ -1167,25 +1329,32 @@ export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, of
 }
 
 /**
- * Retorna o extrato detalhado de postagens de um produto específico
+ * Retorna o extrato detalhado de postagens de um produto específico (por chave canônica ou nome)
  */
-export function getExtratoProdutoValores(produtoLimpoOuTermo: string, limite = 50): RegistroHistoricoProduto[] {
+export function getExtratoProdutoValores(produtoLimpoOuChave: string, limite = 100): RegistroHistoricoProduto[] {
   try {
-    const limpo = normalizarNomeProduto(produtoLimpoOuTermo);
-    if (!limpo) return [];
+    const termo = (produtoLimpoOuChave || '').trim();
+    if (!termo) return [];
+
+    const limpo = normalizarNomeProduto(termo);
 
     const rows = db.prepare(`
-      SELECT id, produto, produto_limpo, preco_por, preco_de, preco_unitario, link, grupo, origem, criado_em
+      SELECT id, produto, produto_limpo, chave_canonica, preco_por, preco_de, preco_unitario, link, grupo, origem, criado_em
       FROM historico_produtos_valores
-      WHERE produto_limpo = ? OR produto_limpo LIKE ?
+      WHERE chave_canonica = ? 
+         OR chave_canonica LIKE ? 
+         OR produto_limpo = ? 
+         OR produto_limpo LIKE ?
+         OR produto LIKE ?
       ORDER BY criado_em DESC, id DESC
       LIMIT ?
-    `).all(limpo, `%${limpo}%`, limite) as any[];
+    `).all(termo, `%${termo}%`, limpo, `%${limpo}%`, `%${termo}%`, limite) as any[];
 
     return rows.map((r) => ({
       id: Number(r.id),
       produto: String(r.produto),
       produto_limpo: String(r.produto_limpo),
+      chave_canonica: r.chave_canonica ? String(r.chave_canonica) : undefined,
       preco_por: Number(r.preco_por),
       preco_de: r.preco_de ? Number(r.preco_de) : undefined,
       preco_unitario: r.preco_unitario ? Number(r.preco_unitario) : undefined,
@@ -1202,32 +1371,59 @@ export function getExtratoProdutoValores(produtoLimpoOuTermo: string, limite = 5
 
 /**
  * Busca o benchmark de preços de um produto para balizar a criação de novos anúncios
+ * Utiliza busca Canônica TCG inteligente em primeiro lugar
  */
 export function buscarBenchmarkPreco(termoOuTitulo: string): BenchmarkPrecoProduto {
   try {
     const limpo = normalizarNomeProduto(termoOuTitulo);
-    if (!limpo || limpo.length < 3) {
+    if (!limpo || limpo.length < 2) {
       return { encontrado: false };
     }
 
-    // 1. Tentar correspondência exata de produto_limpo
-    let row = db.prepare(`
-      SELECT 
-        (SELECT h2.produto FROM historico_produtos_valores h2 WHERE h2.produto_limpo = h.produto_limpo ORDER BY h2.criado_em DESC LIMIT 1) as produto,
-        h.produto_limpo,
-        MIN(h.preco_por) as menor_preco,
-        MAX(h.preco_por) as maior_preco,
-        ROUND(AVG(h.preco_por), 2) as preco_medio,
-        COUNT(*) as total_postagens,
-        MAX(h.criado_em) as ultima_postagem,
-        (SELECT h3.preco_por FROM historico_produtos_valores h3 WHERE h3.produto_limpo = h.produto_limpo ORDER BY h3.criado_em DESC LIMIT 1) as ultimo_preco,
-        (SELECT h4.link FROM historico_produtos_valores h4 WHERE h4.produto_limpo = h.produto_limpo ORDER BY h4.criado_em DESC LIMIT 1) as ultimo_link
-      FROM historico_produtos_valores h
-      WHERE h.produto_limpo = ?
-      GROUP BY h.produto_limpo
-    `).get(limpo) as any;
+    const canonico = extrairIdentidadeCanonicaTCG(termoOuTitulo);
 
-    // 2. Se não encontrar exato, tentar buscar pelas palavras-chave principais
+    // 1. Tentar correspondência direta por chave canônica
+    let row: any = null;
+    if (canonico && canonico.chaveCanonica && !canonico.chaveCanonica.startsWith('gen__')) {
+      row = db.prepare(`
+        SELECT 
+          (SELECT h2.produto FROM historico_produtos_valores h2 WHERE h2.chave_canonica = h.chave_canonica ORDER BY h2.criado_em DESC LIMIT 1) as produto,
+          h.produto_limpo,
+          h.chave_canonica,
+          MIN(h.preco_por) as menor_preco,
+          MAX(h.preco_por) as maior_preco,
+          ROUND(AVG(h.preco_por), 2) as preco_medio,
+          COUNT(*) as total_postagens,
+          MAX(h.criado_em) as ultima_postagem,
+          (SELECT h3.preco_por FROM historico_produtos_valores h3 WHERE h3.chave_canonica = h.chave_canonica ORDER BY h3.criado_em DESC LIMIT 1) as ultimo_preco,
+          (SELECT h4.link FROM historico_produtos_valores h4 WHERE h4.chave_canonica = h.chave_canonica ORDER BY h4.criado_em DESC LIMIT 1) as ultimo_link
+        FROM historico_produtos_valores h
+        WHERE h.chave_canonica = ?
+        GROUP BY h.chave_canonica
+      `).get(canonico.chaveCanonica) as any;
+    }
+
+    // 2. Se não encontrar canônico, tentar correspondência exata de produto_limpo
+    if (!row) {
+      row = db.prepare(`
+        SELECT 
+          (SELECT h2.produto FROM historico_produtos_valores h2 WHERE h2.produto_limpo = h.produto_limpo ORDER BY h2.criado_em DESC LIMIT 1) as produto,
+          h.produto_limpo,
+          h.chave_canonica,
+          MIN(h.preco_por) as menor_preco,
+          MAX(h.preco_por) as maior_preco,
+          ROUND(AVG(h.preco_por), 2) as preco_medio,
+          COUNT(*) as total_postagens,
+          MAX(h.criado_em) as ultima_postagem,
+          (SELECT h3.preco_por FROM historico_produtos_valores h3 WHERE h3.produto_limpo = h.produto_limpo ORDER BY h3.criado_em DESC LIMIT 1) as ultimo_preco,
+          (SELECT h4.link FROM historico_produtos_valores h4 WHERE h4.produto_limpo = h.produto_limpo ORDER BY h4.criado_em DESC LIMIT 1) as ultimo_link
+        FROM historico_produtos_valores h
+        WHERE h.produto_limpo = ?
+        GROUP BY h.produto_limpo
+      `).get(limpo) as any;
+    }
+
+    // 3. Fallback: Tentar por palavras-chave principais
     if (!row) {
       const palavras = limpo
         .split(' ')
@@ -1241,6 +1437,7 @@ export function buscarBenchmarkPreco(termoOuTitulo: string): BenchmarkPrecoProdu
           SELECT 
             (SELECT h2.produto FROM historico_produtos_valores h2 WHERE h2.produto_limpo = h.produto_limpo ORDER BY h2.criado_em DESC LIMIT 1) as produto,
             h.produto_limpo,
+            h.chave_canonica,
             MIN(h.preco_por) as menor_preco,
             MAX(h.preco_por) as maior_preco,
             ROUND(AVG(h.preco_por), 2) as preco_medio,
@@ -1250,7 +1447,7 @@ export function buscarBenchmarkPreco(termoOuTitulo: string): BenchmarkPrecoProdu
             (SELECT h4.link FROM historico_produtos_valores h4 WHERE h4.produto_limpo = h.produto_limpo ORDER BY h4.criado_em DESC LIMIT 1) as ultimo_link
           FROM historico_produtos_valores h
           WHERE ${likes}
-          GROUP BY h.produto_limpo
+          GROUP BY COALESCE(h.chave_canonica, h.produto_limpo)
           ORDER BY total_postagens DESC, ultima_postagem DESC
           LIMIT 1
         `).get(...likeParams) as any;
@@ -1261,10 +1458,13 @@ export function buscarBenchmarkPreco(termoOuTitulo: string): BenchmarkPrecoProdu
       return { encontrado: false, termoBuscado: termoOuTitulo };
     }
 
+    const nomeExibido = canonico?.nomePadronizado || String(row.produto || row.produto_limpo);
+
     return {
       encontrado: true,
       termoBuscado: termoOuTitulo,
-      produto: String(row.produto || row.produto_limpo),
+      chaveCanonica: row.chave_canonica || canonico?.chaveCanonica,
+      produto: nomeExibido,
       produto_limpo: String(row.produto_limpo),
       menorPreco: Number(row.menor_preco),
       maiorPreco: Number(row.maior_preco),
@@ -1277,6 +1477,48 @@ export function buscarBenchmarkPreco(termoOuTitulo: string): BenchmarkPrecoProdu
   } catch (err: unknown) {
     console.warn('[Database] Erro ao buscar benchmark de preço:', err);
     return { encontrado: false, termoBuscado: termoOuTitulo };
+  }
+}
+
+/**
+ * Reprocessa retroativamente todas as chaves canônicas dos registros existentes no histórico
+ */
+export function reprocessarChavesCanonicasHistorico(): number {
+  try {
+    const itens = db.prepare(`
+      SELECT id, produto 
+      FROM historico_produtos_valores 
+      WHERE chave_canonica IS NULL OR chave_canonica = ''
+    `).all() as { id: number; produto: string }[];
+
+    if (!itens || itens.length === 0) {
+      return 0;
+    }
+
+    const updateStmt = db.prepare(`
+      UPDATE historico_produtos_valores 
+      SET chave_canonica = ? 
+      WHERE id = ?
+    `);
+
+    let atualizados = 0;
+    db.transaction(() => {
+      for (const item of itens) {
+        const canonico = extrairIdentidadeCanonicaTCG(item.produto);
+        if (canonico && canonico.chaveCanonica) {
+          updateStmt.run(canonico.chaveCanonica, item.id);
+          atualizados++;
+        }
+      }
+    })();
+
+    if (atualizados > 0) {
+      console.log(`[Database] Canonicalização: ${atualizados} produtos TCG reprocessados com chave canônica.`);
+    }
+    return atualizados;
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao reprocessar chaves canônicas:', err);
+    return 0;
   }
 }
 
@@ -1297,16 +1539,17 @@ export function migrarLogsParaHistoricoProdutos(): number {
       return 0;
     }
 
-    // Se já tiver uma quantidade igual ou superior aos logs, pula a migração
+    // Se já tiver quantidade igual ou superior e todos tiverem chave_canonica, reprocessa só chaves
     if (totalExistente && (totalExistente.total || 0) >= logsEnviados.length) {
+      reprocessarChavesCanonicasHistorico();
       return 0;
     }
 
     let inseridos = 0;
     const insertStmt = db.prepare(`
       INSERT OR IGNORE INTO historico_produtos_valores (
-        produto, produto_limpo, preco_por, preco_de, link, grupo, origem, criado_em
-      ) VALUES (?, ?, ?, ?, ?, ?, 'migracao_logs', ?)
+        produto, produto_limpo, chave_canonica, preco_por, preco_de, link, grupo, origem, criado_em
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'migracao_logs', ?)
     `);
 
     db.transaction(() => {
@@ -1349,9 +1592,11 @@ export function migrarLogsParaHistoricoProdutos(): number {
         if (produto && precoPor > 0) {
           const produtoLimpo = normalizarNomeProduto(produto);
           if (produtoLimpo.length >= 3) {
+            const canonico = extrairIdentidadeCanonicaTCG(produto);
             insertStmt.run(
               produto,
               produtoLimpo,
+              canonico.chaveCanonica,
               precoPor,
               precoDe || null,
               link || null,
@@ -1367,12 +1612,15 @@ export function migrarLogsParaHistoricoProdutos(): number {
     if (inseridos > 0) {
       console.log(`[Database] Migração concluída: ${inseridos} produtos inseridos na base histórica de preços.`);
     }
+
+    reprocessarChavesCanonicasHistorico();
     return inseridos;
   } catch (err: unknown) {
     console.warn('[Database] Erro na migração retroativa de logs:', err);
     return 0;
   }
 }
+
 
 
 

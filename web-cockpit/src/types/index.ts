@@ -378,6 +378,9 @@ export interface MeliAffiliateOverview {
 export interface ProdutoValorConsolidado {
   produto: string;
   produto_limpo: string;
+  chave_canonica?: string;
+  formato_nome?: string;
+  colecao_nome?: string;
   menor_preco: number;
   maior_preco: number;
   ultimo_preco: number;
@@ -396,6 +399,7 @@ export interface RegistroHistoricoProduto {
   id: number;
   produto: string;
   produto_limpo: string;
+  chave_canonica?: string;
   preco_por: number;
   preco_de?: number;
   preco_unitario?: number;
@@ -408,6 +412,7 @@ export interface RegistroHistoricoProduto {
 export interface BenchmarkPrecoProduto {
   encontrado: boolean;
   termoBuscado?: string;
+  chaveCanonica?: string;
   produto?: string;
   produto_limpo?: string;
   menorPreco?: number;
