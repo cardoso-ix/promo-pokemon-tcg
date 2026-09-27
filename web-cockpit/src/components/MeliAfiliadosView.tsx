@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   Copy,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Package
 } from 'lucide-react';
 import type { MeliAffiliateOverview } from '../types/index.ts';
 import { api } from '../services/api.ts';
@@ -43,6 +44,7 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
     clicksToday: '36'
   });
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
+  const [unrealizedImgErrors, setUnrealizedImgErrors] = useState<Record<string, boolean>>({});
 
   const carregarMetricas = async (refresh = false) => {
     try {
@@ -611,11 +613,19 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
                   <tr key={item.id} className="hover:bg-white/[0.02] transition-colors">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={item.image}
-                          alt={item.title}
-                          className="w-10 h-10 rounded-lg object-contain bg-white/5 border border-white/10 p-1 flex-shrink-0"
-                        />
+                        {item.image && !unrealizedImgErrors[item.id] ? (
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            referrerPolicy="no-referrer"
+                            onError={() => setUnrealizedImgErrors(prev => ({ ...prev, [item.id]: true }))}
+                            className="w-10 h-10 rounded-lg object-contain bg-white/5 border border-white/10 p-1 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 flex-shrink-0">
+                            <Package className="w-5 h-5" />
+                          </div>
+                        )}
                         <span className="font-medium text-slate-200 line-clamp-2 max-w-sm">
                           {item.title}
                         </span>

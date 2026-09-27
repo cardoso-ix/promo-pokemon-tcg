@@ -422,6 +422,20 @@ export class MeliAffiliateService {
       );
     }
 
+    // Função de sanitização de imagens para garantir que nunca quebrem no frontend
+    const sanitizeProductImage = (img: string | undefined, idx: number): string => {
+      if (!img || img.includes('mlstatic.com') || !img.trim()) {
+        const pNum = (idx % 8) + 1;
+        return `/assets/products/p${pNum}.svg`;
+      }
+      return img;
+    };
+
+    // Sanitiza productsSold caso venha de cache antigo com URLs mlstatic
+    for (let i = 0; i < productsSold.length; i++) {
+      productsSold[i].image = sanitizeProductImage(productsSold[i].image, i);
+    }
+
     // 4. Audiências (Demografia Oficial do Mercado Livre: Idade, Gênero e Localização)
     const audience: MeliAudienceDemographics = cached?.audience || {
       ageGroups: [
@@ -447,11 +461,11 @@ export class MeliAffiliateService {
     };
 
     // 5. Vendas Não Efetivadas (Carrinhos abandonados, compras canceladas, boleto vencido)
-    const unrealizedSales: MeliUnrealizedSale[] = cached?.unrealizedSales || [
+    const unrealizedSalesRaw: MeliUnrealizedSale[] = cached?.unrealizedSales || [
       {
         id: 'UNR-2026-0926-01',
         title: 'Pokémon Celebração De 30 Anos Treinador Avançado Lacrado',
-        image: 'https://http2.mlstatic.com/D_NQ_NP_2X_992140-MLB72345678901_062024-F.webp',
+        image: '/assets/products/p4.svg',
         units: 2,
         lostSalesValue: 1039.80,
         estimatedLostCommission: 124.78,
@@ -461,7 +475,7 @@ export class MeliAffiliateService {
       {
         id: 'UNR-2026-0925-02',
         title: 'Box Coleção Especial Charizard Ex Pokémon TCG Copag',
-        image: 'https://http2.mlstatic.com/D_NQ_NP_2X_841092-MLB79012345678_092024-F.webp',
+        image: '/assets/products/p8.svg',
         units: 3,
         lostSalesValue: 897.00,
         estimatedLostCommission: 107.64,
@@ -471,7 +485,7 @@ export class MeliAffiliateService {
       {
         id: 'UNR-2026-0924-03',
         title: 'Pokémon Me04 Caos Ascendente Blister Quádruplo Toxel',
-        image: 'https://http2.mlstatic.com/D_NQ_NP_2X_813942-MLB78901234567_092024-F.webp',
+        image: '/assets/products/p5.svg',
         units: 2,
         lostSalesValue: 429.90,
         estimatedLostCommission: 51.58,
@@ -481,7 +495,7 @@ export class MeliAffiliateService {
       {
         id: 'UNR-2026-0923-04',
         title: 'Porta Temperos Giratório Em Bambu 3 Andares Com 12 Potes',
-        image: 'https://http2.mlstatic.com/D_NQ_NP_2X_612345-MLB71234567890_052024-F.webp',
+        image: '/assets/products/p7.svg',
         units: 1,
         lostSalesValue: 66.45,
         estimatedLostCommission: 7.97,
@@ -489,6 +503,11 @@ export class MeliAffiliateService {
         date: '2026-09-23'
       }
     ];
+
+    const unrealizedSales = unrealizedSalesRaw.map((item, idx) => ({
+      ...item,
+      image: sanitizeProductImage(item.image, idx + 4)
+    }));
 
     // 6. Categorias
     const categories: MeliCategoryStat[] = cached?.categories || [

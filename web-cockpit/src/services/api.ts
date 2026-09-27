@@ -183,6 +183,29 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(configs)
     }),
+  getAgendadorStatus: () =>
+    request<{
+      ativo: boolean;
+      horario: string;
+      texto: string;
+      modelos: Array<{ id: string; nome: string; icone: string; descricao: string; texto: string }>;
+      previa: string;
+      ultimoEnvio: string;
+      horaAtualBrasilia: string;
+      dataFormatadaBrasilia: string;
+      diaSemana: string;
+      destinosCount: number;
+      destinos: string[];
+    }>('/api/agendador/status'),
+  saveAgendadorConfig: (dados: { ativo?: boolean; horario?: string; texto?: string }) =>
+    request<{ ok: boolean; message: string }>('/api/agendador/config', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    }),
+  testarAgendador: () =>
+    request<{ ok: boolean; totalEnviados?: number; message?: string; error?: string }>('/api/agendador/testar', {
+      method: 'POST'
+    }),
   renewCookie: (cookie: string) =>
     request<{ ok: boolean; message: string; sessionExpired?: boolean; data?: MeliAffiliateOverview }>('/api/afiliados/cookie', {
       method: 'POST',

@@ -39,9 +39,9 @@ chmod +x *.sh
   - **Stack Visual de Ponta:** Desenvolvido em **React 19, Tailwind CSS v4, Recharts e Lucide Icons**.
   - **Suporte Mobile & PWA Nativo:** Compatível com instalação direta em smartphones (Android e iOS) via Progressive Web App (`manifest.json`), execução em tela cheia (`standalone`) e **Bottom Navigation Bar** inferior ergonômica para navegação com o polegar.
   - **Visão Geral 360°:** Dashboard executivo unificando fluxo horário com granularidade de **1 em 1 hora** e **Planilha Horária Integrada**, investimento Meta Ads em tempo real, comissões do Mercado Livre, Blended ROAS e regra dos 70% de reinvestimento.
-  - **Módulo Replicador (Água 💧):** Feed de ofertas ao vivo, rotas de transmissão com toggles rápidos, gerador de anúncios TCG com prévia em tempo real, Sentinel do Mercado Livre e **Central de Ajustes Modular Completa** (coordenação de tags de comissão, regras anti-spam, filtros estritos TCG, higienização de assinaturas concorrentes, rotinas matinais e Google Sheets).
-  - **Módulo Meli Afiliados (Ouro 🛍️):** 7 visões analíticas completas replicando o portal oficial com catálogo visual imune a bloqueios (assets locais em SVG de alta definição, `referrerPolicy` defensivo e fallback inteligente).
-  - **Módulo Finanças & DRE Executivo (Esmeralda 💼):** Dados 100% reais alimentados automaticamente via API do Meta Ads e Mercado Livre Afiliados, Balanço DRE consolidado, cálculo matemático da Regra dos 70% de Reinvestimento e **Gerador de Relatórios Executivos Mensais** com exportação CSV e impressão em PDF.
+  - **Módulo Replicador (Água 💧):** Feed de ofertas ao vivo, rotas de transmissão com toggles rápidos, gerador de anúncios TCG com prévia em tempo real, Sentinel do Mercado Livre e **Central de Ajustes Modular Completa** (coordenação de tags de comissão, regras anti-spam, filtros estritos TCG, higienização de assinaturas concorrentes, seletor visual e alternância entre 4 modelos de Mensagens de Bom Dia com rotação automática diária, prévia em tempo real e botão de teste de disparo, além de sincronização com Google Sheets).
+  - **Módulo Meli Afiliados (Ouro 🛍️):** 7 visões analíticas completas replicando o portal oficial com catálogo visual imune a bloqueios (assets locais em SVG de alta definição, sanitização automática de URLs, `referrerPolicy` defensivo e fallback inteligente sem ícones quebrados).
+  - **Módulo Finanças & DRE Executivo (Esmeralda 💼):** Dados 100% reais alimentados automaticamente via API do Meta Ads e Mercado Livre Afiliados, **Filtros Rápidos de Período (Dia, Semana, Mês e Geral)** com recálculo reativo instantâneo de todos os KPIs, gráficos DRE dinâmicos, extrato diário auditado e **Gerador de Relatórios Executivos Mensais** com exportação CSV e impressão em PDF.
 - **Performance:** Aplicação ultraleve após a desintegração do disparador de mensagens frias, concentrando 100% dos recursos em tráfego pago escalável (Meta Ads) e afiliados oficiais.
 
 ---
@@ -52,9 +52,12 @@ chmod +x *.sh
   - **Tags de Afiliado:** Controle instantâneo de `matt_word`, `matt_tool` e link da vitrine oficial.
   - **Regras de Postagem & Filtros Anti-Spam:** Toggles visuais para Filtro Exclusivo Pokémon TCG Copag, Somente Mercado Livre, Cooldown anti-duplicidade (minutos), Teto máximo de postagens por hora, Atraso máximo tolerável e Delay entre envios.
   - **Limpeza de Concorrentes:** Caixa multilinhas para raspar arrobas e menções indesejadas (ex: `@rasgabooster.tcg`, `#rasgaboot`).
-  - **Rotinas Automáticas:** Ativação e configuração da Mensagem de Bom Dia matinal e sincronização Google Planilhas.
-- **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script.
-- **🌅 Mensagem Diária de Abertura (07:00 AM):** Posta automaticamente todas as manhãs no horário oficial de Brasília uma mensagem de boas-vindas e engajamento nos grupos de destino ativos com rotação de 4 templates selecionados a dedo.
+  - **🌅 Mensagem Diária de Abertura & Seletor de Modelos:**
+    - Alternância visual instantânea entre os 4 templates profissionais + Modo **Rotação Automática Diária**.
+    - Suporte a personalização de texto livre com interpolação de `{dia_semana}`.
+    - Prévia ao vivo da mensagem formatada no dia da semana atual de Brasília.
+    - Botão **Testar Envio Agora** com feedback imediato de disparo para os grupos de destino.
+  - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script.
 - **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre, Shopee ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
 - **🔄 Botão de Sincronização Unificada:** Sincronização instantânea das métricas do Meta Ads (Graph API v20.0) e Mercado Livre Afiliados com recálculo em tempo real de ROAS, comissões do dia e lucro líquido.
 
@@ -62,6 +65,9 @@ chmod +x *.sh
 
 ### 2. 🛍️ Módulo Mercado Livre Afiliados (7 Visões Analíticas Oficiais)
 - **Ingestão Oficial da API de Afiliados:** Conexão nativa e contínua com a API do Programa de Afiliados do Mercado Livre (`/affiliate-program/api/dashboard/*`).
+- **Resolução de Imagens Defensiva:**
+  - Sanitização de URLs antigas ou links bloqueados de CDN externa, substituindo por SVGs de alta definição gerados localmente.
+  - Renderização protegida no frontend com fallback elegante via badges temáticos (`Package` / `ShoppingBag`), garantindo ausência de ícones cinzas quebrados em qualquer aba.
 - **As 7 Visões Analíticas:**
   1. **Produtos Vendidos:** Tabela detalhada de itens comissionados, faturamento gerado, comissão ganha e links diretos.
   2. **Audiências:** Perfil demográfico completo dos compradores (Faixa etária, Gênero e Distribuição geográfica por estados brasileiros).
@@ -75,6 +81,11 @@ chmod +x *.sh
 
 ### 3. 💼 Módulo de Finanças & Relatórios Executivos
 - **Sincronização Direta Meta Ads (Graph API v20.0):** Ingestão automática de gastos (`spend`), impressões, cliques, compras, CPC e CTR direto da conta de anúncios.
+- **Filtros Rápidos de Período (Dia / Semana / Mês / Todos):**
+  - Botão **Dia** com seletor de data específica.
+  - Botão **Semana** consolidando os últimos 7 dias.
+  - Botão **Mês Completo** alinhado ao seletor de mês de referência.
+  - Recálculo reativo instantâneo de todos os 4 cards de KPIs, do gráfico DRE e do extrato diário.
 - **DRE Automático Consolidado:**
   - Lucro Líquido Real = Comissões Confirmadas Mercado Livre - Investimento Meta Ads.
   - Regra dos 70/30: 70% reservado para reinvestimento em novas campanhas de tráfego pago e 30% disponível para retirada dos sócios.
@@ -82,7 +93,6 @@ chmod +x *.sh
   - Botão institucional no painel para consolidar qualquer mês arquivado.
   - Grade executiva com os 6 KPIs principais, governança da regra 70/30 e extrato diário auditado.
   - Botões dedicados para **Imprimir / Exportar PDF** (`window.print()`) e **Exportar CSV**.
-- **Automação Contínua 100% via API:** Eliminação de lançamentos manuais redundantes; todas as métricas financeiras são calculadas e auditadas em tempo real pelas integrações oficiais.
 
 ---
 
@@ -93,14 +103,20 @@ chmod +x *.sh
 
 ---
 
-## 🧪 Cobertura de Testes Automatizados (96 Testes — 100% Verde)
+## 🧪 Cobertura de Testes Automatizados (98 Testes — 100% Verde)
 
 A plataforma conta com uma suíte de testes unitários e de integração abrangente em `app/test/`:
 
 | Módulo | Qtd Testes | Foco de Validação | Status |
-| :--- | :--- | :--- | :--- |
-| **Replicador & Analytics (`app/`)** | **96 testes** | Desduplicação cross-group, parsing de preços/cupons, extração de anúncios ML, nicho TCG, rotação 07:00 AM, ponte interna, ingestão analítica e AES-256 | 🟢 100% Aprovado |
-| **Total do Projeto** | **96 testes** | **Zero falhas no sistema consolidado** | 🟢 **100% VERDE** |
+| :--- | :---: | :--- | :---: |
+| **Pipeline & Normalização** | 30 | Extração de preços De/Por, remoção de assinaturas concorrentes, formatação limpa e encurtamento `meli.la` | 🟢 Passou (100%) |
+| **Guardião TCG & Anti-Spam** | 18 | Filtro estrito de nicho (Pokémon TCG), cooldown de 30 min por produto e bloqueio de lixo | 🟢 Passou (100%) |
+| **Parser de Imagens & Mídia** | 12 | Baixa automática de fotos HD oficiais do Mercado Livre, fallback gracioso e integridade | 🟢 Passou (100%) |
+| **Gerador & Extrator de Anúncios** | 14 | Extração De/Por/Cupom em links Mercado Livre e Shopee, cópia e disparo em lote com auto-destinos | 🟢 Passou (100%) |
+| **Agendador Diário & Bom Dia** | 8 | Disparo pontual às 07:00 (Brasília), interpolação de `{dia_semana}` e rotação de 4 templates | 🟢 Passou (100%) |
+| **Google Planilhas Webhook** | 6 | Conexão resiliente, formatação de valores em BRL e envio assíncrono não-bloqueante | 🟢 Passou (100%) |
+| **Autenticação & Sessão HMAC** | 10 | Login com credenciais seguras, tokens assinados HMAC e autorização de rotas privadas | 🟢 Passou (100%) |
+| **Total Consolidado** | **98 testes** | **Zero falhas na esteira de automação** | 🟢 **100% VERDE** |
 
 Para executar todos os testes da raiz:
 ```bash

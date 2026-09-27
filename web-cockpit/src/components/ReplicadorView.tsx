@@ -28,6 +28,108 @@ import type { OfertaLog, RotaGrupo, SubTabReplica } from '../types/index.ts';
 import { api } from '../services/api.ts';
 import { useUnifiedStatus } from '../hooks/useUnifiedStatus.ts';
 
+export interface ModeloBomDia {
+  id: string;
+  nome: string;
+  icone: string;
+  descricao: string;
+  texto: string;
+}
+
+export const MODELOS_BOM_DIA: ModeloBomDia[] = [
+  {
+    id: 'rotacao',
+    nome: '🔄 Rotação Automática Diária',
+    icone: '🔄',
+    descricao: 'Alterna a cada dia da semana entre os 4 modelos para manter o grupo sempre dinâmico e com novidade.',
+    texto: '[ROTACAO_DIARIA]'
+  },
+  {
+    id: 'comunidade_gratidao',
+    nome: '🌟 Modelo 1: Comunidade & Curadoria a Dedo',
+    icone: '🌟',
+    descricao: 'Tom pessoal e acolhedor, agradecendo a comunidade e destacando a dedicação diária de garimpar preços justos.',
+    texto: `@pokemon_tcg_promo
+
+🌅 *BOM DIA, TREINADORES E COLECIONADORES!* ⚡
+O nosso grupo oficial de ofertas de Pokémon TCG está oficialmente *ABERTO* para o dia de hoje!
+
+Quero agradecer de coração a cada um de vocês por fazer parte da nossa comunidade. É muito gratificante ver a nossa família de colecionadores crescendo todos os dias! 🙏✨
+
+🔎 Passo boa parte do meu dia garimpando pessoalmente lojas oficiais, distribuidores e estoques confiáveis para encontrar ofertas reais, cupons que funcionam de verdade e oportunidades selecionadas a dedo em boosters, boxes, latas, ETBs e produtos lacrados. Aqui dedico meu tempo para que você não pague preços abusivos e consiga colecionar gastando o justo.
+
+👥 *Dica especial:* Se você tem amigos ou conhecidos que também amam Pokémon TCG e querem economizar com segurança, fique 100% à vontade para adicioná-los ou mandar o link do nosso grupo. Quanto mais gente junta, mais forte fica a nossa comunidade! 🚀
+
+Tenham todos uma excelente {dia_semana} e um dia cheio de bons pulls! 🔥`
+  },
+  {
+    id: 'radar_drops',
+    nome: '🎯 Modelo 2: Garimpo Diário & Ofertas Reais',
+    icone: '🎯',
+    descricao: 'Foco na busca manual diária, tempo dedicado para filtrar os melhores preços e reposições de estoque.',
+    texto: `@pokemon_tcg_promo
+
+⚡ *BOM DIA, MESTRES POKÉMON!* 🎯
+Grupo liberado e dia começando a todo vapor nesta {dia_semana}!
+
+Hoje já comecei a varredura manual pelos estoques oficiais. Todo dia sento e dedico tempo para vasculhar os anúncios um por um, separando somente o que é produto original, de vendedor seguro e com preço justo de verdade.
+
+🛒 *O que garimpo a dedo todos os dias para vocês:*
+• Combos de boosters avulsos com o menor valor real por pacote
+• Boxes temáticas, Bundles, Fichários e Latas com desconto verdadeiro
+• Cupons de desconto relâmpago testados e funcionando no carrinho
+• Reposições de estoques disputados sem ágio de revenda
+
+🔔 *Dica de amigo:* Mantenha as notificações ativadas! As melhores oportunidades que encontro costumam esgotar bem rápido.
+
+Bora caçar aquelas cartas secretas e completar as coleções! Ótimo dia a todos! 🌟`
+  },
+  {
+    id: 'colecionador_raiz',
+    nome: '🃏 Modelo 3: Colecionador Raiz & Preço Justo',
+    icone: '🃏',
+    descricao: 'Compromisso pessoal contra ágio abusivo, cálculo manual de preço por booster e amor pelo hobby.',
+    texto: `@pokemon_tcg_promo
+
+☀️ *BOM DIA, FAMÍLIA POKÉMON TCG!* 🃏
+Mais um dia começando e o nosso grupo está oficialmente *ABERTO* nesta {dia_semana}!
+
+Colecionar é uma paixão compartilhada, e o meu maior compromisso aqui é cuidar do bolso de vocês. Eu mesmo confiro o histórico de preços e calculo o valor unitário por booster antes de postar qualquer link, para garantir que você esteja fazendo um bom negócio e não caindo em armadilhas de falsas promoções.
+
+📦 Aqui não tem pegadinha nem preço inflacionado: só entra no grupo o que eu mesmo compraria para a minha própria coleção!
+
+🚀 Se você valoriza esse trabalho diário de busca e curadoria feita de fã para fãs, convide aquele amigo que também rasga booster para se juntar a nós. Vamos juntos fortalecer o hobby no Brasil! 🇧🇷
+
+Que o dia venha recheado de hits e raridades! Pra cima! 🔥✨`
+  },
+  {
+    id: 'cupons_estrategia',
+    nome: '🎟️ Modelo 4: Cupons & Achados Selecionados',
+    icone: '🎟️',
+    descricao: 'Dicas práticas de compra, acompanhamento manual de cupons e economia real.',
+    texto: `@pokemon_tcg_promo
+
+🎟️ *BOM DIA, COLECIONADORES E CAÇADORES DE OFERTAS!* ⚡
+Grupo 100% aberto e pronto para as melhores oportunidades desta {dia_semana}!
+
+Hoje o foco do meu garimpo está nos novos cupons liberados no app, compras com frete grátis e combos que realmente compensam o parcelamento sem juros. Testo os cupons manualmente antes de mandar aqui para você não perder tempo.
+
+💡 *Dicas para aproveitar melhor o dia:*
+1. Quando eu postar um cupom, resgate imediatamente no seu aplicativo
+2. Confira sempre o valor final com as vantagens aplicadas no carrinho
+3. Fique atento aos avisos de "Últimas Unidades" para não ficar sem
+
+Obrigado a cada um de vocês pela confiança no meu trabalho e pela parceria diária. Vamos juntos em busca dos melhores achados! 🏆🎯`
+  },
+  {
+    id: 'custom',
+    nome: '✍️ Modelo Personalizado (Escrever Manualmente)',
+    icone: '✍️',
+    descricao: 'Permite criar ou editar um texto livremente com a tag dinâmica {dia_semana}.',
+    texto: ''
+  }
+];
+
 interface ReplicadorViewProps {
   onOpenCookieModal: () => void;
 }
@@ -41,6 +143,10 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
   const [filtroStatus, setFiltroStatus] = useState<'todos' | 'enviado' | 'ignorado'>('todos');
   const [loading, setLoading] = useState(false);
   const { status, isMeliValid } = useUnifiedStatus();
+
+  // Estados do Agendador de Mensagem de Bom Dia
+  const [testandoBomDia, setTestandoBomDia] = useState(false);
+  const [feedbackBomDia, setFeedbackBomDia] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
   // Estados do Gerador de Anúncio
   const [geradorLink, setGeradorLink] = useState('');
@@ -246,6 +352,43 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
     navigator.clipboard.writeText(geradorPreview);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
+  };
+
+  const obterDiaSemanaAtualPt = () => {
+    try {
+      const d = new Date();
+      const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+      return dias[d.getDay()];
+    } catch {
+      return 'Hoje';
+    }
+  };
+
+  const handleTestarBomDia = async () => {
+    setTestandoBomDia(true);
+    setFeedbackBomDia(null);
+    try {
+      const res = await api.testarAgendador();
+      if (res.ok) {
+        setFeedbackBomDia({
+          tipo: 'sucesso',
+          texto: res.message || 'Mensagem de bom dia disparada com sucesso para os grupos de destino!'
+        });
+      } else {
+        setFeedbackBomDia({
+          tipo: 'erro',
+          texto: res.error || 'Falha ao disparar teste de bom dia. Verifique se o WhatsApp está conectado.'
+        });
+      }
+    } catch (err: unknown) {
+      setFeedbackBomDia({
+        tipo: 'erro',
+        texto: err instanceof Error ? err.message : 'Erro ao disparar teste de bom dia.'
+      });
+    } finally {
+      setTestandoBomDia(false);
+      setTimeout(() => setFeedbackBomDia(null), 6000);
+    }
   };
 
   const filteredLogs = logs.filter(log => {
@@ -1028,17 +1171,23 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
               </div>
 
               <div className="space-y-3 text-xs">
-                {/* Mensagem Diária */}
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] space-y-2.5">
-                  <div className="flex items-center justify-between">
+                {/* Mensagem Diária de Bom Dia e Alternância de Modelos */}
+                <div className="p-4 rounded-xl bg-gradient-to-br from-amber-950/20 via-white/[0.02] to-transparent border border-amber-500/20 space-y-3.5">
+                  <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
                     <div>
-                      <span className="font-semibold text-slate-200 block">Mensagem Diária de Bom Dia</span>
-                      <span className="text-[10px] text-slate-400">Postagem matinal automática de boas-vindas</span>
+                      <span className="font-semibold text-white flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-amber-400" />
+                        Mensagem Diária de Bom Dia & Abertura
+                      </span>
+                      <span className="text-[11px] text-slate-400 block mt-0.5">
+                        Postagem matinal automática com curadoria e boas-vindas aos membros
+                      </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setConfigs({ ...configs, msg_abertura_ativa: configs['msg_abertura_ativa'] === 'false' ? 'true' : 'false' })}
                       className="cursor-pointer"
+                      title={configs['msg_abertura_ativa'] !== 'false' ? 'Desativar postagem de bom dia' : 'Ativar postagem de bom dia'}
                     >
                       {configs['msg_abertura_ativa'] !== 'false' ? (
                         <ToggleRight className="w-7 h-7 text-amber-400" />
@@ -1048,14 +1197,180 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                     </button>
                   </div>
 
+                  {feedbackBomDia && (
+                    <div
+                      className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
+                        feedbackBomDia.tipo === 'sucesso'
+                          ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-300'
+                          : 'bg-red-500/15 border border-red-500/30 text-red-300'
+                      }`}
+                    >
+                      {feedbackBomDia.tipo === 'sucesso' ? (
+                        <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <X className="w-4 h-4 text-red-400 shrink-0" />
+                      )}
+                      <span>{feedbackBomDia.texto}</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-300 font-medium text-[11px] mb-1">
+                        Horário Oficial do Disparo:
+                      </label>
+                      <input
+                        type="time"
+                        value={configs['msg_abertura_horario'] || '07:00'}
+                        onChange={e => setConfigs({ ...configs, msg_abertura_horario: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-amber-500/50 text-xs font-mono"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Fuso de Brasília (América/São Paulo).
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-medium text-[11px] mb-1">
+                        Alternar Modelo de Mensagem:
+                      </label>
+                      <select
+                        value={
+                          configs['msg_abertura_modelo_id'] ||
+                          (configs['msg_abertura_texto'] === '[ROTACAO_DIARIA]'
+                            ? 'rotacao'
+                            : MODELOS_BOM_DIA.find(
+                                m =>
+                                  m.id !== 'rotacao' &&
+                                  m.id !== 'custom' &&
+                                  m.texto.trim() === (configs['msg_abertura_texto'] || '').trim()
+                              )?.id ||
+                              (configs['msg_abertura_texto'] ? 'custom' : 'comunidade_gratidao'))
+                        }
+                        onChange={e => {
+                          const novoId = e.target.value;
+                          const selecionado = MODELOS_BOM_DIA.find(m => m.id === novoId);
+                          if (selecionado) {
+                            if (novoId === 'custom') {
+                              setConfigs({
+                                ...configs,
+                                msg_abertura_modelo_id: novoId
+                              });
+                            } else {
+                              setConfigs({
+                                ...configs,
+                                msg_abertura_modelo_id: novoId,
+                                msg_abertura_texto: selecionado.texto
+                              });
+                            }
+                          }
+                        }}
+                        className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-amber-500/30 text-amber-300 focus:outline-none focus:border-amber-400 text-xs font-semibold cursor-pointer"
+                      >
+                        {MODELOS_BOM_DIA.map(mod => (
+                          <option key={mod.id} value={mod.id} className="bg-slate-900 text-white py-1">
+                            {mod.nome}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-slate-400 mt-1 block line-clamp-1">
+                        {
+                          MODELOS_BOM_DIA.find(
+                            m =>
+                              m.id ===
+                              (configs['msg_abertura_modelo_id'] ||
+                                (configs['msg_abertura_texto'] === '[ROTACAO_DIARIA]'
+                                  ? 'rotacao'
+                                  : 'comunidade_gratidao'))
+                          )?.descricao
+                        }
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Edição do Texto do Modelo */}
                   <div>
-                    <label className="block text-slate-400 text-[11px] mb-1">Horário Oficial do Disparo:</label>
-                    <input
-                      type="time"
-                      value={configs['msg_abertura_horario'] || '07:00'}
-                      onChange={e => setConfigs({ ...configs, msg_abertura_horario: e.target.value })}
-                      className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-amber-500/50 text-xs"
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-slate-300 font-medium text-[11px] flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                        Texto do Template (use <code className="text-amber-300 px-1 py-0.2 rounded bg-amber-500/10 font-mono">{"{dia_semana}"}</code> para dia dinâmico):
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const modId = configs['msg_abertura_modelo_id'] || 'comunidade_gratidao';
+                          const original = MODELOS_BOM_DIA.find(m => m.id === modId);
+                          if (original && original.id !== 'custom') {
+                            setConfigs({ ...configs, msg_abertura_texto: original.texto });
+                          }
+                        }}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                        title="Restaurar o texto oficial deste modelo"
+                      >
+                        Restaurar padrão deste modelo
+                      </button>
+                    </div>
+
+                    <textarea
+                      rows={5}
+                      value={
+                        configs['msg_abertura_texto'] !== undefined
+                          ? configs['msg_abertura_texto']
+                          : MODELOS_BOM_DIA[1].texto
+                      }
+                      onChange={e =>
+                        setConfigs({
+                          ...configs,
+                          msg_abertura_texto: e.target.value,
+                          msg_abertura_modelo_id: 'custom'
+                        })
+                      }
+                      placeholder="Escreva a mensagem de abertura do grupo..."
+                      className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-amber-500/50 font-mono text-[11px] leading-relaxed"
                     />
+                  </div>
+
+                  {/* Painel de Prévia da Mensagem Formatada */}
+                  <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1">
+                        <Send className="w-3 h-3 text-emerald-400" />
+                        Prévia ao vivo no WhatsApp (Hoje: {obterDiaSemanaAtualPt()}):
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleTestarBomDia}
+                        disabled={testandoBomDia}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-[11px] border border-emerald-500/30 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                        title="Dispara a mensagem de bom dia agora nos grupos de destino para teste"
+                      >
+                        {testandoBomDia ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span>Enviando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3 h-3" />
+                            <span>Testar Envio Agora</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <pre className="text-[11px] text-slate-300 whitespace-pre-wrap font-sans max-h-36 overflow-y-auto p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                      {(() => {
+                        let t =
+                          configs['msg_abertura_texto'] !== undefined
+                            ? configs['msg_abertura_texto']
+                            : MODELOS_BOM_DIA[1].texto;
+                        if (t === '[ROTACAO_DIARIA]') {
+                          const diaNum = new Date().getDay();
+                          const presets = MODELOS_BOM_DIA.filter(m => m.id !== 'rotacao' && m.id !== 'custom');
+                          t = presets[diaNum % presets.length]?.texto || t;
+                        }
+                        return t.replace(/\{dia_semana\}/gi, obterDiaSemanaAtualPt());
+                      })()}
+                    </pre>
                   </div>
                 </div>
 

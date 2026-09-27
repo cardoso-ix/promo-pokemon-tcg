@@ -42,6 +42,10 @@ export const FinancasView: React.FC = () => {
   const [lancamentos, setLancamentos] = useState<LancamentoDiario[]>([]);
   const [carregandoDRE, setCarregandoDRE] = useState(false);
 
+  // Filtros de Período Financeiro (Dia / Semana / Mês)
+  const [periodoFiltro, setPeriodoFiltro] = useState<'mes' | 'semana' | 'dia' | 'todos'>('mes');
+  const [diaSelecionado, setDiaSelecionado] = useState<string>(new Date().toISOString().split('T')[0]);
+
   // Modal Relatório Executivo Mensal (Meta Ads + Mercado Livre)
   const [showRelatorioMensalModal, setShowRelatorioMensalModal] = useState(false);
   const [relatorioMensal, setRelatorioMensal] = useState<any>(null);
@@ -155,26 +159,82 @@ export const FinancasView: React.FC = () => {
     }
   };
 
-  // Dados para o Gráfico Comparativo Recharts
+  // Filtro Dinâmico de Lançamentos por Período (Dia, Semana, Mês)
+  const lancamentosFiltrados = React.useMemo(() => {
+    if (periodoFiltro === 'dia') {
+      return lancamentos.filter(l => {
+        const d = (l.dataLancamento || l.data_lancamento || '').split('T')[0];
+        return d === diaSelecionado;
+      });
+    }
+    if (periodoFiltro === 'semana') {
+      const limite = new Date();
+      limite.setDate(limite.getDate() - 7);
+      const limiteIso = limite.toISOString().split('T')[0];
+      return lancamentos.filter(l => {
+        const d = (l.dataLancamento || l.data_lancamento || '').split('T')[0];
+        return d >= limiteIso;
+      });
+    }
+    return lancamentos;
+  }, [lancamentos, periodoFiltro, diaSelecionado]);
+
+  // Recálculo Reativo dos KPIs do DRE para o Período Filtrado
+  const kpisDRE = React.useMemo(() => {
+    if (periodoFiltro === 'mes' && balanco) {
+      return {
+        lucroBruto: balanco.totalLucroBruto || 0,
+        gastoCampanhas: balanco.totalGastoCampanhas || 0,
+        resultadoLiquido: balanco.resultadoLiquido || 0,
+        reinvestimento: balanco.valorReinvestimentoCampanhas || 0,
+        lucroDisponivel: balanco.valorLucroDisponivel || 0,
+        roi: balanco.roiPercentual || 0,
+        margem: balanco.margemLiquidaPercentual || 0,
+        status: balanco.status || 'neutro'
+      };
+    }
+
+    const lucroBruto = lancamentosFiltrados.reduce((acc, l) => acc + (Number(l.lucroBruto ?? l.lucro_bruto) || 0), 0);
+    const gastoCampanhas = lancamentosFiltrados.reduce((acc, l) => acc + (Number(l.gastoCampanhas ?? l.gasto_campanhas) || 0), 0);
+    const resultadoLiquido = lucroBruto - gastoCampanhas;
+    const reinvestimento = resultadoLiquido > 0 ? resultadoLiquido * 0.7 : 0;
+    const lucroDisponivel = resultadoLiquido > 0 ? resultadoLiquido * 0.3 : 0;
+    const roi = gastoCampanhas > 0 ? ((resultadoLiquido / gastoCampanhas) * 100) : (lucroBruto > 0 ? 100 : 0);
+    const margem = lucroBruto > 0 ? ((resultadoLiquido / lucroBruto) * 100) : 0;
+    const status: 'lucro' | 'prejuizo' | 'neutro' = resultadoLiquido > 0 ? 'lucro' : resultadoLiquido < 0 ? 'prejuizo' : 'neutro';
+
+    return {
+      lucroBruto,
+      gastoCampanhas,
+      resultadoLiquido,
+      reinvestimento,
+      lucroDisponivel,
+      roi,
+      margem,
+      status
+    };
+  }, [lancamentosFiltrados, periodoFiltro, balanco]);
+
+  // Dados para o Gráfico Comparativo Recharts Reativo
   const chartData = [
     {
       nome: 'Lucro ML',
-      valor: balanco?.totalLucroBruto || 0,
+      valor: kpisDRE.lucroBruto,
       fill: '#10b981'
     },
     {
       nome: 'Meta Ads',
-      valor: balanco?.totalGastoCampanhas || 0,
+      valor: kpisDRE.gastoCampanhas,
       fill: '#ef4444'
     },
     {
       nome: 'Saldo Líquido',
-      valor: Math.max(0, balanco?.resultadoLiquido || 0),
+      valor: Math.max(0, kpisDRE.resultadoLiquido),
       fill: '#00e5ff'
     },
     {
       nome: 'Reinvestir (70%)',
-      valor: Math.max(0, balanco?.valorReinvestimentoCampanhas || 0),
+      valor: Math.max(0, kpisDRE.reinvestimento),
       fill: '#8b5cf6'
     }
   ];
@@ -256,19 +316,83 @@ export const FinancasView: React.FC = () => {
         </div>
       </div>
 
-      {/* Indicador de Modo do DRE Automático */}
-      <div className="flex items-center gap-2 border-b border-white/[0.08] pb-2">
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-sm">
-          <BarChart3 className="w-4 h-4" />
-          <span>Balanço DRE & Extrato Diário</span>
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">
-            100% Automático via API
-          </span>
-          {lancamentos.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/30 text-[10px] text-emerald-200">
-              {lancamentos.length} dias
+      {/* Indicador de Modo e Barra de Filtros Rápidos (Dia, Semana, Mês) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-sm">
+            <BarChart3 className="w-4 h-4" />
+            <span>Balanço DRE & Extrato Diário</span>
+            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">
+              100% Automático via API
             </span>
+          </div>
+        </div>
+
+        {/* Botoes de Filtro de Período (Dia / Semana / Mês) */}
+        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs">
+          <button
+            type="button"
+            onClick={() => setPeriodoFiltro('dia')}
+            className={`flex items-center gap-1 px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+              periodoFiltro === 'dia'
+                ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Dia</span>
+          </button>
+
+          {periodoFiltro === 'dia' && (
+            <input
+              type="date"
+              value={diaSelecionado}
+              onChange={e => setDiaSelecionado(e.target.value)}
+              className="px-2 py-0.5 rounded-lg bg-slate-900 border border-emerald-500/40 text-emerald-300 text-xs font-mono focus:outline-none cursor-pointer"
+            />
           )}
+
+          <button
+            type="button"
+            onClick={() => setPeriodoFiltro('semana')}
+            className={`flex items-center gap-1 px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+              periodoFiltro === 'semana'
+                ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Semana (7d)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPeriodoFiltro('mes')}
+            className={`flex items-center gap-1 px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+              periodoFiltro === 'mes'
+                ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Mês Completo</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPeriodoFiltro('todos')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+              periodoFiltro === 'todos'
+                ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <span>Todos</span>
+          </button>
+
+          <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 text-[10px] font-mono ml-1">
+            {lancamentosFiltrados.length} {lancamentosFiltrados.length === 1 ? 'dia' : 'dias'}
+          </span>
         </div>
       </div>
 
@@ -281,10 +405,16 @@ export const FinancasView: React.FC = () => {
                 Lucro Bruto (Mercado Livre)
               </span>
               <div className="text-2xl font-heading font-extrabold text-white mt-1">
-                R$ {formatarMoeda(balanco?.totalLucroBruto)}
+                R$ {formatarMoeda(kpisDRE.lucroBruto)}
               </div>
               <span className="text-[11px] text-slate-400 mt-1 inline-block">
-                Total acumulado no mês {mesAtivo}
+                {periodoFiltro === 'dia'
+                  ? `Filtro: Dia ${diaSelecionado}`
+                  : periodoFiltro === 'semana'
+                  ? 'Filtro: Últimos 7 dias (Semana)'
+                  : periodoFiltro === 'todos'
+                  ? 'Total acumulado geral'
+                  : `Total acumulado no mês ${mesAtivo}`}
               </span>
             </div>
 
@@ -294,37 +424,37 @@ export const FinancasView: React.FC = () => {
                 Gasto em Tráfego (Meta Ads)
               </span>
               <div className="text-2xl font-heading font-extrabold text-red-400 mt-1">
-                R$ {formatarMoeda(balanco?.totalGastoCampanhas)}
+                R$ {formatarMoeda(kpisDRE.gastoCampanhas)}
               </div>
               <span className="text-[11px] text-slate-400 mt-1 inline-block">
-                ROI: {(balanco?.roiPercentual || 0).toFixed(1)}% | Margem: {(balanco?.margemLiquidaPercentual || 0).toFixed(1)}%
+                ROI: {kpisDRE.roi.toFixed(1)}% | Margem: {kpisDRE.margem.toFixed(1)}%
               </span>
             </div>
 
             {/* Card 3: Resultado Líquido Real */}
             <div className="glass-panel rounded-2xl p-5 border border-cyan-500/20 bg-gradient-to-br from-cyan-950/20 to-transparent">
               <span className="text-[11px] text-cyan-400 uppercase tracking-wider font-bold">
-                Resultado Líquido do Mês
+                Resultado Líquido ({periodoFiltro === 'dia' ? 'Dia' : periodoFiltro === 'semana' ? 'Semana' : 'Mês'})
               </span>
               <div
                 className={`text-2xl font-heading font-extrabold mt-1 ${
-                  (balanco?.resultadoLiquido || 0) >= 0 ? 'text-cyan-300' : 'text-red-400'
+                  kpisDRE.resultadoLiquido >= 0 ? 'text-cyan-300' : 'text-red-400'
                 }`}
               >
-                R$ {formatarMoeda(balanco?.resultadoLiquido)}
+                R$ {formatarMoeda(kpisDRE.resultadoLiquido)}
               </div>
               <span
                 className={`text-[11px] font-semibold mt-1 inline-block ${
-                  balanco?.status === 'lucro'
+                  kpisDRE.status === 'lucro'
                     ? 'text-emerald-400'
-                    : balanco?.status === 'prejuizo'
+                    : kpisDRE.status === 'prejuizo'
                     ? 'text-red-400'
                     : 'text-slate-400'
                 }`}
               >
-                {balanco?.status === 'lucro'
+                {kpisDRE.status === 'lucro'
                   ? 'Lucro Líquido Positivo'
-                  : balanco?.status === 'prejuizo'
+                  : kpisDRE.status === 'prejuizo'
                   ? 'Prejuízo Operacional'
                   : 'Equilíbrio'}
               </span>
@@ -334,13 +464,13 @@ export const FinancasView: React.FC = () => {
             <div className="glass-panel rounded-2xl p-5 border border-purple-500/20 bg-gradient-to-br from-purple-950/25 to-transparent">
               <span className="text-[11px] text-purple-300 uppercase tracking-wider font-bold flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                Reinvestir ({balanco?.percentualReinvestimento || 70}%)
+                Reinvestir (70%)
               </span>
               <div className="text-2xl font-heading font-extrabold text-white mt-1">
-                R$ {formatarMoeda(balanco?.valorReinvestimentoCampanhas)}
+                R$ {formatarMoeda(kpisDRE.reinvestimento)}
               </div>
               <span className="text-[11px] text-slate-400 mt-1 inline-block">
-                Retirada livre (30%): R$ {formatarMoeda(balanco?.valorLucroDisponivel)}
+                Retirada livre (30%): R$ {formatarMoeda(kpisDRE.lucroDisponivel)}
               </span>
             </div>
           </div>
@@ -351,7 +481,15 @@ export const FinancasView: React.FC = () => {
               <div>
                 <h3 className="font-heading font-bold text-white text-base flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-emerald-400" />
-                  Demonstrativo de Resultado do Exercício (DRE) - {mesAtivo}
+                  Demonstrativo de Resultado do Exercício (DRE) - {
+                    periodoFiltro === 'dia'
+                      ? `Dia ${diaSelecionado}`
+                      : periodoFiltro === 'semana'
+                      ? 'Últimos 7 Dias (Semana)'
+                      : periodoFiltro === 'todos'
+                      ? 'Geral Acumulado'
+                      : `Mês ${mesAtivo}`
+                  }
                 </h3>
                 <p className="text-xs text-slate-400">
                   Comparativo entre faturamento bruto, custos de aquisição Meta Ads e margens operacionais
@@ -393,10 +531,16 @@ export const FinancasView: React.FC = () => {
               <div>
                 <h3 className="font-heading font-bold text-white text-base flex items-center gap-2">
                   <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                  Extrato de Lançamentos Diários ({lancamentos.length})
+                  Extrato de Lançamentos ({lancamentosFiltrados.length})
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Histórico detalhado por dia de vendas no Mercado Livre e gastos com Meta Ads
+                  {periodoFiltro === 'dia'
+                    ? `Registros filtrados para o dia ${diaSelecionado}`
+                    : periodoFiltro === 'semana'
+                    ? 'Registros consolidados dos últimos 7 dias'
+                    : periodoFiltro === 'todos'
+                    ? 'Todos os registros disponíveis no banco de dados'
+                    : `Histórico detalhado por dia de vendas no Mercado Livre e gastos com Meta Ads no mês ${mesAtivo}`}
                 </p>
               </div>
               <button
@@ -429,10 +573,16 @@ export const FinancasView: React.FC = () => {
                         Carregando lançamentos...
                       </td>
                     </tr>
-                  ) : lancamentos.length === 0 ? (
+                  ) : lancamentosFiltrados.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="text-center py-10 text-slate-500">
-                        Nenhum registro encontrado para o mês {mesAtivo}. Clique em{' '}
+                        Nenhum registro encontrado no filtro selecionado (
+                        {periodoFiltro === 'dia'
+                          ? `Dia ${diaSelecionado}`
+                          : periodoFiltro === 'semana'
+                          ? 'Últimos 7 dias'
+                          : `Mês ${mesAtivo}`}
+                        ). Clique em{' '}
                         <strong className="text-emerald-400 cursor-pointer" onClick={abrirRelatorioExecutivo}>
                           Gerar Relatório do Mês
                         </strong>{' '}
@@ -440,7 +590,7 @@ export const FinancasView: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    lancamentos.map((l, idx) => {
+                    lancamentosFiltrados.map((l, idx) => {
                       const dataLanc = l.dataLancamento || l.data_lancamento || '—';
                       const gasto = Number(l.gastoCampanhas ?? l.gasto_campanhas) || 0;
                       const lucro = Number(l.lucroBruto ?? l.lucro_bruto) || 0;
