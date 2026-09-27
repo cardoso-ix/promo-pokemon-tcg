@@ -73,6 +73,19 @@ export async function createServer() {
     logger: { level: 'info' }
   });
 
+  // Parser robusto para Content-Type application/json que tolera bodies vazios
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body: string, done) => {
+    if (!body || body.trim() === '') {
+      return done(null, {});
+    }
+    try {
+      const json = JSON.parse(body);
+      done(null, json);
+    } catch (err) {
+      done(err as Error, undefined);
+    }
+  });
+
   await app.register(fastifyWebsocket);
 
   // Servir frontend estático com controle de cache estrito

@@ -383,7 +383,9 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   // ==========================================
   // 5. SINCRONIZAÇÃO UNIFICADA (META ADS + MELI AFILIADOS + MELI ORDENS)
   // ==========================================
-  app.post('/api/integrations/sync-all', async (req: FastifyRequest, reply: FastifyReply) => {
+  // Sincronização Unificada Automática (POST / GET)
+  // ==========================================
+  const handleSyncAll = async (req: FastifyRequest, reply: FastifyReply) => {
     try {
       const hoje = getBrazilToday();
       const trintaDiasAtras = getBrazilDaysAgo(30);
@@ -413,7 +415,10 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
       const msg = err instanceof Error ? err.message : String(err);
       return reply.status(500).send({ ok: false, error: msg });
     }
-  });
+  };
+
+  app.post('/api/integrations/sync-all', handleSyncAll);
+  app.get('/api/integrations/sync-all', handleSyncAll);
 
   // ==========================================
   // 6. ROTAS DE FINANÇAS & DRE AUTOMÁTICO (META ADS + MERCADO LIVRE)

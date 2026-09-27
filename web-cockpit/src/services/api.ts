@@ -11,14 +11,28 @@ import type {
   MeliAffiliateOverview
 } from '../types/index.ts';
 
-// Helper genérico para requests com tratamento de erro
+// Helper genérico para requests com tratamento de erro e resiliência
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const method = (options?.method || 'GET').toUpperCase();
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string> || {})
+  };
+
+  let body = options?.body;
+  if (['POST', 'PUT', 'PATCH'].includes(method)) {
+    if (!headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (body === undefined || body === null) {
+      body = '{}';
+    }
+  }
+
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options?.headers || {})
-    }
+    method,
+    headers,
+    body
   });
 
   if (!response.ok) {
@@ -28,7 +42,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
       }
     }
     const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.error || errData.message || `Erro HTTP ${response.status}`);
+    throw new Error(errData.message || errData.error || `Erro HTTP ${response.status}`);
   }
 
   return response.json() as Promise<T>;
@@ -103,7 +117,8 @@ export const api = {
     }),
   syncAll: () =>
     request<{ ok: boolean; message: string; meta?: any; affiliate?: any; meliOrders?: any; timestamp: string }>('/api/integrations/sync-all', {
-      method: 'POST'
+      method: 'POST',
+      body: JSON.stringify({})
     }),
 
   // --- REPLICADOR DE OFERTAS ---
