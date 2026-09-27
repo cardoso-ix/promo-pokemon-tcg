@@ -4,6 +4,7 @@ import { meliAffiliateService } from './meli-affiliate.service.js';
 import { metaAdsService } from './meta.service.js';
 import { analyticsService } from './analytics.service.js';
 import { getMetaInsightsStats, getMeliOrdersStats } from '../db/database.js';
+import { getBrazilToday, getBrazilDaysAgo } from '../utils/date.js';
 
 export async function registerAnalyticsRoutes(app: FastifyInstance) {
   // ==========================================
@@ -33,8 +34,8 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
 
         let syncResult = null;
         if (syncNow) {
-          const hoje = new Date().toISOString().split('T')[0];
-          const trintaDiasAtras = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+          const hoje = getBrazilToday();
+          const trintaDiasAtras = getBrazilDaysAgo(30);
           syncResult = await metaAdsService.syncMetaInsights(trintaDiasAtras, hoje, accountId);
           await analyticsService.consolidateRange(trintaDiasAtras, hoje);
         }
@@ -79,8 +80,8 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
       reply: FastifyReply
     ) => {
       try {
-        const hoje = new Date().toISOString().split('T')[0];
-        const seteDiasAtras = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const hoje = getBrazilToday();
+        const seteDiasAtras = getBrazilDaysAgo(7);
 
         const since = req.body?.since || seteDiasAtras;
         const until = req.body?.until || hoje;
@@ -377,4 +378,39 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
       }
     }
   );
+
+  // ==========================================
+  // 5. SINCRONIZAÇÃO UNIFICADA (META ADS + MELI AFILIADOS + MELI ORDENS)
+  // ==========================================
+  app.post('/api/integrations/sync-all', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const hoje = getBrazilToday();
+      const trintaDiasAtras = getBrazilDaysAgo(30);
+
+      // Disparar sincronização em paralelo
+      const [metaResult, affiliateResult, meliResult] = await Promise.allSettled([
+        metaAdsService.syncMetaInsights(trintaDiasAtras, hoje),
+        meliAffiliateService.fetchLiveMetrics(),
+        meliService.getValidAccessToken().then(() => {
+          const dateTo = new Date();
+          const dateFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          return meliService.syncMeliOrders(dateFrom, dateTo);
+        }).catch(() => null)
+      ]);
+
+      await analyticsService.consolidateRange(trintaDiasAtras, hoje).catch(() => null);
+
+      return {
+        ok: true,
+        message: 'Sincronização unificada realizada com sucesso!',
+        meta: metaResult.status === 'fulfilled' ? metaResult.value : { error: String(metaResult.reason) },
+        affiliate: affiliateResult.status === 'fulfilled' ? affiliateResult.value : { error: String(affiliateResult.reason) },
+        meliOrders: meliResult.status === 'fulfilled' ? meliResult.value : null,
+        timestamp: new Date().toISOString()
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  });
 }

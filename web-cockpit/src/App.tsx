@@ -5,6 +5,7 @@ import { DashboardOverview } from './components/DashboardOverview.tsx';
 import { ReplicadorView } from './components/ReplicadorView.tsx';
 import { DisparadorView } from './components/DisparadorView.tsx';
 import { FinancasView } from './components/FinancasView.tsx';
+import { MeliAfiliadosView } from './components/MeliAfiliadosView.tsx';
 import { CookieModal } from './components/CookieModal.tsx';
 import { QrModal } from './components/QrModal.tsx';
 import { useUnifiedStatus } from './hooks/useUnifiedStatus.ts';
@@ -67,6 +68,10 @@ export const App: React.FC = () => {
             onNavigate={(mod) => setActiveModule(mod)}
             onOpenReplicaQr={() => setReplicaQrOpen(true)}
           />
+        )}
+
+        {activeModule === 'afiliados' && (
+          <MeliAfiliadosView onOpenCookieModal={() => setCookieModalOpen(true)} />
         )}
 
         {activeModule === 'replica' && (

@@ -1,4 +1,4 @@
-export type ActiveModule = 'dashboard' | 'replica' | 'disparador' | 'financas' | 'deepseek';
+export type ActiveModule = 'dashboard' | 'afiliados' | 'replica' | 'disparador' | 'financas' | 'deepseek';
 
 export type SubTabReplica = 'feed' | 'rotas' | 'gerador' | 'conectar' | 'config';
 export type SubTabBot = 'visao-geral' | 'grupos' | 'leads' | 'campanhas' | 'meta-cloud' | 'anti-ban' | 'logs';
@@ -298,6 +298,50 @@ export interface MeliAffiliateDaily {
   cvr: number;
 }
 
+export interface MeliProductSold {
+  id: string;
+  title: string;
+  image: string;
+  unitsSold: number;
+  totalSales: number;
+  commissionRate: number;
+  estimatedEarnings: number;
+  permalink: string;
+}
+
+export interface MeliAudienceDemographics {
+  ageGroups: Array<{ range: string; percentage: number; buyers: number }>;
+  gender: Array<{ label: string; percentage: number; buyers: number }>;
+  locations: Array<{ state: string; stateName: string; percentage: number; orders: number }>;
+}
+
+export interface MeliUnrealizedSale {
+  id: string;
+  title: string;
+  image: string;
+  units: number;
+  lostSalesValue: number;
+  estimatedLostCommission: number;
+  reason: string;
+  date: string;
+}
+
+export interface MeliCategoryStat {
+  name: string;
+  sales: number;
+  earnings: number;
+  percentage: number;
+  units: number;
+}
+
+export interface MeliTrackingTagStat {
+  tag: string;
+  clicks: number;
+  sales: number;
+  earnings: number;
+  cvr: number;
+}
+
 export interface MeliAffiliateOverview {
   tag: string;
   totalClicks: number;
@@ -309,8 +353,14 @@ export interface MeliAffiliateOverview {
   cvr: number;
   commissionsToday: number;
   ordersToday: number;
+  sessionExpired?: boolean;
   recentSales: MeliAffiliateSale[];
   dailyData: MeliAffiliateDaily[];
+  productsSold?: MeliProductSold[];
+  audience?: MeliAudienceDemographics;
+  unrealizedSales?: MeliUnrealizedSale[];
+  categories?: MeliCategoryStat[];
+  trackingTags?: MeliTrackingTagStat[];
   updatedAt: string;
 }
 

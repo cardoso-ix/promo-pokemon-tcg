@@ -35,7 +35,7 @@ interface DashboardOverviewProps {
   status: UnifiedStatus | null;
   recentLogs: OfertaLog[];
   balanco: BalancoFinanceiro | null;
-  onNavigate: (module: 'replica' | 'disparador' | 'financas') => void;
+  onNavigate: (module: 'replica' | 'disparador' | 'financas' | 'afiliados') => void;
   onOpenReplicaQr: () => void;
 }
 
@@ -48,6 +48,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 }) => {
   const replica = status?.replica;
   const bot = status?.bot;
+
+  // Estado de Sincronização Unificada
+  const [syncingAll, setSyncingAll] = useState(false);
 
   // Estados do Meta Ads
   const [metaData, setMetaData] = useState<MetaInsightsOverview | null>(null);
@@ -175,6 +178,23 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     }
   };
 
+  const handleSyncAllNow = async () => {
+    setSyncingAll(true);
+    try {
+      const res = await api.syncAll();
+      alert(res.message || 'Métricas do Meta Ads e Mercado Livre sincronizadas com sucesso!');
+      await Promise.all([
+        carregarMetaInsights(),
+        carregarMeliInsights(),
+        carregarMeliAffiliate(true)
+      ]);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Falha na sincronização unificada');
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
   const handleSyncMetaNow = async () => {
     setSyncingMeta(true);
     try {
@@ -254,7 +274,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const totalComissoesAfiliado = affiliateData?.totalCommissions || meliData?.data?.netProfit || balanco?.totalLucroBruto || 0;
   const comissoesHoje = affiliateData?.commissionsToday || meliData?.data?.revenueToday || 0;
   const vendasGeradasMeli = affiliateData?.totalSales || meliData?.data?.totalRevenue || 0;
-  const pedidosAfiliado = affiliateData?.totalOrders || meliData?.data?.ordersToday || 0;
   const cliquesAfiliado = affiliateData?.totalClicks || 0;
   const cvrAfiliado = affiliateData?.cvr || 0;
   const gastoMetaAds = metaData?.data?.totalSpend || balanco?.totalGastoCampanhas || 0;
@@ -273,10 +292,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header Minimalista & Fluido (Linear & Vercel Style) */}
-      <div className="pt-1 pb-2 flex flex-col lg:flex-row lg:items-center justify-between gap-5 border-b border-white/[0.06]">
+      {/* Header Enquadrado em Card Padrão com Sincronização Unificada */}
+      <div className="glass-panel rounded-2xl p-5 sm:p-6 border border-white/[0.08] bg-slate-900/60 shadow-xl backdrop-blur-xl flex flex-col lg:flex-row lg:items-center justify-between gap-5">
         <div>
-          <div className="flex items-center gap-2.5 mb-1.5">
+          <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <span className={`w-1.5 h-1.5 rounded-full ${isReplicaOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
               {isReplicaOnline ? 'WhatsApp & Cockpit Online' : 'Cockpit Ativo'}
@@ -290,34 +309,19 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             Central de Comando <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Pokémon TCG</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Gestão unificada de afiliados Mercado Livre, réplica automática de grupos VIP e atendimento inteligente com IA em tempo real.
+            Gestão unificada de afiliados Mercado Livre, tráfego pago Meta Ads, réplica de grupos VIP e atendimento inteligente com IA em tempo real.
           </p>
         </div>
 
-        {/* Grupo de Ações Rápidas Alinhadas (Pill Action Group) */}
-        <div className="flex items-center gap-2 self-start lg:self-center flex-wrap">
+        {/* Botão Executivo de Sincronização Unificada Automática */}
+        <div className="flex items-center gap-2.5 self-start lg:self-center flex-wrap">
           <button
-            onClick={() => onNavigate('replica')}
-            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400/50 transition-all duration-200 active:scale-95 shadow-sm"
+            onClick={handleSyncAllNow}
+            disabled={syncingAll}
+            className="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 active:scale-95 disabled:opacity-50"
           >
-            <Droplets className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
-            <span>Ver Replicador</span>
-          </button>
-
-          <button
-            onClick={() => onNavigate('disparador')}
-            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-orange-500/10 hover:bg-orange-500/20 text-orange-300 border border-orange-500/30 hover:border-orange-400/50 transition-all duration-200 active:scale-95 shadow-sm"
-          >
-            <Flame className="w-3.5 h-3.5 text-orange-400 group-hover:scale-110 transition-transform" />
-            <span>Disparar Campanha</span>
-          </button>
-
-          <button
-            onClick={() => onNavigate('financas')}
-            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 hover:border-emerald-400/50 transition-all duration-200 active:scale-95 shadow-sm"
-          >
-            <DollarSign className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-            <span>DRE & Finanças</span>
+            <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+            <span>{syncingAll ? 'Sincronizando Tudo...' : 'Sincronizar Métricas'}</span>
           </button>
         </div>
       </div>
@@ -440,7 +444,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => onNavigate('afiliados')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all shadow-sm"
+            >
+              <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+              <span>Ver Produtos & Audiência</span>
+            </button>
+
             <button
               onClick={handleSyncAffiliateNow}
               disabled={syncingAffiliate}
@@ -467,7 +479,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <p className="text-lg font-heading font-extrabold text-amber-400 mt-0.5">
               R$ {totalComissoesAfiliado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </p>
-            <span className="text-[10px] text-emerald-400">Comissões confirmadas</span>
+            <span className="text-[10px] text-emerald-400">Comissões confirmadas ({affiliateData?.totalOrders ?? 0} vendas)</span>
           </div>
 
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
@@ -476,9 +488,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <p className="text-lg font-heading font-extrabold text-white">
                 R$ {comissoesHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <span className="text-[10px] text-slate-400">({pedidosAfiliado} conversões)</span>
+              <span className="text-[10px] text-cyan-300">({affiliateData?.ordersToday ?? 0} hoje)</span>
             </div>
-            <span className="text-[10px] text-cyan-300">Ganhos em tempo real</span>
+            <span className="text-[10px] text-slate-400">Total do mês: {affiliateData?.totalOrders ?? 0} pedidos</span>
           </div>
 
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">

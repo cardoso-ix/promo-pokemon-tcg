@@ -7,7 +7,8 @@ import {
   LogOut,
   QrCode,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  ShoppingBag
 } from 'lucide-react';
 import type { ActiveModule } from '../types/index.ts';
 import { useUnifiedStatus } from '../hooks/useUnifiedStatus.ts';
@@ -82,6 +83,18 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Activity className="w-3.5 h-3.5 text-cyan-300" />
           <span>Visão Geral 360°</span>
+        </button>
+
+        <button
+          onClick={() => onSelectModule('afiliados')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
+            activeModule === 'afiliados'
+              ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white shadow-md shadow-amber-500/25 border border-amber-400/30'
+              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+          }`}
+        >
+          <ShoppingBag className="w-3.5 h-3.5 text-amber-300" />
+          <span>Meli Afiliados</span>
         </button>
 
         <button

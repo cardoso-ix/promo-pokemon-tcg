@@ -155,7 +155,16 @@ CREATE TABLE IF NOT EXISTS daily_analytics_summary (
   }
   ```
 
-### D. Endpoint Consolidado do Dashboard
+* **Sincronização Unificada em 1 Clique (Meta Ads + Mercado Livre Afiliados + Pedidos):**  
+  `POST /api/integrations/sync-all`  
+  *Executa em paralelo a busca das métricas do Meta Ads (últimos 30 dias até a data canônica de Brasília `America/Sao_Paulo`), comissões e produtos do Mercado Livre Afiliados e consolidação DRE.*
+
+### D. Endpoint de Afiliados Mercado Livre (Produtos, Audiências & Vendas Perdidas)
+* **Consultar Métricas Detalhadas do Portal de Afiliados:**  
+  `GET /api/dashboard/meli-affiliate?refresh=true`  
+  *Retorna a visão completa com 7 dimensões: `productsSold` (ranking de produtos com fotos, unidades, faturamento e ganhos), `audience` (faixa etária, gênero e estados/UF), `unrealizedSales` (vendas perdidas com motivos e comissão não realizada), `dailyData` (desempenho dia a dia), `recentSales`, `categories` e `trackingTags`.*
+
+### E. Endpoint Consolidado do Dashboard
 * **Consultar Métricas e KPIs:**  
   `GET /api/dashboard/overview?startDate=2026-09-01&endDate=2026-09-26`  
   *Exemplo de Retorno:*

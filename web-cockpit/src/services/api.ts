@@ -106,6 +106,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(dados || {})
     }),
+  syncAll: () =>
+    request<{ ok: boolean; message: string; meta?: any; affiliate?: any; meliOrders?: any; timestamp: string }>('/api/integrations/sync-all', {
+      method: 'POST'
+    }),
 
   // --- REPLICADOR DE OFERTAS ---
   getReplicaLogs: async (limit = 80): Promise<OfertaLog[]> => {

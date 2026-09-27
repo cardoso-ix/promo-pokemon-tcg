@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 import { DB_PATH, CONFIG } from '../config.js';
+import { getBrazilToday } from '../utils/date.js';
 
 export interface ModeloAbertura {
   id: string;
@@ -653,7 +654,7 @@ export function getMetaInsightsStats(startDate?: string, endDate?: string) {
       ${whereClause}
     `).get(...params) as any;
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getBrazilToday();
     const todayRow = db.prepare(`
       SELECT COALESCE(SUM(spend), 0) as spend_today
       FROM meta_ad_insights
@@ -810,7 +811,7 @@ export function getMeliOrdersStats(startDate?: string, endDate?: string) {
       params.push(startDate);
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getBrazilToday();
 
     const totalsRow = db.prepare(`
       SELECT 
