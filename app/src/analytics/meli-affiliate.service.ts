@@ -56,6 +56,8 @@ export interface MeliAffiliateOverview {
   cvr: number; // Taxa de conversão (ex: 0.0493 -> 4.93%)
   commissionsToday: number;
   ordersToday: number;
+  totalSalesToday?: number;
+  clicksToday?: number;
   sessionExpired?: boolean;
   recentSales: Array<{
     id: string;
@@ -295,72 +297,43 @@ export class MeliAffiliateService {
       sessionExpired = true;
     }
 
-    // Se a lista de vendas recentes estiver vazia, carrega as vendas de referência
-    if (recentSales.length === 0) {
-      recentSales.push(
-        {
-          id: '20000091823901',
-          date: getBrazilToday(),
-          productName: 'Pokémon Celebração De 30 Anos - Box Coleção Com Fichário Lacrado',
-          productImage: 'https://http2.mlstatic.com/D_NQ_NP_2X_796515-MLB74582602738_022024-F.webp',
-          link: 'https://meli.la/2j7h8ka',
-          storeName: 'Copag Loja Oficial',
-          saleValue: 299.00,
-          saleUnits: 1,
-          commissionValue: 35.88,
-          commissionPercentage: 12
-        },
-        {
-          id: '20000091823902',
-          date: getBrazilToday(),
-          productName: 'Pokémon Me04 Caos Ascendente Blister Quádruplo Toxel Copag',
-          productImage: 'https://http2.mlstatic.com/D_NQ_NP_2X_813942-MLB78901234567_092024-F.webp',
-          link: 'https://meli.la/3k8m9lz',
-          storeName: 'Mercado Livre Oficial',
-          saleValue: 214.95,
-          saleUnits: 1,
-          commissionValue: 25.79,
-          commissionPercentage: 12
-        },
-        {
-          id: '20000091823903',
-          date: getBrazilToday(),
-          productName: 'Porta Temperos Giratório Em Bambu 3 Andares Com 12 Potes',
-          productImage: 'https://http2.mlstatic.com/D_NQ_NP_2X_612345-MLB71234567890_052024-F.webp',
-          link: 'https://meli.la/4p9n0qy',
-          storeName: 'Utilidades Gourmet',
-          saleValue: 66.45,
-          saleUnits: 1,
-          commissionValue: 7.97,
-          commissionPercentage: 12
-        }
-      );
-    }
-
-    // Cálculo Robusto de Comissões e Conversões de Hoje usando o Fuso de Brasília
+    // Cálculo Real e Auditável de Comissões e Vendas de Hoje usando o Fuso de Brasília
     const todayIso = getBrazilToday();
+    let totalSalesToday = cached?.totalSalesToday || 0;
+    let clicksToday = cached?.clicksToday || 0;
 
-    // 1. Tenta pegar do detalhe diário
+    // 1. Tenta pegar do detalhe diário oficial do Meli
     for (const d of dailyData) {
       const itemDateIso = normalizeDateToIsoDay(d.date);
       if (itemDateIso === todayIso) {
         commissionsToday = d.earnings || 0;
         ordersToday = d.orders || 0;
+        if (d.touchpoints) clicksToday = d.touchpoints;
         break;
       }
     }
 
-    // 2. Se o detalhe diário não estiver consolidado para hoje pelo Meli, soma as vendas recentes do dia
-    if (commissionsToday === 0 && recentSales.length > 0) {
-      const salesHoje = recentSales.filter(s => normalizeDateToIsoDay(s.date) === todayIso);
-      if (salesHoje.length > 0) {
-        commissionsToday = salesHoje.reduce((acc, s) => acc + s.commissionValue, 0);
-        ordersToday = salesHoje.reduce((acc, s) => acc + s.saleUnits, 0);
-      } else {
-        // Estimativa mínima de atividade em tempo real
-        commissionsToday = Number((recentSales.slice(0, 3).reduce((acc, s) => acc + s.commissionValue, 0)).toFixed(2));
-        ordersToday = 3;
+    // 2. Se o detalhe diário ainda não consolidou o dia de hoje, consolida a partir das vendas individuais
+    const salesHoje = recentSales.filter(s => normalizeDateToIsoDay(s.date) === todayIso);
+    if (salesHoje.length > 0) {
+      const comissaoSomada = salesHoje.reduce((acc, s) => acc + s.commissionValue, 0);
+      const pedidosSomados = salesHoje.reduce((acc, s) => acc + s.saleUnits, 0);
+      const vendasBrutasSomadas = salesHoje.reduce((acc, s) => acc + s.saleValue, 0);
+      if (commissionsToday === 0 || comissaoSomada > commissionsToday) {
+        commissionsToday = Number(comissaoSomada.toFixed(2));
       }
+      if (ordersToday === 0 || pedidosSomados > ordersToday) {
+        ordersToday = pedidosSomados;
+      }
+      totalSalesToday = Number(vendasBrutasSomadas.toFixed(2));
+    }
+
+    // 3. Se a sessão estiver expirada ou não retornou dados de hoje, preserva dados reais salvos anteriormente para a data de hoje
+    if (commissionsToday === 0 && cached && cached.commissionsToday > 0 && normalizeDateToIsoDay(cached.updatedAt) === todayIso) {
+      commissionsToday = cached.commissionsToday;
+      ordersToday = cached.ordersToday;
+      if (cached.totalSalesToday) totalSalesToday = cached.totalSalesToday;
+      if (cached.clicksToday) clicksToday = cached.clicksToday;
     }
 
     // 3. Montagem da Tabela de "Produtos Vendidos" (Replicando o painel oficial do Mercado Livre)
@@ -542,6 +515,8 @@ export class MeliAffiliateService {
       cvr,
       commissionsToday,
       ordersToday,
+      totalSalesToday,
+      clicksToday,
       sessionExpired,
       recentSales,
       dailyData,
@@ -559,6 +534,75 @@ export class MeliAffiliateService {
     this.lastFetchTime = Date.now();
 
     return overview;
+  }
+
+  /**
+   * Salva métricas de hoje manualmente (snapshot / override resiliente)
+   */
+  saveManualTodayMetrics(metrics: {
+    commissionsToday: number;
+    ordersToday: number;
+    totalSalesToday?: number;
+    clicksToday?: number;
+  }): MeliAffiliateOverview {
+    const cached = this.loadFromSqlite() || this.cache || this.getDefaultOverview();
+    const todayIso = getBrazilToday();
+
+    cached.commissionsToday = Number(metrics.commissionsToday) || 0;
+    cached.ordersToday = Number(metrics.ordersToday) || 0;
+    if (metrics.totalSalesToday !== undefined) {
+      cached.totalSalesToday = Number(metrics.totalSalesToday) || 0;
+    }
+    if (metrics.clicksToday !== undefined) {
+      cached.clicksToday = Number(metrics.clicksToday) || 0;
+    }
+
+    if (!Array.isArray(cached.dailyData)) {
+      cached.dailyData = [];
+    }
+    const idx = cached.dailyData.findIndex(d => normalizeDateToIsoDay(d.date) === todayIso);
+    const dailyEntry = {
+      date: todayIso,
+      orders: cached.ordersToday,
+      quantity: cached.ordersToday,
+      earnings: cached.commissionsToday,
+      touchpoints: cached.clicksToday || 0,
+      cvr: (cached.clicksToday && cached.clicksToday > 0) ? Number((cached.ordersToday / cached.clicksToday).toFixed(4)) : 0
+    };
+    if (idx >= 0) {
+      cached.dailyData[idx] = dailyEntry;
+    } else {
+      cached.dailyData.unshift(dailyEntry);
+    }
+
+    cached.updatedAt = new Date().toISOString();
+    this.saveToSqlite(cached);
+    this.cache = cached;
+    this.lastFetchTime = Date.now();
+    return cached;
+  }
+
+  getDefaultOverview(): MeliAffiliateOverview {
+    const tag = getConfig('meli_tag', 'caed1312314');
+    return {
+      tag,
+      totalClicks: 0,
+      totalBuyers: 0,
+      totalRequests: 0,
+      totalOrders: 0,
+      totalSales: 0,
+      totalCommissions: 0,
+      cvr: 0,
+      commissionsToday: 0,
+      ordersToday: 0,
+      totalSalesToday: 0,
+      clicksToday: 0,
+      sessionExpired: true,
+      recentSales: [],
+      dailyData: [],
+      productsSold: [],
+      updatedAt: new Date().toISOString()
+    };
   }
 
   /**

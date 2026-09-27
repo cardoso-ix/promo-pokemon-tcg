@@ -316,3 +316,18 @@ Em alinhamento com a estratégia de crescimento focada exclusivamente em **Tráf
 - A aplicação principal (`app`) tornou-se significativamente mais leve, rápida e estável, sem overhead de segundo chip WhatsApp ou consumo desnecessário de memória na VPS.
 - Todas as rotas analíticas e financeiras foram migradas nativamente para `app`, garantindo alta performance e atomicidade nas consultas SQLite.
 
+---
+
+## 8. Sincronização & Resiliência do Mercado Livre Afiliados
+
+O painel de Inteligência de Afiliados (`meli-affiliate.service.ts` e `MeliAfiliadosView.tsx`) opera com tripla camada de auditoria e contingência contra o delay de processamento em lotes do Mercado Livre:
+
+* **Rotas de Afiliados:**
+  - `GET /api/dashboard/meli-affiliate?refresh=true|false`: Carrega métricas consolidadas (produtos mais vendidos, demografia, faturamento e comissões de hoje).
+  - `POST /api/afiliados/cookie`: Endpoint oficial para renovar o cookie de sessão do portal Mercado Livre, validando a integridade da sessão e disparando sincronização em tempo real.
+  - `POST /api/dashboard/meli-affiliate/manual`: Endpoint para registro/ajuste pontual das métricas de hoje (ganhos estimados, ordens, cliques e vendas brutas). Garante conciliação imediata no Cockpit e no DRE financeiro mesmo durante atrasos de consolidação da plataforma do Mercado Livre.
+
+* **Regras de Não-Falsificação de Dados:**
+  - Remoção de qualquer fallback artificial ou estimativas fictícias: se a sessão expirar ou o dia não possuir pedidos registrados, o sistema relata estritamente os valores reais auditáveis (`0,00` ou dados confirmados) com alerta visual no painel.
+
+

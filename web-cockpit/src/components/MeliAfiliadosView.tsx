@@ -14,7 +14,8 @@ import {
   Search,
   CheckCircle2,
   AlertTriangle,
-  Copy
+  Copy,
+  SlidersHorizontal
 } from 'lucide-react';
 import type { MeliAffiliateOverview } from '../types/index.ts';
 import { api } from '../services/api.ts';
@@ -33,6 +34,14 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'units' | 'sales' | 'earnings'>('units');
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [modalAjusteAberto, setModalAjusteAberto] = useState(false);
+  const [salvandoAjuste, setSalvandoAjuste] = useState(false);
+  const [formAjuste, setFormAjuste] = useState({
+    commissionsToday: '8.85',
+    ordersToday: '1',
+    totalSalesToday: '89.90',
+    clicksToday: '36'
+  });
 
   const carregarMetricas = async (refresh = false) => {
     try {
@@ -79,6 +88,39 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
   const handleCopiarLink = (link: string) => {
     navigator.clipboard.writeText(link);
     mostrarFeedback('Link comissionado copiado para a área de transferência!');
+  };
+
+  const abrirModalAjuste = () => {
+    setFormAjuste({
+      commissionsToday: String(data?.commissionsToday ?? 8.85),
+      ordersToday: String(data?.ordersToday ?? 1),
+      totalSalesToday: String(data?.totalSalesToday ?? 89.90),
+      clicksToday: String(data?.clicksToday ?? 36)
+    });
+    setModalAjusteAberto(true);
+  };
+
+  const handleSalvarAjuste = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSalvandoAjuste(true);
+    try {
+      const res = await api.saveMeliAffiliateManual({
+        commissionsToday: parseFloat(formAjuste.commissionsToday.replace(',', '.')) || 0,
+        ordersToday: parseInt(formAjuste.ordersToday, 10) || 0,
+        totalSalesToday: parseFloat(formAjuste.totalSalesToday.replace(',', '.')) || 0,
+        clicksToday: parseInt(formAjuste.clicksToday, 10) || 0
+      });
+      if (res.data) {
+        setData(res.data);
+      }
+      setModalAjusteAberto(false);
+      mostrarFeedback('Métricas de hoje atualizadas com sucesso no Cockpit e Finanças!');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Falha ao salvar';
+      mostrarFeedback(`Erro: ${msg}`);
+    } finally {
+      setSalvandoAjuste(false);
+    }
   };
 
   // Filtragem e ordenação dos produtos
@@ -152,6 +194,15 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
             >
               <span>Renovar Cookie</span>
             </button>
+
+            <button
+              onClick={abrirModalAjuste}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-all"
+              title="Ajustar ou sincronizar manualmente os números de hoje"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Ajustar Hoje</span>
+            </button>
           </div>
         </div>
 
@@ -193,6 +244,35 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
           </div>
         </div>
       </div>
+
+      {/* Alerta de Sessão Expirada com Ação Rápida */}
+      {data?.sessionExpired && (
+        <div className="glass-panel rounded-2xl p-4 border border-amber-500/40 bg-amber-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <p className="font-semibold text-white">Sessão do Mercado Livre expirada</p>
+              <p className="text-slate-300 text-[11px] mt-0.5">
+                Para atualizar os dados ao vivo sem atraso, cole o cookie recente da sua conta do Mercado Livre ou ajuste manualmente os números de hoje.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={onOpenCookieModal}
+              className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 transition-all text-xs shadow-sm"
+            >
+              Renovar Cookie
+            </button>
+            <button
+              onClick={abrirModalAjuste}
+              className="px-3 py-1.5 rounded-lg bg-white/10 text-white font-medium hover:bg-white/15 transition-all text-xs border border-white/10"
+            >
+              Ajustar Hoje
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Navegação por Sub-Abas (Exatamente como no Mercado Livre) */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-white/[0.08] scrollbar-none">
@@ -714,6 +794,94 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Ajuste Manual de Hoje */}
+      {modalAjusteAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
+          <div className="glass-panel rounded-2xl p-6 border border-white/10 max-w-md w-full space-y-4 shadow-2xl bg-[#09101d]/95">
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <h4 className="font-heading font-bold text-white text-sm flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-amber-400" />
+                Ajustar Métricas de Hoje (Mercado Livre)
+              </h4>
+              <button onClick={() => setModalAjusteAberto(false)} className="text-slate-400 hover:text-white">
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Confirme os valores conforme exibidos no seu painel oficial do Mercado Livre Afiliados. Esses números atualizam instantaneamente o Cockpit, o Dashboard e o DRE Financeiro de hoje.
+            </p>
+
+            <form onSubmit={handleSalvarAjuste} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-[11px] text-slate-300 mb-1 font-semibold">Ganho Estimado / Comissão Hoje (R$)</label>
+                <input
+                  type="text"
+                  value={formAjuste.commissionsToday}
+                  onChange={e => setFormAjuste({ ...formAjuste, commissionsToday: e.target.value })}
+                  placeholder="Ex: 8.85"
+                  className="w-full p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-300 mb-1 font-semibold">Ordens Estimadas</label>
+                  <input
+                    type="number"
+                    value={formAjuste.ordersToday}
+                    onChange={e => setFormAjuste({ ...formAjuste, ordersToday: e.target.value })}
+                    placeholder="Ex: 1"
+                    className="w-full p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-300 mb-1 font-semibold">Cliques Totais Hoje</label>
+                  <input
+                    type="number"
+                    value={formAjuste.clicksToday}
+                    onChange={e => setFormAjuste({ ...formAjuste, clicksToday: e.target.value })}
+                    placeholder="Ex: 36"
+                    className="w-full p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] text-slate-300 mb-1 font-semibold">Vendas Brutas Estimadas Hoje (R$)</label>
+                <input
+                  type="text"
+                  value={formAjuste.totalSalesToday}
+                  onChange={e => setFormAjuste({ ...formAjuste, totalSalesToday: e.target.value })}
+                  placeholder="Ex: 89.90"
+                  className="w-full p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setModalAjusteAberto(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={salvandoAjuste}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-lg shadow-amber-500/25 flex items-center gap-2 disabled:opacity-50"
+                >
+                  {salvandoAjuste ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span>{salvandoAjuste ? 'Salvando...' : 'Salvar & Aplicar'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

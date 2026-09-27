@@ -180,12 +180,13 @@ export class FinancasService {
     const hojeStr = getBrazilToday();
     if (hojeStr.startsWith(mesRef)) {
       const metaHoje = getMetaInsightsStats();
+      const vendasHoje = affiliate?.totalSalesToday || ((affiliate?.commissionsToday || 0) * 10);
       if (!mapaDias[hojeStr]) {
         mapaDias[hojeStr] = {
           dataLancamento: hojeStr,
           gastoCampanhas: metaHoje.spendToday || 0,
           lucroBruto: affiliate?.commissionsToday || 0,
-          vendasBrutas: (affiliate?.commissionsToday || 0) * 10,
+          vendasBrutas: vendasHoje,
           saldoDia: (affiliate?.commissionsToday || 0) - (metaHoje.spendToday || 0),
           blendedRoas: 0,
           cliquesMeta: 0,
@@ -195,7 +196,7 @@ export class FinancasService {
         if (metaHoje.spendToday > 0) mapaDias[hojeStr].gastoCampanhas = metaHoje.spendToday;
         if (affiliate?.commissionsToday && affiliate.commissionsToday > 0) {
           mapaDias[hojeStr].lucroBruto = affiliate.commissionsToday;
-          mapaDias[hojeStr].vendasBrutas = affiliate.commissionsToday * 10;
+          mapaDias[hojeStr].vendasBrutas = vendasHoje;
         }
         mapaDias[hojeStr].saldoDia = mapaDias[hojeStr].lucroBruto - mapaDias[hojeStr].gastoCampanhas;
       }

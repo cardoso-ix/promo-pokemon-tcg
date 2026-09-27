@@ -353,6 +353,8 @@ export interface MeliAffiliateOverview {
   cvr: number;
   commissionsToday: number;
   ordersToday: number;
+  totalSalesToday?: number;
+  clicksToday?: number;
   sessionExpired?: boolean;
   recentSales: MeliAffiliateSale[];
   dailyData: MeliAffiliateDaily[];

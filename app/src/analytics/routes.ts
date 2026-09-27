@@ -380,6 +380,66 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
     }
   );
 
+  // Renovar Cookie de Afiliados do Mercado Livre (usado pelo CookieModal)
+  app.post(
+    '/api/afiliados/cookie',
+    async (req: FastifyRequest<{ Body?: { cookie?: string } }>, reply: FastifyReply) => {
+      try {
+        const { cookie } = req.body || {};
+        if (!cookie || cookie.trim().length < 10) {
+          return reply.status(400).send({ ok: false, error: 'Cole o cookie da sessão do Mercado Livre para prosseguir.' });
+        }
+        meliAffiliateService.saveCookie(cookie.trim());
+        const data = await meliAffiliateService.fetchLiveMetrics();
+        return {
+          ok: true,
+          message: data.sessionExpired
+            ? 'Cookie salvo, mas a sessão foi recusada ou expirou no Mercado Livre. Verifique o cookie.'
+            : 'Cookie do Mercado Livre validado e sincronizado com sucesso!',
+          sessionExpired: data.sessionExpired,
+          data
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.status(500).send({ ok: false, error: msg });
+      }
+    }
+  );
+
+  // Ajuste Manual / Snapshot do Dia (resiliência contra delays ou indisponibilidade da API do ML)
+  app.post(
+    '/api/dashboard/meli-affiliate/manual',
+    async (
+      req: FastifyRequest<{
+        Body?: {
+          commissionsToday: number;
+          ordersToday: number;
+          totalSalesToday?: number;
+          clicksToday?: number;
+        };
+      }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const body = req.body || { commissionsToday: 0, ordersToday: 0 };
+        const data = meliAffiliateService.saveManualTodayMetrics({
+          commissionsToday: Number(body.commissionsToday) || 0,
+          ordersToday: Number(body.ordersToday) || 0,
+          totalSalesToday: body.totalSalesToday !== undefined ? Number(body.totalSalesToday) : undefined,
+          clicksToday: body.clicksToday !== undefined ? Number(body.clicksToday) : undefined
+        });
+        return {
+          ok: true,
+          message: 'Métricas de hoje atualizadas com sucesso!',
+          data
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.status(500).send({ ok: false, error: msg });
+      }
+    }
+  );
+
   // ==========================================
   // 5. SINCRONIZAÇÃO UNIFICADA (META ADS + MELI AFILIADOS + MELI ORDENS)
   // ==========================================

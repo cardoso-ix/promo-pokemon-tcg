@@ -56,8 +56,16 @@ export function normalizeDateToIsoDay(raw: string | undefined | null): string {
     return `${year}-${month}-${day}`;
   }
 
-  // Padrão YYYY-MM-DD
-  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  // Padrão ISO com hora (ex: 2026-09-27T18:00:00Z ou 2026-09-27 18:00:00)
+  if (trimmed.includes('T') || (trimmed.includes(' ') && trimmed.includes(':'))) {
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      return getBrazilDateStr(parsed);
+    }
+  }
+
+  // Padrão exato YYYY-MM-DD
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (isoMatch) {
     return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
   }

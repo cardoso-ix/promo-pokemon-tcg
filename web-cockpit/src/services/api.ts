@@ -184,9 +184,19 @@ export const api = {
       body: JSON.stringify(configs)
     }),
   renewCookie: (cookie: string) =>
-    request<{ ok: boolean; message: string }>('/api/afiliados/cookie', {
+    request<{ ok: boolean; message: string; sessionExpired?: boolean; data?: MeliAffiliateOverview }>('/api/afiliados/cookie', {
       method: 'POST',
       body: JSON.stringify({ cookie })
+    }),
+  saveMeliAffiliateManual: (dados: {
+    commissionsToday: number;
+    ordersToday: number;
+    totalSalesToday?: number;
+    clicksToday?: number;
+  }) =>
+    request<{ ok: boolean; message: string; data: MeliAffiliateOverview }>('/api/dashboard/meli-affiliate/manual', {
+      method: 'POST',
+      body: JSON.stringify(dados)
     }),
   gerarAnuncio: (dados: { link: string; precoDe?: number; precoPor?: number; cupom?: string; templateId?: number }) =>
     request<{
