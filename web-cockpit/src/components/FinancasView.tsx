@@ -3,14 +3,11 @@ import {
   DollarSign,
   TrendingUp,
   FileSpreadsheet,
-  Upload,
   Plus,
   Trash2,
   Calendar,
   Sparkles,
-  FileText,
   Download,
-  Eye,
   BarChart3,
   CheckCircle2,
   AlertCircle,
@@ -28,8 +25,7 @@ import {
 } from 'recharts';
 import type {
   BalancoFinanceiro,
-  ResumoDespesasPdf,
-  UploadPlanilhaFinancas
+  LancamentoDiario
 } from '../types/index.ts';
 import { api } from '../services/api.ts';
 
@@ -39,30 +35,17 @@ function formatarMoeda(val?: number): string {
 }
 
 export const FinancasView: React.FC = () => {
-  // Aba Ativa interna do módulo financeiro
-  const [subAba, setSubAba] = useState<'dre' | 'faturas' | 'planilhas'>('dre');
-
   // Meses e Dados DRE
   const [meses, setMeses] = useState<string[]>([]);
   const [mesAtivo, setMesAtivo] = useState('');
   const [balanco, setBalanco] = useState<BalancoFinanceiro | null>(null);
-  const [lancamentos, setLancamentos] = useState<any[]>([]);
+  const [lancamentos, setLancamentos] = useState<LancamentoDiario[]>([]);
   const [carregandoDRE, setCarregandoDRE] = useState(false);
 
   // Modal Relatório Executivo Mensal (Meta Ads + Mercado Livre)
   const [showRelatorioMensalModal, setShowRelatorioMensalModal] = useState(false);
   const [relatorioMensal, setRelatorioMensal] = useState<any>(null);
   const [carregandoRelatorio, setCarregandoRelatorio] = useState(false);
-
-  // Faturas PDF do Meta Ads
-  const [despesasResumo, setDespesasResumo] = useState<ResumoDespesasPdf | null>(null);
-  const [carregandoFaturas, setCarregandoFaturas] = useState(false);
-  const [filtroDataInicio] = useState('');
-  const [filtroDataFim] = useState('');
-
-  // Planilhas Semanais
-  const [uploadsPlanilhas, setUploadsPlanilhas] = useState<UploadPlanilhaFinancas[]>([]);
-  const [carregandoPlanilhas, setCarregandoPlanilhas] = useState(false);
 
   // Modal Novo Lançamento Diário
   const [showNovoLancamento, setShowNovoLancamento] = useState(false);
@@ -71,17 +54,6 @@ export const FinancasView: React.FC = () => {
   const [novoGastoMeta, setNovoGastoMeta] = useState('');
   const [novaDescricao, setNovaDescricao] = useState('');
   const [novaCategoria, setNovaCategoria] = useState('mercado_livre');
-
-  // Modal Subir Fatura PDF
-  const [showUploadPdfModal, setShowUploadPdfModal] = useState(false);
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfDescricao, setPdfDescricao] = useState('');
-  const [pdfValor, setPdfValor] = useState('');
-  const [pdfData, setPdfData] = useState(new Date().toISOString().split('T')[0]);
-  const [uploadingPdf, setUploadingPdf] = useState(false);
-
-  // Upload Planilha Semanal
-  const [uploadingPlanilha, setUploadingPlanilha] = useState(false);
 
   // Mensagens de Feedback
   const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
@@ -106,13 +78,11 @@ export const FinancasView: React.FC = () => {
 
   useEffect(() => {
     carregarMeses();
-    carregarFaturas();
   }, []);
 
   useEffect(() => {
     if (mesAtivo) {
       carregarBalancoELancamentos(mesAtivo);
-      carregarPlanilhas(mesAtivo);
     }
   }, [mesAtivo]);
 
@@ -141,30 +111,6 @@ export const FinancasView: React.FC = () => {
       setLancamentos([]);
     } finally {
       setCarregandoDRE(false);
-    }
-  };
-
-  const carregarFaturas = async () => {
-    setCarregandoFaturas(true);
-    try {
-      const resumo = await api.getDespesasPdf(filtroDataInicio, filtroDataFim);
-      setDespesasResumo(resumo);
-    } catch {
-      setDespesasResumo(null);
-    } finally {
-      setCarregandoFaturas(false);
-    }
-  };
-
-  const carregarPlanilhas = async (mes: string) => {
-    setCarregandoPlanilhas(true);
-    try {
-      const lista = await api.getUploadsPlanilhas(mes);
-      setUploadsPlanilhas(lista);
-    } catch {
-      setUploadsPlanilhas([]);
-    } finally {
-      setCarregandoPlanilhas(false);
     }
   };
 
@@ -206,68 +152,6 @@ export const FinancasView: React.FC = () => {
       carregarBalancoELancamentos(mesAtivo);
     } catch (err: unknown) {
       mostrarFeedback('erro', err instanceof Error ? err.message : 'Falha ao excluir lançamento');
-    }
-  };
-
-  // Upload de fatura PDF
-  const handleUploadPdf = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pdfFile) return alert('Selecione um arquivo PDF de fatura do Meta Ads.');
-
-    const formData = new FormData();
-    formData.append('file', pdfFile);
-    if (pdfData) formData.append('dataDespesa', pdfData);
-    if (pdfValor) formData.append('valor', pdfValor.replace(',', '.'));
-    if (pdfDescricao) formData.append('descricao', pdfDescricao);
-
-    setUploadingPdf(true);
-    try {
-      const res = await api.uploadDespesaPdf(formData);
-      setShowUploadPdfModal(false);
-      setPdfFile(null);
-      setPdfDescricao('');
-      setPdfValor('');
-      mostrarFeedback('sucesso', res.message || 'Fatura PDF cadastrada e arquivada com sucesso!');
-      carregarFaturas();
-    } catch (err: unknown) {
-      mostrarFeedback('erro', err instanceof Error ? err.message : 'Falha no upload da fatura PDF');
-    } finally {
-      setUploadingPdf(false);
-    }
-  };
-
-  // Excluir fatura PDF
-  const handleDeleteDespesa = async (id: number) => {
-    if (!confirm('Deseja excluir esta fatura PDF arquivada e remover seu valor do total?')) return;
-    try {
-      await api.deleteDespesaPdf(id);
-      mostrarFeedback('sucesso', 'Fatura PDF removida com sucesso!');
-      carregarFaturas();
-    } catch (err: unknown) {
-      mostrarFeedback('erro', err instanceof Error ? err.message : 'Falha ao remover fatura');
-    }
-  };
-
-  // Upload de Planilha Semanal XLSX/CSV
-  const handleUploadPlanilha = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('mesReferencia', mesAtivo);
-
-    setUploadingPlanilha(true);
-    try {
-      const res = await api.uploadPlanilhaSemanal(formData);
-      mostrarFeedback('sucesso', res.message || 'Planilha do Meta Ads processada e arquivada com sucesso!');
-      carregarPlanilhas(mesAtivo);
-      carregarBalancoELancamentos(mesAtivo);
-    } catch (err: unknown) {
-      mostrarFeedback('erro', err instanceof Error ? err.message : 'Falha ao importar planilha semanal');
-    } finally {
-      setUploadingPlanilha(false);
-      e.target.value = '';
     }
   };
 
@@ -369,79 +253,26 @@ export const FinancasView: React.FC = () => {
             <span>Novo Ajuste</span>
           </button>
 
-          <button
-            onClick={() => setShowUploadPdfModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] text-white text-xs font-semibold border border-white/15 transition-all cursor-pointer"
-          >
-            <FileText className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Subir Fatura PDF</span>
-          </button>
         </div>
       </div>
 
-      {/* Abas Internas de Finanças */}
-      <div className="flex items-center gap-2 border-b border-white/[0.08] pb-1">
-        <button
-          onClick={() => setSubAba('dre')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            subAba === 'dre'
-              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
+      {/* Indicador de Modo do DRE Automático */}
+      <div className="flex items-center gap-2 border-b border-white/[0.08] pb-2">
+        <div className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-sm">
           <BarChart3 className="w-4 h-4" />
           <span>Balanço DRE & Extrato Diário</span>
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">
+            100% Automático via API
+          </span>
           {lancamentos.length > 0 && (
             <span className="px-1.5 py-0.2 rounded-full bg-emerald-500/30 text-[10px] text-emerald-200">
-              {lancamentos.length}
+              {lancamentos.length} dias
             </span>
           )}
-        </button>
-
-        <button
-          onClick={() => {
-            setSubAba('faturas');
-            carregarFaturas();
-          }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            subAba === 'faturas'
-              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <FileText className="w-4 h-4" />
-          <span>Faturas em PDF Meta Ads</span>
-          {(despesasResumo?.totalFaturas || 0) > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-cyan-500/30 text-[10px] text-cyan-200">
-              {despesasResumo?.totalFaturas}
-            </span>
-          )}
-        </button>
-
-        <button
-          onClick={() => {
-            setSubAba('planilhas');
-            carregarPlanilhas(mesAtivo);
-          }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            subAba === 'planilhas'
-              ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <FileSpreadsheet className="w-4 h-4" />
-          <span>Planilhas Semanais Meta</span>
-          {uploadsPlanilhas.length > 0 && (
-            <span className="px-1.5 py-0.2 rounded-full bg-indigo-500/30 text-[10px] text-indigo-200">
-              {uploadsPlanilhas.length}
-            </span>
-          )}
-        </button>
+        </div>
       </div>
 
-      {/* SUB-ABA 1: DEMONSTRATIVO DRE & LANÇAMENTOS DIÁRIOS */}
-      {subAba === 'dre' && (
-        <div className="space-y-6">
+      <div className="space-y-6">
           {/* Grid de KPIs do DRE Mensal */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Card 1: Lucro Bruto / Comissões Mercado Livre */}
@@ -680,261 +511,7 @@ export const FinancasView: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
 
-      {/* SUB-ABA 2: FATURAS E RECIBOS EM PDF DO META ADS */}
-      {subAba === 'faturas' && (
-        <div className="space-y-6">
-          {/* Card Resumo de Faturas PDF */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="glass-panel rounded-2xl p-5 border border-cyan-500/20 bg-gradient-to-br from-cyan-950/20 to-transparent">
-              <span className="text-[11px] text-cyan-400 uppercase tracking-wider font-bold">
-                Total Gasto em Faturas Meta
-              </span>
-              <div className="text-2xl font-heading font-extrabold text-white mt-1">
-                R$ {formatarMoeda(despesasResumo?.totalGasto)}
-              </div>
-              <span className="text-[11px] text-slate-400 mt-1 inline-block">
-                Soma de todos os recibos e faturas arquivadas
-              </span>
-            </div>
-
-            <div className="glass-panel rounded-2xl p-5 border border-white/[0.08]">
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-bold">
-                Total de Faturas / Recibos
-              </span>
-              <div className="text-2xl font-heading font-extrabold text-cyan-300 mt-1">
-                {despesasResumo?.totalFaturas || 0}
-              </div>
-              <span className="text-[11px] text-slate-400 mt-1 inline-block">
-                Média por fatura: R$ {formatarMoeda(despesasResumo?.mediaPorFatura)}
-              </span>
-            </div>
-
-            <div className="glass-panel rounded-2xl p-5 border border-white/[0.08]">
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-bold">
-                Maior Fatura Registrada
-              </span>
-              <div className="text-2xl font-heading font-extrabold text-emerald-400 mt-1">
-                R$ {formatarMoeda(despesasResumo?.maiorDespesa)}
-              </div>
-              <span className="text-[11px] text-slate-400 mt-1 inline-block">
-                Recibo com maior volume financeiro
-              </span>
-            </div>
-          </div>
-
-          {/* Tabela de Faturas PDF */}
-          <div className="glass-panel rounded-2xl p-6 border border-white/[0.08] space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="font-heading font-bold text-white text-base flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-cyan-400" />
-                  Histórico de Faturas & Recibos em PDF ({despesasResumo?.itens?.length || 0})
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Arquivos físicos originais das faturas do Meta Ads com comprovação contábil
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 self-start sm:self-auto">
-                <button
-                  onClick={() => api.exportarDespesasPdfCsv(filtroDataInicio, filtroDataFim)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 text-xs font-semibold border border-white/10 transition-all cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Exportar CSV</span>
-                </button>
-                <button
-                  onClick={() => setShowUploadPdfModal(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-cyan-500/20 cursor-pointer"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Subir PDF</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="text-[11px] uppercase tracking-wider text-slate-400 border-b border-white/[0.06] bg-white/[0.01]">
-                  <tr>
-                    <th className="py-2.5 px-3">Data</th>
-                    <th className="py-2.5 px-3">Descrição / Referência</th>
-                    <th className="py-2.5 px-3">Conta / Pagamento</th>
-                    <th className="py-2.5 px-3">Arquivo Original</th>
-                    <th className="py-2.5 px-3 text-right">Valor</th>
-                    <th className="py-2.5 px-3 text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.03]">
-                  {carregandoFaturas ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-8 text-slate-400">
-                        Carregando faturas PDF...
-                      </td>
-                    </tr>
-                  ) : !despesasResumo?.itens || despesasResumo.itens.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="text-center py-10 text-slate-500">
-                        Nenhuma fatura PDF cadastrada. Clique em{' '}
-                        <strong className="text-cyan-400 cursor-pointer" onClick={() => setShowUploadPdfModal(true)}>
-                          Subir PDF
-                        </strong>{' '}
-                        para cadastrar um recibo de Meta Ads.
-                      </td>
-                    </tr>
-                  ) : (
-                    despesasResumo.itens.map(f => (
-                      <tr key={f.id} className="hover:bg-white/[0.02]">
-                        <td className="py-2.5 px-3 font-mono font-medium text-slate-300">
-                          {f.data_despesa}
-                        </td>
-                        <td className="py-2.5 px-3 text-white font-medium">{f.descricao}</td>
-                        <td className="py-2.5 px-3 text-slate-400">
-                          <span>{f.conta_anuncio || 'Meta Ads'}</span>
-                          {f.metodo_pagamento && (
-                            <span className="text-[10px] text-slate-500 block">
-                              {f.metodo_pagamento}
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-3 font-mono text-cyan-400 max-w-[200px] truncate" title={f.nome_arquivo}>
-                          {f.nome_arquivo}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-red-400 font-bold">
-                          R$ {formatarMoeda(f.valor)}
-                        </td>
-                        <td className="py-2.5 px-3 text-right space-x-1 whitespace-nowrap">
-                          <a
-                            href={`/api/bot/financas/despesas/pdf/${f.id}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center text-slate-400 hover:text-cyan-400 p-1.5 rounded-lg hover:bg-white/[0.05] transition-colors"
-                            title="Visualizar PDF"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </a>
-                          <a
-                            href={`/api/bot/financas/despesas/download/${f.id}`}
-                            className="inline-flex items-center text-slate-400 hover:text-emerald-400 p-1.5 rounded-lg hover:bg-white/[0.05] transition-colors"
-                            title="Download PDF"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                          </a>
-                          <button
-                            onClick={() => handleDeleteDespesa(f.id)}
-                            className="inline-flex items-center text-slate-400 hover:text-red-400 p-1.5 rounded-lg hover:bg-white/[0.05] transition-colors cursor-pointer"
-                            title="Excluir Fatura"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SUB-ABA 3: PLANILHAS SEMANAIS DO META ADS */}
-      {subAba === 'planilhas' && (
-        <div className="space-y-6">
-          <div className="glass-panel rounded-2xl p-6 border border-white/[0.08] space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="font-heading font-bold text-white text-base flex items-center gap-2">
-                  <FileSpreadsheet className="w-4 h-4 text-indigo-400" />
-                  Relatórios Semanais de Campanhas Meta Ads ({uploadsPlanilhas.length})
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Planilhas exportadas do Gerenciador de Anúncios com consolidação automática de métricas de tráfego
-                </p>
-              </div>
-
-              <label className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 cursor-pointer self-start sm:self-auto">
-                <Upload className="w-3.5 h-3.5" />
-                <span>{uploadingPlanilha ? 'Processando Planilha...' : 'Subir Relatório XLSX / CSV'}</span>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleUploadPlanilha}
-                  className="hidden"
-                  disabled={uploadingPlanilha}
-                />
-              </label>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="text-[11px] uppercase tracking-wider text-slate-400 border-b border-white/[0.06] bg-white/[0.01]">
-                  <tr>
-                    <th className="py-2.5 px-3">Semana / Rótulo</th>
-                    <th className="py-2.5 px-3">Mês Ref.</th>
-                    <th className="py-2.5 px-3">Arquivo</th>
-                    <th className="py-2.5 px-3 text-right">Leads Gerados</th>
-                    <th className="py-2.5 px-3 text-right">Custo p/ Lead</th>
-                    <th className="py-2.5 px-3 text-right">Gasto Total</th>
-                    <th className="py-2.5 px-3 text-right">Ação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.03]">
-                  {carregandoPlanilhas ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-8 text-slate-400">
-                        Carregando planilhas...
-                      </td>
-                    </tr>
-                  ) : uploadsPlanilhas.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-10 text-slate-500">
-                        Nenhuma planilha semanal arquivada para o mês {mesAtivo}. Exporte o relatório do Meta Ads
-                        em XLSX e faça o upload acima.
-                      </td>
-                    </tr>
-                  ) : (
-                    uploadsPlanilhas.map(p => (
-                      <tr key={p.id} className="hover:bg-white/[0.02]">
-                        <td className="py-2.5 px-3 font-semibold text-white">{p.semana_rotulo}</td>
-                        <td className="py-2.5 px-3 font-mono text-slate-400">{p.mes_referencia}</td>
-                        <td className="py-2.5 px-3 font-mono text-indigo-400 max-w-[200px] truncate" title={p.nome_arquivo}>
-                          {p.nome_arquivo}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-cyan-300">
-                          {p.leads_gerados || 0}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-300">
-                          R$ {formatarMoeda(p.cpc_medio)}
-                        </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-red-400 font-bold">
-                          R$ {formatarMoeda(p.gasto_total)}
-                        </td>
-                        <td className="py-2.5 px-3 text-right">
-                          <button
-                            onClick={async () => {
-                              if (confirm('Excluir esta planilha arquivada?')) {
-                                await api.deleteUploadPlanilha(p.id);
-                                carregarPlanilhas(mesAtivo);
-                              }
-                            }}
-                            className="text-slate-500 hover:text-red-400 p-1 rounded-lg transition-colors cursor-pointer"
-                            title="Excluir Planilha"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL: NOVO LANÇAMENTO DIÁRIO MANUAL */}
       {showNovoLancamento && (
@@ -1035,102 +612,6 @@ export const FinancasView: React.FC = () => {
                   className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
                 >
                   Salvar Lançamento
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: SUBIR FATURA PDF DO META ADS */}
-      {showUploadPdfModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md">
-          <div className="glass-panel rounded-2xl p-6 border border-white/15 max-w-md w-full space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <h3 className="text-base font-heading font-bold text-white flex items-center gap-2">
-                <FileText className="w-4 h-4 text-cyan-400" />
-                Cadastrar Fatura PDF do Meta Ads
-              </h3>
-              <button
-                onClick={() => setShowUploadPdfModal(false)}
-                className="text-slate-400 hover:text-white p-1 text-sm cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleUploadPdf} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Arquivo da Fatura (.PDF)
-                </label>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={e => setPdfFile(e.target.files?.[0] || null)}
-                  className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white text-xs file:mr-3 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer"
-                  required
-                />
-                <span className="text-[10px] text-slate-400 mt-1 block">
-                  O sistema extrai automaticamente o valor, data e identificador do recibo caso você não preencha.
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Data (Opcional)
-                  </label>
-                  <input
-                    type="date"
-                    value={pdfData}
-                    onChange={e => setPdfData(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white text-xs focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Valor R$ (Opcional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Ex: 380,50"
-                    value={pdfValor}
-                    onChange={e => setPdfValor(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Descrição / Referência (Opcional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Recibo Meta Ads #123456789"
-                  value={pdfDescricao}
-                  onChange={e => setPdfDescricao(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white text-xs focus:outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
-                <button
-                  type="button"
-                  onClick={() => setShowUploadPdfModal(false)}
-                  className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 text-xs font-semibold transition-all cursor-pointer"
-                  disabled={uploadingPdf}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploadingPdf}
-                  className="px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-cyan-500/20 cursor-pointer disabled:opacity-50"
-                >
-                  {uploadingPdf ? 'Processando...' : 'Arquivar Fatura'}
                 </button>
               </div>
             </form>

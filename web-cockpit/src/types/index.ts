@@ -128,6 +128,15 @@ export interface LancamentoDiario {
   categoria: string;
   criado_em: string;
   atualizado_em?: string;
+  dataLancamento?: string;
+  gastoCampanhas?: number;
+  lucroBruto?: number;
+  vendasBrutas?: number;
+  vendas_brutas?: number;
+  saldoDia?: number;
+  cliquesMeta?: number;
+  impressoesMeta?: number;
+  blendedRoas?: number;
 }
 
 export interface FaturaDespesaPdf {
