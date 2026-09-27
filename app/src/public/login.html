@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
   <title>Login · Réplica Promo Cockpit</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -28,17 +28,25 @@
       padding: 0;
     }
 
+    html {
+      height: 100%;
+      overflow-x: hidden;
+    }
+
     body {
       background-color: var(--bg-dark);
       color: var(--text-main);
-      font-family: 'Inter', sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
-      overflow: hidden;
-      padding: 1.5rem;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 1.5rem 1rem;
     }
 
     /* Ambient Background Glows */
@@ -203,10 +211,12 @@
       border-radius: 12px;
       padding: 0.85rem 1rem 0.85rem 2.75rem;
       color: var(--text-main);
-      font-size: 0.95rem;
+      font-size: 16px; /* 16px exatos evita auto-zoom forçado do Safari iOS e Android */
       font-family: inherit;
       outline: none;
+      touch-action: manipulation;
       transition: all 0.2s ease;
+      -webkit-appearance: none;
     }
 
     .form-input:focus {
@@ -287,6 +297,38 @@
       margin-top: 1.5rem;
       font-size: 0.76rem;
       color: #555d6e;
+    }
+
+    /* Otimização Específica para Dispositivos Móveis e Smartphones */
+    @media (max-width: 640px) {
+      body {
+        align-items: flex-start;
+        padding: 1.25rem 0.75rem 2.5rem 0.75rem;
+      }
+
+      .login-container {
+        padding: 1.85rem 1.35rem;
+        margin-top: 0.5rem;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Desativa filtros de blur intensos de 140px e animações infinitas para não travar a GPU */
+      .ambient-glow {
+        filter: blur(40px) !important;
+        animation: none !important;
+        opacity: 0.08 !important;
+        width: 240px !important;
+        height: 240px !important;
+      }
+
+      .scanlines {
+        display: none !important;
+      }
+
+      .brand-title {
+        font-size: 1.6rem;
+      }
     }
   </style>
 </head>
@@ -437,7 +479,16 @@
         if (res.ok && data.ok) {
           btnText.textContent = 'Acesso Autorizado!';
           submitBtn.style.background = 'linear-gradient(135deg, #00e676 0%, #00b0ff 100%)';
-          window.location.href = '/';
+
+          if (data.token) {
+            try {
+              localStorage.setItem('promo_token', data.token);
+            } catch (errLocal) {}
+          }
+
+          setTimeout(() => {
+            window.location.replace('/');
+          }, 150);
         } else {
           showError(data.error || 'Credenciais inválidas.');
           submitBtn.disabled = false;

@@ -170,7 +170,7 @@ export async function createServer() {
       buildSessionCookie(token),
       `promo_disparador_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
     ]);
-    return { ok: true, message: 'Login realizado com sucesso' };
+    return { ok: true, message: 'Login realizado com sucesso', token };
   });
 
   app.post('/api/auth/logout', async (req, reply) => {

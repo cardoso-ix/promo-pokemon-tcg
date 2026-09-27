@@ -21,6 +21,18 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     ...(options?.headers as Record<string, string> || {})
   };
 
+  // Suporte a autenticação híbrida via Bearer token para navegadores móveis com restrição de cookies
+  if (!headers['Authorization'] && typeof window !== 'undefined') {
+    try {
+      const localToken = localStorage.getItem('promo_token');
+      if (localToken) {
+        headers['Authorization'] = `Bearer ${localToken}`;
+      }
+    } catch {
+      // Ignorar caso localStorage não esteja acessível
+    }
+  }
+
   let body = options?.body;
   if (['POST', 'PUT', 'PATCH'].includes(method)) {
     if (!headers['Content-Type']) {
@@ -377,6 +389,13 @@ export const api = {
     }),
 
   // --- LOGOUT UNIFICADO ---
-  logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' })
+  logout: async () => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('promo_token');
+      }
+    } catch {}
+    return request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' });
+  }
 };
 
