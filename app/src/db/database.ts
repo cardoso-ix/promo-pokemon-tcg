@@ -553,15 +553,20 @@ export function getFluxoHorarioHoje(leadsPorHora: Record<string, number> = {}): 
       }
     }
 
-    const faixas = ['06h', '08h', '10h', '12h', '14h', '16h', '18h', '20h', '22h'];
+    // Faixas horárias de 1 em 1 hora (06h às 23h) para granularidade detalhada de métricas
+    const faixas = [
+      '06h', '07h', '08h', '09h', '10h', '11h',
+      '12h', '13h', '14h', '15h', '16h', '17h',
+      '18h', '19h', '20h', '21h', '22h', '23h'
+    ];
+
     return faixas.map((label) => {
       const horaNum = parseInt(label.replace('h', ''), 10);
-      const h1 = String(horaNum).padStart(2, '0');
-      const h2 = String(horaNum + 1).padStart(2, '0');
+      const h = String(horaNum).padStart(2, '0');
 
-      const ofertas = (mapaEnvios[h1]?.ofertas || 0) + (mapaEnvios[h2]?.ofertas || 0);
-      const cliques = (mapaEnvios[h1]?.cliques || 0) + (mapaEnvios[h2]?.cliques || 0);
-      const leads = (leadsPorHora[h1] || 0) + (leadsPorHora[h2] || 0);
+      const ofertas = mapaEnvios[h]?.ofertas || 0;
+      const cliques = mapaEnvios[h]?.cliques || 0;
+      const leads = leadsPorHora[h] || 0;
 
       return {
         hora: label,
@@ -572,16 +577,12 @@ export function getFluxoHorarioHoje(leadsPorHora: Record<string, number> = {}): 
     });
   } catch (err: unknown) {
     console.warn('[Database] Erro ao calcular fluxo horário:', err);
-    return [
-      { hora: '08h', ofertas: 0, cliques: 0, leads: 0 },
-      { hora: '10h', ofertas: 0, cliques: 0, leads: 0 },
-      { hora: '12h', ofertas: 0, cliques: 0, leads: 0 },
-      { hora: '14h', ofertas: 0, cliques: 0, leads: 0 },
-      { hora: '16h', ofertas: 0, cliques: 0, leads: 0 },
-      { hora: '18h', ofertas: 0, cliques: 0, leads: 0 },
-      { hora: '20h', ofertas: 0, cliques: 0, leads: 0 },
-      { hora: '22h', ofertas: 0, cliques: 0, leads: 0 }
+    const fallbackFaixas = [
+      '06h', '07h', '08h', '09h', '10h', '11h',
+      '12h', '13h', '14h', '15h', '16h', '17h',
+      '18h', '19h', '20h', '21h', '22h', '23h'
     ];
+    return fallbackFaixas.map(h => ({ hora: h, ofertas: 0, cliques: 0, leads: 0 }));
   }
 }
 

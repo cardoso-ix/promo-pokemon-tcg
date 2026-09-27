@@ -342,7 +342,7 @@ export class MeliAffiliateService {
         {
           id: 'MLB389210941',
           title: 'Blister Duplo Com Moeda Celebração 30 Anos Pokémon TCG Copag',
-          image: 'https://http2.mlstatic.com/D_NQ_NP_2X_796515-MLB74582602738_022024-F.webp',
+          image: '/assets/products/p1.svg',
           unitsSold: 12,
           totalSales: 1078.80,
           commissionRate: 12,
@@ -352,7 +352,7 @@ export class MeliAffiliateService {
         {
           id: 'MLB389210942',
           title: 'Blister Quádruplo Pokémon Fogo Fantasmagórico Me02 Lacrado',
-          image: 'https://http2.mlstatic.com/D_NQ_NP_2X_813942-MLB78901234567_092024-F.webp',
+          image: '/assets/products/p2.svg',
           unitsSold: 11,
           totalSales: 493.90,
           commissionRate: 12,
@@ -362,7 +362,7 @@ export class MeliAffiliateService {
         {
           id: 'MLB389210943',
           title: 'Pokémon Celebração De 30 Anos Blister Triplo Com Adesivo Especial',
-          image: 'https://http2.mlstatic.com/D_NQ_NP_2X_924810-MLB76543210987_082024-F.webp',
+          image: '/assets/products/p3.svg',
           unitsSold: 9,
           totalSales: 1169.91,
           commissionRate: 12,
@@ -372,7 +372,7 @@ export class MeliAffiliateService {
         {
           id: 'MLB389210944',
           title: 'Pokémon TCG: Megaevolution - Pitch Black - Booster Bundle 6 Pacotes',
-          image: 'https://http2.mlstatic.com/D_NQ_NP_2X_631980-MLB73456789012_072024-F.webp',
+          image: '/assets/products/p4.svg',
           unitsSold: 7,
           totalSales: 1399.93,
           commissionRate: 12,
@@ -382,7 +382,7 @@ export class MeliAffiliateService {
         {
           id: 'MLB389210945',
           title: 'Pokémon Celebração De 30 Anos Treinador Avançado (Elite Trainer Box ETB)',
-          image: 'https://http2.mlstatic.com/D_NQ_NP_2X_992140-MLB72345678901_062024-F.webp',
+          image: '/assets/products/p5.svg',
           unitsSold: 7,
           totalSales: 3639.30,
           commissionRate: 12,
@@ -392,7 +392,7 @@ export class MeliAffiliateService {
         {
           id: 'MLB389210946',
           title: 'Pokémon Celebração De 30 Anos Blister Triplo Com Adesivo - Kit 2 Unidades',
-          image: 'https://http2.mlstatic.com/D_NQ_NP_2X_710920-MLB71234567890_052024-F.webp',
+          image: '/assets/products/p6.svg',
           unitsSold: 5,
           totalSales: 649.95,
           commissionRate: 12,
@@ -402,7 +402,7 @@ export class MeliAffiliateService {
         {
           id: 'MLB389210947',
           title: 'Porta Temperos Giratório Em Bambu 3 Andares Com 12 Potes Herméticos',
-          image: 'https://http2.mlstatic.com/D_NQ_NP_2X_612345-MLB71234567890_052024-F.webp',
+          image: '/assets/products/p7.svg',
           unitsSold: 4,
           totalSales: 265.80,
           commissionRate: 12,
@@ -412,7 +412,7 @@ export class MeliAffiliateService {
         {
           id: 'MLB389210948',
           title: 'Box Coleção Especial Charizard Ex Fogo Supremo Pokémon TCG',
-          image: 'https://http2.mlstatic.com/D_NQ_NP_2X_841092-MLB79012345678_092024-F.webp',
+          image: '/assets/products/p8.svg',
           unitsSold: 3,
           totalSales: 897.00,
           commissionRate: 12,

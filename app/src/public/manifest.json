@@ -1,0 +1,19 @@
+{
+  "name": "Promo Pokémon TCG · Pro Cockpit",
+  "short_name": "Promo TCG",
+  "description": "Plataforma autônoma de alta performance para monitoramento de vendas, tráfego pago e afiliados Pokémon TCG",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070d17",
+  "theme_color": "#070d17",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "64x64 128x128 256x256 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

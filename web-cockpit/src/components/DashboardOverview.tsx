@@ -11,7 +11,10 @@ import {
   RefreshCw,
   Settings,
   X,
-  ShoppingBag
+  ShoppingBag,
+  FileSpreadsheet,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import {
   AreaChart,
@@ -44,6 +47,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onOpenReplicaQr
 }) => {
   const replica = status?.replica;
+
+  // Estado da Planilha de Métricas Horárias de 1 em 1 hora
+  const [showPlanilhaHoraria, setShowPlanilhaHoraria] = useState(false);
 
   // Estado de Sincronização Unificada
   const [syncingAll, setSyncingAll] = useState(false);
@@ -651,18 +657,35 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* Seção Principal de Gráficos Recharts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Gráfico 1: Atividade Horária & Conversão (2 Colunas) */}
-        <div className="lg:col-span-2 glass-panel rounded-2xl p-6 border border-white/[0.08] flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
+        <div className="lg:col-span-2 glass-panel rounded-2xl p-6 border border-white/[0.08] flex flex-col justify-between space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-cyan-400" />
-                Fluxo de Cliques, Ofertas & Leads por Horário
-              </h3>
-              <p className="text-xs text-slate-400">Desempenho em tempo real ao longo do dia</p>
+              <div className="flex items-center gap-2">
+                <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-cyan-400" />
+                  Fluxo de Cliques, Ofertas & Leads por Horário
+                </h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold">
+                  1 em 1 hora
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">Desempenho detalhado em tempo real ao longo do dia</p>
             </div>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold">
-              Live Feed
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowPlanilhaHoraria(!showPlanilhaHoraria)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition-all cursor-pointer shadow-sm active:scale-95"
+                title="Visualizar métricas em formato de planilha de 1 em 1 hora"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>{showPlanilhaHoraria ? 'Ocultar Planilha' : 'Planilha Horária (1 em 1h)'}</span>
+                {showPlanilhaHoraria ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold hidden sm:inline">
+                Live Feed
+              </span>
+            </div>
           </div>
 
           <div className="h-64 w-full">
@@ -683,8 +706,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="hora" stroke="#64748b" fontSize={11} tickLine={false} />
-                <YAxis stroke="#64748b" fontSize={11} tickLine={false} />
+                <XAxis dataKey="hora" stroke="#64748b" fontSize={10} tickLine={false} interval="preserveStartEnd" />
+                <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: '#0d1527',
@@ -725,7 +748,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </ResponsiveContainer>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-6 mt-3 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 border-t border-white/[0.04] pt-2">
             <span className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-cyan-400" /> Cliques Afiliado (meli.la)
             </span>
@@ -736,6 +759,84 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <span className="w-3 h-3 rounded-full bg-orange-500" /> Novos Leads Captados
             </span>
           </div>
+
+          {/* TABELA PLANILHA HORÁRIA: DE 1 EM 1 HORA */}
+          {showPlanilhaHoraria && (
+            <div className="mt-3 pt-3 border-t border-white/[0.08] space-y-2 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" />
+                  Extrato Horário Detalhado (Dia de Hoje)
+                </span>
+                <span className="text-[11px] text-slate-500 font-mono">
+                  {activityData.length} faixas horárias auditadas
+                </span>
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-white/[0.08] max-h-60 overflow-y-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#0b1329] text-[10px] uppercase tracking-wider text-slate-400 sticky top-0 z-10 border-b border-white/[0.08]">
+                    <tr>
+                      <th className="py-2 px-3">Horário</th>
+                      <th className="py-2 px-3 text-right">Cliques (meli.la)</th>
+                      <th className="py-2 px-3 text-right">Ofertas Replicadas</th>
+                      <th className="py-2 px-3 text-right">Novos Leads</th>
+                      <th className="py-2 px-3 text-center">Intensidade</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.03] bg-white/[0.01]">
+                    {activityData.map((item, idx) => {
+                      const totalMov = (item.cliques || 0) + (item.ofertas || 0) + (item.leads || 0);
+                      const statusPico = totalMov >= 20 ? 'Alto Pico 🔥' : totalMov >= 5 ? 'Ativo ⚡' : 'Normal ⏳';
+                      const badgeClass = totalMov >= 20
+                        ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                        : totalMov >= 5
+                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                        : 'bg-slate-500/10 text-slate-400 border-white/[0.06]';
+
+                      return (
+                        <tr key={idx} className="hover:bg-white/[0.02]">
+                          <td className="py-1.5 px-3 font-mono font-bold text-slate-200">
+                            {item.hora} às {String(parseInt(item.hora.replace('h', ''), 10) + 1).padStart(2, '0')}h
+                          </td>
+                          <td className="py-1.5 px-3 text-right font-mono text-cyan-300 font-semibold">
+                            {item.cliques > 0 ? item.cliques : <span className="text-slate-600">0</span>}
+                          </td>
+                          <td className="py-1.5 px-3 text-right font-mono text-emerald-400">
+                            {item.ofertas > 0 ? item.ofertas : <span className="text-slate-600">0</span>}
+                          </td>
+                          <td className="py-1.5 px-3 text-right font-mono text-orange-400">
+                            {item.leads > 0 ? item.leads : <span className="text-slate-600">0</span>}
+                          </td>
+                          <td className="py-1.5 px-3 text-center">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}`}>
+                              {statusPico}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot className="bg-[#0b1329] font-bold text-[11px] border-t border-white/[0.08] sticky bottom-0">
+                    <tr>
+                      <td className="py-2 px-3 text-slate-300">Total do Dia</td>
+                      <td className="py-2 px-3 text-right font-mono text-cyan-300">
+                        {activityData.reduce((acc, i) => acc + (i.cliques || 0), 0)}
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono text-emerald-400">
+                        {activityData.reduce((acc, i) => acc + (i.ofertas || 0), 0)}
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono text-orange-400">
+                        {activityData.reduce((acc, i) => acc + (i.leads || 0), 0)}
+                      </td>
+                      <td className="py-2 px-3 text-center text-slate-400 font-mono text-[10px]">
+                        Auditado
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Gráfico 2: Composição DRE & Regra 70% (1 Coluna) */}

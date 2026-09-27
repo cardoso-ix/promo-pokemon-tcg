@@ -18,7 +18,11 @@ import {
   Pencil,
   Trash2,
   X,
-  Check
+  Check,
+  Shield,
+  Clock,
+  FileSpreadsheet,
+  Sliders
 } from 'lucide-react';
 import type { OfertaLog, RotaGrupo, SubTabReplica } from '../types/index.ts';
 import { api } from '../services/api.ts';
@@ -778,65 +782,330 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
         </div>
       )}
 
-      {/* Sub-Aba: Ajustes & Afiliado */}
+      {/* Sub-Aba: Central de Ajustes & Coordenação Completa */}
       {subTab === 'config' && (
-        <form onSubmit={handleSalvarConfig} className="glass-panel rounded-2xl p-6 border border-white/[0.08] space-y-4 max-w-2xl mx-auto">
-          <h3 className="text-base font-heading font-bold text-white flex items-center gap-2">
-            <Settings className="w-4 h-4 text-cyan-400" />
-            Configurações Globais & Afiliado
-          </h3>
-
-          <div className="space-y-3 text-xs">
+        <form onSubmit={handleSalvarConfig} className="space-y-6 max-w-4xl mx-auto">
+          {/* Topo com Título e Botão de Salvar Superior */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Tag Matt Word (Mercado Livre):</label>
-              <input
-                type="text"
-                placeholder="Ex: caed1312314"
-                value={configs['affiliate_matt_word'] || configs['matt_word'] || configs['meli_tag'] || ''}
-                onChange={e => setConfigs({ ...configs, affiliate_matt_word: e.target.value, matt_word: e.target.value, meli_tag: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50 font-mono"
-              />
+              <h3 className="text-lg font-heading font-extrabold text-white flex items-center gap-2">
+                <Settings className="w-5 h-5 text-cyan-400" />
+                Central de Ajustes & Coordenação Operacional
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Controle total das tags de comissão, regras anti-spam, limpeza de concorrentes e rotinas automatizadas.
+              </p>
             </div>
-
-            <div>
-              <label className="block text-slate-300 font-medium mb-1">Tag Matt Tool (Mercado Livre):</label>
-              <input
-                type="text"
-                placeholder="Opcional (Canal/Ferramenta do Mercado Livre)"
-                value={configs['affiliate_matt_tool'] || configs['matt_tool'] || ''}
-                onChange={e => setConfigs({ ...configs, affiliate_matt_tool: e.target.value, matt_tool: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50 font-mono"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Delay Entre Postagens (segundos):</label>
-                <input
-                  type="number"
-                  value={configs['delay_postagem_segundos'] || '5'}
-                  onChange={e => setConfigs({ ...configs, delay_postagem_segundos: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Horário de Abertura Diária:</label>
-                <input
-                  type="time"
-                  value={configs['msg_abertura_horario'] || '11:11'}
-                  onChange={e => setConfigs({ ...configs, msg_abertura_horario: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50"
-                />
-              </div>
-            </div>
-
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-xl font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50 cursor-pointer active:scale-95 shrink-0"
             >
-              {loading ? 'Salvando...' : 'Salvar Configurações'}
+              <Check className="w-4 h-4" />
+              <span>{loading ? 'Salvando...' : 'Salvar Todos os Ajustes'}</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* CARD 1: TAGS DE AFILIADO & VITRINE */}
+            <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] space-y-4">
+              <div className="flex items-center gap-2 text-cyan-300 border-b border-white/[0.06] pb-3">
+                <Sliders className="w-4 h-4 text-cyan-400" />
+                <h4 className="font-heading font-bold text-sm text-white">Tags de Afiliação & Vitrine</h4>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                    <span>Tag Matt Word (Apelido Afiliado):</span>
+                    <span className="text-[10px] text-cyan-400 font-mono">matt_word</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: caed1312314"
+                    value={configs['affiliate_matt_word'] || configs['matt_word'] || configs['meli_tag'] || ''}
+                    onChange={e => setConfigs({ ...configs, affiliate_matt_word: e.target.value, matt_word: e.target.value, meli_tag: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50 font-mono"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Garante a atribuição das comissões das compras realizadas através dos links.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                    <span>Tag Matt Tool (Canal/Ferramenta):</span>
+                    <span className="text-[10px] text-slate-400 font-mono">matt_tool</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 96097202"
+                    value={configs['affiliate_matt_tool'] || configs['matt_tool'] || ''}
+                    onChange={e => setConfigs({ ...configs, affiliate_matt_tool: e.target.value, matt_tool: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Link da Vitrine / Catálogo Oficial:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: https://mercadolivre.com/sec/2rM6RPm"
+                    value={configs['link_vitrine_curto'] || ''}
+                    onChange={e => setConfigs({ ...configs, link_vitrine_curto: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-cyan-500/50 font-mono text-[11px]"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Inserido nas mensagens de abertura e no rodapé das ofertas recomendadas.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 2: REGRAS DE POSTAGEM & ANTI-SPAM */}
+            <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] space-y-4">
+              <div className="flex items-center gap-2 text-emerald-300 border-b border-white/[0.06] pb-3">
+                <Shield className="w-4 h-4 text-emerald-400" />
+                <h4 className="font-heading font-bold text-sm text-white">Regras de Postagem & Filtros</h4>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                {/* Switch: Filtro Apenas TCG */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <div>
+                    <span className="font-semibold text-slate-200 block">Filtro Exclusivo Pokémon TCG</span>
+                    <span className="text-[10px] text-slate-400">Posta apenas produtos com termos de Pokémon TCG Copag</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConfigs({ ...configs, filtro_apenas_tcg: configs['filtro_apenas_tcg'] === 'false' ? 'true' : 'false' })}
+                    className="cursor-pointer"
+                  >
+                    {configs['filtro_apenas_tcg'] !== 'false' ? (
+                      <ToggleRight className="w-7 h-7 text-emerald-400" />
+                    ) : (
+                      <ToggleLeft className="w-7 h-7 text-slate-500" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Switch: Somente Mercado Livre */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <div>
+                    <span className="font-semibold text-slate-200 block">Somente Mercado Livre</span>
+                    <span className="text-[10px] text-slate-400">Ignora ofertas de outras lojas fora do Meli</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConfigs({ ...configs, somente_mercadolivre: configs['somente_mercadolivre'] === 'false' ? 'true' : 'false' })}
+                    className="cursor-pointer"
+                  >
+                    {configs['somente_mercadolivre'] !== 'false' ? (
+                      <ToggleRight className="w-7 h-7 text-emerald-400" />
+                    ) : (
+                      <ToggleLeft className="w-7 h-7 text-slate-500" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Switch: Replicar Comunicados em Texto */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <div>
+                    <span className="font-semibold text-slate-200 block">Replicar Comunicados em Texto</span>
+                    <span className="text-[10px] text-slate-400">Repassa mensagens institucionais sem link/foto</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConfigs({ ...configs, replicar_comunicados_texto: configs['replicar_comunicados_texto'] === 'true' ? 'false' : 'true' })}
+                    className="cursor-pointer"
+                  >
+                    {configs['replicar_comunicados_texto'] === 'true' ? (
+                      <ToggleRight className="w-7 h-7 text-cyan-400" />
+                    ) : (
+                      <ToggleLeft className="w-7 h-7 text-slate-500" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Grade de Delays e Tetos */}
+                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                  <div>
+                    <label className="block text-slate-400 text-[11px] mb-1">Cooldown Duplicidade:</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="5"
+                        max="180"
+                        value={configs['cooldown_duplicidade_minutos'] || '30'}
+                        onChange={e => setConfigs({ ...configs, cooldown_duplicidade_minutos: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-emerald-500/50"
+                      />
+                      <span className="text-[10px] text-slate-400">min</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[11px] mb-1">Teto Máx / Hora:</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="5"
+                        max="120"
+                        value={configs['teto_hora'] || '40'}
+                        onChange={e => setConfigs({ ...configs, teto_hora: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-emerald-500/50"
+                      />
+                      <span className="text-[10px] text-slate-400">msgs</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[11px] mb-1">Delay Entre Envios:</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="1"
+                        max="60"
+                        value={configs['delay_postagem_segundos'] || configs['delay_segundos'] || '5'}
+                        onChange={e => setConfigs({ ...configs, delay_postagem_segundos: e.target.value, delay_segundos: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-emerald-500/50"
+                      />
+                      <span className="text-[10px] text-slate-400">seg</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[11px] mb-1">Atraso Máximo:</label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="60"
+                        max="3600"
+                        value={configs['atraso_maximo_segundos'] || '600'}
+                        onChange={e => setConfigs({ ...configs, atraso_maximo_segundos: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-emerald-500/50"
+                      />
+                      <span className="text-[10px] text-slate-400">seg</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 3: HIGIENIZAÇÃO DE MENSAGENS (CONCORRENTES) */}
+            <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] space-y-4">
+              <div className="flex items-center gap-2 text-purple-300 border-b border-white/[0.06] pb-3">
+                <Trash2 className="w-4 h-4 text-purple-400" />
+                <h4 className="font-heading font-bold text-sm text-white">Limpeza de Concorrentes & Assinaturas</h4>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">
+                    Frases, Links e Arrobas a Remover (1 por linha):
+                  </label>
+                  <textarea
+                    rows={6}
+                    placeholder={`@rasgabooster.tcg\n#rasgaboot\n@rasgabooster\nt.me/concorrente\nwa.me/concorrente`}
+                    value={configs['frases_remover'] ?? '@rasgabooster.tcg\n#rasgaboot\n@rasgabooster'}
+                    onChange={e => setConfigs({ ...configs, frases_remover: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-purple-500/50 font-mono text-[11px]"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    O robô detecta e apaga essas expressões antes de enviar nos seus grupos, garantindo mensagens 100% limpas.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 4: MENSAGEM DE BOM DIA & GOOGLE PLANILHAS */}
+            <div className="glass-panel rounded-2xl p-5 border border-white/[0.08] space-y-4">
+              <div className="flex items-center gap-2 text-amber-300 border-b border-white/[0.06] pb-3">
+                <Clock className="w-4 h-4 text-amber-400" />
+                <h4 className="font-heading font-bold text-sm text-white">Rotinas Automáticas & Integrações</h4>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                {/* Mensagem Diária */}
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-slate-200 block">Mensagem Diária de Bom Dia</span>
+                      <span className="text-[10px] text-slate-400">Postagem matinal automática de boas-vindas</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setConfigs({ ...configs, msg_abertura_ativa: configs['msg_abertura_ativa'] === 'false' ? 'true' : 'false' })}
+                      className="cursor-pointer"
+                    >
+                      {configs['msg_abertura_ativa'] !== 'false' ? (
+                        <ToggleRight className="w-7 h-7 text-amber-400" />
+                      ) : (
+                        <ToggleLeft className="w-7 h-7 text-slate-500" />
+                      )}
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[11px] mb-1">Horário Oficial do Disparo:</label>
+                    <input
+                      type="time"
+                      value={configs['msg_abertura_horario'] || '07:00'}
+                      onChange={e => setConfigs({ ...configs, msg_abertura_horario: e.target.value })}
+                      className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-amber-500/50 text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Google Planilhas */}
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                      <div>
+                        <span className="font-semibold text-slate-200 block">Google Planilhas Integrado</span>
+                        <span className="text-[10px] text-slate-400">Grava cada oferta em "produtos tcg valores"</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setConfigs({ ...configs, google_sheets_ativo: configs['google_sheets_ativo'] === 'false' ? 'true' : 'false' })}
+                      className="cursor-pointer"
+                    >
+                      {configs['google_sheets_ativo'] !== 'false' ? (
+                        <ToggleRight className="w-7 h-7 text-emerald-400" />
+                      ) : (
+                        <ToggleLeft className="w-7 h-7 text-slate-500" />
+                      )}
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 text-[11px] mb-1">Webhook URL (Google Apps Script):</label>
+                    <input
+                      type="text"
+                      placeholder="https://script.google.com/macros/s/..."
+                      value={configs['google_sheets_webhook_url'] || ''}
+                      onChange={e => setConfigs({ ...configs, google_sheets_webhook_url: e.target.value })}
+                      className="w-full px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-emerald-500/50 text-[11px] font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Botão de Salvar Rodapé */}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-sm transition-all shadow-xl shadow-cyan-500/20 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+            >
+              <Check className="w-4 h-4 text-slate-950 font-bold" />
+              <span>{loading ? 'Salvando Configurações...' : 'Salvar e Aplicar Todas as Configurações'}</span>
             </button>
           </div>
         </form>

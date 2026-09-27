@@ -57,19 +57,19 @@ export const Header: React.FC<HeaderProps> = ({
             <circle cx="24" cy="24" r="2" fill="#00e5ff" />
           </svg>
         </div>
-        <div className="hidden sm:block">
-          <h1 className="font-heading font-bold text-sm tracking-tight text-white flex items-center gap-1.5">
+        <div className="block">
+          <h1 className="font-heading font-bold text-xs sm:text-sm tracking-tight text-white flex items-center gap-1.5">
             Promo Pokémon TCG
-            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold">
+            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold hidden xs:inline">
               Pro Hub
             </span>
           </h1>
-          <p className="text-[11px] text-slate-400 font-medium">Cockpit Unificado de Automação</p>
+          <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium hidden sm:block">Cockpit Unificado de Automação</p>
         </div>
       </div>
 
-      {/* Navegação Central de Módulos (Tabs) */}
-      <nav className="flex items-center gap-1.5 p-1 rounded-xl bg-white/[0.04] border border-white/[0.06] shadow-inner">
+      {/* Navegação Central de Módulos (Tabs) - Apenas Desktop (No Mobile é BottomNav) */}
+      <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-xl bg-white/[0.04] border border-white/[0.06] shadow-inner">
         <button
           onClick={() => onSelectModule('dashboard')}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${

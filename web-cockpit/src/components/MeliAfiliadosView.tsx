@@ -42,6 +42,7 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
     totalSalesToday: '89.90',
     clicksToday: '36'
   });
+  const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   const carregarMetricas = async (refresh = false) => {
     try {
@@ -419,10 +420,12 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
                   <tr key={prod.id} className="hover:bg-white/[0.02] transition-colors group">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        {prod.image ? (
+                        {prod.image && !imgErrors[prod.id] ? (
                           <img
                             src={prod.image}
                             alt={prod.title}
+                            referrerPolicy="no-referrer"
+                            onError={() => setImgErrors(prev => ({ ...prev, [prod.id]: true }))}
                             className="w-11 h-11 rounded-lg object-contain bg-white/5 border border-white/10 p-1 flex-shrink-0"
                           />
                         ) : (
@@ -701,8 +704,14 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
             {(data?.recentSales || []).map(s => (
               <div key={s.id} className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.04] transition-all">
                 <div className="flex items-center gap-3">
-                  {s.productImage ? (
-                    <img src={s.productImage} alt={s.productName} className="w-12 h-12 rounded-lg object-contain bg-white/5 p-1 border border-white/10 flex-shrink-0" />
+                  {s.productImage && !imgErrors[s.id] ? (
+                    <img
+                      src={s.productImage}
+                      alt={s.productName}
+                      referrerPolicy="no-referrer"
+                      onError={() => setImgErrors(prev => ({ ...prev, [s.id]: true }))}
+                      className="w-12 h-12 rounded-lg object-contain bg-white/5 p-1 border border-white/10 flex-shrink-0"
+                    />
                   ) : (
                     <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
                       <ShoppingBag className="w-5 h-5" />

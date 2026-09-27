@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { ActiveModule, OfertaLog, BalancoFinanceiro } from './types/index.ts';
 import { Header } from './components/Header.tsx';
+import { BottomNav } from './components/BottomNav.tsx';
 import { DashboardOverview } from './components/DashboardOverview.tsx';
 import { ReplicadorView } from './components/ReplicadorView.tsx';
 import { FinancasView } from './components/FinancasView.tsx';
@@ -55,8 +56,8 @@ export const App: React.FC = () => {
         onOpenCookieModal={() => setCookieModalOpen(true)}
       />
 
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 transition-all">
+      {/* Main Container com padding mobile seguro para BottomNav */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 transition-all">
         {activeModule === 'dashboard' && (
           <DashboardOverview
             status={status}
@@ -93,7 +94,7 @@ export const App: React.FC = () => {
       />
 
       {/* Footer Minimalista */}
-      <footer className="border-t border-white/[0.05] py-4 px-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl w-full mx-auto">
+      <footer className="border-t border-white/[0.05] py-4 px-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl w-full mx-auto mb-16 md:mb-0">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-cyan-400" />
           <span>Promo Pokémon TCG · Plataforma Autônoma de Alta Performance</span>
@@ -106,6 +107,12 @@ export const App: React.FC = () => {
           <span>DeepSeek V4</span>
         </div>
       </footer>
+
+      {/* Barra de Navegação Inferior para Celular / Smartphones */}
+      <BottomNav
+        activeModule={activeModule}
+        onSelectModule={setActiveModule}
+      />
     </div>
   );
 };

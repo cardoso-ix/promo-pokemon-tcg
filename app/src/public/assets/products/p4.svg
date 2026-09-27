@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <defs>
+    <linearGradient id="bg-p4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0e7490" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" rx="24" fill="url(#bg-p4)"/>
+  <circle cx="80" cy="65" r="32" fill="#ffffff" fill-opacity="0.12" stroke="#10b981" stroke-width="2.5" stroke-dasharray="4 2"/>
+  
+  <!-- Pokeball Vector Symbol -->
+  <circle cx="80" cy="65" r="24" fill="none" stroke="#ffffff" stroke-width="3.5"/>
+  <path d="M 56 65 L 104 65" stroke="#ffffff" stroke-width="3.5"/>
+  <circle cx="80" cy="65" r="8" fill="#ffffff" stroke="#0e7490" stroke-width="3"/>
+  <circle cx="80" cy="65" r="3" fill="#10b981"/>
+  
+  <!-- Labels -->
+  <rect x="14" y="112" width="132" height="24" rx="8" fill="#070d17" fill-opacity="0.8" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+  <text x="80" y="123" fill="#ffffff" font-size="8.5" font-family="Inter, sans-serif" font-weight="700" text-anchor="middle" letter-spacing="0.3">BOOSTER BUNDLE</text>
+  <text x="80" y="132" fill="#10b981" font-size="7" font-family="Inter, sans-serif" font-weight="700" text-anchor="middle">MEGAEVOLUTION 6 PACKS</text>
+  
+  <rect x="50" y="13" width="60" height="16" rx="5" fill="#10b981"/>
+  <text x="80" y="24" fill="#0b1329" font-size="8" font-family="Outfit, sans-serif" font-weight="900" text-anchor="middle" letter-spacing="0.5">POKÉMON TCG</text>
+</svg>

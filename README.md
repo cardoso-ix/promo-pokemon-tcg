@@ -37,16 +37,22 @@ chmod +x *.sh
 - **Painel em Produção:** 👉 **`http://108.174.145.77:3000`** | **Local:** 👉 **`http://localhost:3000`**
 - **Arquitetura Moderna & Leve (SPA Nativa sem Iframes):**
   - **Stack Visual de Ponta:** Desenvolvido em **React 19, Tailwind CSS v4, Recharts e Lucide Icons**.
-  - **Visão Geral 360°:** Dashboard executivo unificando fluxo horário, investimento Meta Ads em tempo real, comissões do Mercado Livre, Blended ROAS e regra dos 70% de reinvestimento.
-  - **Módulo Replicador (Água 💧):** Feed de ofertas ao vivo, rotas de transmissão com toggles rápidos, gerador de anúncios TCG com prévia em tempo real e Sentinel do Mercado Livre.
-  - **Módulo Meli Afiliados (Ouro 🛍️):** 7 visões analíticas completas replicando o portal oficial (Produtos vendidos, Audiências demográficas e por estado, Vendas não efetivadas, Histórico diário, Vendas recentes, Categorias e Tags de rastreamento).
+  - **Suporte Mobile & PWA Nativo:** Compatível com instalação direta em smartphones (Android e iOS) via Progressive Web App (`manifest.json`), execução em tela cheia (`standalone`) e **Bottom Navigation Bar** inferior ergonômica para navegação com o polegar.
+  - **Visão Geral 360°:** Dashboard executivo unificando fluxo horário com granularidade de **1 em 1 hora** e **Planilha Horária Integrada**, investimento Meta Ads em tempo real, comissões do Mercado Livre, Blended ROAS e regra dos 70% de reinvestimento.
+  - **Módulo Replicador (Água 💧):** Feed de ofertas ao vivo, rotas de transmissão com toggles rápidos, gerador de anúncios TCG com prévia em tempo real, Sentinel do Mercado Livre e **Central de Ajustes Modular Completa** (coordenação de tags de comissão, regras anti-spam, filtros estritos TCG, higienização de assinaturas concorrentes, rotinas matinais e Google Sheets).
+  - **Módulo Meli Afiliados (Ouro 🛍️):** 7 visões analíticas completas replicando o portal oficial com catálogo visual imune a bloqueios (assets locais em SVG de alta definição, `referrerPolicy` defensivo e fallback inteligente).
   - **Módulo Finanças & DRE Executivo (Esmeralda 💼):** Dados 100% reais alimentados automaticamente via API do Meta Ads e Mercado Livre Afiliados, Balanço DRE consolidado, cálculo matemático da Regra dos 70% de Reinvestimento e **Gerador de Relatórios Executivos Mensais** com exportação CSV e impressão em PDF.
 - **Performance:** Aplicação ultraleve após a desintegração do disparador de mensagens frias, concentrando 100% dos recursos em tráfego pago escalável (Meta Ads) e afiliados oficiais.
 
 ---
 
-### 1. 🌊 Módulo Replicador de Ofertas
+### 1. 🌊 Módulo Replicador de Ofertas & Central de Ajustes
 - **Objetivo:** Monitora grupos de ofertas concorrentes 24/7, intercepta links de produtos, higieniza mensagens removendo assinaturas de terceiros, gera links de afiliados oficiais com encurtamento `meli.la`, preserva/baixa fotos oficiais em 2X HD e replica nos seus grupos VIP.
+- **⚙️ Central de Ajustes & Coordenação:**
+  - **Tags de Afiliado:** Controle instantâneo de `matt_word`, `matt_tool` e link da vitrine oficial.
+  - **Regras de Postagem & Filtros Anti-Spam:** Toggles visuais para Filtro Exclusivo Pokémon TCG Copag, Somente Mercado Livre, Cooldown anti-duplicidade (minutos), Teto máximo de postagens por hora, Atraso máximo tolerável e Delay entre envios.
+  - **Limpeza de Concorrentes:** Caixa multilinhas para raspar arrobas e menções indesejadas (ex: `@rasgabooster.tcg`, `#rasgaboot`).
+  - **Rotinas Automáticas:** Ativação e configuração da Mensagem de Bom Dia matinal e sincronização Google Planilhas.
 - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script.
 - **🌅 Mensagem Diária de Abertura (07:00 AM):** Posta automaticamente todas as manhãs no horário oficial de Brasília uma mensagem de boas-vindas e engajamento nos grupos de destino ativos com rotação de 4 templates selecionados a dedo.
 - **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre, Shopee ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
