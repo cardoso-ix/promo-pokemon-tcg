@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { getConfig } from '../db/database.js';
+import { getConfig, inserirOfertaHistorico } from '../db/database.js';
 import { formatarTituloPorSlug, parseValorMoeda, extrairPrecoUnitario } from './anuncio.js';
 
 export interface OfertaPlanilha {
@@ -356,6 +356,21 @@ export async function registrarOfertaPlanilha(
   oferta: OfertaPlanilha,
   customWebhookUrl?: string
 ): Promise<{ ok: boolean; error?: string }> {
+  // 0. Gravação Primária e Imediata no Histórico Nativo de Preços (SQLite)
+  try {
+    inserirOfertaHistorico({
+      produto: oferta.produto,
+      precoPor: oferta.valorPor,
+      precoDe: oferta.valorDe,
+      precoUnitario: oferta.valorUnitario,
+      link: oferta.link,
+      grupo: oferta.grupo,
+      origem: 'planilha'
+    });
+  } catch (errDb: unknown) {
+    console.warn('[Sheets] Aviso ao persistir no SQLite nativo:', errDb);
+  }
+
   const isTest = Boolean(customWebhookUrl && customWebhookUrl.trim());
   const webhookUrl = (customWebhookUrl || getConfig('google_sheets_webhook_url', '')).trim();
   const ativo = getConfig('google_sheets_ativo', 'true') === 'true';

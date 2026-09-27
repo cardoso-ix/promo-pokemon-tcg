@@ -18,7 +18,11 @@ import {
   getFluxoHorarioHoje,
   insertLog,
   DEFAULT_MSG_ABERTURA,
-  PRESET_MSGS_ABERTURA
+  PRESET_MSGS_ABERTURA,
+  getHistoricoProdutosConsolidado,
+  getExtratoProdutoValores,
+  buscarBenchmarkPreco,
+  migrarLogsParaHistoricoProdutos
 } from '../db/database.js';
 import {
   dispararMensagemAbertura,
@@ -846,6 +850,72 @@ export async function createServer() {
         error: resultado.error || 'Falha ao conectar com o Google Sheets Webhook.'
       });
     }
+  });
+
+  // ==========================================
+  // API REST: BASE DE PREÇOS TCG (PLANILHA NATIVA)
+  // ==========================================
+
+  // Listar produtos consolidados com Menor Preço e Maior Preço histórico
+  app.get<{
+    Querystring: { busca?: string; limite?: string; offset?: string };
+  }>('/api/produtos-valores', async (req) => {
+    const busca = req.query.busca || '';
+    const limite = req.query.limite ? Math.min(Math.max(parseInt(req.query.limite, 10), 1), 500) : 100;
+    const offset = req.query.offset ? Math.max(parseInt(req.query.offset, 10), 0) : 0;
+
+    const res = getHistoricoProdutosConsolidado(busca, limite, offset);
+    return {
+      ok: true,
+      itens: res.itens,
+      total: res.total,
+      limite,
+      offset
+    };
+  });
+
+  // Buscar benchmark imediato para balizar precificação no Gerador de Anúncios
+  app.get<{
+    Querystring: { termo?: string };
+  }>('/api/produtos-valores/benchmark', async (req) => {
+    const termo = (req.query.termo || '').trim();
+    if (!termo || termo.length < 2) {
+      return { ok: true, benchmark: { encontrado: false } };
+    }
+
+    const benchmark = buscarBenchmarkPreco(termo);
+    return {
+      ok: true,
+      benchmark
+    };
+  });
+
+  // Obter extrato detalhado de postagens de um produto específico
+  app.get<{
+    Querystring: { produto?: string; limite?: string };
+  }>('/api/produtos-valores/extrato', async (req) => {
+    const produto = (req.query.produto || '').trim();
+    const limite = req.query.limite ? Math.min(Math.max(parseInt(req.query.limite, 10), 1), 200) : 50;
+
+    if (!produto) {
+      return { ok: true, registros: [] };
+    }
+
+    const registros = getExtratoProdutoValores(produto, limite);
+    return {
+      ok: true,
+      registros
+    };
+  });
+
+  // Forçar sincronização/migração retroativa de logs
+  app.post('/api/produtos-valores/migrar', async () => {
+    const inseridos = migrarLogsParaHistoricoProdutos();
+    return {
+      ok: true,
+      inseridos,
+      message: `${inseridos} produtos inseridos ou atualizados a partir do histórico de postagens.`
+    };
   });
 
   // API REST: Agendador Diário - Obter Status e Configurações

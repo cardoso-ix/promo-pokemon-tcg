@@ -1,6 +1,6 @@
 export type ActiveModule = 'dashboard' | 'afiliados' | 'replica' | 'financas';
 
-export type SubTabReplica = 'feed' | 'rotas' | 'gerador' | 'conectar' | 'config';
+export type SubTabReplica = 'feed' | 'rotas' | 'gerador' | 'precos' | 'conectar' | 'config';
 export type SubTabBot = 'visao-geral' | 'grupos' | 'leads' | 'campanhas' | 'meta-cloud' | 'anti-ban' | 'logs';
 
 export type WhatsAppConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr';
@@ -375,6 +375,46 @@ export interface MeliAffiliateOverview {
   updatedAt: string;
 }
 
+export interface ProdutoValorConsolidado {
+  produto: string;
+  produto_limpo: string;
+  menor_preco: number;
+  maior_preco: number;
+  ultimo_preco: number;
+  preco_medio: number;
+  menor_preco_de?: number;
+  maior_preco_de?: number;
+  total_postagens: number;
+  primeira_postagem: string;
+  ultima_postagem: string;
+  ultimo_link?: string;
+  grupo_recente?: string;
+  variacao_perc: number;
+}
 
+export interface RegistroHistoricoProduto {
+  id: number;
+  produto: string;
+  produto_limpo: string;
+  preco_por: number;
+  preco_de?: number;
+  preco_unitario?: number;
+  link?: string;
+  grupo?: string;
+  origem?: string;
+  criado_em: string;
+}
 
-
+export interface BenchmarkPrecoProduto {
+  encontrado: boolean;
+  termoBuscado?: string;
+  produto?: string;
+  produto_limpo?: string;
+  menorPreco?: number;
+  maiorPreco?: number;
+  ultimoPreco?: number;
+  precoMedio?: number;
+  totalPostagens?: number;
+  ultimaPostagem?: string;
+  ultimoLink?: string;
+}

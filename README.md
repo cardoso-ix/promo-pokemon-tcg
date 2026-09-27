@@ -58,7 +58,12 @@ chmod +x *.sh
     - Prévia ao vivo da mensagem formatada no dia da semana atual de Brasília.
     - Botão **Testar Envio Agora** com feedback imediato de disparo para os grupos de destino.
   - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script.
-- **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre, Shopee ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
+  - **📈 Base de Preços TCG (Planilha Nativa Integrada):**
+    - Armazenamento nativo contínuo no SQLite (`historico_produtos_valores`) de todas as ofertas postadas.
+    - Visão consolidada em tempo real com **Menor Preço Postado 🟢 (mínimo histórico)** e **Maior Preço Postado 🔴 (teto histórico)**, preço médio, último valor e oscilação percentual.
+    - **Radar de Precificação no Gerador de Anúncios:** Balizador visual instantâneo que indica o menor e maior preço já praticado no produto para guiar a precificação segura de novas publicações manuais, com botões para aplicar direto no formulário.
+    - Extrato cronológico detalhado com linha do tempo de cada postagem e botão de sincronização retroativa a partir dos logs passados.
+- **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre, Shopee ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, radar de precificação histórica integrada, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
 - **🔄 Botão de Sincronização Unificada:** Sincronização instantânea das métricas do Meta Ads (Graph API v20.0) e Mercado Livre Afiliados com recálculo em tempo real de ROAS, comissões do dia e lucro líquido.
 
 ---

@@ -8,7 +8,10 @@ import type {
   FluxoHorarioItem,
   MetaInsightsOverview,
   MeliOrdersOverview,
-  MeliAffiliateOverview
+  MeliAffiliateOverview,
+  ProdutoValorConsolidado,
+  RegistroHistoricoProduto,
+  BenchmarkPrecoProduto
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro e resiliência
@@ -249,6 +252,35 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ mensagem, fotoUrl, destinos })
     }),
+
+  // --- BASE DE PREÇOS TCG (PLANILHA DE PRODUTOS NATIVA) ---
+  getProdutosValores: (busca = '', limite = 100, offset = 0) =>
+    request<{
+      ok: boolean;
+      itens: ProdutoValorConsolidado[];
+      total: number;
+      limite: number;
+      offset: number;
+    }>(`/api/produtos-valores?busca=${encodeURIComponent(busca)}&limite=${limite}&offset=${offset}`),
+
+  getBenchmarkPreco: (termo: string) =>
+    request<{
+      ok: boolean;
+      benchmark: BenchmarkPrecoProduto;
+    }>(`/api/produtos-valores/benchmark?termo=${encodeURIComponent(termo)}`),
+
+  getExtratoProdutoValores: (produto: string, limite = 50) =>
+    request<{
+      ok: boolean;
+      registros: RegistroHistoricoProduto[];
+    }>(`/api/produtos-valores/extrato?produto=${encodeURIComponent(produto)}&limite=${limite}`),
+
+  migrarProdutosValores: () =>
+    request<{
+      ok: boolean;
+      inseridos: number;
+      message: string;
+    }>('/api/produtos-valores/migrar', { method: 'POST' }),
 
   // --- FINANÇAS & DRE META ADS / MERCADO LIVRE ---
   getFinancasMeses: () =>

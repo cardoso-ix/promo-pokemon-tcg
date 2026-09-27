@@ -22,9 +22,21 @@ import {
   Shield,
   Clock,
   FileSpreadsheet,
-  Sliders
+  Sliders,
+  TrendingDown,
+  TrendingUp,
+  History,
+  ExternalLink,
+  Tag
 } from 'lucide-react';
-import type { OfertaLog, RotaGrupo, SubTabReplica } from '../types/index.ts';
+import type {
+  OfertaLog,
+  RotaGrupo,
+  SubTabReplica,
+  ProdutoValorConsolidado,
+  RegistroHistoricoProduto,
+  BenchmarkPrecoProduto
+} from '../types/index.ts';
 import { api } from '../services/api.ts';
 import { useUnifiedStatus } from '../hooks/useUnifiedStatus.ts';
 
@@ -159,12 +171,105 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
   const [disparando, setDisparando] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
+  // Estados da Base de Preços TCG (Planilha Nativa Integrada)
+  const [produtosValores, setProdutosValores] = useState<ProdutoValorConsolidado[]>([]);
+  const [totalProdutosValores, setTotalProdutosValores] = useState(0);
+  const [buscaPrecos, setBuscaPrecos] = useState('');
+  const [carregandoPrecos, setCarregandoPrecos] = useState(false);
+  const [migrandoPrecos, setMigrandoPrecos] = useState(false);
+  const [ordenacaoPrecos, setOrdenacaoPrecos] = useState<'recente' | 'menor' | 'maior' | 'postagens' | 'variacao'>('recente');
+  const [extratoAberto, setExtratoAberto] = useState(false);
+  const [produtoExtrato, setProdutoExtrato] = useState<string>('');
+  const [registrosExtrato, setRegistrosExtrato] = useState<RegistroHistoricoProduto[]>([]);
+  const [carregandoExtrato, setCarregandoExtrato] = useState(false);
+
+  // Estados do Radar de Precificação no Gerador de Anúncios
+  const [radarBenchmark, setRadarBenchmark] = useState<BenchmarkPrecoProduto | null>(null);
+  const [buscandoBenchmark, setBuscandoBenchmark] = useState(false);
+
   // Carregar dados
   useEffect(() => {
     carregarDados();
     const interval = setInterval(carregarDados, 4000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (subTab === 'precos') {
+      carregarProdutosValores();
+    }
+  }, [subTab]);
+
+  const carregarProdutosValores = async (termo = buscaPrecos) => {
+    setCarregandoPrecos(true);
+    try {
+      const res = await api.getProdutosValores(termo, 300, 0);
+      if (res.ok) {
+        setProdutosValores(res.itens || []);
+        setTotalProdutosValores(res.total || 0);
+      }
+    } catch (err: unknown) {
+      console.warn('Erro ao carregar base de preços:', err);
+    } finally {
+      setCarregandoPrecos(false);
+    }
+  };
+
+  const handleSincronizarHistoricoPrecos = async () => {
+    setMigrandoPrecos(true);
+    try {
+      const res = await api.migrarProdutosValores();
+      alert(res.message || 'Sincronização do histórico concluída com sucesso!');
+      await carregarProdutosValores();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Falha ao sincronizar histórico');
+    } finally {
+      setMigrandoPrecos(false);
+    }
+  };
+
+  const handleAbrirExtrato = async (produto: string) => {
+    setProdutoExtrato(produto);
+    setExtratoAberto(true);
+    setCarregandoExtrato(true);
+    try {
+      const res = await api.getExtratoProdutoValores(produto, 100);
+      if (res.ok) {
+        setRegistrosExtrato(res.registros || []);
+      }
+    } catch (err: unknown) {
+      console.warn('Erro ao carregar extrato de valores:', err);
+    } finally {
+      setCarregandoExtrato(false);
+    }
+  };
+
+  const buscarRadarBenchmark = async (termo: string) => {
+    if (!termo || termo.trim().length < 3) return;
+    setBuscandoBenchmark(true);
+    try {
+      const res = await api.getBenchmarkPreco(termo);
+      if (res.ok && res.benchmark && res.benchmark.encontrado) {
+        setRadarBenchmark(res.benchmark);
+      } else {
+        setRadarBenchmark(null);
+      }
+    } catch {
+      setRadarBenchmark(null);
+    } finally {
+      setBuscandoBenchmark(false);
+    }
+  };
+
+  const usarProdutoNoGerador = (item: ProdutoValorConsolidado) => {
+    setGeradorLink(item.ultimo_link || '');
+    setGeradorPor(item.menor_preco ? item.menor_preco.toFixed(2).replace('.', ',') : '');
+    if (item.maior_preco && item.maior_preco > item.menor_preco) {
+      setGeradorDe(item.maior_preco.toFixed(2).replace('.', ','));
+    }
+    setSubTab('gerador');
+    buscarRadarBenchmark(item.produto || item.produto_limpo);
+  };
 
   const carregarDados = async () => {
     try {
@@ -317,8 +422,11 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
         precoPor: geradorPor ? parseFloat(geradorPor.replace(',', '.')) : undefined,
         cupom: geradorCupom.trim() || undefined
       });
-      setGeradorPreview(res.mensagem || res.textoGerado || '');
+      const textoFinal = res.mensagem || res.textoGerado || '';
+      setGeradorPreview(textoFinal);
       setGeradorFoto(res.fotoUrl || res.imageUrl || null);
+      // Buscar balizador histórico de preços (menor e maior valor já postado)
+      buscarRadarBenchmark(textoFinal || geradorLink);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Falha ao gerar anúncio');
     } finally {
@@ -472,6 +580,24 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
             }`}
           >
             Gerador de Anúncios
+          </button>
+          <button
+            onClick={() => setSubTab('precos')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              subTab === 'precos'
+                ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Base de Preços TCG</span>
+            {totalProdutosValores > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                subTab === 'precos' ? 'bg-slate-950/40 text-slate-950' : 'bg-emerald-500/20 text-emerald-300'
+              }`}>
+                {totalProdutosValores}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setSubTab('conectar')}
@@ -800,6 +926,86 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                 {gerando ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 <span>{gerando ? 'Processando dados...' : 'Gerar Prévia da Mensagem'}</span>
               </button>
+
+              {/* Radar de Precificação Histórica (Menor e Maior Preço Já Postado) */}
+              {buscandoBenchmark && (
+                <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                  <span>Consultando histórico e balizadores de preço...</span>
+                </div>
+              )}
+
+              {radarBenchmark && radarBenchmark.encontrado && (
+                <div className="p-3.5 rounded-xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/30 text-xs space-y-2.5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                      <TrendingDown className="w-4 h-4" />
+                      Radar de Precificação Histórica
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-semibold">
+                      {radarBenchmark.totalPostagens}x postado no grupo
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-300 truncate" title={radarBenchmark.produto}>
+                    Base: <span className="text-white font-medium">{radarBenchmark.produto}</span>
+                  </p>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                    <div className="p-2 rounded-lg bg-emerald-950/60 border border-emerald-500/40">
+                      <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Menor Preço 🟢</p>
+                      <p className="text-sm font-extrabold text-emerald-300">
+                        R$ {radarBenchmark.menorPreco?.toFixed(2).replace('.', ',')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (radarBenchmark.menorPreco) {
+                            setGeradorPor(radarBenchmark.menorPreco.toFixed(2).replace('.', ','));
+                          }
+                        }}
+                        className="mt-1 w-full py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-[9px] font-bold text-emerald-300 transition-colors"
+                      >
+                        Usar no POR
+                      </button>
+                    </div>
+
+                    <div className="p-2 rounded-lg bg-amber-950/60 border border-amber-500/40">
+                      <p className="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Maior Preço 🔴</p>
+                      <p className="text-sm font-extrabold text-amber-300">
+                        R$ {radarBenchmark.maiorPreco?.toFixed(2).replace('.', ',')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (radarBenchmark.maiorPreco) {
+                            setGeradorDe(radarBenchmark.maiorPreco.toFixed(2).replace('.', ','));
+                          }
+                        }}
+                        className="mt-1 w-full py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-[9px] font-bold text-amber-300 transition-colors"
+                      >
+                        Usar no DE
+                      </button>
+                    </div>
+
+                    <div className="p-2 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Média 📊</p>
+                      <p className="text-sm font-bold text-slate-200">
+                        R$ {radarBenchmark.precoMedio?.toFixed(2).replace('.', ',')}
+                      </p>
+                      <span className="text-[9px] text-slate-500 block mt-1">Preço médio</span>
+                    </div>
+
+                    <div className="p-2 rounded-lg bg-white/[0.04] border border-white/[0.08]">
+                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Último ⏱️</p>
+                      <p className="text-sm font-bold text-cyan-300">
+                        R$ {radarBenchmark.ultimoPreco?.toFixed(2).replace('.', ',')}
+                      </p>
+                      <span className="text-[9px] text-slate-500 block mt-1">Mais recente</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -877,6 +1083,425 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Sub-Aba: Base de Preços TCG (Planilha de Produtos Integrada) */}
+      {subTab === 'precos' && (
+        <div className="space-y-6">
+          {/* Topo com Título, Subtítulo e Ações */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel rounded-2xl p-6 border border-white/[0.08]">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                <FileSpreadsheet className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-heading font-bold text-white flex items-center gap-2">
+                  Base de Preços TCG · Inteligência de Precificação
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold">
+                    Planilha Nativa
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400 max-w-2xl mt-1">
+                  Todos os produtos e valores postados nos grupos integrados diretamente no sistema. 
+                  Consulte o <strong>menor valor</strong> e o <strong>maior valor</strong> histórico para balizar com precisão seus próximos anúncios manuais.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleSincronizarHistoricoPrecos}
+                disabled={migrandoPrecos}
+                className="px-3 py-2 rounded-xl text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border border-white/[0.1] transition-all flex items-center gap-2 disabled:opacity-50"
+                title="Varre os logs de envios passados para consolidar produtos antigos"
+              >
+                <History className={`w-3.5 h-3.5 text-emerald-400 ${migrandoPrecos ? 'animate-spin' : ''}`} />
+                <span>{migrandoPrecos ? 'Sincronizando...' : 'Sincronizar Histórico'}</span>
+              </button>
+              <button
+                onClick={() => carregarProdutosValores(buscaPrecos)}
+                disabled={carregandoPrecos}
+                className="px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${carregandoPrecos ? 'animate-spin' : ''}`} />
+                <span>{carregandoPrecos ? 'Atualizando...' : 'Atualizar Tabela'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Cards de Métricas e KPIs Globais de Precificação */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="glass-panel rounded-2xl p-4 border border-white/[0.08] relative overflow-hidden">
+              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                <span>Produtos Cadastrados</span>
+                <Tag className="w-4 h-4 text-cyan-400" />
+              </div>
+              <p className="text-2xl font-bold font-heading text-white">{totalProdutosValores}</p>
+              <p className="text-[11px] text-slate-500 mt-1">Itens colecionáveis únicos</p>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-4 border border-white/[0.08] relative overflow-hidden">
+              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                <span>Total de Postagens</span>
+                <Layers className="w-4 h-4 text-emerald-400" />
+              </div>
+              <p className="text-2xl font-bold font-heading text-emerald-400">
+                {produtosValores.reduce((acc, p) => acc + p.total_postagens, 0)}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">Ofertas enviadas aos grupos</p>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-4 border border-white/[0.08] relative overflow-hidden">
+              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                <span>Menor Preço Médio</span>
+                <TrendingDown className="w-4 h-4 text-emerald-400" />
+              </div>
+              <p className="text-2xl font-bold font-heading text-emerald-300">
+                R$ {(produtosValores.length > 0
+                  ? produtosValores.reduce((acc, p) => acc + p.menor_preco, 0) / produtosValores.length
+                  : 0
+                ).toFixed(2).replace('.', ',')}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">Piso médio das promoções</p>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-4 border border-white/[0.08] relative overflow-hidden">
+              <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
+                <span>Oscilação Piso x Teto</span>
+                <TrendingUp className="w-4 h-4 text-amber-400" />
+              </div>
+              <p className="text-2xl font-bold font-heading text-amber-300">
+                {(produtosValores.length > 0
+                  ? produtosValores.reduce((acc, p) => acc + p.variacao_perc, 0) / produtosValores.length
+                  : 0
+                ).toFixed(1)}%
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">Amplitude média de desconto</p>
+            </div>
+          </div>
+
+          {/* Barra de Filtros e Busca */}
+          <div className="glass-panel rounded-2xl p-4 border border-white/[0.08] flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="relative w-full sm:w-96">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Buscar por produto (ex: Booster Box, ETB, Copag, 151)..."
+                value={buscaPrecos}
+                onChange={e => {
+                  setBuscaPrecos(e.target.value);
+                  carregarProdutosValores(e.target.value);
+                }}
+                className="w-full pl-9 pr-8 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/50"
+              />
+              {buscaPrecos && (
+                <button
+                  onClick={() => {
+                    setBuscaPrecos('');
+                    carregarProdutosValores('');
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <span className="text-xs text-slate-400 hidden sm:inline">Ordenar por:</span>
+              <select
+                value={ordenacaoPrecos}
+                onChange={e => setOrdenacaoPrecos(e.target.value as any)}
+                className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-slate-200 text-xs focus:outline-none focus:border-emerald-500/50 cursor-pointer"
+              >
+                <option value="recente" className="bg-slate-900 text-white">Últimas Postagens</option>
+                <option value="menor" className="bg-slate-900 text-white">Menor Preço (Crescente)</option>
+                <option value="maior" className="bg-slate-900 text-white">Maior Preço (Decrescente)</option>
+                <option value="postagens" className="bg-slate-900 text-white">Mais Postados no Grupo</option>
+                <option value="variacao" className="bg-slate-900 text-white">Maior Variação de Preço %</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Tabela de Preços Históricos */}
+          <div className="glass-panel rounded-2xl border border-white/[0.08] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-white/[0.08] bg-white/[0.02] text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                    <th className="py-3.5 px-4 min-w-[260px]">Produto / Coleção</th>
+                    <th className="py-3.5 px-3 min-w-[130px] text-emerald-400">Menor Valor 🟢</th>
+                    <th className="py-3.5 px-3 min-w-[130px] text-amber-400">Maior Valor 🔴</th>
+                    <th className="py-3.5 px-3 min-w-[110px]">Preço Médio 📊</th>
+                    <th className="py-3.5 px-3 min-w-[110px]">Último Preço ⏱️</th>
+                    <th className="py-3.5 px-3 min-w-[100px] text-center">Variação</th>
+                    <th className="py-3.5 px-3 min-w-[90px] text-center">Postagens</th>
+                    <th className="py-3.5 px-4 min-w-[140px] text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {produtosValores.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-500">
+                        {carregandoPrecos ? (
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <RefreshCw className="w-5 h-5 animate-spin text-emerald-400" />
+                            <span>Carregando base de preços...</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <FileSpreadsheet className="w-8 h-8 text-slate-600" />
+                            <p className="font-semibold text-slate-400">Nenhum produto encontrado no histórico.</p>
+                            <p className="text-[11px] text-slate-500 max-w-sm">
+                              Clique no botão <strong>"Sincronizar Histórico"</strong> no topo para puxar os produtos já enviados anteriormente pelo robô.
+                            </p>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ) : (
+                    produtosValores
+                      .sort((a, b) => {
+                        if (ordenacaoPrecos === 'menor') return a.menor_preco - b.menor_preco;
+                        if (ordenacaoPrecos === 'maior') return b.maior_preco - a.maior_preco;
+                        if (ordenacaoPrecos === 'postagens') return b.total_postagens - a.total_postagens;
+                        if (ordenacaoPrecos === 'variacao') return b.variacao_perc - a.variacao_perc;
+                        return new Date(b.ultima_postagem).getTime() - new Date(a.ultima_postagem).getTime();
+                      })
+                      .map((p, idx) => {
+                        const dataFormatada = p.ultima_postagem
+                          ? new Date(p.ultima_postagem).toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          : '-';
+
+                        return (
+                          <tr
+                            key={p.produto_limpo + idx}
+                            className="hover:bg-white/[0.03] transition-colors group"
+                          >
+                            {/* Nome do Produto */}
+                            <td className="py-3 px-4">
+                              <div className="space-y-0.5">
+                                <p className="font-semibold text-white group-hover:text-emerald-300 transition-colors line-clamp-2">
+                                  {p.produto}
+                                </p>
+                                <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                                  <span>Último post: {dataFormatada}</span>
+                                  {p.grupo_recente && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="truncate max-w-[140px]">{p.grupo_recente}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Menor Preço Já Postado */}
+                            <td className="py-3 px-3">
+                              <div className="inline-flex flex-col">
+                                <span className="font-extrabold text-emerald-300 text-sm">
+                                  R$ {p.menor_preco.toFixed(2).replace('.', ',')}
+                                </span>
+                                <span className="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">
+                                  Mínimo histórico
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Maior Preço Já Postado */}
+                            <td className="py-3 px-3">
+                              <div className="inline-flex flex-col">
+                                <span className="font-bold text-amber-300 text-sm">
+                                  R$ {p.maior_preco.toFixed(2).replace('.', ',')}
+                                </span>
+                                <span className="text-[9px] font-semibold text-amber-500 uppercase tracking-wider">
+                                  Teto histórico
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Preço Médio */}
+                            <td className="py-3 px-3 text-slate-300 font-medium">
+                              R$ {p.preco_medio.toFixed(2).replace('.', ',')}
+                            </td>
+
+                            {/* Último Preço */}
+                            <td className="py-3 px-3 text-cyan-300 font-semibold">
+                              R$ {p.ultimo_preco.toFixed(2).replace('.', ',')}
+                            </td>
+
+                            {/* Variação % */}
+                            <td className="py-3 px-3 text-center">
+                              {p.variacao_perc > 0 ? (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-bold text-[10px] inline-block">
+                                  -{p.variacao_perc.toFixed(0)}%
+                                </span>
+                              ) : (
+                                <span className="text-slate-500 text-[11px]">-</span>
+                              )}
+                            </td>
+
+                            {/* Total Postagens */}
+                            <td className="py-3 px-3 text-center">
+                              <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 font-semibold text-[10px]">
+                                {p.total_postagens}x
+                              </span>
+                            </td>
+
+                            {/* Ações */}
+                            <td className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => usarProdutoNoGerador(p)}
+                                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-semibold text-[11px] transition-all flex items-center gap-1"
+                                  title="Preencher Gerador com este produto e menor preço sugerido"
+                                >
+                                  <Sparkles className="w-3 h-3" />
+                                  <span>Gerar</span>
+                                </button>
+
+                                <button
+                                  onClick={() => handleAbrirExtrato(p.produto_limpo)}
+                                  className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] text-slate-300 transition-colors"
+                                  title="Ver todas as postagens históricas deste produto"
+                                >
+                                  <History className="w-3.5 h-3.5" />
+                                </button>
+
+                                {p.ultimo_link && (
+                                  <a
+                                    href={p.ultimo_link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] text-slate-400 hover:text-cyan-300 transition-colors"
+                                    title="Abrir último link postado"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {produtosValores.length > 0 && (
+              <div className="p-3 border-t border-white/[0.06] bg-white/[0.01] flex items-center justify-between text-[11px] text-slate-400">
+                <span>Exibindo <strong>{produtosValores.length}</strong> produtos cadastrados</span>
+                <span>Base sincronizada com o banco de dados nativo</span>
+              </div>
+            )}
+          </div>
+
+          {/* Modal de Extrato Cronológico de Postagens do Produto */}
+          {extratoAberto && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+              <div className="glass-panel w-full max-w-2xl rounded-2xl border border-white/[0.12] p-6 space-y-4 max-h-[85vh] flex flex-col shadow-2xl">
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                  <div>
+                    <h4 className="text-base font-heading font-bold text-white flex items-center gap-2">
+                      <History className="w-4 h-4 text-emerald-400" />
+                      Extrato de Postagens Históricas
+                    </h4>
+                    <p className="text-xs text-slate-400 truncate max-w-md mt-0.5">
+                      Item: <span className="text-white font-medium">{produtoExtrato}</span>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setExtratoAberto(false)}
+                    className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-slate-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+                  {carregandoExtrato ? (
+                    <div className="py-8 text-center text-slate-400 flex flex-col items-center gap-2">
+                      <RefreshCw className="w-5 h-5 animate-spin text-emerald-400" />
+                      <span>Carregando extrato de postagens...</span>
+                    </div>
+                  ) : registrosExtrato.length === 0 ? (
+                    <div className="py-8 text-center text-slate-500">
+                      Nenhum registro individual encontrado para este item.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {registrosExtrato.map((reg) => {
+                        const dataPost = new Date(reg.criado_em).toLocaleString('pt-BR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
+
+                        return (
+                          <div
+                            key={reg.id}
+                            className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-between gap-3 text-xs"
+                          >
+                            <div className="space-y-0.5">
+                              <p className="text-white font-medium line-clamp-1">{reg.produto}</p>
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                                <span>{dataPost}</span>
+                                <span>•</span>
+                                <span>{reg.grupo || 'Grupo Pokémon TCG'}</span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-4 shrink-0 text-right">
+                              <div>
+                                <span className="font-extrabold text-emerald-400 text-sm">
+                                  R$ {reg.preco_por.toFixed(2).replace('.', ',')}
+                                </span>
+                                {reg.preco_de && reg.preco_de > reg.preco_por && (
+                                  <span className="block text-[10px] text-slate-500 line-through">
+                                    R$ {reg.preco_de.toFixed(2).replace('.', ',')}
+                                  </span>
+                                )}
+                              </div>
+
+                              {reg.link && (
+                                <a
+                                  href={reg.link}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-cyan-300"
+                                  title="Ver anúncio original"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-white/[0.08] flex justify-end">
+                  <button
+                    onClick={() => setExtratoAberto(false)}
+                    className="px-4 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white text-xs font-semibold"
+                  >
+                    Fechar Extrato
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

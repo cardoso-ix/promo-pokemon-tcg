@@ -189,6 +189,19 @@ export function initDatabase() {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS historico_produtos_valores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      produto TEXT NOT NULL,
+      produto_limpo TEXT NOT NULL,
+      preco_por REAL NOT NULL,
+      preco_de REAL,
+      preco_unitario REAL,
+      link TEXT,
+      grupo TEXT,
+      origem TEXT DEFAULT 'auto',
+      criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_logs_hash ON logs(hash_conteudo);
     CREATE INDEX IF NOT EXISTS idx_logs_criado ON logs(criado_em);
     CREATE INDEX IF NOT EXISTS idx_logs_status ON logs(status);
@@ -196,6 +209,9 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_meta_insights_date ON meta_ad_insights(date);
     CREATE INDEX IF NOT EXISTS idx_meli_orders_date ON meli_orders(date_created);
     CREATE INDEX IF NOT EXISTS idx_meli_orders_status ON meli_orders(status);
+    CREATE INDEX IF NOT EXISTS idx_hist_prod_limpo ON historico_produtos_valores(produto_limpo);
+    CREATE INDEX IF NOT EXISTS idx_hist_prod_data ON historico_produtos_valores(criado_em);
+    CREATE INDEX IF NOT EXISTS idx_hist_prod_preco ON historico_produtos_valores(preco_por);
   `);
 
   // Semear valores padrão se não existirem
@@ -274,6 +290,13 @@ export function initDatabase() {
     }
   } catch (errMig: any) {
     console.warn('[Database Migration] Aviso ao verificar restrição UNIQUE de logs:', errMig?.message || errMig);
+  }
+
+  // Migração retroativa dos logs para a tabela de histórico de valores de produtos
+  try {
+    migrarLogsParaHistoricoProdutos();
+  } catch (errHist: unknown) {
+    console.warn('[Database Migration] Aviso ao migrar histórico de produtos:', errHist);
   }
 }
 
@@ -904,6 +927,450 @@ export function getMeliOrdersStats(startDate?: string, endDate?: string) {
       recentOrders: [],
       dailyData: []
     };
+  }
+}
+
+// ==========================================
+// MÓDULO: BASE DE PREÇOS TCG & BENCHMARK
+// ==========================================
+
+export interface ProdutoValorConsolidado {
+  produto: string;
+  produto_limpo: string;
+  menor_preco: number;
+  maior_preco: number;
+  ultimo_preco: number;
+  preco_medio: number;
+  menor_preco_de?: number;
+  maior_preco_de?: number;
+  total_postagens: number;
+  primeira_postagem: string;
+  ultima_postagem: string;
+  ultimo_link?: string;
+  grupo_recente?: string;
+  variacao_perc: number;
+}
+
+export interface RegistroHistoricoProduto {
+  id: number;
+  produto: string;
+  produto_limpo: string;
+  preco_por: number;
+  preco_de?: number;
+  preco_unitario?: number;
+  link?: string;
+  grupo?: string;
+  origem?: string;
+  criado_em: string;
+}
+
+export interface BenchmarkPrecoProduto {
+  encontrado: boolean;
+  termoBuscado?: string;
+  produto?: string;
+  produto_limpo?: string;
+  menorPreco?: number;
+  maiorPreco?: number;
+  ultimoPreco?: number;
+  precoMedio?: number;
+  totalPostagens?: number;
+  ultimaPostagem?: string;
+  ultimoLink?: string;
+}
+
+/**
+ * Normaliza o nome do produto para agrupamento e indexação semântica
+ */
+export function normalizarNomeProduto(nome: string): string {
+  if (!nome) return '';
+  return nome
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\*\_\~]/g, '')
+    .replace(/[^\w\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Converte string ou número para valor float seguro
+ */
+function parseMoedaParaNumero(valor: string | number | undefined | null): number {
+  if (valor === undefined || valor === null) return 0;
+  if (typeof valor === 'number') return isNaN(valor) ? 0 : valor;
+  const limpo = String(valor)
+    .replace(/R\$/gi, '')
+    .replace(/\s+/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.')
+    .trim();
+  const n = parseFloat(limpo);
+  return isNaN(n) ? 0 : n;
+}
+
+/**
+ * Insere um novo registro no histórico de valores postados
+ */
+export function inserirOfertaHistorico(item: {
+  produto: string;
+  precoPor: number | string;
+  precoDe?: number | string;
+  precoUnitario?: number | string;
+  link?: string;
+  grupo?: string;
+  origem?: string;
+  criadoEm?: string;
+}): boolean {
+  try {
+    const nomeOriginal = (item.produto || '').replace(/[\*_~]/g, '').trim();
+    if (!nomeOriginal || nomeOriginal.length < 3) return false;
+
+    const nomeLimpo = normalizarNomeProduto(nomeOriginal);
+    if (!nomeLimpo || nomeLimpo.length < 3) return false;
+
+    const precoPor = parseMoedaParaNumero(item.precoPor);
+    if (precoPor <= 0) return false;
+
+    const precoDe = item.precoDe ? parseMoedaParaNumero(item.precoDe) : undefined;
+    const precoUnitario = item.precoUnitario ? parseMoedaParaNumero(item.precoUnitario) : undefined;
+
+    // Evitar duplicidade idêntica nos últimos 5 minutos
+    const existente = db.prepare(`
+      SELECT id FROM historico_produtos_valores 
+      WHERE produto_limpo = ? AND preco_por = ? 
+        AND criado_em >= datetime('now', '-5 minutes')
+      LIMIT 1
+    `).get(nomeLimpo, precoPor);
+
+    if (existente) {
+      return false;
+    }
+
+    if (item.criadoEm) {
+      db.prepare(`
+        INSERT INTO historico_produtos_valores (
+          produto, produto_limpo, preco_por, preco_de, preco_unitario, link, grupo, origem, criado_em
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        nomeOriginal,
+        nomeLimpo,
+        precoPor,
+        precoDe || null,
+        precoUnitario || null,
+        item.link || null,
+        item.grupo || 'Grupo Pokémon TCG',
+        item.origem || 'auto',
+        item.criadoEm
+      );
+    } else {
+      db.prepare(`
+        INSERT INTO historico_produtos_valores (
+          produto, produto_limpo, preco_por, preco_de, preco_unitario, link, grupo, origem
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        nomeOriginal,
+        nomeLimpo,
+        precoPor,
+        precoDe || null,
+        precoUnitario || null,
+        item.link || null,
+        item.grupo || 'Grupo Pokémon TCG',
+        item.origem || 'auto'
+      );
+    }
+
+    return true;
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao inserir produto no histórico de valores:', err);
+    return false;
+  }
+}
+
+/**
+ * Retorna os produtos consolidados com Menor Preço e Maior Preço histórico
+ */
+export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, offset = 0): {
+  itens: ProdutoValorConsolidado[];
+  total: number;
+} {
+  try {
+    let whereClause = '';
+    const params: (string | number)[] = [];
+
+    if (busca && busca.trim()) {
+      const termoLimpo = `%${normalizarNomeProduto(busca)}%`;
+      whereClause = 'WHERE h.produto_limpo LIKE ? OR h.produto LIKE ?';
+      params.push(termoLimpo, `%${busca.trim()}%`);
+    }
+
+    const totalRow = db.prepare(`
+      SELECT COUNT(DISTINCT produto_limpo) as total 
+      FROM historico_produtos_valores h
+      ${whereClause}
+    `).get(...params) as { total?: number } | undefined;
+
+    const total = totalRow?.total || 0;
+
+    const rows = db.prepare(`
+      SELECT 
+        h.produto_limpo,
+        (SELECT h2.produto FROM historico_produtos_valores h2 WHERE h2.produto_limpo = h.produto_limpo ORDER BY h2.criado_em DESC, h2.id DESC LIMIT 1) as produto,
+        MIN(h.preco_por) as menor_preco,
+        MAX(h.preco_por) as maior_preco,
+        ROUND(AVG(h.preco_por), 2) as preco_medio,
+        MIN(h.preco_de) as menor_preco_de,
+        MAX(h.preco_de) as maior_preco_de,
+        COUNT(*) as total_postagens,
+        MIN(h.criado_em) as primeira_postagem,
+        MAX(h.criado_em) as ultima_postagem,
+        (SELECT h3.preco_por FROM historico_produtos_valores h3 WHERE h3.produto_limpo = h.produto_limpo ORDER BY h3.criado_em DESC, h3.id DESC LIMIT 1) as ultimo_preco,
+        (SELECT h4.link FROM historico_produtos_valores h4 WHERE h4.produto_limpo = h.produto_limpo ORDER BY h4.criado_em DESC, h4.id DESC LIMIT 1) as ultimo_link,
+        (SELECT h5.grupo FROM historico_produtos_valores h5 WHERE h5.produto_limpo = h.produto_limpo ORDER BY h5.criado_em DESC, h5.id DESC LIMIT 1) as grupo_recente
+      FROM historico_produtos_valores h
+      ${whereClause}
+      GROUP BY h.produto_limpo
+      ORDER BY ultima_postagem DESC
+      LIMIT ? OFFSET ?
+    `).all(...params, limite, offset) as any[];
+
+    const itens: ProdutoValorConsolidado[] = rows.map((r) => {
+      const menor = Number(r.menor_preco) || 0;
+      const maior = Number(r.maior_preco) || 0;
+      const variacao = maior > 0 && maior !== menor
+        ? Number((((maior - menor) / maior) * 100).toFixed(1))
+        : 0;
+
+      return {
+        produto: String(r.produto || r.produto_limpo),
+        produto_limpo: String(r.produto_limpo),
+        menor_preco: menor,
+        maior_preco: maior,
+        ultimo_preco: Number(r.ultimo_preco) || menor,
+        preco_medio: Number(r.preco_medio) || menor,
+        menor_preco_de: r.menor_preco_de ? Number(r.menor_preco_de) : undefined,
+        maior_preco_de: r.maior_preco_de ? Number(r.maior_preco_de) : undefined,
+        total_postagens: Number(r.total_postagens) || 1,
+        primeira_postagem: String(r.primeira_postagem),
+        ultima_postagem: String(r.ultima_postagem),
+        ultimo_link: r.ultimo_link ? String(r.ultimo_link) : undefined,
+        grupo_recente: r.grupo_recente ? String(r.grupo_recente) : undefined,
+        variacao_perc: variacao
+      };
+    });
+
+    return { itens, total };
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao buscar histórico consolidado:', err);
+    return { itens: [], total: 0 };
+  }
+}
+
+/**
+ * Retorna o extrato detalhado de postagens de um produto específico
+ */
+export function getExtratoProdutoValores(produtoLimpoOuTermo: string, limite = 50): RegistroHistoricoProduto[] {
+  try {
+    const limpo = normalizarNomeProduto(produtoLimpoOuTermo);
+    if (!limpo) return [];
+
+    const rows = db.prepare(`
+      SELECT id, produto, produto_limpo, preco_por, preco_de, preco_unitario, link, grupo, origem, criado_em
+      FROM historico_produtos_valores
+      WHERE produto_limpo = ? OR produto_limpo LIKE ?
+      ORDER BY criado_em DESC, id DESC
+      LIMIT ?
+    `).all(limpo, `%${limpo}%`, limite) as any[];
+
+    return rows.map((r) => ({
+      id: Number(r.id),
+      produto: String(r.produto),
+      produto_limpo: String(r.produto_limpo),
+      preco_por: Number(r.preco_por),
+      preco_de: r.preco_de ? Number(r.preco_de) : undefined,
+      preco_unitario: r.preco_unitario ? Number(r.preco_unitario) : undefined,
+      link: r.link ? String(r.link) : undefined,
+      grupo: r.grupo ? String(r.grupo) : undefined,
+      origem: r.origem ? String(r.origem) : undefined,
+      criado_em: String(r.criado_em)
+    }));
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao buscar extrato de produto:', err);
+    return [];
+  }
+}
+
+/**
+ * Busca o benchmark de preços de um produto para balizar a criação de novos anúncios
+ */
+export function buscarBenchmarkPreco(termoOuTitulo: string): BenchmarkPrecoProduto {
+  try {
+    const limpo = normalizarNomeProduto(termoOuTitulo);
+    if (!limpo || limpo.length < 3) {
+      return { encontrado: false };
+    }
+
+    // 1. Tentar correspondência exata de produto_limpo
+    let row = db.prepare(`
+      SELECT 
+        (SELECT h2.produto FROM historico_produtos_valores h2 WHERE h2.produto_limpo = h.produto_limpo ORDER BY h2.criado_em DESC LIMIT 1) as produto,
+        h.produto_limpo,
+        MIN(h.preco_por) as menor_preco,
+        MAX(h.preco_por) as maior_preco,
+        ROUND(AVG(h.preco_por), 2) as preco_medio,
+        COUNT(*) as total_postagens,
+        MAX(h.criado_em) as ultima_postagem,
+        (SELECT h3.preco_por FROM historico_produtos_valores h3 WHERE h3.produto_limpo = h.produto_limpo ORDER BY h3.criado_em DESC LIMIT 1) as ultimo_preco,
+        (SELECT h4.link FROM historico_produtos_valores h4 WHERE h4.produto_limpo = h.produto_limpo ORDER BY h4.criado_em DESC LIMIT 1) as ultimo_link
+      FROM historico_produtos_valores h
+      WHERE h.produto_limpo = ?
+      GROUP BY h.produto_limpo
+    `).get(limpo) as any;
+
+    // 2. Se não encontrar exato, tentar buscar pelas palavras-chave principais
+    if (!row) {
+      const palavras = limpo
+        .split(' ')
+        .filter((p) => p.length >= 3 && !['pokemon', 'tcg', 'copag', 'original', 'lacrado', 'novo', 'para', 'com', 'kit', 'combo'].includes(p));
+
+      if (palavras.length > 0) {
+        const likes = palavras.map(() => 'h.produto_limpo LIKE ?').join(' AND ');
+        const likeParams = palavras.map((p) => `%${p}%`);
+
+        row = db.prepare(`
+          SELECT 
+            (SELECT h2.produto FROM historico_produtos_valores h2 WHERE h2.produto_limpo = h.produto_limpo ORDER BY h2.criado_em DESC LIMIT 1) as produto,
+            h.produto_limpo,
+            MIN(h.preco_por) as menor_preco,
+            MAX(h.preco_por) as maior_preco,
+            ROUND(AVG(h.preco_por), 2) as preco_medio,
+            COUNT(*) as total_postagens,
+            MAX(h.criado_em) as ultima_postagem,
+            (SELECT h3.preco_por FROM historico_produtos_valores h3 WHERE h3.produto_limpo = h.produto_limpo ORDER BY h3.criado_em DESC LIMIT 1) as ultimo_preco,
+            (SELECT h4.link FROM historico_produtos_valores h4 WHERE h4.produto_limpo = h.produto_limpo ORDER BY h4.criado_em DESC LIMIT 1) as ultimo_link
+          FROM historico_produtos_valores h
+          WHERE ${likes}
+          GROUP BY h.produto_limpo
+          ORDER BY total_postagens DESC, ultima_postagem DESC
+          LIMIT 1
+        `).get(...likeParams) as any;
+      }
+    }
+
+    if (!row || !row.menor_preco) {
+      return { encontrado: false, termoBuscado: termoOuTitulo };
+    }
+
+    return {
+      encontrado: true,
+      termoBuscado: termoOuTitulo,
+      produto: String(row.produto || row.produto_limpo),
+      produto_limpo: String(row.produto_limpo),
+      menorPreco: Number(row.menor_preco),
+      maiorPreco: Number(row.maior_preco),
+      ultimoPreco: Number(row.ultimo_preco) || Number(row.menor_preco),
+      precoMedio: Number(row.preco_medio) || Number(row.menor_preco),
+      totalPostagens: Number(row.total_postagens) || 1,
+      ultimaPostagem: String(row.ultima_postagem),
+      ultimoLink: row.ultimo_link ? String(row.ultimo_link) : undefined
+    };
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao buscar benchmark de preço:', err);
+    return { encontrado: false, termoBuscado: termoOuTitulo };
+  }
+}
+
+/**
+ * Migra retroativamente os produtos postados nos logs para a tabela de histórico de valores
+ */
+export function migrarLogsParaHistoricoProdutos(): number {
+  try {
+    const totalExistente = db.prepare('SELECT COUNT(*) as total FROM historico_produtos_valores').get() as { total?: number };
+    const logsEnviados = db.prepare(`
+      SELECT id, texto_publicado, texto_original, criado_em 
+      FROM logs 
+      WHERE status = 'enviado' AND (texto_publicado IS NOT NULL OR texto_original IS NOT NULL)
+      ORDER BY criado_em ASC
+    `).all() as any[];
+
+    if (!logsEnviados || logsEnviados.length === 0) {
+      return 0;
+    }
+
+    // Se já tiver uma quantidade igual ou superior aos logs, pula a migração
+    if (totalExistente && (totalExistente.total || 0) >= logsEnviados.length) {
+      return 0;
+    }
+
+    let inseridos = 0;
+    const insertStmt = db.prepare(`
+      INSERT OR IGNORE INTO historico_produtos_valores (
+        produto, produto_limpo, preco_por, preco_de, link, grupo, origem, criado_em
+      ) VALUES (?, ?, ?, ?, ?, ?, 'migracao_logs', ?)
+    `);
+
+    db.transaction(() => {
+      for (const log of logsEnviados) {
+        const texto = log.texto_publicado || log.texto_original || '';
+        if (!texto) continue;
+
+        const linhas = texto.split('\n').map((l: string) => l.trim()).filter(Boolean);
+        let produto = '';
+        let precoPor = 0;
+        let precoDe: number | undefined;
+        let link = '';
+
+        for (const linha of linhas) {
+          const matchLink = linha.match(/(https?:\/\/[^\s]+)/i);
+          if (matchLink && !link) {
+            link = matchLink[1];
+          }
+
+          const matchPor = linha.match(/(?:👉🏼|👉|\*|)\s*(?:POR:?|APENAS:?|)\s*R?\$?\s*([\d\.,]+)/i);
+          if (linha.toLowerCase().includes('por') || linha.toLowerCase().includes('apenas')) {
+            if (matchPor && !precoPor) {
+              precoPor = parseMoedaParaNumero(matchPor[1]);
+            }
+          }
+
+          const matchDe = linha.match(/(?:❌|~|)\s*DE:?\s*R?\$?\s*([\d\.,]+)/i);
+          if (matchDe && !precoDe) {
+            precoDe = parseMoedaParaNumero(matchDe[1]);
+          }
+
+          if (!produto && !linha.startsWith('http') && !linha.startsWith('🔗') && !linha.startsWith('👉') && !linha.startsWith('❌') && !linha.startsWith('@') && !linha.toLowerCase().includes('cupom')) {
+            const linhaLimpa = linha.replace(/[\*_~]/g, '').trim();
+            if (linhaLimpa.length >= 5) {
+              produto = linhaLimpa;
+            }
+          }
+        }
+
+        if (produto && precoPor > 0) {
+          const produtoLimpo = normalizarNomeProduto(produto);
+          if (produtoLimpo.length >= 3) {
+            insertStmt.run(
+              produto,
+              produtoLimpo,
+              precoPor,
+              precoDe || null,
+              link || null,
+              'Grupo Pokémon TCG',
+              log.criado_em
+            );
+            inseridos++;
+          }
+        }
+      }
+    })();
+
+    if (inseridos > 0) {
+      console.log(`[Database] Migração concluída: ${inseridos} produtos inseridos na base histórica de preços.`);
+    }
+    return inseridos;
+  } catch (err: unknown) {
+    console.warn('[Database] Erro na migração retroativa de logs:', err);
+    return 0;
   }
 }
 
