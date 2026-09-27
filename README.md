@@ -40,7 +40,7 @@ chmod +x *.sh
   - **Visão Geral 360°:** Dashboard executivo unificando fluxo horário, investimento Meta Ads em tempo real, comissões do Mercado Livre, Blended ROAS e regra dos 70% de reinvestimento.
   - **Módulo Replicador (Água 💧):** Feed de ofertas ao vivo, rotas de transmissão com toggles rápidos, gerador de anúncios TCG com prévia em tempo real e Sentinel do Mercado Livre.
   - **Módulo Meli Afiliados (Ouro 🛍️):** 7 visões analíticas completas replicando o portal oficial (Produtos vendidos, Audiências demográficas e por estado, Vendas não efetivadas, Histórico diário, Vendas recentes, Categorias e Tags de rastreamento).
-  - **Módulo Finanças & DRE Executivo (Esmeralda 💼):** Dados 100% reais alimentados automaticamente do Meta Ads e Mercado Livre, Balanço DRE consolidado, cálculo matemático da Regra dos 70% de Reinvestimento, gestão de faturas PDF e **Gerador de Relatórios Executivos Mensais** com exportação CSV e impressão em PDF.
+  - **Módulo Finanças & DRE Executivo (Esmeralda 💼):** Dados 100% reais alimentados automaticamente via API do Meta Ads e Mercado Livre Afiliados, Balanço DRE consolidado, cálculo matemático da Regra dos 70% de Reinvestimento e **Gerador de Relatórios Executivos Mensais** com exportação CSV e impressão em PDF.
 - **Performance:** Aplicação ultraleve após a desintegração do disparador de mensagens frias, concentrando 100% dos recursos em tráfego pago escalável (Meta Ads) e afiliados oficiais.
 
 ---
@@ -76,7 +76,7 @@ chmod +x *.sh
   - Botão institucional no painel para consolidar qualquer mês arquivado.
   - Grade executiva com os 6 KPIs principais, governança da regra 70/30 e extrato diário auditado.
   - Botões dedicados para **Imprimir / Exportar PDF** (`window.print()`) e **Exportar CSV**.
-- **Gestão de Comprovantes & Faturas PDF:** Upload e arquivamento seguro de recibos oficiais do Meta Ads.
+- **Automação Contínua 100% via API:** Eliminação de lançamentos manuais redundantes; todas as métricas financeiras são calculadas e auditadas em tempo real pelas integrações oficiais.
 
 ---
 
