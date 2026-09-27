@@ -80,14 +80,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
   // Fluxo de atividade por horário alimentado com dados 100% reais do banco
   const [activityData, setActivityData] = useState<FluxoHorarioItem[]>([
-    { hora: '08h', ofertas: 0, cliques: 0, leads: 0 },
-    { hora: '10h', ofertas: 0, cliques: 0, leads: 0 },
-    { hora: '12h', ofertas: 0, cliques: 0, leads: 0 },
-    { hora: '14h', ofertas: 0, cliques: 0, leads: 0 },
-    { hora: '16h', ofertas: 0, cliques: 0, leads: 0 },
-    { hora: '18h', ofertas: 0, cliques: 0, leads: 0 },
-    { hora: '20h', ofertas: 0, cliques: 0, leads: 0 },
-    { hora: '22h', ofertas: 0, cliques: 0, leads: 0 },
+    { hora: '08h', ofertas: 0, cliques: 0 },
+    { hora: '10h', ofertas: 0, cliques: 0 },
+    { hora: '12h', ofertas: 0, cliques: 0 },
+    { hora: '14h', ofertas: 0, cliques: 0 },
+    { hora: '16h', ofertas: 0, cliques: 0 },
+    { hora: '18h', ofertas: 0, cliques: 0 },
+    { hora: '20h', ofertas: 0, cliques: 0 },
+    { hora: '22h', ofertas: 0, cliques: 0 },
   ]);
 
   const carregarMetaInsights = async () => {
@@ -663,7 +663,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <div className="flex items-center gap-2">
                 <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-cyan-400" />
-                  Fluxo de Cliques, Ofertas & Leads por Horário
+                  Fluxo de Cliques & Ofertas por Horário
                 </h3>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold">
                   1 em 1 hora
@@ -700,10 +700,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                     <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                   </linearGradient>
-                  <linearGradient id="colorLeads" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="5%" stopColor="#f97316" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#f97316" stopOpacity={0.0} />
-                  </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="hora" stroke="#64748b" fontSize={10} tickLine={false} interval="preserveStartEnd" />
@@ -735,15 +731,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   fill="url(#colorOfertas)"
                   name="Ofertas Replicadas"
                 />
-                <Area
-                  type="monotone"
-                  dataKey="leads"
-                  stroke="#f97316"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorLeads)"
-                  name="Novos Leads"
-                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -754,9 +741,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </span>
             <span className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-emerald-400" /> Ofertas Replicadas
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-orange-500" /> Novos Leads Captados
             </span>
           </div>
 
@@ -779,13 +763,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                       <th className="py-2 px-3">Horário</th>
                       <th className="py-2 px-3 text-right">Cliques (meli.la)</th>
                       <th className="py-2 px-3 text-right">Ofertas Replicadas</th>
-                      <th className="py-2 px-3 text-right">Novos Leads</th>
                       <th className="py-2 px-3 text-center">Intensidade</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.03] bg-white/[0.01]">
                     {activityData.map((item, idx) => {
-                      const totalMov = (item.cliques || 0) + (item.ofertas || 0) + (item.leads || 0);
+                      const totalMov = (item.cliques || 0) + (item.ofertas || 0);
                       const statusPico = totalMov >= 20 ? 'Alto Pico 🔥' : totalMov >= 5 ? 'Ativo ⚡' : 'Normal ⏳';
                       const badgeClass = totalMov >= 20
                         ? 'bg-red-500/20 text-red-300 border-red-500/30'
@@ -804,9 +787,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                           <td className="py-1.5 px-3 text-right font-mono text-emerald-400">
                             {item.ofertas > 0 ? item.ofertas : <span className="text-slate-600">0</span>}
                           </td>
-                          <td className="py-1.5 px-3 text-right font-mono text-orange-400">
-                            {item.leads > 0 ? item.leads : <span className="text-slate-600">0</span>}
-                          </td>
                           <td className="py-1.5 px-3 text-center">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}`}>
                               {statusPico}
@@ -824,9 +804,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                       </td>
                       <td className="py-2 px-3 text-right font-mono text-emerald-400">
                         {activityData.reduce((acc, i) => acc + (i.ofertas || 0), 0)}
-                      </td>
-                      <td className="py-2 px-3 text-right font-mono text-orange-400">
-                        {activityData.reduce((acc, i) => acc + (i.leads || 0), 0)}
                       </td>
                       <td className="py-2 px-3 text-center text-slate-400 font-mono text-[10px]">
                         Auditado

@@ -528,10 +528,10 @@ export interface FluxoHorarioItem {
   hora: string;
   ofertas: number;
   cliques: number;
-  leads: number;
+  leads?: number;
 }
 
-export function getFluxoHorarioHoje(leadsPorHora: Record<string, number> = {}): FluxoHorarioItem[] {
+export function getFluxoHorarioHoje(): FluxoHorarioItem[] {
   try {
     const rows = db.prepare(`
       SELECT 
@@ -566,13 +566,11 @@ export function getFluxoHorarioHoje(leadsPorHora: Record<string, number> = {}): 
 
       const ofertas = mapaEnvios[h]?.ofertas || 0;
       const cliques = mapaEnvios[h]?.cliques || 0;
-      const leads = leadsPorHora[h] || 0;
 
       return {
         hora: label,
         ofertas,
-        cliques,
-        leads
+        cliques
       };
     });
   } catch (err: unknown) {
@@ -582,7 +580,7 @@ export function getFluxoHorarioHoje(leadsPorHora: Record<string, number> = {}): 
       '12h', '13h', '14h', '15h', '16h', '17h',
       '18h', '19h', '20h', '21h', '22h', '23h'
     ];
-    return fallbackFaixas.map(h => ({ hora: h, ofertas: 0, cliques: 0, leads: 0 }));
+    return fallbackFaixas.map(h => ({ hora: h, ofertas: 0, cliques: 0 }));
   }
 }
 

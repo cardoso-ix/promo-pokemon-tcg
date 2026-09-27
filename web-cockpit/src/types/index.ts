@@ -212,7 +212,7 @@ export interface FluxoHorarioItem {
   hora: string;
   ofertas: number;
   cliques: number;
-  leads: number;
+  leads?: number;
 }
 
 export interface MetaCampaignInsight {
