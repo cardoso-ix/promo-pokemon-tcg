@@ -887,7 +887,7 @@ export async function extrairDadosAnuncio(
   }
 
   try {
-    // 1. Expandir a URL (trata meli.la, mercadolivre.com/sec/ e vitrines /social/)
+    // 1. Expandir a URL (trata meli.la, sec/, s.shopee.com.br e redirecionadores)
     const { resolvedUrl, productImageUrl, rawHtml } = await expandUrl(
       rawUrl,
       'Pokemon TCG',
@@ -897,25 +897,35 @@ export async function extrairDadosAnuncio(
     const targetUrl = resolvedUrl || rawUrl;
     let htmlConteudo = rawHtml || '';
 
+    const isMeli = /mercadolivre\.com|meli\.la/i.test(targetUrl) || /mercadolivre\.com|meli\.la/i.test(rawUrl);
+    const isShopee = /shopee\.com|s\.shopee\.com/i.test(targetUrl) || /shopee\.com|s\.shopee\.com/i.test(rawUrl);
+
     // 2. Extrair slug e título inicial
     let slug = '';
-    const slugMatch = targetUrl.match(/mercadolivre\.com\.br\/([^\s"'<>]+?)\/(?:p\/|up\/|MLB-)/i);
-    if (slugMatch) {
-      slug = slugMatch[1];
+    const meliSlugMatch = targetUrl.match(/mercadolivre\.com\.br\/([^\s"'<>]+?)\/(?:p\/|up\/|MLB-)/i);
+    const shopeeSlugMatch = targetUrl.match(/shopee\.com\.br\/([^\/\?#]+?)-i\.\d+\.\d+/i);
+
+    if (meliSlugMatch) {
+      slug = meliSlugMatch[1];
+    } else if (shopeeSlugMatch) {
+      slug = shopeeSlugMatch[1];
     } else {
       try {
         const u = new URL(targetUrl);
         const parts = u.pathname.split('/').filter(Boolean);
         if (parts.length > 0) {
-          slug = parts[0];
+          slug = parts[parts.length - 1] || parts[0];
         }
       } catch {}
     }
 
     let titulo = formatarTituloPorSlug(slug);
 
-    // 3. Obter a foto oficial em alta resolução (2X) e inspecionar HTML direto se necessário
-    let imageUrl: string | null = productImageUrl ? normalizarFotoMl(productImageUrl) : null;
+    // 3. Obter a foto oficial e inspecionar HTML se necessário
+    let imageUrl: string | null = null;
+    if (productImageUrl) {
+      imageUrl = isMeli ? normalizarFotoMl(productImageUrl) : productImageUrl;
+    }
 
     if ((!htmlConteudo || !imageUrl) && targetUrl && !targetUrl.includes('/social/')) {
       try {
@@ -936,7 +946,7 @@ export async function extrairDadosAnuncio(
     }
 
     // Extrair detalhes estruturados do HTML (Preço De, Por, Cupom, Parcelamento, Título)
-    const detalhes = extrairDetalhesPrecoECupom(htmlConteudo, slug);
+    const detalhes = isMeli ? extrairDetalhesPrecoECupom(htmlConteudo, slug) : {};
 
     if (detalhes.titulo && detalhes.titulo.length > 5) {
       titulo = detalhes.titulo;
@@ -945,21 +955,43 @@ export async function extrairDadosAnuncio(
         /<meta[^>]+(?:property|name)=["']og:title["'][^>]+content=["']([^"']+)["']/i
       );
       if (ogTitle && ogTitle[1]) {
-        const parsedTitle = ogTitle[1].replace(/\s*\|\s*Mercado\s*Livre.*$/i, '').trim();
+        const parsedTitle = ogTitle[1]
+          .replace(/\s*\|\s*(?:Mercado\s*Livre|Shopee\s*Brasil|Shopee|Amazon).*$/i, '')
+          .replace(/^Compre\s+/i, '')
+          .trim();
         if (parsedTitle && parsedTitle.length > 5 && !/minhas listas|recomenda[çc][õo]es|vitrine|perfil/i.test(parsedTitle)) {
           titulo = parsedTitle;
+        }
+      } else {
+        const rawTitle = htmlConteudo.match(/<title[^>]*>([^<]+)<\/title>/i);
+        if (rawTitle && rawTitle[1]) {
+          const parsedTitle = rawTitle[1]
+            .replace(/\s*\|\s*(?:Mercado\s*Livre|Shopee\s*Brasil|Shopee|Amazon).*$/i, '')
+            .trim();
+          if (parsedTitle.length > 5) {
+            titulo = parsedTitle;
+          }
         }
       }
     }
 
     if (!imageUrl && htmlConteudo) {
       const ogImg = htmlConteudo.match(
-        /<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i
+        /<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i
       );
-      const ogClean = ogImg && ogImg[1] ? ogImg[1].replace(/\{sanitized_title\}/gi, '').trim() : '';
-      if (ogClean && isImagemValidaProdutoMl(ogClean)) {
-        imageUrl = normalizarFotoMl(ogClean);
-      } else {
+      const rawImgUrl = ogImg && ogImg[1] ? ogImg[1].replace(/\{sanitized_title\}/gi, '').trim() : '';
+
+      if (rawImgUrl) {
+        if (isMeli) {
+          if (isImagemValidaProdutoMl(rawImgUrl)) {
+            imageUrl = normalizarFotoMl(rawImgUrl);
+          }
+        } else if (/^https?:\/\//i.test(rawImgUrl)) {
+          imageUrl = rawImgUrl;
+        }
+      }
+
+      if (!imageUrl && isMeli) {
         const mlImgs = htmlConteudo.match(
           /https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi
         );
@@ -977,7 +1009,7 @@ export async function extrairDadosAnuncio(
     const isAlreadyShortAffiliate =
       /mercadolivre\.com\/sec\//i.test(rawUrl) || /meli\.la\//i.test(rawUrl);
 
-    if (!isAlreadyShortAffiliate) {
+    if (isMeli && !isAlreadyShortAffiliate) {
       const affiliateLongUrl = buildAffiliateUrl(
         targetUrl,
         config.mattWord,
@@ -998,6 +1030,9 @@ export async function extrairDadosAnuncio(
       } else {
         linkAfiliadoFinal = affiliateLongUrl;
       }
+    } else {
+      // Shopee ou outros e-commerces mantém o link informado (já com tag de afiliado se fornecido)
+      linkAfiliadoFinal = rawUrl;
     }
 
     // 5. Preços e Cupons Finais (Prioriza o digitado manualmente pelo usuário, fallback para extração automática)
@@ -1041,15 +1076,38 @@ export async function extrairDadosAnuncio(
       valorComCupom: valorComCupomFinal,
       parcelamento: parcelamentoFinal
     };
-  } catch (err: any) {
-    return {
-      ok: false,
-      titulo: '',
-      imageUrl: null,
-      textoGerado: '',
-      linkAfiliado: rawUrl,
-      resolvedUrl: rawUrl,
-      error: err?.message || 'Falha ao processar link.'
-    };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    // Fallback defensivo: nunca explode erro se temos pelo menos uma URL válida
+    try {
+      const copySimples = gerarCopyPromocional({
+        titulo: 'Colecionável Pokémon TCG Original',
+        linkAfiliado: rawUrl,
+        precoDe: (input.precoDe || '').trim() || undefined,
+        precoPor: (input.precoPor || '').trim() || undefined,
+        cupom: (input.cupom || '').trim() || undefined
+      });
+      return {
+        ok: true,
+        titulo: 'Colecionável Pokémon TCG Original',
+        imageUrl: null,
+        textoGerado: copySimples,
+        linkAfiliado: rawUrl,
+        resolvedUrl: rawUrl,
+        precoDe: input.precoDe,
+        precoPor: input.precoPor,
+        cupom: input.cupom
+      };
+    } catch {
+      return {
+        ok: false,
+        titulo: '',
+        imageUrl: null,
+        textoGerado: '',
+        linkAfiliado: rawUrl,
+        resolvedUrl: rawUrl,
+        error: errorMsg || 'Falha ao processar link.'
+      };
+    }
   }
 }

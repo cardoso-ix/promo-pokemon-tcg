@@ -174,14 +174,32 @@ export const api = {
       body: JSON.stringify({ cookie })
     }),
   gerarAnuncio: (dados: { link: string; precoDe?: number; precoPor?: number; cupom?: string; templateId?: number }) =>
-    request<{ ok: boolean; mensagem: string; fotoUrl?: string }>('/api/gerador/anuncio', {
+    request<{
+      ok: boolean;
+      mensagem: string;
+      textoGerado?: string;
+      fotoUrl?: string;
+      imageUrl?: string;
+      titulo?: string;
+      linkAfiliado?: string;
+      precoDe?: string;
+      precoPor?: string;
+      cupom?: string;
+    }>('/api/gerador/anuncio', {
       method: 'POST',
       body: JSON.stringify(dados)
     }),
-  dispararAnuncio: (mensagem: string, fotoUrl?: string) =>
-    request<{ ok: boolean; enviados: number }>('/api/gerador/disparar', {
+  dispararAnuncio: (mensagem: string, fotoUrl?: string, destinos?: string[]) =>
+    request<{
+      ok: boolean;
+      enviados: number;
+      totalEnviados?: number;
+      totalDestinos?: number;
+      falhas?: string[];
+      message?: string;
+    }>('/api/gerador/disparar', {
       method: 'POST',
-      body: JSON.stringify({ mensagem, fotoUrl })
+      body: JSON.stringify({ mensagem, fotoUrl, destinos })
     }),
 
   // --- FINANÇAS & DRE META ADS / MERCADO LIVRE ---

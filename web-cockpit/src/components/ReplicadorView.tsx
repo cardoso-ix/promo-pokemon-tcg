@@ -46,6 +46,8 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
   const [geradorPreview, setGeradorPreview] = useState('');
   const [geradorFoto, setGeradorFoto] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
+  const [disparando, setDisparando] = useState(false);
+  const [copiado, setCopiado] = useState(false);
 
   // Carregar dados
   useEffect(() => {
@@ -196,40 +198,50 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
   };
 
   const handleGerarPreview = async () => {
-    if (!geradorLink) return alert('Por favor, informe um link do produto!');
+    if (!geradorLink.trim()) return alert('Por favor, informe um link do produto!');
     setGerando(true);
     try {
       const res = await api.gerarAnuncio({
-        link: geradorLink,
+        link: geradorLink.trim(),
         precoDe: geradorDe ? parseFloat(geradorDe.replace(',', '.')) : undefined,
         precoPor: geradorPor ? parseFloat(geradorPor.replace(',', '.')) : undefined,
-        cupom: geradorCupom || undefined
+        cupom: geradorCupom.trim() || undefined
       });
-      setGeradorPreview(res.mensagem);
-      setGeradorFoto(res.fotoUrl || null);
+      setGeradorPreview(res.mensagem || res.textoGerado || '');
+      setGeradorFoto(res.fotoUrl || res.imageUrl || null);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Falha ao gerar anúncio');
     } finally {
-      setLoading(false);
+      setGerando(false);
     }
   };
 
   const handleDispararAnuncio = async () => {
-    if (!geradorPreview) return alert('Gere o anúncio primeiro!');
-    if (!confirm('Deseja realmente disparar este anúncio para todas as rotas ativas?')) return;
+    if (!geradorPreview.trim()) return alert('Gere o anúncio primeiro!');
+    if (!confirm('Deseja realmente disparar este anúncio para todas as rotas ativas do WhatsApp?')) return;
+    setDisparando(true);
     try {
       const res = await api.dispararAnuncio(geradorPreview, geradorFoto || undefined);
-      alert(`Anúncio disparado com sucesso para ${res.enviados} grupos!`);
+      alert(res.message || `Anúncio disparado com sucesso para ${res.enviados} grupo(s)!`);
       setGeradorLink('');
       setGeradorDe('');
       setGeradorPor('');
       setGeradorCupom('');
       setGeradorPreview('');
       setGeradorFoto(null);
-      carregarDados();
+      await carregarDados();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Falha no disparo');
+    } finally {
+      setDisparando(false);
     }
+  };
+
+  const handleCopiarTexto = () => {
+    if (!geradorPreview) return;
+    navigator.clipboard.writeText(geradorPreview);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
   };
 
   const filteredLogs = logs.filter(log => {
@@ -646,30 +658,63 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
 
           {/* Prévia Estilo WhatsApp */}
           <div className="glass-panel rounded-2xl p-6 border border-white/[0.08] space-y-4 flex flex-col justify-between">
-            <div>
-              <h3 className="text-base font-heading font-bold text-white flex items-center gap-2 mb-2">
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
-                Prévia do Balão do WhatsApp
-              </h3>
-              <p className="text-xs text-slate-400 mb-4">
-                É assim que a mensagem chegará aos membros dos seus grupos.
-              </p>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-heading font-bold text-white flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    Prévia do Balão do WhatsApp
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Você pode revisar e ajustar o texto antes de disparar.
+                  </p>
+                </div>
+                {geradorPreview && (
+                  <button
+                    onClick={handleCopiarTexto}
+                    className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 transition-all flex items-center gap-1.5 border border-white/[0.08]"
+                    title="Copiar texto para a área de transferência"
+                  >
+                    {copiado ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiado ? 'Copiado!' : 'Copiar Copy'}</span>
+                  </button>
+                )}
+              </div>
 
               {geradorPreview ? (
-                <div className="p-4 rounded-xl bg-[#0b141a] border border-[#202c33] text-xs font-mono text-slate-100 whitespace-pre-line space-y-3 shadow-xl">
+                <div className="p-4 rounded-xl bg-[#0b141a] border border-[#202c33] text-xs font-mono text-slate-100 space-y-3 shadow-xl">
                   {geradorFoto && (
-                    <img
-                      src={geradorFoto}
-                      alt="Produto"
-                      className="w-full h-44 object-cover rounded-lg border border-white/10"
-                    />
+                    <div className="relative group">
+                      <img
+                        src={geradorFoto}
+                        alt="Produto"
+                        className="w-full h-44 object-contain bg-slate-900/50 rounded-lg border border-white/10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setGeradorFoto(null)}
+                        className="absolute top-2 right-2 p-1 rounded-lg bg-black/70 hover:bg-black text-rose-400 border border-rose-500/30 text-xs transition-all opacity-80 hover:opacity-100"
+                        title="Remover foto do disparo"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   )}
-                  <p>{geradorPreview}</p>
+                  <div>
+                    <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Texto Final do Balão (Editável):</label>
+                    <textarea
+                      value={geradorPreview}
+                      onChange={e => setGeradorPreview(e.target.value)}
+                      rows={8}
+                      className="w-full p-2 rounded-lg bg-[#111b21] border border-[#222e35] text-slate-100 focus:outline-none focus:border-cyan-500/50 text-xs font-mono resize-y leading-relaxed"
+                    />
+                  </div>
                 </div>
               ) : (
-                <div className="h-60 rounded-xl border border-dashed border-white/10 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
+                <div className="h-64 rounded-xl border border-dashed border-white/10 flex flex-col items-center justify-center text-slate-500 text-xs gap-2">
                   <Sparkles className="w-6 h-6 text-slate-600" />
                   <span>Nenhuma prévia gerada ainda.</span>
+                  <span className="text-[11px] text-slate-600">Cole o link ao lado e clique em Gerar Prévia.</span>
                 </div>
               )}
             </div>
@@ -677,10 +722,11 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
             {geradorPreview && (
               <button
                 onClick={handleDispararAnuncio}
-                className="w-full py-2.5 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25"
+                disabled={disparando}
+                className="w-full py-2.5 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 disabled:opacity-50"
               >
-                <Send className="w-4 h-4" />
-                <span>Disparar Imediatamente para Grupos de Destino</span>
+                {disparando ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                <span>{disparando ? 'Disparando para as rotas ativas...' : 'Disparar Imediatamente para Grupos de Destino'}</span>
               </button>
             )}
           </div>

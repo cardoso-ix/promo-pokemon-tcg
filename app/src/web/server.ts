@@ -650,121 +650,159 @@ export async function createServer() {
     }
   });
 
-  // API REST: Gerador de Anúncios - Extrair Dados por Link
-  app.post<{ Body: { url: string; cupom?: string; precoDe?: string; precoPor?: string; valorComCupom?: string; parcelamento?: string } }>(
-    '/api/anuncio/extrair',
-    async (req, reply) => {
-      const { url, cupom, precoDe, precoPor, valorComCupom, parcelamento } = req.body || {};
-      if (!url || !url.trim()) {
-        return reply.status(400).send({ ok: false, error: 'Cole o link do Mercado Livre para gerar o anúncio.' });
-      }
-
-      try {
-        const mattWord = getConfig('affiliate_matt_word', CONFIG.defaultMattWord);
-        const mattTool = getConfig('affiliate_matt_tool', CONFIG.defaultMattTool);
-        const meliCookie = getConfig('meli_cookie', '');
-        const meliTag = getConfig('meli_tag', mattWord);
-
-        const dados = await extrairDadosAnuncio(
-          { url, cupom, precoDe, precoPor, valorComCupom, parcelamento },
-          { mattWord, mattTool, meliCookie, meliTag }
-        );
-
-        return dados;
-      } catch (err: any) {
-        return reply.status(500).send({ ok: false, error: err?.message || 'Erro ao extrair dados do anúncio.' });
-      }
+  // Handler compartilhado para extração de anúncio (compatível com Mercado Livre, Shopee e outros marketplaces)
+  async function handleExtrairAnuncio(body: any, reply: any) {
+    const rawUrl = (body?.url || body?.link || '').trim();
+    if (!rawUrl) {
+      return reply.status(400).send({ ok: false, error: 'Cole o link do Mercado Livre ou Shopee para gerar o anúncio.' });
     }
-  );
 
-  // API REST: Gerador de Anúncios - Publicar no WhatsApp
-  app.post<{ Body: { destinos: string[]; texto: string; imageUrl?: string } }>(
-    '/api/anuncio/publicar',
-    async (req, reply) => {
-      const { destinos, texto, imageUrl } = req.body || {};
-      if (!destinos || !Array.isArray(destinos) || destinos.length === 0) {
-        return reply.status(400).send({ ok: false, error: 'Selecione pelo menos um grupo de destino para publicar.' });
-      }
-      if (!texto || !texto.trim()) {
-        return reply.status(400).send({ ok: false, error: 'O texto do anúncio não pode estar vazio.' });
-      }
+    try {
+      const mattWord = getConfig('affiliate_matt_word', CONFIG.defaultMattWord);
+      const mattTool = getConfig('affiliate_matt_tool', CONFIG.defaultMattTool);
+      const meliCookie = getConfig('meli_cookie', '');
+      const meliTag = getConfig('meli_tag', mattWord);
 
-      try {
-        let imageBuffer: Buffer | null = null;
-        if (imageUrl && imageUrl.startsWith('http')) {
-          try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 10000);
-            const res = await fetch(imageUrl, {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-              },
-              signal: controller.signal
-            });
-            clearTimeout(timeout);
-            if (res.ok) {
-              const arrayBuf = await res.arrayBuffer();
-              imageBuffer = Buffer.from(arrayBuf);
-            }
-          } catch (e) {
-            console.warn('[Publicar Anúncio] Falha ao baixar imagem remota:', e);
-          }
-        }
+      const precoDe = body?.precoDe !== undefined ? String(body.precoDe) : undefined;
+      const precoPor = body?.precoPor !== undefined ? String(body.precoPor) : undefined;
+      const valorComCupom = body?.valorComCupom !== undefined ? String(body.valorComCupom) : undefined;
+      const cupom = body?.cupom !== undefined ? String(body.cupom) : undefined;
+      const parcelamento = body?.parcelamento !== undefined ? String(body.parcelamento) : undefined;
 
-        let enviados = 0;
-        const falhas: string[] = [];
+      const dados = await extrairDadosAnuncio(
+        { url: rawUrl, cupom, precoDe, precoPor, valorComCupom, parcelamento },
+        { mattWord, mattTool, meliCookie, meliTag }
+      );
 
-        for (const destino of destinos) {
-          try {
-            await whatsAppManager.sendDirectMessage(destino, texto, imageBuffer);
-            enviados++;
-
-            insertLog({
-              origem_chat_id: 'gerador_manual',
-              origem_nome: 'Gerador Manual de Anúncios',
-              destino_chat_id: destino,
-              hash_conteudo: `manual_${Date.now()}_${Math.random()}`,
-              texto_original: texto,
-              texto_publicado: texto,
-              tem_foto: Boolean(imageBuffer && imageBuffer.length > 0),
-              links_convertidos: 1,
-              status: 'enviado',
-              motivo: 'disparo_manual_gerador'
-            });
-          } catch (err: any) {
-            console.error(`Erro ao disparar para ${destino}:`, err);
-            falhas.push(destino);
-          }
-        }
-
-        if (enviados > 0) {
-          try {
-            const dadosOferta = extrairDadosOferta(texto, imageUrl, 'Gerador Manual');
-            registrarOfertaPlanilha(dadosOferta).catch((e: unknown) => {
-              console.warn('[Google Sheets] Erro em background ao registrar anúncio manual:', e);
-            });
-          } catch (e: unknown) {
-            console.warn('[Google Sheets] Falha ao extrair dados do anúncio manual:', e);
-          }
-        }
-
-        broadcast('stats_update', {
-          postsLastHour: getPostsLastHour(),
-          totalEnviadosHoje: getRecentLogs(100).filter((l) => l.status === 'enviado').length
-        });
-        broadcast('logs_update', getRecentLogs(30));
-
-        return {
-          ok: true,
-          totalEnviados: enviados,
-          falhas,
-          message: `Anúncio publicado com sucesso em ${enviados} grupo(s)!`
-        };
-      } catch (err: any) {
-        return reply.status(500).send({ ok: false, error: err?.message || 'Falha ao publicar anúncio.' });
-      }
+      return {
+        ok: true,
+        mensagem: dados.textoGerado,
+        textoGerado: dados.textoGerado,
+        fotoUrl: dados.imageUrl,
+        imageUrl: dados.imageUrl,
+        titulo: dados.titulo,
+        linkAfiliado: dados.linkAfiliado,
+        resolvedUrl: dados.resolvedUrl,
+        precoDe: dados.precoDe,
+        precoPor: dados.precoPor,
+        cupom: dados.cupom,
+        valorComCupom: dados.valorComCupom,
+        parcelamento: dados.parcelamento
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg || 'Erro ao extrair dados do anúncio.' });
     }
-  );
+  }
+
+  // Endpoints de Extração (compatibilidade universal /api/anuncio/extrair e /api/gerador/anuncio)
+  app.post('/api/anuncio/extrair', async (req, reply) => handleExtrairAnuncio(req.body, reply));
+  app.post('/api/gerador/anuncio', async (req, reply) => handleExtrairAnuncio(req.body, reply));
+
+  // Handler compartilhado para publicação e disparo de anúncio com auto-destinos inteligentes
+  async function handlePublicarAnuncio(body: any, reply: any) {
+    const texto = (body?.texto || body?.mensagem || '').trim();
+    if (!texto) {
+      return reply.status(400).send({ ok: false, error: 'O texto do anúncio não pode estar vazio.' });
+    }
+
+    const imageUrl = (body?.imageUrl || body?.fotoUrl || '').trim();
+    let destinos: string[] = Array.isArray(body?.destinos) ? body.destinos.filter(Boolean) : [];
+
+    // Se nenhum destino foi especificado manualmente, obtém automaticamente das rotas ativas
+    if (destinos.length === 0) {
+      destinos = obterDestinosAtivos();
+    }
+
+    if (destinos.length === 0) {
+      return reply.status(400).send({
+        ok: false,
+        error: 'Nenhum grupo de destino encontrado nas rotas ativas. Ative pelo menos uma rota com grupos de destino para disparar.'
+      });
+    }
+
+    try {
+      let imageBuffer: Buffer | null = null;
+      if (imageUrl && imageUrl.startsWith('http')) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 10000);
+          const res = await fetch(imageUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            },
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+          if (res.ok) {
+            const arrayBuf = await res.arrayBuffer();
+            imageBuffer = Buffer.from(arrayBuf);
+          }
+        } catch (e) {
+          console.warn('[Publicar Anúncio] Falha ao baixar imagem remota:', e);
+        }
+      }
+
+      let enviados = 0;
+      const falhas: string[] = [];
+
+      for (const destino of destinos) {
+        try {
+          await whatsAppManager.sendDirectMessage(destino, texto, imageBuffer);
+          enviados++;
+
+          insertLog({
+            origem_chat_id: 'gerador_manual',
+            origem_nome: 'Gerador Manual de Anúncios',
+            destino_chat_id: destino,
+            hash_conteudo: `manual_${Date.now()}_${Math.random()}`,
+            texto_original: texto,
+            texto_publicado: texto,
+            tem_foto: Boolean(imageBuffer && imageBuffer.length > 0),
+            links_convertidos: 1,
+            status: 'enviado',
+            motivo: 'disparo_manual_gerador'
+          });
+        } catch (err: unknown) {
+          console.error(`Erro ao disparar para ${destino}:`, err);
+          falhas.push(destino);
+        }
+      }
+
+      if (enviados > 0) {
+        try {
+          const dadosOferta = extrairDadosOferta(texto, imageUrl, 'Gerador Manual');
+          registrarOfertaPlanilha(dadosOferta).catch((e: unknown) => {
+            console.warn('[Google Sheets] Erro em background ao registrar anúncio manual:', e);
+          });
+        } catch (e: unknown) {
+          console.warn('[Google Sheets] Falha ao extrair dados do anúncio manual:', e);
+        }
+      }
+
+      broadcast('stats_update', {
+        postsLastHour: getPostsLastHour(),
+        totalEnviadosHoje: getRecentLogs(100).filter((l) => l.status === 'enviado').length
+      });
+      broadcast('logs_update', getRecentLogs(30));
+
+      return {
+        ok: true,
+        enviados,
+        totalEnviados: enviados,
+        totalDestinos: destinos.length,
+        falhas,
+        message: `Anúncio publicado com sucesso em ${enviados} de ${destinos.length} grupo(s)!`
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg || 'Falha ao publicar anúncio.' });
+    }
+  }
+
+  // Endpoints de Publicação (compatibilidade universal /api/anuncio/publicar e /api/gerador/disparar)
+  app.post('/api/anuncio/publicar', async (req, reply) => handlePublicarAnuncio(req.body, reply));
+  app.post('/api/gerador/disparar', async (req, reply) => handlePublicarAnuncio(req.body, reply));
 
   // API REST: Configuração do Google Sheets
   app.get('/api/sheets/config', async () => {

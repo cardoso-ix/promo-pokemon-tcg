@@ -27,7 +27,7 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 | **Finanças & Relatórios Executivos** | Fastify + Recharts + SQLite | 🟢 **Ativo (Conciliação Contábil)** | Consolidação automática das bases Meta Ads e Mercado Livre, DRE e emissão de relatórios mensais formatados. |
 | **Google Planilhas ("produtos tcg valores")** | Webhook Apps Script + Dual-Write Local | 🟢 **Ativo (Sincronização Contínua)** | Registra automaticamente cada oferta enviada nos grupos com Data/Hora, Nome do Produto, Preço e Link. |
 | **Mensagem Diária de Abertura (07:00 AM)** | Scheduler Nativo (Fuso de Brasília) | 🟢 **Ativo (Anti-Duplicidade)** | Dispara automaticamente mensagem calorosa todas as manhãs às 07:00 AM com rotação entre 4 modelos. |
-| **Gerador de Anúncios Reativo** | Fastify + Scraper ML + Preview ao Vivo | 🟢 **Ativo (Replicador)** | Puxa dados reais do produto via link, foto 2X, De/Por e permite disparo manual com 1 clique. |
+| **Gerador de Anúncios Universal** | Fastify + Scraper ML & Shopee + OpenGraph | 🟢 **Ativo (Replicador)** | Suporta links do Mercado Livre, Shopee e lojas gerais com fallback anti-bot, edição de copy, cópia rápida e disparo para rotas ativas. |
 
 ---
 
@@ -48,7 +48,7 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 
 ## 4. Cobertura de Testes Automatizados
 
-- **Total de Testes:** **96 testes unitários e de integração** (100% aprovados, 0 falhas).
+- **Total de Testes:** **98 testes unitários e de integração** (100% aprovados, 0 falhas).
   - Executável com um único comando na raiz do projeto: `npm test`.
 
 ---

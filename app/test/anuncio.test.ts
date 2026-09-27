@@ -216,4 +216,45 @@ test('extrairDadosAnuncio deve extrair De 70,90 e Por promocional (~R$ 36-37) do
   assert.strictEqual(resultado.textoGerado.includes('Por apenas: R$ 3'), true);
 });
 
+test('extrairDadosAnuncio deve suportar links de produtos da Shopee sem quebrar', async () => {
+  const resultado = await extrairDadosAnuncio(
+    {
+      url: 'https://shopee.com.br/Pokemon-Tcg-Box-Treinador-Avancado-Copag-i.123456789.987654321',
+      precoDe: '350,00',
+      precoPor: '289,90',
+      cupom: 'SHOPEE20'
+    },
+    {
+      mattWord: 'meutag',
+      mattTool: '123456'
+    }
+  );
+
+  assert.strictEqual(resultado.ok, true);
+  assert.strictEqual(resultado.titulo.includes('Pokémon'), true);
+  assert.strictEqual(resultado.textoGerado.includes('289,90'), true);
+  assert.strictEqual(resultado.textoGerado.includes('SHOPEE20'), true);
+  // O link final da Shopee não pode ser adulterado por parâmetros do Mercado Livre
+  assert.strictEqual(resultado.linkAfiliado.includes('matt_word'), false);
+  assert.strictEqual(resultado.linkAfiliado.includes('shopee.com.br'), true);
+});
+
+test('extrairDadosAnuncio deve ter fallback gracioso para links gerais com tolerância anti-bot', async () => {
+  const resultado = await extrairDadosAnuncio(
+    {
+      url: 'https://www.exemplo.com.br/deck-pokemon-charizard-ex-lacrado',
+      precoPor: '149,90'
+    },
+    {
+      mattWord: 'meutag',
+      mattTool: '123456'
+    }
+  );
+
+  assert.strictEqual(resultado.ok, true);
+  assert.strictEqual(resultado.textoGerado.includes('149,90'), true);
+  assert.strictEqual(resultado.textoGerado.includes('exemplo.com.br'), true);
+});
+
+
 
