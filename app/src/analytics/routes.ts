@@ -5,6 +5,7 @@ import { metaAdsService } from './meta.service.js';
 import { analyticsService } from './analytics.service.js';
 import { getMetaInsightsStats, getMeliOrdersStats } from '../db/database.js';
 import { getBrazilToday, getBrazilDaysAgo } from '../utils/date.js';
+import { financasService } from './financas.service.js';
 
 export async function registerAnalyticsRoutes(app: FastifyInstance) {
   // ==========================================
@@ -413,4 +414,113 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
       return reply.status(500).send({ ok: false, error: msg });
     }
   });
+
+  // ==========================================
+  // 6. ROTAS DE FINANÇAS & DRE AUTOMÁTICO (META ADS + MERCADO LIVRE)
+  // ==========================================
+
+  // Meses disponíveis
+  const handleGetMeses = async () => {
+    const meses = financasService.getMesesDisponiveis();
+    return { ok: true, meses };
+  };
+  app.get('/api/financas/meses', handleGetMeses);
+  app.get('/api/bot/financas/meses', handleGetMeses);
+
+  // Balanço Mensal / DRE Consolidado
+  const handleGetBalanco = async (req: FastifyRequest<{ Querystring: { mes?: string } }>, reply: FastifyReply) => {
+    try {
+      const mes = req.query?.mes;
+      const balanco = await financasService.getBalancoMensal(mes);
+      return { ok: true, balanco };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  };
+  app.get('/api/financas/balanco', handleGetBalanco);
+  app.get('/api/bot/financas/balanco', handleGetBalanco);
+
+  // Relatório Mensal Executivo Arquivado
+  app.get(
+    '/api/financas/relatorio-mensal',
+    async (req: FastifyRequest<{ Querystring: { mes?: string } }>, reply: FastifyReply) => {
+      try {
+        const mes = req.query?.mes || getBrazilToday().slice(0, 7);
+        const balanco = await financasService.getBalancoMensal(mes);
+        const metaStats = getMetaInsightsStats(`${mes}-01`, `${mes}-31`);
+
+        return {
+          ok: true,
+          mesReferencia: mes,
+          geradoEm: new Date().toISOString(),
+          kpis: {
+            faturamentoMeli: balanco.totalVendasBrutas,
+            comissoesConfirmadasMeli: balanco.totalLucroBruto,
+            investimentoMetaAds: balanco.totalGastoCampanhas,
+            lucroOperacionalLiquido: balanco.resultadoLiquido,
+            reservaReinvestimento70: balanco.valorReinvestimentoCampanhas,
+            lucroDisponivel30: balanco.valorLucroDisponivel,
+            blendedRoas: balanco.blendedRoas,
+            margemLucroPercentual: balanco.margemPercentual,
+            cliquesMeta: metaStats.totalClicks,
+            impressoesMeta: metaStats.totalImpressions,
+            cpcMedio: metaStats.avgCpc,
+            ctrMedio: metaStats.avgCtr
+          },
+          detalhamentoDiario: balanco.itens
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.status(500).send({ ok: false, error: msg });
+      }
+    }
+  );
+
+  // Exportar Balanço em CSV
+  const handleExportCsv = async (req: FastifyRequest<{ Querystring: { mes?: string } }>, reply: FastifyReply) => {
+    try {
+      const mes = req.query?.mes || getBrazilToday().slice(0, 7);
+      const balanco = await financasService.getBalancoMensal(mes);
+
+      let csv = 'Data;Gasto Campanhas Meta (R$);Faturamento Enviado Meli (R$);Comissões Confirmadas (R$);Saldo Líquido (R$);Blended ROAS;Cliques Meta;Impressões Meta\n';
+      for (const item of balanco.itens) {
+        csv += `${item.dataLancamento};${item.gastoCampanhas.toFixed(2)};${item.vendasBrutas.toFixed(2)};${item.lucroBruto.toFixed(2)};${item.saldoDia.toFixed(2)};${item.blendedRoas.toFixed(2)};${item.cliquesMeta};${item.impressoesMeta}\n`;
+      }
+
+      reply.header('Content-Type', 'text/csv; charset=utf-8');
+      reply.header('Content-Disposition', `attachment; filename="relatorio-financas-${mes}.csv"`);
+      return reply.send(csv);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  };
+  app.get('/api/financas/exportar-csv', handleExportCsv);
+  app.get('/api/bot/financas/exportar-csv', handleExportCsv);
+
+  // Comprovantes / Despesas PDF
+  const handleGetDespesas = async (req: FastifyRequest<{ Querystring: { inicio?: string; fim?: string } }>) => {
+    const { inicio, fim } = req.query || {};
+    const resumo = financasService.listarFaturasPdf(inicio, fim);
+    return { ok: true, resumo };
+  };
+  app.get('/api/financas/despesas', handleGetDespesas);
+  app.get('/api/bot/financas/despesas', handleGetDespesas);
+
+  const handleDeleteDespesa = async (req: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    const id = parseInt(req.params.id, 10);
+    const ok = financasService.excluirFaturaPdf(id);
+    return { ok, message: ok ? 'Comprovante removido' : 'Não encontrado' };
+  };
+  app.delete('/api/financas/despesas/:id', handleDeleteDespesa);
+  app.delete('/api/bot/financas/despesas/:id', handleDeleteDespesa);
+
+  // Registro de Fatura / Comprovante
+  const handleSaveDespesa = async (req: FastifyRequest<{ Body: { dataDespesa: string; valor: number; descricao?: string; nomeArquivo: string } }>) => {
+    const id = financasService.salvarFaturaPdf(req.body);
+    return { ok: true, id, message: 'Comprovante registrado com sucesso' };
+  };
+  app.post('/api/financas/despesas', handleSaveDespesa);
+  app.post('/api/bot/financas/despesas', handleSaveDespesa);
 }

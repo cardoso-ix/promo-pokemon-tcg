@@ -1,7 +1,6 @@
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
-import fastifyHttpProxy from '@fastify/http-proxy';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG } from '../config.js';
@@ -89,80 +88,10 @@ export async function createServer() {
     }
   });
 
-  // 1. Proxy para o frontend estático do Bot Disparador
-  await app.register(fastifyHttpProxy, {
-    upstream: CONFIG.disparadorUrl,
-    prefix: '/bot',
-    rewritePrefix: '',
-    replyOptions: {
-      rewriteRequestHeaders: (originalReq, headers) => {
-        return {
-          ...headers,
-          'x-internal-token': CONFIG.internalApiKey
-        };
-      }
-    }
-  });
-
-  // 2. Gateway Proxies para APIs do Bot Disparador
-  const botDirectApiPrefixes = [
-    '/api/grupos',
-    '/api/contatos',
-    '/api/campanhas',
-    '/api/financas',
-    '/api/meta',
-    '/api/ofertas-recebidas',
-    '/api/deepseek',
-    '/api/warmup',
-    '/api/engine',
-    '/api/events',
-    '/api/templates',
-    '/api/bot'
-  ];
-
-  for (const prefix of botDirectApiPrefixes) {
-    await app.register(fastifyHttpProxy, {
-      upstream: CONFIG.disparadorUrl,
-      prefix: prefix,
-      rewritePrefix: prefix === '/api/bot' ? '/api' : prefix,
-      replyOptions: {
-        rewriteRequestHeaders: (originalReq, headers) => {
-          return {
-            ...headers,
-            'x-internal-token': CONFIG.internalApiKey
-          };
-        }
-      }
-    });
-  }
-
-  // 3. Encaminhamento de rotas de WhatsApp exclusivas do disparador
-  const botWaActions = ['connect', 'disconnect', 'test-send'];
-  for (const action of botWaActions) {
-    await app.register(fastifyHttpProxy, {
-      upstream: CONFIG.disparadorUrl,
-      prefix: `/api/whatsapp/${action}`,
-      rewritePrefix: `/api/whatsapp/${action}`,
-      replyOptions: {
-        rewriteRequestHeaders: (originalReq, headers) => {
-          return {
-            ...headers,
-            'x-internal-token': CONFIG.internalApiKey
-          };
-        }
-      }
-    });
-  }
-
   // Hook de Autenticação Global
   app.addHook('onRequest', async (req, reply) => {
     const url = req.raw.url || '';
     const pathname = url.split('?')[0];
-
-    // Normalização: /bot deve ter barra final para resolução correta de assets relativos
-    if (pathname === '/bot') {
-      return reply.redirect('/bot/', 301);
-    }
 
     // Rotas públicas e assets estáticos que não requerem autenticação
     if (
@@ -240,29 +169,8 @@ export async function createServer() {
     return { ok: auth.valid, username: auth.username };
   });
 
-  // API REST: Status Unificado da Plataforma (Replicador + Disparador + Meli)
+  // API REST: Status Unificado da Plataforma (Replicador + Meli)
   app.get('/api/unified-status', async () => {
-    let botStatus: { online: boolean; whatsapp: string; metricas?: Record<string, unknown> } = {
-      online: false,
-      whatsapp: 'disconnected'
-    };
-    try {
-      const res = await fetch(`${CONFIG.disparadorUrl.replace(/\/$/, '')}/api/status`, {
-        headers: { 'x-internal-token': CONFIG.internalApiKey },
-        signal: AbortSignal.timeout(2000)
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { whatsapp?: string; metricas?: Record<string, unknown> };
-        botStatus = {
-          online: true,
-          whatsapp: data.whatsapp || 'disconnected',
-          metricas: data.metricas
-        };
-      }
-    } catch {
-      // Disparador pode estar inicializando
-    }
-
     return {
       replica: {
         whatsapp: whatsAppManager.getState(),
@@ -271,7 +179,10 @@ export async function createServer() {
         totalEnviadosHoje: getRecentLogs(100).filter((l) => l.status === 'enviado').length,
         cookieStatus: currentCookieStatus
       },
-      bot: botStatus,
+      bot: {
+        online: false,
+        whatsapp: 'disconnected'
+      },
       timestamp: new Date().toISOString()
     };
   });

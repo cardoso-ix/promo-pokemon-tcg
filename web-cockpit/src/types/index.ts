@@ -1,4 +1,4 @@
-export type ActiveModule = 'dashboard' | 'afiliados' | 'replica' | 'disparador' | 'financas' | 'deepseek';
+export type ActiveModule = 'dashboard' | 'afiliados' | 'replica' | 'financas';
 
 export type SubTabReplica = 'feed' | 'rotas' | 'gerador' | 'conectar' | 'config';
 export type SubTabBot = 'visao-geral' | 'grupos' | 'leads' | 'campanhas' | 'meta-cloud' | 'anti-ban' | 'logs';

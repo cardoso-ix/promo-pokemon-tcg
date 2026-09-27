@@ -2,14 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   TrendingUp,
   Zap,
-  Users,
   DollarSign,
   Droplets,
-  Flame,
   ArrowUpRight,
   ShieldCheck,
   ExternalLink,
-  MessageSquare,
   Sparkles,
   RefreshCw,
   Settings,
@@ -35,7 +32,7 @@ interface DashboardOverviewProps {
   status: UnifiedStatus | null;
   recentLogs: OfertaLog[];
   balanco: BalancoFinanceiro | null;
-  onNavigate: (module: 'replica' | 'disparador' | 'financas' | 'afiliados') => void;
+  onNavigate: (module: 'replica' | 'financas' | 'afiliados' | 'dashboard') => void;
   onOpenReplicaQr: () => void;
 }
 
@@ -47,7 +44,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   onOpenReplicaQr
 }) => {
   const replica = status?.replica;
-  const bot = status?.bot;
 
   // Estado de Sincronização Unificada
   const [syncingAll, setSyncingAll] = useState(false);
@@ -280,6 +276,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const lucroOperacaoReal = Math.max(0, totalComissoesAfiliado - gastoMetaAds);
   const reinvestir70 = lucroOperacaoReal * 0.70;
   const disponivel30 = lucroOperacaoReal * 0.30;
+  const roasBlended = gastoMetaAds > 0 && vendasGeradasMeli > 0 ? (vendasGeradasMeli / gastoMetaAds) : (balanco?.roiPercentual ? balanco.roiPercentual / 100 : 0);
+  const isMetaConnected = Boolean(metaData?.configured);
 
   const pieData = [
     { name: 'Lucro Sócios (30%)', value: disponivel30 || balanco?.valorLucroDisponivel || 0, color: '#10b981' },
@@ -353,46 +351,46 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
 
-        {/* KPI 2: Base de Leads & Grupos */}
+        {/* KPI 2: Tráfego Pago & Meta Ads */}
         <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Leads & Grupos</span>
+            <span className="text-xs font-medium uppercase tracking-wider">Tráfego Meta Ads</span>
             <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center text-blue-400 border border-blue-500/20 group-hover:scale-110 transition-transform">
-              <Users className="w-4 h-4" />
+              <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-heading font-extrabold text-white tracking-tight">
-              {bot?.metricas?.totalContatos || 0}
+              R$ {gastoMetaAds.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
-            <span className="text-xs text-slate-400">leads em</span>
-            <span className="text-sm font-semibold text-cyan-300">{bot?.metricas?.totalGrupos || 172} grupos</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">Captação automática e segmentação por pastas</p>
+          <p className="text-xs text-slate-400 mt-1">
+            {metaData?.data?.totalClicks || 0} cliques · {metaData?.data?.totalImpressions || 0} impressões
+          </p>
           <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full w-[85%]" />
           </div>
         </div>
 
-        {/* KPI 3: Atendimento IA DeepSeek */}
+        {/* KPI 3: Blended ROAS & Performance */}
         <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Respostas IA Hoje</span>
-            <div className="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center text-orange-400 border border-orange-500/20 group-hover:scale-110 transition-transform">
-              <MessageSquare className="w-4 h-4" />
+            <span className="text-xs font-medium uppercase tracking-wider">Blended ROAS Geral</span>
+            <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center text-purple-400 border border-purple-500/20 group-hover:scale-110 transition-transform">
+              <Sparkles className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-white tracking-tight">
-              {bot?.metricas?.respostasIaHoje || 10}
+            <span className="text-3xl font-heading font-extrabold text-purple-400 tracking-tight">
+              {roasBlended.toFixed(2)}x
             </span>
-            <span className="text-xs text-emerald-400 font-medium">DeepSeek V4 Ativo</span>
+            <span className="text-xs text-emerald-400 font-medium">Retorno Operacional</span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Encaminhamento inteligente para o grupo oficial
+            Vendas / Investimento em tráfego pago
           </p>
           <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 h-1.5 rounded-full w-[65%]" />
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full w-[75%]" />
           </div>
         </div>
 
@@ -919,31 +917,31 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             )}
           </div>
 
-          {/* Chip 2 */}
+          {/* Tráfego Meta Ads */}
           <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.05] space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-orange-500/15 flex items-center justify-center text-orange-400">
-                  <Flame className="w-3.5 h-3.5" />
+                <div className="w-6 h-6 rounded-md bg-blue-500/15 flex items-center justify-center text-blue-400">
+                  <TrendingUp className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-white">Chip 2 · Disparador & IA</h4>
-                  <p className="text-[10px] text-slate-400">Aquecimento & Captação</p>
+                  <h4 className="text-xs font-semibold text-white">Meta Ads · Tráfego Pago</h4>
+                  <p className="text-[10px] text-slate-400">Atribuição & Comissões</p>
                 </div>
               </div>
               <span
                 className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                  bot?.whatsapp?.status === 'connected'
+                  isMetaConnected
                     ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                     : 'bg-slate-700 text-slate-300'
                 }`}
               >
-                {bot?.whatsapp?.status === 'connected' ? 'Conectado' : 'Desconectado'}
+                {isMetaConnected ? 'API Ativa' : 'Aguardando Token'}
               </span>
             </div>
             <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
-              <span>Warmup do Chip:</span>
-              <span className="text-orange-400 font-semibold">Nível Seguro (Até 50/dia)</span>
+              <span>Conta Meta:</span>
+              <span className="text-cyan-300 font-mono font-semibold">{metaData?.accountId || 'Configurada'}</span>
             </div>
           </div>
 

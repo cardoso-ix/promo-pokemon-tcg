@@ -286,3 +286,33 @@ export interface MeliAffiliateOverview {
 3. **Distribuição para Sócios / Retirada:**
    $$\text{Retirada Sócios (30\%)} = \text{Lucro Líquido} \times 0.30$$
 
+---
+
+## 6. Módulo Nativo de Finanças & Gerador de Relatórios Mensais
+
+Com a integração das bases analíticas, o módulo de finanças opera de forma 100% autônoma através de `FinancasService`:
+
+* **Rotas Disponíveis:**
+  - `GET /api/financas/meses`: Retorna os meses arquivados com histórico de tráfego e vendas.
+  - `GET /api/financas/balanco?mes=YYYY-MM`: Retorna o DRE consolidado e os itens arquivados dia a dia.
+  - `GET /api/financas/relatorio-mensal?mes=YYYY-MM`: Retorna os KPIs executivos consolidados (faturamento, investimento, comissões, margem e ROAS) e detalhamento diário para emissão de relatório formal.
+  - `GET /api/financas/exportar-csv?mes=YYYY-MM`: Gera download do extrato contábil formatado em CSV.
+  - `POST /api/financas/despesas`: Registra despesas complementares ou faturas.
+  - `DELETE /api/financas/despesas/:id`: Remove lançamento de fatura.
+
+* **Recursos do Gerador Executivo no Frontend (`FinancasView`):**
+  - Botão **"Gerar Relatório do Mês"**: Abre modal executivo com design institucional de auditoria.
+  - Visualização de 6 KPIs Chave: Faturamento Meli, Investimento Meta Ads, Comissões Confirmadas, Lucro Operacional Líquido, Blended ROAS e Margem Operacional.
+  - Painel de Governança 70/30 (Reinvestimento em Tráfego vs Caixa Livre).
+  - Tabela Diária Completa: Data, Gasto Meta, Cliques, Impressões, Vendas, Comissões, Saldo Líquido e Blended ROAS do dia.
+  - Impressão formatada para PDF (`window.print()`) e exportação direta em CSV.
+
+---
+
+## 7. Desintegração do Bot Disparador & Foco em Tráfego Pago
+
+Em alinhamento com a estratégia de crescimento focada exclusivamente em **Tráfego Pago (Meta Ads)** e **Mercado Livre Afiliados**:
+- O serviço `bot-disparador` (mass sender, campanhas, grupos de leads e metacloud) foi completamente desintegrado e removido do repositório.
+- A aplicação principal (`app`) tornou-se significativamente mais leve, rápida e estável, sem overhead de segundo chip WhatsApp ou consumo desnecessário de memória na VPS.
+- Todas as rotas analíticas e financeiras foram migradas nativamente para `app`, garantindo alta performance e atomicidade nas consultas SQLite.
+

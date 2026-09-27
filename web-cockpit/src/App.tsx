@@ -3,7 +3,6 @@ import type { ActiveModule, OfertaLog, BalancoFinanceiro } from './types/index.t
 import { Header } from './components/Header.tsx';
 import { DashboardOverview } from './components/DashboardOverview.tsx';
 import { ReplicadorView } from './components/ReplicadorView.tsx';
-import { DisparadorView } from './components/DisparadorView.tsx';
 import { FinancasView } from './components/FinancasView.tsx';
 import { MeliAfiliadosView } from './components/MeliAfiliadosView.tsx';
 import { CookieModal } from './components/CookieModal.tsx';
@@ -19,7 +18,6 @@ export const App: React.FC = () => {
   // Modais
   const [cookieModalOpen, setCookieModalOpen] = useState(false);
   const [replicaQrOpen, setReplicaQrOpen] = useState(false);
-  const [botQrOpen, setBotQrOpen] = useState(false);
 
   const { status, refetch } = useUnifiedStatus();
 
@@ -54,7 +52,6 @@ export const App: React.FC = () => {
         activeModule={activeModule}
         onSelectModule={setActiveModule}
         onOpenReplicaQr={() => setReplicaQrOpen(true)}
-        onOpenBotQr={() => setBotQrOpen(true)}
         onOpenCookieModal={() => setCookieModalOpen(true)}
       />
 
@@ -78,8 +75,6 @@ export const App: React.FC = () => {
           <ReplicadorView onOpenCookieModal={() => setCookieModalOpen(true)} />
         )}
 
-        {activeModule === 'disparador' && <DisparadorView />}
-
         {activeModule === 'financas' && <FinancasView />}
       </main>
 
@@ -93,15 +88,8 @@ export const App: React.FC = () => {
       <QrModal
         isOpen={replicaQrOpen}
         onClose={() => setReplicaQrOpen(false)}
-        title="Chip 1 · Replicador"
+        title="WhatsApp · Replicador de Ofertas"
         waState={status?.replica?.whatsapp}
-      />
-
-      <QrModal
-        isOpen={botQrOpen}
-        onClose={() => setBotQrOpen(false)}
-        title="Chip 2 · Disparador"
-        waState={status?.bot?.whatsapp}
       />
 
       {/* Footer Minimalista */}

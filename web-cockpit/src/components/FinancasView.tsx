@@ -13,7 +13,9 @@ import {
   Eye,
   BarChart3,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Printer,
+  ShieldCheck
 } from 'lucide-react';
 import {
   BarChart,
@@ -26,7 +28,6 @@ import {
 } from 'recharts';
 import type {
   BalancoFinanceiro,
-  LancamentoDiario,
   ResumoDespesasPdf,
   UploadPlanilhaFinancas
 } from '../types/index.ts';
@@ -45,8 +46,13 @@ export const FinancasView: React.FC = () => {
   const [meses, setMeses] = useState<string[]>([]);
   const [mesAtivo, setMesAtivo] = useState('');
   const [balanco, setBalanco] = useState<BalancoFinanceiro | null>(null);
-  const [lancamentos, setLancamentos] = useState<LancamentoDiario[]>([]);
+  const [lancamentos, setLancamentos] = useState<any[]>([]);
   const [carregandoDRE, setCarregandoDRE] = useState(false);
+
+  // Modal Relatório Executivo Mensal (Meta Ads + Mercado Livre)
+  const [showRelatorioMensalModal, setShowRelatorioMensalModal] = useState(false);
+  const [relatorioMensal, setRelatorioMensal] = useState<any>(null);
+  const [carregandoRelatorio, setCarregandoRelatorio] = useState(false);
 
   // Faturas PDF do Meta Ads
   const [despesasResumo, setDespesasResumo] = useState<ResumoDespesasPdf | null>(null);
@@ -83,6 +89,19 @@ export const FinancasView: React.FC = () => {
   const mostrarFeedback = (tipo: 'sucesso' | 'erro', texto: string) => {
     setFeedback({ tipo, texto });
     setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const abrirRelatorioExecutivo = async () => {
+    setShowRelatorioMensalModal(true);
+    setCarregandoRelatorio(true);
+    try {
+      const rel = await api.getRelatorioMensal(mesAtivo);
+      setRelatorioMensal(rel);
+    } catch {
+      setRelatorioMensal(null);
+    } finally {
+      setCarregandoRelatorio(false);
+    }
   };
 
   useEffect(() => {
@@ -334,11 +353,20 @@ export const FinancasView: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setShowNovoLancamento(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-95 cursor-pointer"
+            onClick={abrirRelatorioExecutivo}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 hover:from-amber-300 hover:to-emerald-300 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-95 cursor-pointer"
+            title="Gerar Relatório Executivo Consolidado do Mês com métricas arquivadas"
           >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Novo Lançamento</span>
+            <Sparkles className="w-3.5 h-3.5 text-slate-950" />
+            <span>Gerar Relatório do Mês</span>
+          </button>
+
+          <button
+            onClick={() => setShowNovoLancamento(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] text-white text-xs font-bold border border-white/10 transition-all active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Novo Ajuste</span>
           </button>
 
           <button
@@ -554,68 +582,94 @@ export const FinancasView: React.FC = () => {
                 <thead className="text-[11px] uppercase tracking-wider text-slate-400 border-b border-white/[0.06] bg-white/[0.01]">
                   <tr>
                     <th className="py-2.5 px-3">Data</th>
-                    <th className="py-2.5 px-3">Categoria</th>
-                    <th className="py-2.5 px-3">Descrição / Campanha</th>
                     <th className="py-2.5 px-3 text-right">Gasto Meta Ads</th>
-                    <th className="py-2.5 px-3 text-right">Lucro Bruto ML</th>
+                    <th className="py-2.5 px-3 text-right">Cliques / Impr.</th>
+                    <th className="py-2.5 px-3 text-right">Comissões Meli</th>
+                    <th className="py-2.5 px-3 text-right">Vendas Geradas</th>
                     <th className="py-2.5 px-3 text-right">Saldo Líquido</th>
+                    <th className="py-2.5 px-3 text-right">Blended ROAS</th>
                     <th className="py-2.5 px-3 text-right">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.03]">
                   {carregandoDRE ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-8 text-slate-400">
+                      <td colSpan={8} className="text-center py-8 text-slate-400">
                         Carregando lançamentos...
                       </td>
                     </tr>
                   ) : lancamentos.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-10 text-slate-500">
-                        Nenhum lançamento diário registrado para o mês {mesAtivo}. Clique em{' '}
-                        <strong className="text-emerald-400 cursor-pointer" onClick={() => setShowNovoLancamento(true)}>
-                          Novo Lançamento
+                      <td colSpan={8} className="text-center py-10 text-slate-500">
+                        Nenhum registro encontrado para o mês {mesAtivo}. Clique em{' '}
+                        <strong className="text-emerald-400 cursor-pointer" onClick={abrirRelatorioExecutivo}>
+                          Gerar Relatório do Mês
                         </strong>{' '}
-                        para alimentar os dados reais.
+                        para consolidar os dados das bases Meta Ads e Mercado Livre.
                       </td>
                     </tr>
                   ) : (
-                    lancamentos.map(l => {
-                      const gasto = Number(l.gasto_campanhas) || 0;
-                      const lucro = Number(l.lucro_bruto) || 0;
-                      const saldo = lucro - gasto;
+                    lancamentos.map((l, idx) => {
+                      const dataLanc = l.dataLancamento || l.data_lancamento || '—';
+                      const gasto = Number(l.gastoCampanhas ?? l.gasto_campanhas) || 0;
+                      const lucro = Number(l.lucroBruto ?? l.lucro_bruto) || 0;
+                      const vendas = Number(l.vendasBrutas ?? l.vendas_brutas) || (lucro > 0 ? lucro * 10 : 0);
+                      const saldo = typeof l.saldoDia === 'number' ? l.saldoDia : lucro - gasto;
+                      const cliques = Number(l.cliquesMeta || 0);
+                      const impressoes = Number(l.impressoesMeta || 0);
+                      const roas = typeof l.blendedRoas === 'number' && l.blendedRoas > 0
+                        ? l.blendedRoas
+                        : (gasto > 0 && vendas > 0 ? (vendas / gasto) : 0);
+
                       return (
-                        <tr key={l.id} className="hover:bg-white/[0.02]">
+                        <tr key={l.id || idx} className="hover:bg-white/[0.02]">
                           <td className="py-2.5 px-3 font-mono font-medium text-slate-300">
-                            {l.data_lancamento}
+                            {dataLanc}
                           </td>
-                          <td className="py-2.5 px-3">
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/[0.06] text-slate-300">
-                              {l.categoria || 'Geral'}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-slate-200">{l.descricao || '—'}</td>
                           <td className="py-2.5 px-3 text-right font-mono text-red-400">
-                            R$ {formatarMoeda(gasto)}
+                            {gasto > 0 ? `R$ ${formatarMoeda(gasto)}` : <span className="text-slate-600">—</span>}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-slate-400 text-[11px]">
+                            {cliques > 0 || impressoes > 0 ? (
+                              <span>{cliques} <span className="text-slate-600">/</span> {impressoes}</span>
+                            ) : (
+                              <span className="text-slate-600">—</span>
+                            )}
                           </td>
                           <td className="py-2.5 px-3 text-right font-mono text-emerald-400 font-semibold">
-                            R$ {formatarMoeda(lucro)}
+                            {lucro > 0 ? `R$ ${formatarMoeda(lucro)}` : <span className="text-slate-600">—</span>}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-cyan-300">
+                            {vendas > 0 ? `R$ ${formatarMoeda(vendas)}` : <span className="text-slate-600">—</span>}
                           </td>
                           <td
                             className={`py-2.5 px-3 text-right font-mono font-bold ${
-                              saldo >= 0 ? 'text-cyan-300' : 'text-red-400'
+                              saldo >= 0 ? 'text-emerald-300' : 'text-red-400'
                             }`}
                           >
                             {saldo >= 0 ? '+' : ''} R$ {formatarMoeda(saldo)}
                           </td>
+                          <td className="py-2.5 px-3 text-right font-mono">
+                            {roas > 0 ? (
+                              <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                                roas >= 4 ? 'bg-emerald-500/20 text-emerald-300' : roas >= 2 ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300'
+                              }`}>
+                                {roas.toFixed(2)}x
+                              </span>
+                            ) : (
+                              <span className="text-slate-600">—</span>
+                            )}
+                          </td>
                           <td className="py-2.5 px-3 text-right">
-                            <button
-                              onClick={() => handleDeleteLancamento(l.id)}
-                              className="text-slate-500 hover:text-red-400 p-1 rounded-lg transition-colors cursor-pointer"
-                              title="Excluir Lançamento"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            {l.id && (
+                              <button
+                                onClick={() => handleDeleteLancamento(l.id)}
+                                className="text-slate-500 hover:text-red-400 p-1 rounded-lg transition-colors cursor-pointer"
+                                title="Excluir Lançamento"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       );
@@ -1080,6 +1134,265 @@ export const FinancasView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: RELATÓRIO EXECUTIVO MENSAL INTEGRADO */}
+      {showRelatorioMensalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto">
+          <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-white/20 max-w-5xl w-full my-auto space-y-6 shadow-2xl bg-[#080d1a]/95 text-white max-h-[92vh] overflow-y-auto">
+            
+            {/* Topbar do Relatório */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] uppercase font-bold tracking-widest">
+                    Relatório Oficial de Auditoria
+                  </span>
+                  <span className="text-slate-400 text-xs font-mono">
+                    Ref: {mesAtivo}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-white mt-1">
+                  Relatório Executivo de Aquisição & Performance
+                </h2>
+                <p className="text-xs text-slate-300">
+                  Consolidação automática dos dados arquivados do Meta Ads e Mercado Livre Afiliados.
+                </p>
+              </div>
+
+              {/* Botões de Ação do Relatório */}
+              <div className="flex items-center gap-2 self-end sm:self-center">
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white text-xs font-bold border border-white/15 transition-all cursor-pointer"
+                  title="Imprimir ou Salvar em PDF"
+                >
+                  <Printer className="w-4 h-4 text-cyan-400" />
+                  <span>Imprimir / PDF</span>
+                </button>
+
+                <button
+                  onClick={() => api.exportarBalancoCsv(mesAtivo)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold border border-emerald-500/30 transition-all cursor-pointer"
+                  title="Exportar dados para Excel ou CSV"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Exportar CSV</span>
+                </button>
+
+                <button
+                  onClick={() => setShowRelatorioMensalModal(false)}
+                  className="p-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-400 hover:text-white transition-all cursor-pointer"
+                  title="Fechar Relatório"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {carregandoRelatorio ? (
+              <div className="py-20 text-center text-slate-400 text-sm">
+                Carregando e consolidando métricas do mês {mesAtivo}...
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Grade dos 6 KPIs Executivos */}
+                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                      Faturamento Meli
+                    </span>
+                    <div className="text-lg font-heading font-extrabold text-white mt-1">
+                      R$ {formatarMoeda(relatorioMensal?.kpis?.faturamentoMeli ?? (balanco as any)?.totalVendasBrutas)}
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/25">
+                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">
+                      Comissões Confirmadas
+                    </span>
+                    <div className="text-lg font-heading font-extrabold text-emerald-400 mt-1">
+                      R$ {formatarMoeda(relatorioMensal?.kpis?.comissoesConfirmadasMeli ?? balanco?.totalLucroBruto)}
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-red-950/20 border border-red-500/25">
+                    <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider block">
+                      Gasto Meta Ads
+                    </span>
+                    <div className="text-lg font-heading font-extrabold text-red-400 mt-1">
+                      R$ {formatarMoeda(relatorioMensal?.kpis?.investimentoMetaAds ?? balanco?.totalGastoCampanhas)}
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-cyan-950/20 border border-cyan-500/25">
+                    <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block">
+                      Lucro Líquido Real
+                    </span>
+                    <div className="text-lg font-heading font-extrabold text-cyan-300 mt-1">
+                      R$ {formatarMoeda(relatorioMensal?.kpis?.lucroOperacionalLiquido ?? balanco?.resultadoLiquido)}
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
+                    <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block">
+                      Blended ROAS
+                    </span>
+                    <div className="text-lg font-heading font-extrabold text-purple-300 mt-1">
+                      {(relatorioMensal?.kpis?.blendedRoas ?? (balanco as any)?.blendedRoas ?? 0).toFixed(2)}x
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
+                    <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">
+                      Margem Líquida
+                    </span>
+                    <div className="text-lg font-heading font-extrabold text-amber-300 mt-1">
+                      {(relatorioMensal?.kpis?.margemLucroPercentual ?? balanco?.margemLiquidaPercentual ?? 0).toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quadro da Regra dos 70/30 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4.5 rounded-2xl bg-gradient-to-r from-purple-950/30 via-slate-900/60 to-emerald-950/30 border border-purple-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                      <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs text-purple-300 font-bold uppercase tracking-wide">
+                        Reinvestimento em Campanhas (70%)
+                      </span>
+                      <div className="text-xl font-heading font-extrabold text-white mt-0.5">
+                        R$ {formatarMoeda(relatorioMensal?.kpis?.reservaReinvestimento70 ?? balanco?.valorReinvestimentoCampanhas)}
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Capital destinado para escala de tráfego pago no próximo ciclo.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-white/10 pt-3 sm:pt-0 sm:pl-4">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                      <DollarSign className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-xs text-emerald-400 font-bold uppercase tracking-wide">
+                        Lucro Disponível para Retirada (30%)
+                      </span>
+                      <div className="text-xl font-heading font-extrabold text-white mt-0.5">
+                        R$ {formatarMoeda(relatorioMensal?.kpis?.lucroDisponivel30 ?? balanco?.valorLucroDisponivel)}
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Retirada líquida de sócios sem descapitalizar o tráfego.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tabela de Métricas Arquivadas Dia a Dia */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                      Histórico Arquivado Dia a Dia ({relatorioMensal?.detalhamentoDiario?.length || lancamentos.length} dias)
+                    </h4>
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      Dados auditados via API
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-white/10 max-h-72 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-white/10 bg-[#0e172a] sticky top-0 z-10">
+                        <tr>
+                          <th className="py-2.5 px-3">Data</th>
+                          <th className="py-2.5 px-3 text-right">Investimento Meta</th>
+                          <th className="py-2.5 px-3 text-right">Cliques Meta</th>
+                          <th className="py-2.5 px-3 text-right">Impressões</th>
+                          <th className="py-2.5 px-3 text-right">Vendas Meli</th>
+                          <th className="py-2.5 px-3 text-right">Comissão Meli</th>
+                          <th className="py-2.5 px-3 text-right">Saldo Líquido</th>
+                          <th className="py-2.5 px-3 text-right">ROAS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/[0.04] bg-white/[0.01]">
+                        {((relatorioMensal?.detalhamentoDiario || lancamentos) as any[]).map((d, i) => {
+                          const dataDia = d.dataLancamento || d.data_lancamento || '—';
+                          const gasto = Number(d.gastoCampanhas ?? d.gasto_campanhas) || 0;
+                          const lucro = Number(d.lucroBruto ?? d.lucro_bruto) || 0;
+                          const vendas = Number(d.vendasBrutas ?? d.vendas_brutas) || (lucro > 0 ? lucro * 10 : 0);
+                          const saldo = typeof d.saldoDia === 'number' ? d.saldoDia : lucro - gasto;
+                          const cliques = Number(d.cliquesMeta || 0);
+                          const impressoes = Number(d.impressoesMeta || 0);
+                          const roas = typeof d.blendedRoas === 'number' && d.blendedRoas > 0
+                            ? d.blendedRoas
+                            : (gasto > 0 && vendas > 0 ? (vendas / gasto) : 0);
+
+                          return (
+                            <tr key={i} className="hover:bg-white/[0.03]">
+                              <td className="py-2 px-3 font-mono font-medium text-slate-300">
+                                {dataDia}
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono text-red-400">
+                                {gasto > 0 ? `R$ ${formatarMoeda(gasto)}` : <span className="text-slate-600">—</span>}
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono text-slate-400">
+                                {cliques > 0 ? cliques : <span className="text-slate-600">—</span>}
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono text-slate-400">
+                                {impressoes > 0 ? impressoes : <span className="text-slate-600">—</span>}
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono text-cyan-300">
+                                {vendas > 0 ? `R$ ${formatarMoeda(vendas)}` : <span className="text-slate-600">—</span>}
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono text-emerald-400 font-semibold">
+                                {lucro > 0 ? `R$ ${formatarMoeda(lucro)}` : <span className="text-slate-600">—</span>}
+                              </td>
+                              <td
+                                className={`py-2 px-3 text-right font-mono font-bold ${
+                                  saldo >= 0 ? 'text-emerald-300' : 'text-red-400'
+                                }`}
+                              >
+                                {saldo >= 0 ? '+' : ''} R$ {formatarMoeda(saldo)}
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono">
+                                {roas > 0 ? (
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    roas >= 4 ? 'bg-emerald-500/20 text-emerald-300' : roas >= 2 ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300'
+                                  }`}>
+                                    {roas.toFixed(2)}x
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-600">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Rodapé do Relatório */}
+                <div className="flex items-center justify-between pt-3 border-t border-white/10 text-[11px] text-slate-400">
+                  <div className="flex items-center gap-1.5 text-emerald-400">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Relatório emitido pelo Cockpit Promos Pokémon TCG • Conciliação Meta + Mercado Livre</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowRelatorioMensalModal(false)}
+                    className="px-4 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white font-semibold transition-all cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

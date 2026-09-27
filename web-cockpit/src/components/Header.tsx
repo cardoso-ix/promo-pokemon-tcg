@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Flame,
   Droplets,
   DollarSign,
   Activity,
@@ -18,7 +17,6 @@ interface HeaderProps {
   activeModule: ActiveModule;
   onSelectModule: (module: ActiveModule) => void;
   onOpenReplicaQr: () => void;
-  onOpenBotQr: () => void;
   onOpenCookieModal: () => void;
 }
 
@@ -26,10 +24,9 @@ export const Header: React.FC<HeaderProps> = ({
   activeModule,
   onSelectModule,
   onOpenReplicaQr,
-  onOpenBotQr,
   onOpenCookieModal
 }) => {
-  const { isReplicaConnected, isReplicaQrReady, isBotConnected, isBotQrReady, isMeliValid } = useUnifiedStatus();
+  const { isReplicaConnected, isReplicaQrReady, isMeliValid } = useUnifiedStatus();
 
   const handleLogout = async () => {
     if (window.confirm('Deseja realmente encerrar a sessão na plataforma?')) {
@@ -110,18 +107,6 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <button
-          onClick={() => onSelectModule('disparador')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
-            activeModule === 'disparador'
-              ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-md shadow-orange-500/25 border border-orange-400/30'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-          }`}
-        >
-          <Flame className="w-3.5 h-3.5 text-orange-400" />
-          <span>Disparador & IA</span>
-        </button>
-
-        <button
           onClick={() => onSelectModule('financas')}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
             activeModule === 'financas'
@@ -174,29 +159,6 @@ export const Header: React.FC<HeaderProps> = ({
           <QrCode className="w-3 h-3 opacity-70" />
           <span>
             {isReplicaConnected ? 'Replicador OK' : isReplicaQrReady ? 'Escanear QR' : 'Replicador Off'}
-          </span>
-        </button>
-
-        {/* Badge WhatsApp Disparador */}
-        <button
-          onClick={onOpenBotQr}
-          className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-            isBotConnected
-              ? 'bg-orange-500/10 text-orange-300 border-orange-500/30 hover:bg-orange-500/20'
-              : isBotQrReady
-              ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25 animate-pulse'
-              : 'bg-slate-800 text-slate-400 border-white/10 hover:bg-white/[0.06]'
-          }`}
-          title="Status do Chip do Disparador. Clique para escanear QR Code."
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isBotConnected ? 'bg-orange-400 shadow-[0_0_8px_#f97316]' : 'bg-slate-500'
-            }`}
-          />
-          <QrCode className="w-3 h-3 opacity-70" />
-          <span>
-            {isBotConnected ? 'Disparador OK' : isBotQrReady ? 'Escanear QR' : 'Disparador Off'}
           </span>
         </button>
 
