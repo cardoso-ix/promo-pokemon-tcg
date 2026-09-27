@@ -49,9 +49,8 @@ chmod +x *.sh
 - **Objetivo:** Monitora grupos de ofertas concorrentes 24/7, intercepta links de produtos, higieniza mensagens removendo assinaturas de terceiros, gera links de afiliados oficiais com encurtamento `meli.la`, preserva/baixa fotos oficiais em 2X HD e replica nos seus grupos VIP.
 - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script.
 - **🌅 Mensagem Diária de Abertura (07:00 AM):** Posta automaticamente todas as manhãs no horário oficial de Brasília uma mensagem de boas-vindas e engajamento nos grupos de destino ativos com rotação de 4 templates selecionados a dedo.
-- **🛡️ Cookie Sentinel:** Validador em background a cada 45 minutos da integridade da sessão do Mercado Livre.
-- **⚡ Gerador de Anúncios Reativo:** Interface no painel para colar qualquer link do Mercado Livre, puxar título limpo, foto oficial 2X, preço De/Por, preencher cupom e disparar com 1 clique.
-- **🎛️ Gestão & Edição Visual de Rotas:** Modal intuitivo para criar, editar e excluir rotas com seleção de grupos de Origem (monitoramento) e Destino (publicação) a partir dos 170+ chats do WhatsApp em cache ou por inserção manual de JID.
+- **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre, Shopee ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
+- **🔄 Botão de Sincronização Unificada:** Sincronização instantânea das métricas do Meta Ads (Graph API v20.0) e Mercado Livre Afiliados com recálculo em tempo real de ROAS, comissões do dia e lucro líquido.
 
 ---
 
