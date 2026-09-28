@@ -400,7 +400,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     { name: 'Meta Ads', value: gastoMetaAds || balanco?.totalGastoCampanhas || 0, color: '#ef4444' }
   ];
 
-  const totalHoje = replica?.totalEnviadosHoje || recentLogs.filter(l => l.status === 'enviado').length;
+  const totalHoje = typeof replica?.totalEnviadosHoje === 'number'
+    ? replica.totalEnviadosHoje
+    : recentLogs.filter(l => l.status === 'enviado').length;
   const isReplicaOnline = replica?.whatsapp?.status === 'connected';
 
   return (

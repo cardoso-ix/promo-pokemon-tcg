@@ -481,6 +481,20 @@ export function getPostsLastHour(): number {
   return row ? row.total : 0;
 }
 
+export function getTotalEnviadosHoje(): number {
+  try {
+    const row = db.prepare(`
+      SELECT COUNT(*) as total
+      FROM logs
+      WHERE status = 'enviado'
+        AND date(datetime(criado_em, '-3 hours')) = date('now', '-3 hours')
+    `).get() as { total: number } | undefined;
+    return Number(row?.total) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 // Helpers para Cache de Nomes de Grupos
 export function updateChatCache(chatId: string, nome: string, isGroup = true): void {
   db.prepare(`

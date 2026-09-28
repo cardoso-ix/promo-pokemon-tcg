@@ -6,7 +6,7 @@ import {
   dispararMensagemAbertura,
   verificarEExecutarAgendador
 } from '../src/core/agendador.js';
-import { setConfig, getConfig, saveRota } from '../src/db/database.js';
+import { setConfig, getConfig, saveRota, getTotalEnviadosHoje, insertLog } from '../src/db/database.js';
 
 test('obterHoraBrasilia - Deve converter corretamente horários UTC para o fuso de Brasília (America/Sao_Paulo)', () => {
   // 10:00:00 UTC em qualquer dia equivale a 07:00:00 em Brasília (UTC-3)
@@ -128,4 +128,27 @@ test('prepararTextoMensagemAbertura - Modo [ROTACAO_DIARIA] deve alternar modelo
   assert.ok(textoSeg.includes('@pokemon_tcg_promo'));
   assert.ok(!textoSeg.includes('{dia_semana}'));
 });
+
+test('getTotalEnviadosHoje - Deve refletir com precisão a contagem real de hoje sem travar em 70 ou 100', () => {
+  const contagemInicial = getTotalEnviadosHoje();
+  assert.ok(typeof contagemInicial === 'number' && contagemInicial >= 0);
+
+  // Inserir log novo de envio com sucesso hoje
+  insertLog({
+    origem_chat_id: 'origem_teste',
+    origem_nome: 'Grupo Teste',
+    destino_chat_id: 'destino_teste',
+    hash_conteudo: `hash_teste_${Date.now()}`,
+    texto_original: 'Oferta Teste',
+    texto_publicado: 'Oferta Teste Formatada',
+    tem_foto: false,
+    links_convertidos: 1,
+    status: 'enviado',
+    motivo: 'teste_unitario'
+  });
+
+  const contagemAposEnvio = getTotalEnviadosHoje();
+  assert.strictEqual(contagemAposEnvio, contagemInicial + 1, 'A contagem de enviados hoje deve incrementar exatamente em 1');
+});
+
 

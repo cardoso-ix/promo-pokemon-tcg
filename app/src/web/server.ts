@@ -18,11 +18,12 @@ import {
   getFluxoHorarioHoje,
   insertLog,
   DEFAULT_MSG_ABERTURA,
-  PRESET_MSGS_ABERTURA,
   getHistoricoProdutosConsolidado,
   getExtratoProdutoValores,
   buscarBenchmarkPreco,
-  migrarLogsParaHistoricoProdutos
+  migrarLogsParaHistoricoProdutos,
+  getTotalEnviadosHoje,
+  PRESET_MSGS_ABERTURA
 } from '../db/database.js';
 import {
   dispararMensagemAbertura,
@@ -194,7 +195,7 @@ export async function createServer() {
         whatsapp: whatsAppManager.getState(),
         isAtivo: getConfig('ativo', 'true') === 'true',
         postsLastHour: getPostsLastHour(),
-        totalEnviadosHoje: getRecentLogs(100).filter((l) => l.status === 'enviado').length,
+        totalEnviadosHoje: getTotalEnviadosHoje(),
         cookieStatus: currentCookieStatus
       },
       bot: {
