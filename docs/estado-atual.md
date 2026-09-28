@@ -25,6 +25,7 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 | **Super Cockpit Unificado (React 19)** | React 19 + Tailwind v4 + Recharts | 🟢 **Online (Header Glass Panel)** | Design em padrão de cartões enquadrados, botão de sincronização unificada automática e navegação direta. |
 | **Bancos de Dados SQLite** | Better-SQLite3 (WAL Mode) | 🟢 **Ativo (Named Volumes)** | `replica.db` salvo com segurança em `/app/data` com fuso horário canônico de Brasília (BRT / UTC-3). |
 | **Finanças & Relatórios Executivos** | Fastify + Recharts + SQLite | 🟢 **Ativo (Conciliação Contábil)** | Consolidação automática das bases Meta Ads e Mercado Livre, DRE e emissão de relatórios mensais formatados. |
+| **Caixa & Recargas Meta Ads** | Graph API v20.0 + SQLite Híbrido | 🟢 **Ativo (Tempo Real)** | Exibição do saldo de caixa para anúncios no Cockpit, badges de status, recargas manuais e limites de alerta. |
 | **Google Planilhas ("produtos tcg valores")** | Webhook Apps Script + Dual-Write Local | 🟢 **Ativo (Sincronização Contínua)** | Registra automaticamente cada oferta enviada nos grupos com Data/Hora, Nome do Produto, Preço e Link. |
 | **Mensagem Diária de Abertura (07:00 AM)** | Scheduler Nativo (Fuso de Brasília) | 🟢 **Ativo (Anti-Duplicidade)** | Dispara automaticamente mensagem calorosa todas as manhãs às 07:00 AM com rotação entre 4 modelos. |
 | **Gerador de Anúncios Universal** | Fastify + Scraper ML & Shopee + OpenGraph | 🟢 **Ativo (Replicador)** | Suporta links do Mercado Livre, Shopee e lojas gerais com fallback anti-bot, edição de copy, cópia rápida e disparo para rotas ativas. |
@@ -48,7 +49,7 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 
 ## 4. Cobertura de Testes Automatizados
 
-- **Total de Testes:** **98 testes unitários e de integração** (100% aprovados, 0 falhas).
+- **Total de Testes:** **99 testes unitários e de integração** (100% aprovados, 0 falhas).
   - Executável com um único comando na raiz do projeto: `npm test`.
 
 ---

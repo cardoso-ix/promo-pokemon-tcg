@@ -102,6 +102,65 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
     }
   );
 
+  // Consulta do Saldo de Caixa e Limites da Conta de Anúncios Meta Ads
+  app.get(
+    '/api/integrations/meta/balance',
+    async (
+      req: FastifyRequest<{
+        Querystring: { accountId?: string };
+      }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { accountId } = req.query || {};
+        const balanceInfo = await metaAdsService.getAdAccountBalance(accountId);
+        return {
+          ok: true,
+          data: balanceInfo
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.status(500).send({ ok: false, error: msg });
+      }
+    }
+  );
+
+  // Atualização ou Recarga de Saldo de Caixa Meta Ads
+  app.post(
+    '/api/integrations/meta/balance',
+    async (
+      req: FastifyRequest<{
+        Body: {
+          saldo?: number;
+          recarga?: number;
+          descricao?: string;
+          threshold?: number;
+          mode?: 'hybrid' | 'auto' | 'manual';
+        };
+      }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { saldo, recarga, descricao, threshold, mode } = req.body || {};
+        const updated = await metaAdsService.updateAdAccountBalance({
+          novoSaldo: saldo,
+          recarga,
+          descricao,
+          alertThreshold: threshold,
+          mode
+        });
+        return {
+          ok: true,
+          message: 'Saldo e preferências de caixa do Meta Ads atualizados com sucesso!',
+          data: updated
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.status(500).send({ ok: false, error: msg });
+      }
+    }
+  );
+
   // ==========================================
   // 2. ROTAS DO MERCADO LIVRE (TEMPO REAL & DRE)
   // ==========================================

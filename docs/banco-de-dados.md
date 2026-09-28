@@ -145,3 +145,20 @@ Tabela analítica nativa integrada que registra o histórico completo de preços
 
 **Lógica de Agrupamento SQL:**
 A visão consolidada utiliza `GROUP BY COALESCE(h.chave_canonica, h.produto_limpo)` para garantir que todas as ocorrências de um mesmo produto fiquem em linha única, com `MIN(h.preco_por)` como Menor Preço real, `MAX(h.preco_por)` como Maior Preço e `COUNT(*)` como total de postagens combinadas.
+
+### 3.15. `meta_ad_recargas` (Histórico de Caixa e Recargas Meta Ads)
+Tabela para registro e auditoria de recargas de verba e ajustes no saldo de caixa de tráfego:
+- `id`: Chave primária autoincremento.
+- `valor`: Valor monetário adicionado na recarga (R$, zero em caso de ajuste de saldo).
+- `descricao`: Descrição ou método (ex: "Recarga via PIX", "Ajuste manual com Gerenciador").
+- `saldo_resultante`: Saldo total de caixa resultante da operação (R$).
+- `data_recarga`: Data e hora do registro (DATETIME DEFAULT CURRENT_TIMESTAMP).
+
+**Configurações de Caixa (`configs`):**
+- `meta_ad_balance_manual`: Saldo manual atual registrado no painel.
+- `meta_ad_balance_manual_set`: Flag (`true`/`false`) que sinaliza se houve ajuste explícito do usuário.
+- `meta_ad_balance_mode`: Modo de cálculo (`hybrid` [padrão], `auto` ou `manual`).
+- `meta_ad_alert_threshold`: Limiar mínimo em R$ para disparo de alerta de saldo baixo (default: `50.00`).
+- `meta_ad_balance_api_cached`: Último saldo reportado pela Graph API em cache.
+- `meta_ad_balance_last_sync`: Timestamp da última consulta à Marketing API da Meta.
+

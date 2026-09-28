@@ -14,7 +14,10 @@ import {
   ShoppingBag,
   FileSpreadsheet,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Wallet,
+  CreditCard,
+  CheckCircle2
 } from 'lucide-react';
 import {
   AreaChart,
@@ -28,7 +31,16 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import type { UnifiedStatus, OfertaLog, BalancoFinanceiro, FluxoHorarioItem, MetaInsightsOverview, MeliOrdersOverview, MeliAffiliateOverview } from '../types/index.ts';
+import type {
+  UnifiedStatus,
+  OfertaLog,
+  BalancoFinanceiro,
+  FluxoHorarioItem,
+  MetaInsightsOverview,
+  MeliOrdersOverview,
+  MeliAffiliateOverview,
+  MetaAdBalanceInfo
+} from '../types/index.ts';
 import { api } from '../services/api.ts';
 
 interface DashboardOverviewProps {
@@ -62,6 +74,17 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const [savingMeta, setSavingMeta] = useState(false);
   const [syncingMeta, setSyncingMeta] = useState(false);
 
+  // Estados do Saldo de Caixa Meta Ads
+  const [metaBalance, setMetaBalance] = useState<MetaAdBalanceInfo | null>(null);
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [balanceRecargaInput, setBalanceRecargaInput] = useState('');
+  const [balanceSaldoInput, setBalanceSaldoInput] = useState('');
+  const [balanceDescInput, setBalanceDescInput] = useState('');
+  const [balanceThresholdInput, setBalanceThresholdInput] = useState('50');
+  const [balanceModeInput, setBalanceModeInput] = useState<'hybrid' | 'auto' | 'manual'>('hybrid');
+  const [balanceTab, setBalanceTab] = useState<'recarga' | 'ajuste' | 'config'>('recarga');
+  const [savingBalance, setSavingBalance] = useState(false);
+
   // Estados do Mercado Livre Afiliados (Comissões e Métricas Reais)
   const [affiliateData, setAffiliateData] = useState<MeliAffiliateOverview | null>(null);
   const [isAffiliateConnected, setIsAffiliateConnected] = useState(false);
@@ -89,6 +112,19 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     { hora: '20h', ofertas: 0, cliques: 0 },
     { hora: '22h', ofertas: 0, cliques: 0 },
   ]);
+
+  const carregarMetaBalance = async () => {
+    try {
+      const res = await api.getMetaBalance();
+      if (res && res.data) {
+        setMetaBalance(res.data);
+        if (res.data.alertThreshold) setBalanceThresholdInput(String(res.data.alertThreshold));
+        if (res.data.mode) setBalanceModeInput(res.data.mode);
+      }
+    } catch {
+      // Silencioso
+    }
+  };
 
   const carregarMetaInsights = async () => {
     try {
@@ -143,11 +179,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
     carregarFluxoReal();
     carregarMetaInsights();
+    carregarMetaBalance();
     carregarMeliInsights();
     carregarMeliAffiliate();
     const interval = setInterval(() => {
       carregarFluxoReal();
       carregarMetaInsights();
+      carregarMetaBalance();
       carregarMeliInsights();
       carregarMeliAffiliate();
     }, 15000);
@@ -172,7 +210,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       alert(res.message || 'Configurações do Meta Ads salvas com sucesso!');
       setShowMetaModal(false);
       setMetaTokenInput('');
-      await carregarMetaInsights();
+      await Promise.all([carregarMetaInsights(), carregarMetaBalance()]);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Falha ao salvar Meta Ads');
     } finally {
@@ -187,6 +225,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       alert(res.message || 'Métricas do Meta Ads e Mercado Livre sincronizadas com sucesso!');
       await Promise.all([
         carregarMetaInsights(),
+        carregarMetaBalance(),
         carregarMeliInsights(),
         carregarMeliAffiliate(true)
       ]);
@@ -204,11 +243,81 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       const trintaDiasAtras = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const res = await api.syncMetaInsights(trintaDiasAtras, hoje);
       alert(`Sincronização concluída com sucesso! ${res.totalSincronizados} registros de gastos atualizados.`);
-      await carregarMetaInsights();
+      await Promise.all([carregarMetaInsights(), carregarMetaBalance()]);
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Falha na sincronização do Meta Ads');
     } finally {
       setSyncingMeta(false);
+    }
+  };
+
+  const handleRegistrarRecarga = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = parseFloat(balanceRecargaInput.replace(',', '.'));
+    if (!val || val <= 0) {
+      return alert('Informe um valor de recarga válido maior que zero.');
+    }
+    setSavingBalance(true);
+    try {
+      const res = await api.updateMetaBalance({
+        recarga: val,
+        descricao: balanceDescInput || `Recarga de saldo Meta Ads via Cockpit: R$ ${val.toFixed(2)}`
+      });
+      alert(res.message || 'Recarga registrada com sucesso!');
+      setMetaBalance(res.data);
+      setBalanceRecargaInput('');
+      setBalanceDescInput('');
+      setShowBalanceModal(false);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Falha ao registrar recarga');
+    } finally {
+      setSavingBalance(false);
+    }
+  };
+
+  const handleAjustarSaldoManual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = parseFloat(balanceSaldoInput.replace(',', '.'));
+    if (isNaN(val) || val < 0) {
+      return alert('Informe um valor de saldo válido (zero ou positivo).');
+    }
+    setSavingBalance(true);
+    try {
+      const res = await api.updateMetaBalance({
+        saldo: val,
+        descricao: balanceDescInput || `Ajuste manual de saldo de caixa para R$ ${val.toFixed(2)}`,
+        threshold: parseFloat(balanceThresholdInput) || 50,
+        mode: balanceModeInput
+      });
+      alert(res.message || 'Saldo atualizado com sucesso!');
+      setMetaBalance(res.data);
+      setBalanceSaldoInput('');
+      setBalanceDescInput('');
+      setShowBalanceModal(false);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Falha ao ajustar saldo');
+    } finally {
+      setSavingBalance(false);
+    }
+  };
+
+  const handleSalvarConfigCaixa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const thresholdVal = parseFloat(balanceThresholdInput.replace(',', '.'));
+    setSavingBalance(true);
+    try {
+      const res = await api.updateMetaBalance({
+        threshold: !isNaN(thresholdVal) ? thresholdVal : 50,
+        mode: balanceModeInput,
+        descricao: `Preferências de caixa atualizadas (Modo: ${balanceModeInput}, Alerta: R$ ${thresholdVal})`
+      });
+      alert('Preferências de caixa salvas com sucesso!');
+      setMetaBalance(res.data);
+      setShowBalanceModal(false);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Falha ao salvar preferências de caixa');
+    } finally {
+      setSavingBalance(false);
     }
   };
 
@@ -330,8 +439,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
       </div>
 
-      {/* Grid de 4 KPIs Estratégicos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Grid de 5 KPIs Estratégicos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* KPI 1: Ofertas Hoje */}
         <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
@@ -378,7 +487,79 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
 
-        {/* KPI 3: Blended ROAS & Performance */}
+        {/* KPI 3: Caixa Meta Ads (Saldo & Recargas) */}
+        <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
+          <div className="flex items-center justify-between text-slate-400 mb-2">
+            <span className="text-xs font-medium uppercase tracking-wider flex items-center gap-1.5">
+              <span>Caixa Meta Ads</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setBalanceSaldoInput(metaBalance ? String(metaBalance.currentBalance) : '');
+                setShowBalanceModal(true);
+              }}
+              title="Gerenciar Caixa & Recargas do Meta Ads"
+              className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-110 hover:bg-emerald-500/30 transition-all cursor-pointer"
+            >
+              <Wallet className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-heading font-extrabold text-white tracking-tight">
+              R$ {(metaBalance?.currentBalance ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-1 flex-wrap">
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                metaBalance?.statusBadge === 'healthy'
+                  ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                  : metaBalance?.statusBadge === 'warning'
+                  ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                  : 'bg-red-500/15 text-red-400 border-red-500/30 animate-pulse'
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  metaBalance?.statusBadge === 'healthy'
+                    ? 'bg-emerald-400'
+                    : metaBalance?.statusBadge === 'warning'
+                    ? 'bg-amber-400'
+                    : 'bg-red-400'
+                }`}
+              />
+              {metaBalance?.statusBadge === 'healthy'
+                ? 'Saldo Saudável'
+                : metaBalance?.statusBadge === 'warning'
+                ? 'Saldo Baixo'
+                : 'Recarga Urgente'}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setBalanceSaldoInput(metaBalance ? String(metaBalance.currentBalance) : '');
+                setShowBalanceModal(true);
+              }}
+              className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-medium cursor-pointer"
+            >
+              Recarregar / Ajustar
+            </button>
+          </div>
+          <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
+            <div
+              className={`h-1.5 rounded-full transition-all duration-500 ${
+                metaBalance?.statusBadge === 'healthy'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 w-full'
+                  : metaBalance?.statusBadge === 'warning'
+                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400 w-1/2'
+                  : 'bg-gradient-to-r from-red-500 to-rose-400 w-1/5'
+              }`}
+            />
+          </div>
+        </div>
+
+        {/* KPI 4: Blended ROAS & Performance */}
         <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
             <span className="text-xs font-medium uppercase tracking-wider">Blended ROAS Geral</span>
@@ -400,7 +581,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
 
-        {/* KPI 4: Faturamento & Regra 70% */}
+        {/* KPI 5: Faturamento & Regra 70% */}
         <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
             <span className="text-xs font-medium uppercase tracking-wider">Lucro Líquido Real</span>
@@ -1317,6 +1498,300 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Modal de Gestão de Caixa & Recargas do Meta Ads */}
+      {showBalanceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass-panel w-full max-w-lg rounded-2xl border border-white/10 p-6 space-y-5 bg-slate-900/95 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            {/* Header do Modal */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-bold text-lg text-white">Caixa & Recargas Meta Ads</h3>
+                  <p className="text-xs text-slate-400">Controle de saldo, recargas e alertas de verba de tráfego</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBalanceModal(false)}
+                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Card de Visão Geral do Saldo */}
+            <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/25 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Saldo de Caixa Disponível</span>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                    metaBalance?.statusBadge === 'healthy'
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : metaBalance?.statusBadge === 'warning'
+                      ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                      : 'bg-red-500/15 text-red-400 border-red-500/30 animate-pulse'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      metaBalance?.statusBadge === 'healthy'
+                        ? 'bg-emerald-400'
+                        : metaBalance?.statusBadge === 'warning'
+                        ? 'bg-amber-400'
+                        : 'bg-red-400'
+                    }`}
+                  />
+                  {metaBalance?.statusBadge === 'healthy'
+                    ? 'Saldo Saudável'
+                    : metaBalance?.statusBadge === 'warning'
+                    ? 'Saldo Baixo'
+                    : 'Recarga Urgente'}
+                </span>
+              </div>
+
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-heading font-extrabold text-white tracking-tight">
+                  R$ {(metaBalance?.currentBalance ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+                <span className="text-xs text-slate-400">
+                  ({metaBalance?.currency || 'BRL'})
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/[0.06] text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Conta de Anúncios</span>
+                  <span className="text-white font-medium font-mono text-[11px] truncate block">
+                    {metaBalance?.accountName || 'Meta Ads'} ({metaBalance?.accountId ? `act_${metaBalance.accountId}` : 'Não configurada'})
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[11px]">Origem dos Dados</span>
+                  <span className="text-cyan-300 font-medium text-[11px] capitalize block">
+                    {metaBalance?.source === 'api' ? 'Graph API Meta' : metaBalance?.source === 'hybrid' ? 'Híbrido (API + Manual)' : 'Lançamento Manual'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Abas de Ação */}
+            <div className="flex items-center gap-1 p-1 bg-white/[0.04] border border-white/10 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setBalanceTab('recarga')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+                  balanceTab === 'recarga'
+                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                + Adicionar Recarga
+              </button>
+              <button
+                type="button"
+                onClick={() => setBalanceTab('ajuste')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+                  balanceTab === 'ajuste'
+                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Ajustar Saldo Exato
+              </button>
+              <button
+                type="button"
+                onClick={() => setBalanceTab('config')}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+                  balanceTab === 'config'
+                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Preferências & Alertas
+              </button>
+            </div>
+
+            {/* Conteúdo da Aba 1: Adicionar Recarga */}
+            {balanceTab === 'recarga' && (
+              <form onSubmit={handleRegistrarRecarga} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                    <span>Valor da Recarga (R$)</span>
+                    <span className="text-[11px] text-emerald-400">Soma ao saldo atual</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">R$</span>
+                    <input
+                      type="text"
+                      placeholder="Ex: 100,00"
+                      value={balanceRecargaInput}
+                      onChange={(e) => setBalanceRecargaInput(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 font-mono"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">Descrição / Método (Opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Recarga via PIX / Boleto bancário"
+                    value={balanceDescInput}
+                    onChange={(e) => setBalanceDescInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={savingBalance}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>{savingBalance ? 'Registrando...' : 'Confirmar e Somar Recarga'}</span>
+                </button>
+              </form>
+            )}
+
+            {/* Conteúdo da Aba 2: Ajustar Saldo Exato */}
+            {balanceTab === 'ajuste' && (
+              <form onSubmit={handleAjustarSaldoManual} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                    <span>Novo Saldo Total (R$)</span>
+                    <span className="text-[11px] text-amber-400">Substitui o saldo atual</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">R$</span>
+                    <input
+                      type="text"
+                      placeholder="Ex: 150,00"
+                      value={balanceSaldoInput}
+                      onChange={(e) => setBalanceSaldoInput(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-emerald-500 font-mono"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">Motivo do Ajuste (Opcional)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Alinhamento com saldo do Gerenciador de Anúncios"
+                    value={balanceDescInput}
+                    onChange={(e) => setBalanceDescInput(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={savingBalance}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white transition-all shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{savingBalance ? 'Atualizando...' : 'Definir Saldo Exato'}</span>
+                </button>
+              </form>
+            )}
+
+            {/* Conteúdo da Aba 3: Preferências & Alertas */}
+            {balanceTab === 'config' && (
+              <form onSubmit={handleSalvarConfigCaixa} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300">Modo de Operação do Caixa</label>
+                  <select
+                    value={balanceModeInput}
+                    onChange={(e) => setBalanceModeInput(e.target.value as any)}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="hybrid">Híbrido (Recomendado: Graph API + Ajuste Manual de Recargas)</option>
+                    <option value="auto">Automático (Consulta direta Graph API Meta Ads)</option>
+                    <option value="manual">Manual (Apenas recargas manuais informadas no Cockpit)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
+                    <span>Limite de Alerta de Saldo Baixo (R$)</span>
+                    <span className="text-[11px] text-amber-400">Dispara aviso quando o saldo for menor</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">R$</span>
+                    <input
+                      type="text"
+                      placeholder="50,00"
+                      value={balanceThresholdInput}
+                      onChange={(e) => setBalanceThresholdInput(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-emerald-500 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={savingBalance}
+                  className="w-full py-2.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 text-white transition-all border border-white/10 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  <span>{savingBalance ? 'Salvando...' : 'Salvar Preferências'}</span>
+                </button>
+              </form>
+            )}
+
+            {/* Histórico Recente de Recargas */}
+            {metaBalance?.recargas && metaBalance.recargas.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-white/10">
+                <span className="text-xs font-semibold text-slate-300 block">Histórico de Movimentações de Caixa</span>
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                  {metaBalance.recargas.slice(0, 5).map((r) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-xs"
+                    >
+                      <div>
+                        <span className="text-white font-medium block truncate max-w-[220px]">
+                          {r.descricao || 'Recarga de Saldo'}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {new Date(r.data_recarga).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        {r.valor > 0 ? (
+                          <span className="text-emerald-400 font-bold font-mono">+ R$ {r.valor.toFixed(2)}</span>
+                        ) : (
+                          <span className="text-cyan-400 font-bold font-mono">Ajuste</span>
+                        )}
+                        <span className="text-[10px] text-slate-400 block font-mono">
+                          Saldo: R$ {r.saldo_resultante.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Rodapé do Modal */}
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setShowBalanceModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

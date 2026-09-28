@@ -11,7 +11,8 @@ import type {
   MeliAffiliateOverview,
   ProdutoValorConsolidado,
   RegistroHistoricoProduto,
-  BenchmarkPrecoProduto
+  BenchmarkPrecoProduto,
+  MetaAdBalanceInfo
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro e resiliência
@@ -92,6 +93,21 @@ export const api = {
     request<{ ok: boolean; totalSincronizados: number }>('/api/integrations/meta/sync', {
       method: 'POST',
       body: JSON.stringify({ since, until, accountId })
+    }),
+  getMetaBalance: (accountId?: string) => {
+    const query = accountId ? `?accountId=${encodeURIComponent(accountId)}` : '';
+    return request<{ ok: boolean; data: MetaAdBalanceInfo }>(`/api/integrations/meta/balance${query}`);
+  },
+  updateMetaBalance: (dados: {
+    saldo?: number;
+    recarga?: number;
+    descricao?: string;
+    threshold?: number;
+    mode?: 'hybrid' | 'auto' | 'manual';
+  }) =>
+    request<{ ok: boolean; message: string; data: MetaAdBalanceInfo }>('/api/integrations/meta/balance', {
+      method: 'POST',
+      body: JSON.stringify(dados)
     }),
 
   // --- MERCADO LIVRE: VENDAS, PEDIDOS & WEBHOOK EM TEMPO REAL ---

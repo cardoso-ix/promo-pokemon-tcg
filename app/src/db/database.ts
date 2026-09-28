@@ -203,11 +203,20 @@ export function initDatabase() {
       criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS meta_ad_recargas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      valor REAL NOT NULL,
+      descricao TEXT,
+      saldo_resultante REAL,
+      data_recarga DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE INDEX IF NOT EXISTS idx_logs_hash ON logs(hash_conteudo);
     CREATE INDEX IF NOT EXISTS idx_logs_criado ON logs(criado_em);
     CREATE INDEX IF NOT EXISTS idx_logs_status ON logs(status);
     CREATE INDEX IF NOT EXISTS idx_prod_rec ON produtos_replicados(produto_id, criado_em);
     CREATE INDEX IF NOT EXISTS idx_meta_insights_date ON meta_ad_insights(date);
+    CREATE INDEX IF NOT EXISTS idx_meta_recargas_data ON meta_ad_recargas(data_recarga);
     CREATE INDEX IF NOT EXISTS idx_meli_orders_date ON meli_orders(date_created);
     CREATE INDEX IF NOT EXISTS idx_meli_orders_status ON meli_orders(status);
     CREATE INDEX IF NOT EXISTS idx_hist_prod_limpo ON historico_produtos_valores(produto_limpo);
@@ -237,7 +246,12 @@ export function initDatabase() {
     msg_abertura_ativa: 'true',
     msg_abertura_horario: '07:00',
     msg_abertura_texto: DEFAULT_MSG_ABERTURA,
-    msg_abertura_ultimo_envio: ''
+    msg_abertura_ultimo_envio: '',
+    meta_ad_balance_manual: '0.00',
+    meta_ad_balance_mode: 'hybrid',
+    meta_ad_alert_threshold: '50.00',
+    meta_ad_balance_last_sync: '',
+    meta_ad_balance_api_cached: '0.00'
   };
 
   const insertConfig = db.prepare(`
@@ -765,6 +779,55 @@ export function getMetaInsightsStats(startDate?: string, endDate?: string) {
       topCampaigns: [],
       dailyData: []
     };
+  }
+}
+
+export interface MetaRecargaItem {
+  id: number;
+  valor: number;
+  descricao: string;
+  saldo_resultante: number;
+  data_recarga: string;
+}
+
+export function salvarRecargaMeta(valor: number, descricao = 'Recarga de Saldo Meta Ads', saldoResultante = 0): number {
+  try {
+    const info = db.prepare(`
+      INSERT INTO meta_ad_recargas (valor, descricao, saldo_resultante)
+      VALUES (?, ?, ?)
+    `).run(Number(valor) || 0, String(descricao || ''), Number(saldoResultante) || 0);
+    return Number(info.lastInsertRowid);
+  } catch (err) {
+    console.warn('[Database] Erro ao salvar recarga do Meta Ads:', err);
+    return 0;
+  }
+}
+
+export function listarRecargasMeta(limit = 10): MetaRecargaItem[] {
+  try {
+    return db.prepare(`
+      SELECT id, valor, descricao, saldo_resultante, data_recarga
+      FROM meta_ad_recargas
+      ORDER BY id DESC
+      LIMIT ?
+    `).all(limit) as MetaRecargaItem[];
+  } catch {
+    return [];
+  }
+}
+
+export function getMetaTotalSpendDesde(dataIso?: string): number {
+  try {
+    if (!dataIso) return 0;
+    const datePart = dataIso.slice(0, 10);
+    const row = db.prepare(`
+      SELECT COALESCE(SUM(spend), 0) as spend_desde
+      FROM meta_ad_insights
+      WHERE date >= ?
+    `).get(datePart) as { spend_desde: number } | undefined;
+    return Number(row?.spend_desde) || 0;
+  } catch {
+    return 0;
   }
 }
 

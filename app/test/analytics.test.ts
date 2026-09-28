@@ -86,3 +86,46 @@ test('Schema Drizzle ORM - Definições das 4 Tabelas Analíticas', () => {
   assert.ok(metaAdInsights, 'meta_ad_insights deve estar definido');
   assert.ok(dailyAnalyticsSummary, 'daily_analytics_summary deve estar definido');
 });
+
+test('Meta Ads - Atualização de Saldo Manual e Histórico de Recargas', async () => {
+  // 1. Ajuste direto de saldo para R$ 150,00
+  const saldoDefinido = await metaAdsService.updateAdAccountBalance({
+    novoSaldo: 150.0,
+    descricao: 'Ajuste inicial de caixa teste',
+    alertThreshold: 40.0,
+    mode: 'hybrid'
+  });
+
+  assert.equal(saldoDefinido.ok, true);
+  assert.equal(saldoDefinido.currentBalance, 150.0);
+  assert.equal(saldoDefinido.statusBadge, 'healthy');
+  assert.equal(saldoDefinido.alertThreshold, 40.0);
+
+  // 2. Adicionar uma recarga adicional de R$ 50,00 (saldo vai para R$ 200,00)
+  const saldoAposRecarga = await metaAdsService.updateAdAccountBalance({
+    recarga: 50.0,
+    descricao: 'Recarga via PIX teste'
+  });
+
+  assert.equal(saldoAposRecarga.currentBalance, 200.0);
+  assert.equal(saldoAposRecarga.recargas.length > 0, true);
+  assert.equal(saldoAposRecarga.recargas[0].valor, 50.0);
+
+  // 3. Simular saldo baixo (< alertThreshold de 40.0)
+  const saldoBaixo = await metaAdsService.updateAdAccountBalance({
+    novoSaldo: 35.0,
+    descricao: 'Simulação de saldo baixo'
+  });
+
+  assert.equal(saldoBaixo.currentBalance, 35.0);
+  assert.equal(saldoBaixo.statusBadge, 'warning');
+
+  // 4. Simular saldo zerado ou crítico
+  const saldoZerado = await metaAdsService.updateAdAccountBalance({
+    novoSaldo: 0.0,
+    descricao: 'Simulação de saldo zerado'
+  });
+
+  assert.equal(saldoZerado.currentBalance, 0.0);
+  assert.equal(saldoZerado.statusBadge, 'critical');
+});

@@ -423,3 +423,34 @@ export interface BenchmarkPrecoProduto {
   ultimaPostagem?: string;
   ultimoLink?: string;
 }
+
+export interface MetaRecargaItem {
+  id: number;
+  valor: number;
+  descricao: string;
+  saldo_resultante: number;
+  data_recarga: string;
+}
+
+export interface MetaAdBalanceInfo {
+  ok: boolean;
+  accountName: string;
+  accountId: string;
+  currency: string;
+  accountStatus: number;
+  accountStatusText: string;
+  currentBalance: number;
+  apiBalance: number;
+  manualBalance: number;
+  spendCap: number;
+  amountSpent: number;
+  fundingSource: string;
+  statusBadge: 'healthy' | 'warning' | 'critical';
+  alertThreshold: number;
+  lastUpdated: string;
+  source: 'api' | 'manual' | 'hybrid';
+  mode: 'hybrid' | 'auto' | 'manual';
+  recargas: MetaRecargaItem[];
+  error?: string;
+}
+

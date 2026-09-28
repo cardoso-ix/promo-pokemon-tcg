@@ -330,4 +330,21 @@ O painel de Inteligência de Afiliados (`meli-affiliate.service.ts` e `MeliAfili
 * **Regras de Não-Falsificação de Dados:**
   - Remoção de qualquer fallback artificial ou estimativas fictícias: se a sessão expirar ou o dia não possuir pedidos registrados, o sistema relata estritamente os valores reais auditáveis (`0,00` ou dados confirmados) com alerta visual no painel.
 
+---
 
+## 9. Módulo de Caixa & Gestão de Recargas Meta Ads (Híbrido)
+
+Para permitir acompanhamento em tempo real da verba restante disponível para anúncios (fundos pré-pagos, saldo em conta e limite de crédito), o sistema conta com o módulo híbrido de Saldo de Caixa:
+
+* **Rotas da API:**
+  - `GET /api/integrations/meta/balance`: Consulta saldo atual da conta de anúncios, status da conta na Meta (1 = Ativa, etc.), moeda (`BRL`), limite de gastos (`spend_cap`), total gasto histórico (`amount_spent`), forma de pagamento / fundos (`funding_source_details`), status badge (`healthy`, `warning`, `critical`), limiar de alerta e histórico recente de recargas.
+  - `POST /api/integrations/meta/balance`: Permite adicionar recarga de verba (soma ao caixa atual), definir saldo exato do Gerenciador de Anúncios, alterar limite de alerta de saldo baixo (default: R$ 50,00) ou selecionar o modo de operação (`hybrid`, `auto`, `manual`).
+
+* **Modelagem no SQLite (`meta_ad_recargas` e `configs`):**
+  - Tabela `meta_ad_recargas`: Armazena histórico cronológico de depósitos (PIX, boleto, cartão) com `id`, `valor`, `descricao`, `saldo_resultante` e `data_recarga`.
+  - Configurações persistidas: `meta_ad_balance_manual`, `meta_ad_balance_mode`, `meta_ad_alert_threshold`, `meta_ad_balance_last_sync` e `meta_ad_balance_api_cached`.
+
+* **Regras de Negócio e Indicadores:**
+  - **Saldo Saudável (🟢):** Saldo $\ge$ Limiar configurado (ex: R$ 50,00).
+  - **Saldo Baixo (🟡):** Saldo $<$ Limiar configurado, recomendando nova recarga preventiva.
+  - **Recarga Urgente (🔴):** Saldo $\le$ R$ 0,00 ou conta desativada na Meta.

@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Printer,
-  ShieldCheck
+  ShieldCheck,
+  Wallet
 } from 'lucide-react';
 import {
   BarChart,
@@ -25,7 +26,8 @@ import {
 } from 'recharts';
 import type {
   BalancoFinanceiro,
-  LancamentoDiario
+  LancamentoDiario,
+  MetaAdBalanceInfo
 } from '../types/index.ts';
 import { api } from '../services/api.ts';
 
@@ -41,6 +43,7 @@ export const FinancasView: React.FC = () => {
   const [balanco, setBalanco] = useState<BalancoFinanceiro | null>(null);
   const [lancamentos, setLancamentos] = useState<LancamentoDiario[]>([]);
   const [carregandoDRE, setCarregandoDRE] = useState(false);
+  const [metaBalance, setMetaBalance] = useState<MetaAdBalanceInfo | null>(null);
 
   // Filtros de Período Financeiro (Dia / Semana / Mês)
   const [periodoFiltro, setPeriodoFiltro] = useState<'mes' | 'semana' | 'dia' | 'todos'>('mes');
@@ -67,6 +70,17 @@ export const FinancasView: React.FC = () => {
     setTimeout(() => setFeedback(null), 4000);
   };
 
+  const carregarMetaBalance = async () => {
+    try {
+      const res = await api.getMetaBalance();
+      if (res && res.data) {
+        setMetaBalance(res.data);
+      }
+    } catch {
+      // Silencioso
+    }
+  };
+
   const abrirRelatorioExecutivo = async () => {
     setShowRelatorioMensalModal(true);
     setCarregandoRelatorio(true);
@@ -82,6 +96,7 @@ export const FinancasView: React.FC = () => {
 
   useEffect(() => {
     carregarMeses();
+    carregarMetaBalance();
   }, []);
 
   useEffect(() => {
@@ -398,7 +413,7 @@ export const FinancasView: React.FC = () => {
 
       <div className="space-y-6">
           {/* Grid de KPIs do DRE Mensal */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {/* Card 1: Lucro Bruto / Comissões Mercado Livre */}
             <div className="glass-panel rounded-2xl p-5 border border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 to-transparent">
               <span className="text-[11px] text-emerald-400 uppercase tracking-wider font-bold">
@@ -471,6 +486,35 @@ export const FinancasView: React.FC = () => {
               </div>
               <span className="text-[11px] text-slate-400 mt-1 inline-block">
                 Retirada livre (30%): R$ {formatarMoeda(kpisDRE.lucroDisponivel)}
+              </span>
+            </div>
+
+            {/* Card 5: Caixa Meta Ads (Saldo Disponível) */}
+            <div className="glass-panel rounded-2xl p-5 border border-emerald-500/30 bg-gradient-to-br from-teal-950/25 to-slate-900">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-teal-300 uppercase tracking-wider font-bold flex items-center gap-1.5">
+                  <Wallet className="w-3.5 h-3.5 text-teal-400" />
+                  Caixa Meta Ads
+                </span>
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    metaBalance?.statusBadge === 'healthy'
+                      ? 'bg-emerald-400'
+                      : metaBalance?.statusBadge === 'warning'
+                      ? 'bg-amber-400'
+                      : 'bg-red-400 animate-pulse'
+                  }`}
+                />
+              </div>
+              <div className="text-2xl font-heading font-extrabold text-teal-300 mt-1">
+                R$ {formatarMoeda(metaBalance?.currentBalance ?? 0)}
+              </div>
+              <span className="text-[11px] text-slate-400 mt-1 inline-block">
+                {metaBalance?.statusBadge === 'healthy'
+                  ? 'Fundo de tráfego saudável'
+                  : metaBalance?.statusBadge === 'warning'
+                  ? 'Atenção: saldo baixo'
+                  : 'Recarga urgente necessária'}
               </span>
             </div>
           </div>

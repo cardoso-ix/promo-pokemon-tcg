@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import { getAnalyticsDb } from './db.js';
 import { integrationTokens, metaAdInsights } from './schema.js';
 import { encryptToken, decryptToken } from './security.js';
-import { getConfig, setConfig, saveMetaInsightSqlite } from '../db/database.js';
+import { getConfig, setConfig, saveMetaInsightSqlite, salvarRecargaMeta, listarRecargasMeta, getMetaTotalSpendDesde, MetaRecargaItem } from '../db/database.js';
 
 const GRAPH_API_BASE = 'https://graph.facebook.com/v20.0';
 
@@ -333,6 +333,221 @@ export class MetaAdsIntegrationService {
     console.log(`[Meta Ads Service] Sincronização concluída: ${totalSincronizados} registros diários persistidos no período ${since} a ${until}.`);
     return { totalSincronizados, period: { since, until } };
   }
+
+  /**
+   * Obtém informações detalhadas de Saldo de Caixa e Limites da Conta de Anúncios Meta Ads
+   */
+  async getAdAccountBalance(customAccountId?: string): Promise<MetaAdAccountBalanceInfo> {
+    const manualBalance = parseFloat(getConfig('meta_ad_balance_manual', '0.00')) || 0;
+    const mode = (getConfig('meta_ad_balance_mode', 'hybrid') as 'hybrid' | 'auto' | 'manual') || 'hybrid';
+    const alertThreshold = parseFloat(getConfig('meta_ad_alert_threshold', '50.00')) || 50;
+    const cachedApiBalance = parseFloat(getConfig('meta_ad_balance_api_cached', '0.00')) || 0;
+    const recargas = listarRecargasMeta(10);
+    const lastSync = getConfig('meta_ad_balance_last_sync', '') || new Date().toISOString();
+
+    let accountName = 'Conta Meta Ads';
+    let accountId = '';
+    let currency = 'BRL';
+    let accountStatus = 1;
+    let accountStatusText = 'Ativa';
+    let apiBalance = cachedApiBalance;
+    let spendCap = 0;
+    let amountSpent = 0;
+    let fundingSource = 'Saldo Pré-pago / Cartão';
+    let source: 'api' | 'manual' | 'hybrid' = mode === 'manual' ? 'manual' : 'hybrid';
+    let apiSuccess = false;
+    let errorMsg: string | undefined;
+
+    try {
+      const config = await this.getConfigStatus();
+      accountId = customAccountId || config.accountId || this.adAccountId || process.env.META_AD_ACCOUNT_ID || '';
+
+      if (config.configured && accountId) {
+        const token = await this.getValidAccessToken();
+        const formattedActId = this.formatAccountId(accountId);
+
+        const fields = [
+          'name',
+          'account_status',
+          'balance',
+          'currency',
+          'amount_spent',
+          'spend_cap',
+          'funding_source_details',
+          'min_daily_budget'
+        ].join(',');
+
+        const res = await fetch(`${GRAPH_API_BASE}/${formattedActId}?fields=${fields}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (res.ok) {
+          const json = await res.json() as any;
+          apiSuccess = true;
+          accountName = json.name || accountName;
+          currency = json.currency || currency;
+          accountStatus = Number(json.account_status) || 1;
+
+          // Mapeamento oficial de status da Meta
+          switch (accountStatus) {
+            case 1: accountStatusText = 'Ativa'; break;
+            case 2: accountStatusText = 'Desativada'; break;
+            case 3: accountStatusText = 'Pendente de Liquidação'; break;
+            case 7: accountStatusText = 'Em Revisão de Risco'; break;
+            case 8: accountStatusText = 'Pendente de Pagamento'; break;
+            case 9: accountStatusText = 'Período de Carência'; break;
+            case 100: case 101: accountStatusText = 'Fechada'; break;
+            default: accountStatusText = `Status ${accountStatus}`; break;
+          }
+
+          // Balance na Meta vem em centavos
+          if (json.balance !== undefined && json.balance !== null) {
+            apiBalance = (parseFloat(json.balance) || 0) / 100;
+            setConfig('meta_ad_balance_api_cached', apiBalance.toFixed(2));
+          }
+
+          if (json.amount_spent !== undefined && json.amount_spent !== null) {
+            amountSpent = (parseFloat(json.amount_spent) || 0) / 100;
+          }
+
+          if (json.spend_cap !== undefined && json.spend_cap !== null) {
+            spendCap = (parseFloat(json.spend_cap) || 0) / 100;
+          }
+
+          if (json.funding_source_details && typeof json.funding_source_details === 'object') {
+            const fs = json.funding_source_details;
+            fundingSource = fs.display_string || (fs.type ? `Tipo ${fs.type}` : fundingSource);
+          }
+
+          setConfig('meta_ad_balance_last_sync', new Date().toISOString());
+        } else {
+          const errJson = await res.json().catch(() => ({})) as any;
+          errorMsg = errJson.error?.message || `Erro HTTP ${res.status} ao consultar conta Meta`;
+        }
+      }
+    } catch (err: unknown) {
+      errorMsg = err instanceof Error ? err.message : String(err);
+    }
+
+    // Cálculo do Saldo Efetivo (Opção 1: Híbrido)
+    const manualDefinido = getConfig('meta_ad_balance_manual_set', 'false') === 'true';
+    let currentBalance = manualBalance;
+
+    if (mode === 'auto') {
+      currentBalance = apiSuccess ? apiBalance : manualBalance;
+      source = 'api';
+    } else if (mode === 'manual') {
+      currentBalance = manualBalance;
+      source = 'manual';
+    } else {
+      // Modo Híbrido (Padrão)
+      if (manualDefinido) {
+        currentBalance = manualBalance;
+        source = 'hybrid';
+      } else if (apiSuccess) {
+        currentBalance = apiBalance;
+        source = 'api';
+      } else {
+        currentBalance = manualBalance;
+        source = 'manual';
+      }
+    }
+
+    // Determinação do Badge de Status
+    let statusBadge: 'healthy' | 'warning' | 'critical' = 'healthy';
+    if (currentBalance <= 0 || accountStatus !== 1) {
+      statusBadge = 'critical';
+    } else if (currentBalance < alertThreshold) {
+      statusBadge = 'warning';
+    }
+
+    return {
+      ok: true,
+      accountName,
+      accountId,
+      currency,
+      accountStatus,
+      accountStatusText,
+      currentBalance: Number(currentBalance.toFixed(2)),
+      apiBalance: Number(apiBalance.toFixed(2)),
+      manualBalance: Number(manualBalance.toFixed(2)),
+      spendCap: Number(spendCap.toFixed(2)),
+      amountSpent: Number(amountSpent.toFixed(2)),
+      fundingSource,
+      statusBadge,
+      alertThreshold,
+      lastUpdated: lastSync,
+      source,
+      mode,
+      recargas,
+      error: errorMsg
+    };
+  }
+
+  /**
+   * Atualiza o Saldo Manual ou Registra uma Nova Recarga
+   */
+  async updateAdAccountBalance(params: {
+    novoSaldo?: number;
+    recarga?: number;
+    descricao?: string;
+    alertThreshold?: number;
+    mode?: 'hybrid' | 'auto' | 'manual';
+  }): Promise<MetaAdAccountBalanceInfo> {
+    const { novoSaldo, recarga, descricao, alertThreshold, mode } = params;
+
+    let saldoAtual = parseFloat(getConfig('meta_ad_balance_manual', '0.00')) || 0;
+
+    if (alertThreshold !== undefined && alertThreshold >= 0) {
+      setConfig('meta_ad_alert_threshold', alertThreshold.toFixed(2));
+    }
+
+    if (mode) {
+      setConfig('meta_ad_balance_mode', mode);
+      if (mode === 'auto') {
+        setConfig('meta_ad_balance_manual_set', 'false');
+      }
+    }
+
+    if (typeof novoSaldo === 'number' && !isNaN(novoSaldo)) {
+      saldoAtual = Math.max(0, novoSaldo);
+      setConfig('meta_ad_balance_manual', saldoAtual.toFixed(2));
+      setConfig('meta_ad_balance_manual_set', 'true');
+      salvarRecargaMeta(0, descricao || `Ajuste manual de saldo para R$ ${saldoAtual.toFixed(2)}`, saldoAtual);
+    } else if (typeof recarga === 'number' && !isNaN(recarga) && recarga > 0) {
+      saldoAtual += recarga;
+      setConfig('meta_ad_balance_manual', saldoAtual.toFixed(2));
+      setConfig('meta_ad_balance_manual_set', 'true');
+      salvarRecargaMeta(recarga, descricao || `Recarga de crédito Meta Ads: R$ ${recarga.toFixed(2)}`, saldoAtual);
+    }
+
+    return this.getAdAccountBalance();
+  }
+}
+
+export interface MetaAdAccountBalanceInfo {
+  ok: boolean;
+  accountName: string;
+  accountId: string;
+  currency: string;
+  accountStatus: number;
+  accountStatusText: string;
+  currentBalance: number;
+  apiBalance: number;
+  manualBalance: number;
+  spendCap: number;
+  amountSpent: number;
+  fundingSource: string;
+  statusBadge: 'healthy' | 'warning' | 'critical';
+  alertThreshold: number;
+  lastUpdated: string;
+  source: 'api' | 'manual' | 'hybrid';
+  mode: 'hybrid' | 'auto' | 'manual';
+  recargas: MetaRecargaItem[];
+  error?: string;
 }
 
 export const metaAdsService = new MetaAdsIntegrationService();
