@@ -53,17 +53,20 @@ chmod +x *.sh
   - **Regras de Postagem & Filtros Anti-Spam:** Toggles visuais para Filtro Exclusivo Pokémon TCG Copag, Somente Mercado Livre, Cooldown anti-duplicidade (minutos), Teto máximo de postagens por hora, Atraso máximo tolerável e Delay entre envios.
   - **Limpeza de Concorrentes:** Caixa multilinhas para raspar arrobas e menções indesejadas (ex: `@rasgabooster.tcg`, `#rasgaboot`).
   - **🌅 Mensagem Diária de Abertura & Seletor de Modelos:**
-    - Alternância visual instantânea entre os 4 templates profissionais + Modo **Rotação Automática Diária**.
-    - Suporte a personalização de texto livre com interpolação de `{dia_semana}`.
-    - Prévia ao vivo da mensagem formatada no dia da semana atual de Brasília.
-    - Botão **Testar Envio Agora** com feedback imediato de disparo para os grupos de destino.
+    - Alternância visual instantânea entre os 4 templates profissionais + Modo **Rotação Automática Diária** + Modo **Mensagem Personalizada**.
+    - Suporte a personalização de texto livre com interpolação dinâmica de `{dia_semana}`.
+    - **Isolamento de Polling (`configDirty`):** Previne qualquer reversão involuntária da mensagem selecionada ao editar na aba de Ajustes.
+    - **Auto-Save Inteligente:** Ao clicar em *"Testar Envio Agora"*, o sistema salva automaticamente o modelo selecionado no banco de dados antes do disparo, garantindo que o WhatsApp receba exatamente a mensagem ativa.
+    - Botão dedicado **"Salvar Este Modelo"** diretamente no card para persistência instantânea.
+    - Prévia ao vivo com balão autêntico de WhatsApp iniciando no topo sem cortes descompensados.
   - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script.
-  - **📈 Base de Preços TCG (Planilha Nativa Integrada):**
-    - Armazenamento nativo contínuo no SQLite (`historico_produtos_valores`) de todas as ofertas postadas.
-    - Visão consolidada em tempo real com **Menor Preço Postado 🟢 (mínimo histórico)** e **Maior Preço Postado 🔴 (teto histórico)**, preço médio, último valor e oscilação percentual.
-    - **Radar de Precificação no Gerador de Anúncios:** Balizador visual instantâneo que indica o menor e maior preço já praticado no produto para guiar a precificação segura de novas publicações manuais, com botões para aplicar direto no formulário.
-    - Extrato cronológico detalhado com linha do tempo de cada postagem e botão de sincronização retroativa a partir dos logs passados.
-- **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre, Shopee ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, radar de precificação histórica integrada, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
+  - **📈 Base de Preços TCG & Motor Canônico Inteligente (Planilha Nativa Integrada):**
+    - **Deduplicação Canônica Automática:** Motor TCG que identifica o formato (*Booster Box*, *ETB*, *Blister Triplo*, *Blister Quádruplo*, *Lata*, *Deck*, *Fichário*) e a expansão oficial (*Escuridão Absoluta/ME05*, *Evoluções Prismáticas/SV8.5*, *Faíscas Volumosas*, *Coroa Estelar*, *151*, *30 Anos*, etc.).
+    - **Unificação de Variações de Vendedores:** Agrupa títulos diferentes para o mesmo produto em uma **única linha canônica** no SQLite (`chave_canonica`), eliminando dezenas de duplicidades redundantes.
+    - **Métricas Consolidadas:** Identifica o **Menor Preço Real 🟢 (mínimo histórico consolidado)** e **Maior Preço Real 🔴 (teto histórico)** entre todas as postagens combinadas, preço médio e soma de ocorrências.
+    - **Radar de Precificação Canônico no Gerador de Anúncios:** Balizador instantâneo que busca primeiro pela chave canônica do produto, permitindo sugerir na hora o preço ideal e menor valor já postado para guiar novas ofertas manuais.
+    - Extrato cronológico detalhado com linha do tempo de todas as postagens unificadas daquele produto e sincronização retroativa inteligente.
+- **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre, Shopee ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, radar de precificação canônica integrada, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
 - **🔄 Botão de Sincronização Unificada:** Sincronização instantânea das métricas do Meta Ads (Graph API v20.0) e Mercado Livre Afiliados com recálculo em tempo real de ROAS, comissões do dia e lucro líquido.
 
 ---

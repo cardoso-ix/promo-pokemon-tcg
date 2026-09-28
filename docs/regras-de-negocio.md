@@ -130,3 +130,67 @@ O sistema conta com um agendador autônomo e de alta precisão para engajar e da
    - **Simulador Visual do WhatsApp**: balão com pré-visualização ao vivo renderizando a data do dia em tempo real.
    - **Salvar com 1 Clique**: botão direto no card para persistir instantaneamente sem precisar rolar a página.
    - **Disparo de Teste**: botão **"🚀 Testar Envio Agora no WhatsApp"** para homologação em tempo real.
+
+---
+
+## 6. Motor Canônico TCG Inteligente & Deduplicação de Produtos
+
+### 6.1. O Problema das Variações de Títulos de Vendedores
+Em grupos de WhatsApp e no Mercado Livre, um mesmo produto recebe dezenas de títulos diferentes por conta de cada vendedor:
+- Vendedor A: *"📦 🇧🇷 Box Display ME05 Escuridão Absoluta Copag"*
+- Vendedor B: *"Box Booster Display Escuridao Absoluta Oficial Lacrada"*
+- Vendedor C: *"Display Pokémon Escuridao Absoluta 36 Boosters"*
+
+Sem canonicalização, o sistema gerava 3 linhas separadas na tabela, dividindo as postagens e impossibilitando calcular com precisão o verdadeiro menor e maior preço daquele item.
+
+### 6.2. Arquitetura do Motor Canônico (`extrairIdentidadeCanonicaTCG`)
+O motor canônico analisa o título em duas dimensões determinísticas:
+
+#### A. Identificação do Formato TCG (Prioridade Decrescente):
+1. `blister_triplo`: Blister Triplo / 3 Boosters / Tripack.
+2. `blister_quad`: Blister Quádruplo / Quadpack / 4 Boosters.
+3. `booster_box`: Booster Box / Display 36 / Box Booster / Caixa Display.
+4. `etb`: Elite Trainer Box / ETB / Caixa de Treinador Avançado.
+5. `bundle_poster`: Coleção Pôster / Poster Collection.
+6. `colecao_especial`: Coleção Especial / Coleção Ilustração Especial / UPC / Caixa Premium.
+7. `blister_unitario`: Blister Unitário / Booster Avulso / 1 Booster.
+8. `lata`: Lata Colecionável / Tin / Mini Tin.
+9. `fichario`: Fichário / Álbum / Pasta de Cartas.
+10. `deck`: Deck de Batalha / Battle Deck / Baralho.
+11. `bundle`: Booster Bundle / Combo Especial.
+12. `acessorio_sleeves`: Sleeves Protetores / Shields.
+13. `acessorio_toploader`: Toploaders Protetores.
+
+#### B. Identificação da Coleção / Expansão Oficial:
+- `escuridao_absoluta`: Escuridão Absoluta / ME05 / Darkness Ablaze.
+- `evolucoes_prismaticas`: Evoluções Prismáticas / SV8.5 / Prismatic Evolutions.
+- `faiscas_volumosas`: Faíscas Volumosas / SV08 / Surging Sparks.
+- `coroa_estelar`: Coroa Estelar / SV07 / Stellar Crown.
+- `mascaras_do_crepusculo`: Máscaras do Crepúsculo / SV06 / Twilight Masquerade.
+- `forca_temporal`: Força Temporal / SV05 / Temporal Forces.
+- `destinos_de_paldea`: Destinos de Paldea / SV04.5 / Paldean Fates.
+- `fenda_paradoxal`: Fenda Paradoxal / SV04 / Paradox Rift.
+- `151`: Pokémon 151 / SV03.5.
+- `chamas_obsidianas`: Chamas Obsidianas / SV03 / Obsidian Flames.
+- `evolucoes_em_paldea`: Evoluções em Paldea / SV02 / Paldea Evolved.
+- `escarlate_e_violeta_base`: Escarlate e Violeta Base / SV01.
+- `30_anos`: Coleção 30 Anos.
+- `celebracoes_25`: Celebrações 25 Anos.
+- E coleções clássicas SWSH (Cênit dos Coroados, Tempestade Prateada, Origem Perdida, Astros Reluzentes, Golpe Fusão, Céus em Evolução, etc.).
+
+### 6.3. Composição da Chave Canônica & Regra de Isolamento
+1. **Regra de Ouro (Isolamento de Formato):** Uma *Booster Box (Display 36)* **nunca** se mistura com um *Blister Triplo* ou *ETB*, pois representam tickets de preço totalmente distintos (~R$ 300 vs ~R$ 40 vs ~R$ 350).
+2. **Chave Determinística:** Se formato e coleção forem detectados:
+   `chave_canonica = ${formatoId}__${colecaoId}`
+   Exemplo: `booster_box__escuridao_absoluta`, `blister_triplo__escuridao_absoluta`.
+3. **Nome Padronizado Exibido:**
+   `Pokémon TCG: ${formatoNome} - ${colecaoNome}`
+   Exemplo: *"Pokémon TCG: Booster Box (Display 36) - Escuridão Absoluta"*.
+
+### 6.4. Agrupamento e Consolidação no Banco de Dados
+- **Consulta Consolidada:** `GROUP BY COALESCE(h.chave_canonica, h.produto_limpo)`.
+- **Menor Preço:** `MIN(h.preco_por)` entre todas as publicações agrupadas.
+- **Maior Preço:** `MAX(h.preco_por)` histórico.
+- **Preço Médio:** `ROUND(AVG(h.preco_por), 2)`.
+- **Total de Postagens:** `COUNT(*)` somando todas as variações de títulos consolidadas.
+- **Radar de Precificação Canônico no Gerador:** Busca primeiro por correspondência exata de `chave_canonica`. Qualquer título colado no Gerador encontra imediatamente o histórico canônico consolidado da família de produto.

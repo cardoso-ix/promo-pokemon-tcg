@@ -122,3 +122,26 @@ Balanço financeiro diário para cálculo contábil e DRE:
 - `id`, `data_lancamento` (`YYYY-MM-DD`), `mes_referencia` (`YYYY-MM`), `gasto_campanhas`, `lucro_bruto`, `descricao`, `categoria`, `criado_em`, `atualizado_em`.
 - *Regra Contábil:* `lucro_liquido = lucro_bruto - gasto_campanhas`.
 - *Regra dos 70%:* `reinvestimento_campanhas = lucro_liquido * 0.70` e `distribuicao_socios = lucro_liquido * 0.30` (se lucro > 0).
+
+### 3.14. `historico_produtos_valores` (Base de Preços TCG & Canonicalização)
+Tabela analítica nativa integrada que registra o histórico completo de preços de todos os produtos postados no WhatsApp e baliza a precificação inteligente no Gerador de Anúncios:
+- `id`: Chave primária autoincremento.
+- `produto`: Título original postado pelo vendedor ou gerado.
+- `produto_limpo`: Versão normalizada em minúsculas e sem acentos para indexação textual.
+- `chave_canonica`: Identificador determinístico canônico gerado pelo Motor Canônico TCG (`${formatoId}__${colecaoId}`), unificando variações de títulos de vendedores para o mesmo produto em uma linha única.
+- `preco_por`: Valor promocional praticado (R$).
+- `preco_de`: Valor original de referência (R$, opcional).
+- `preco_unitario`: Preço calculado por booster individual quando detectado (R$, opcional).
+- `link`: Link afiliado gerado (`meli.la`).
+- `grupo`: Nome do grupo onde foi postado.
+- `origem`: Origem da publicação (`auto` para replicador autônomo, `manual` para gerador, `migracao_logs` para sincronização retroativa).
+- `criado_em`: Data e hora do registro no fuso de Brasília.
+
+**Índices de Performance:**
+- `idx_hist_prod_canonico ON historico_produtos_valores(chave_canonica)`: Acelera o agrupamento canônico e radar de benchmark.
+- `idx_hist_prod_limpo ON historico_produtos_valores(produto_limpo)`: Busca textual por nome.
+- `idx_hist_prod_data ON historico_produtos_valores(criado_em)`: Ordenação cronológica de extratos e filtros temporais.
+- `idx_hist_prod_preco ON historico_produtos_valores(preco_por)`: Busca do menor e maior preço histórico.
+
+**Lógica de Agrupamento SQL:**
+A visão consolidada utiliza `GROUP BY COALESCE(h.chave_canonica, h.produto_limpo)` para garantir que todas as ocorrências de um mesmo produto fiquem em linha única, com `MIN(h.preco_por)` como Menor Preço real, `MAX(h.preco_por)` como Maior Preço e `COUNT(*)` como total de postagens combinadas.
