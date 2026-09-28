@@ -420,6 +420,16 @@ export class MetaAdsIntegrationService {
           if (json.funding_source_details && typeof json.funding_source_details === 'object') {
             const fs = json.funding_source_details;
             fundingSource = fs.display_string || (fs.type ? `Tipo ${fs.type}` : fundingSource);
+
+            // Se for conta pré-paga (Boleto/PIX), a Meta expõe os fundos restantes em display_string (ex: Available Balance (R$206.40 BRL))
+            const matchSaldoDisponivel = /(?:available\s*balance|saldo\s*dispon[ií]vel)[^\d]*([0-9]+(?:[.,][0-9]{2})?)/i.exec(fundingSource);
+            if (matchSaldoDisponivel && matchSaldoDisponivel[1]) {
+              const valorParsed = parseFloat(matchSaldoDisponivel[1].replace(',', '.'));
+              if (!isNaN(valorParsed) && valorParsed > 0) {
+                apiBalance = valorParsed;
+                setConfig('meta_ad_balance_api_cached', apiBalance.toFixed(2));
+              }
+            }
           }
 
           setConfig('meta_ad_balance_last_sync', new Date().toISOString());
