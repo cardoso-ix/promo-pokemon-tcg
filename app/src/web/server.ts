@@ -405,9 +405,15 @@ export async function createServer() {
     Body: { id?: number; nome: string; ativa?: boolean; ativo?: boolean; origens?: string[]; destinos?: string[] };
   }>('/api/rotas', async (req, reply) => {
     const { nome, ativa, ativo, origens, destinos, id } = req.body;
-    if (!nome) return reply.status(400).send({ error: 'Nome da rota é obrigatório' });
+    if (!nome || !String(nome).trim()) return reply.status(400).send({ error: 'Nome da rota é obrigatório' });
     const isAtiva = ativa !== undefined ? Boolean(ativa) : (ativo !== undefined ? Boolean(ativo) : true);
-    const rotaId = saveRota({ id, nome, ativa: isAtiva, origens: origens || [], destinos: destinos || [] });
+    const cleanOrigens = Array.isArray(origens)
+      ? Array.from(new Set(origens.map(o => String(o || '').trim()).filter(Boolean)))
+      : [];
+    const cleanDestinos = Array.isArray(destinos)
+      ? Array.from(new Set(destinos.map(d => String(d || '').trim()).filter(Boolean)))
+      : [];
+    const rotaId = saveRota({ id, nome: String(nome).trim(), ativa: isAtiva, origens: cleanOrigens, destinos: cleanDestinos });
     broadcast('rotas_updated', getAllRotas());
     return { ok: true, id: rotaId };
   });
@@ -432,14 +438,25 @@ export async function createServer() {
     return { ok: true };
   });
 
-  // API REST: Grupos e Chats
+  // API REST: Grupos e Chats (compatível com id e chat_id)
   app.get('/api/chats', async () => {
-    return getCachedChats();
+    const chats = getCachedChats();
+    return chats.map(c => ({
+      id: c.chat_id,
+      chat_id: c.chat_id,
+      nome: c.nome,
+      is_group: c.is_group
+    }));
   });
 
   app.post('/api/chats/sync', async () => {
     await whatsAppManager.syncGroups(true);
-    const chats = getCachedChats();
+    const chats = getCachedChats().map(c => ({
+      id: c.chat_id,
+      chat_id: c.chat_id,
+      nome: c.nome,
+      is_group: c.is_group
+    }));
     broadcast('chats_updated', chats);
     return { ok: true, total: chats.length, chats };
   });

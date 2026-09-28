@@ -354,12 +354,19 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
     carregarChats();
   };
 
+  const getChatNomePorId = (chatId: string) => {
+    const c = chatsWhatsapp.find(item => item.id === chatId || (item as any).chat_id === chatId);
+    return c?.nome || chatId;
+  };
+
   const handleEditarRota = (r: RotaGrupo) => {
     setRotaIdEditando(r.id);
     setRotaNome(r.nome || r.origem_nome || `Rota #${r.id}`);
     setRotaAtiva(Boolean(r.ativo ?? r.ativa));
-    const origens = Array.isArray(r.origens) && r.origens.length > 0 ? r.origens : (r.origem_id ? [r.origem_id] : []);
-    const destinos = Array.isArray(r.destinos) && r.destinos.length > 0 ? r.destinos : (r.destino_id ? [r.destino_id] : []);
+    const rawOrigens = Array.isArray(r.origens) && r.origens.length > 0 ? r.origens : (r.origem_id ? [r.origem_id] : []);
+    const rawDestinos = Array.isArray(r.destinos) && r.destinos.length > 0 ? r.destinos : (r.destino_id ? [r.destino_id] : []);
+    const origens = Array.from(new Set(rawOrigens.map(o => String(o || '').trim()).filter(Boolean)));
+    const destinos = Array.from(new Set(rawDestinos.map(d => String(d || '').trim()).filter(Boolean)));
     setRotaOrigens(origens);
     setRotaDestinos(destinos);
     setInputOrigemManual('');
@@ -372,18 +379,21 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
 
   const handleSalvarRota = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rotaNome.trim()) return alert('Informe o nome da rota.');
-    if (rotaOrigens.length === 0) return alert('Selecione ao menos 1 grupo de Origem (onde o robô monitora ofertas).');
-    if (rotaDestinos.length === 0) return alert('Selecione ao menos 1 grupo de Destino (onde o robô envia as ofertas).');
+    const nomeLimpo = rotaNome.trim();
+    if (!nomeLimpo) return alert('Informe o nome da rota.');
+    const origensLimpas = Array.from(new Set(rotaOrigens.map(o => String(o || '').trim()).filter(Boolean)));
+    const destinosLimpos = Array.from(new Set(rotaDestinos.map(d => String(d || '').trim()).filter(Boolean)));
+    if (origensLimpas.length === 0) return alert('Selecione ao menos 1 grupo de Origem (onde o robô monitora ofertas).');
+    if (destinosLimpos.length === 0) return alert('Selecione ao menos 1 grupo de Destino (onde o robô envia as ofertas).');
 
     setSalvandoRota(true);
     try {
       await api.saveRota({
         id: rotaIdEditando ?? undefined,
-        nome: rotaNome.trim(),
+        nome: nomeLimpo,
         ativa: rotaAtiva,
-        origens: rotaOrigens,
-        destinos: rotaDestinos
+        origens: origensLimpas,
+        destinos: destinosLimpos
       });
       alert(rotaIdEditando ? 'Rota atualizada com sucesso!' : 'Nova rota criada com sucesso!');
       setModalRotaAberto(false);
@@ -2126,9 +2136,9 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
       {/* Modal de Criação / Edição de Rota (Opção 1) */}
       {modalRotaAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="glass-panel w-full max-w-3xl rounded-2xl border border-white/10 p-6 space-y-5 bg-slate-900/95 shadow-2xl flex flex-col max-h-[90vh]">
-            {/* Cabeçalho do Modal */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div className="glass-panel w-full max-w-4xl rounded-2xl border border-white/10 p-6 bg-slate-900/95 shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Cabeçalho do Modal (Fixo) */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-4 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
                   <Layers className="w-5 h-5" />
@@ -2143,6 +2153,7 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setModalRotaAberto(false)}
                 className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-colors"
               >
@@ -2150,259 +2161,363 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
               </button>
             </div>
 
-            {/* Conteúdo Rolável */}
-            <form onSubmit={handleSalvarRota} className="space-y-5 overflow-y-auto pr-1 flex-1">
-              {/* Linha 1: Nome da Rota e Switch Ativa */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2 space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-300">Nome da Rota</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Oficial, Ofertas VIP, Grupo Teste..."
-                    value={rotaNome}
-                    onChange={e => setRotaNome(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500/50"
-                    required
-                  />
+            {/* Formulário com Miolo Rolável e Rodapé Fixo */}
+            <form onSubmit={handleSalvarRota} className="flex flex-col flex-1 min-h-0 pt-4">
+              <div className="flex-1 overflow-y-auto pr-1 sm:pr-2 space-y-5 min-h-0">
+                {/* Linha 1: Nome da Rota e Switch Ativa */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">Nome da Rota</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Oficial, Ofertas VIP, Grupo Teste..."
+                      value={rotaNome}
+                      onChange={e => setRotaNome(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-cyan-500/50"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 flex flex-col justify-end">
+                    <label className="text-xs font-semibold text-slate-300">Status da Rota</label>
+                    <button
+                      type="button"
+                      onClick={() => setRotaAtiva(!rotaAtiva)}
+                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all ${
+                        rotaAtiva
+                          ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                          : 'bg-slate-800 border-white/10 text-slate-400'
+                      }`}
+                    >
+                      <span>{rotaAtiva ? '✓ Rota Ativa' : '○ Rota Pausada'}</span>
+                      {rotaAtiva ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+                    </button>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5 flex flex-col justify-end">
-                  <label className="text-xs font-semibold text-slate-300">Status da Rota</label>
-                  <button
-                    type="button"
-                    onClick={() => setRotaAtiva(!rotaAtiva)}
-                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all ${
-                      rotaAtiva
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                        : 'bg-slate-800 border-white/10 text-slate-400'
-                    }`}
-                  >
-                    <span>{rotaAtiva ? '✓ Rota Ativa' : '○ Rota Pausada'}</span>
-                    {rotaAtiva ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-                  </button>
+                {/* Grid: 2 Colunas (Origens vs Destinos) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Coluna 1: Grupos de Origem */}
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-cyan-500/20 space-y-3 flex flex-col">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+                          <Droplets className="w-3.5 h-3.5" />
+                          1. Grupos de Origem
+                        </h4>
+                        <p className="text-[11px] text-slate-400">O robô copia ofertas daqui</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                        {rotaOrigens.length} selecionado(s)
+                      </span>
+                    </div>
+
+                    {/* Chips de Grupos Selecionados (Permite visualizar e desmarcar na hora) */}
+                    {rotaOrigens.length > 0 ? (
+                      <div className="p-2.5 rounded-lg bg-cyan-950/30 border border-cyan-500/20 space-y-2">
+                        <div className="flex items-center justify-between text-[10px] text-cyan-300 font-semibold">
+                          <span>Grupos Ativos ({rotaOrigens.length})</span>
+                          <button
+                            type="button"
+                            onClick={() => setRotaOrigens([])}
+                            className="text-[10px] text-red-400 hover:text-red-300 underline cursor-pointer"
+                          >
+                            Remover todos
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                          {rotaOrigens.map(id => (
+                            <span
+                              key={id}
+                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-cyan-500/20 text-cyan-200 border border-cyan-500/40 text-[11px]"
+                            >
+                              <span className="max-w-[160px] truncate font-medium" title={id}>
+                                {getChatNomePorId(id)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setRotaOrigens(rotaOrigens.filter(x => x !== id))}
+                                className="hover:bg-cyan-500/30 rounded p-0.5 text-cyan-400 hover:text-white"
+                                title="Desmarcar grupo"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2 rounded-lg bg-white/[0.01] border border-dashed border-white/10 text-center text-[11px] text-slate-500">
+                        Nenhum grupo de origem selecionado
+                      </div>
+                    )}
+
+                    {/* Busca e Atualizar */}
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Buscar grupo..."
+                          value={filtroChatOrigem}
+                          onChange={e => setFiltroChatOrigem(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={carregarChats}
+                        disabled={carregandoChats}
+                        className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300"
+                        title="Sincronizar grupos do WhatsApp"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${carregandoChats ? 'animate-spin' : ''}`} />
+                      </button>
+                    </div>
+
+                    {/* Lista de Grupos com Checkbox */}
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 flex-1">
+                      {chatsWhatsapp.length === 0 ? (
+                        <p className="text-[11px] text-slate-500 text-center py-4">
+                          {carregandoChats ? 'Carregando grupos...' : 'Nenhum grupo encontrado no cache. Cole o JID abaixo se preferir.'}
+                        </p>
+                      ) : (
+                        chatsWhatsapp
+                          .filter(c => {
+                            const cid = c.id || (c as any).chat_id || '';
+                            return Boolean(cid) && (!filtroChatOrigem || (c.nome || cid).toLowerCase().includes(filtroChatOrigem.toLowerCase()));
+                          })
+                          .sort((a, b) => {
+                            const aId = a.id || (a as any).chat_id || '';
+                            const bId = b.id || (b as any).chat_id || '';
+                            const aSel = rotaOrigens.includes(aId) ? 1 : 0;
+                            const bSel = rotaOrigens.includes(bId) ? 1 : 0;
+                            return bSel - aSel;
+                          })
+                          .map(chat => {
+                            const chatId = chat.id || (chat as any).chat_id;
+                            const isSelected = rotaOrigens.includes(chatId);
+                            return (
+                              <div
+                                key={chatId}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setRotaOrigens(rotaOrigens.filter(id => id !== chatId));
+                                  } else {
+                                    setRotaOrigens([...rotaOrigens, chatId]);
+                                  }
+                                }}
+                                className={`p-2 rounded-lg cursor-pointer transition-all flex items-center justify-between text-xs border ${
+                                  isSelected
+                                    ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-200'
+                                    : 'bg-white/[0.02] border-white/[0.04] text-slate-300 hover:bg-white/[0.05]'
+                                }`}
+                              >
+                                <div className="truncate mr-2">
+                                  <p className="font-semibold truncate">{chat.nome || 'Grupo sem nome'}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono truncate">{chatId}</p>
+                                </div>
+                                <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 transition-colors ${
+                                  isSelected ? 'bg-cyan-500 border-cyan-400 text-slate-950 font-bold' : 'border-white/20'
+                                }`}>
+                                  {isSelected && <Check className="w-3 h-3 text-slate-950 font-bold" />}
+                                </div>
+                              </div>
+                            );
+                          })
+                      )}
+                    </div>
+
+                    {/* Inserir JID Manual */}
+                    <div className="pt-2 border-t border-white/[0.04] flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Ou cole o JID manual (ex: 12036...)"
+                        value={inputOrigemManual}
+                        onChange={e => setInputOrigemManual(e.target.value)}
+                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-[11px] text-white placeholder-slate-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = inputOrigemManual.trim();
+                          if (val && !rotaOrigens.includes(val)) {
+                            setRotaOrigens([...rotaOrigens, val]);
+                            setInputOrigemManual('');
+                          }
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Coluna 2: Grupos de Destino */}
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-purple-500/20 space-y-3 flex flex-col">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                          <Send className="w-3.5 h-3.5" />
+                          2. Grupos de Destino
+                        </h4>
+                        <p className="text-[11px] text-slate-400">O robô envia ofertas convertidas para cá</p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                        {rotaDestinos.length} selecionado(s)
+                      </span>
+                    </div>
+
+                    {/* Chips de Grupos Selecionados (Permite visualizar e desmarcar na hora) */}
+                    {rotaDestinos.length > 0 ? (
+                      <div className="p-2.5 rounded-lg bg-purple-950/30 border border-purple-500/20 space-y-2">
+                        <div className="flex items-center justify-between text-[10px] text-purple-300 font-semibold">
+                          <span>Grupos Ativos ({rotaDestinos.length})</span>
+                          <button
+                            type="button"
+                            onClick={() => setRotaDestinos([])}
+                            className="text-[10px] text-red-400 hover:text-red-300 underline cursor-pointer"
+                          >
+                            Remover todos
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                          {rotaDestinos.map(id => (
+                            <span
+                              key={id}
+                              className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-purple-500/20 text-purple-200 border border-purple-500/40 text-[11px]"
+                            >
+                              <span className="max-w-[160px] truncate font-medium" title={id}>
+                                {getChatNomePorId(id)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setRotaDestinos(rotaDestinos.filter(x => x !== id))}
+                                className="hover:bg-purple-500/30 rounded p-0.5 text-purple-400 hover:text-white"
+                                title="Desmarcar grupo"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2 rounded-lg bg-white/[0.01] border border-dashed border-white/10 text-center text-[11px] text-slate-500">
+                        Nenhum grupo de destino selecionado
+                      </div>
+                    )}
+
+                    {/* Busca e Atualizar */}
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Buscar grupo..."
+                          value={filtroChatDestino}
+                          onChange={e => setFiltroChatDestino(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={carregarChats}
+                        disabled={carregandoChats}
+                        className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300"
+                        title="Sincronizar grupos do WhatsApp"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${carregandoChats ? 'animate-spin' : ''}`} />
+                      </button>
+                    </div>
+
+                    {/* Lista de Grupos com Checkbox */}
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 flex-1">
+                      {chatsWhatsapp.length === 0 ? (
+                        <p className="text-[11px] text-slate-500 text-center py-4">
+                          {carregandoChats ? 'Carregando grupos...' : 'Nenhum grupo encontrado no cache. Cole o JID abaixo se preferir.'}
+                        </p>
+                      ) : (
+                        chatsWhatsapp
+                          .filter(c => {
+                            const cid = c.id || (c as any).chat_id || '';
+                            return Boolean(cid) && (!filtroChatDestino || (c.nome || cid).toLowerCase().includes(filtroChatDestino.toLowerCase()));
+                          })
+                          .sort((a, b) => {
+                            const aId = a.id || (a as any).chat_id || '';
+                            const bId = b.id || (b as any).chat_id || '';
+                            const aSel = rotaDestinos.includes(aId) ? 1 : 0;
+                            const bSel = rotaDestinos.includes(bId) ? 1 : 0;
+                            return bSel - aSel;
+                          })
+                          .map(chat => {
+                            const chatId = chat.id || (chat as any).chat_id;
+                            const isSelected = rotaDestinos.includes(chatId);
+                            return (
+                              <div
+                                key={chatId}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    setRotaDestinos(rotaDestinos.filter(id => id !== chatId));
+                                  } else {
+                                    setRotaDestinos([...rotaDestinos, chatId]);
+                                  }
+                                }}
+                                className={`p-2 rounded-lg cursor-pointer transition-all flex items-center justify-between text-xs border ${
+                                  isSelected
+                                    ? 'bg-purple-500/15 border-purple-500/40 text-purple-200'
+                                    : 'bg-white/[0.02] border-white/[0.04] text-slate-300 hover:bg-white/[0.05]'
+                                }`}
+                              >
+                                <div className="truncate mr-2">
+                                  <p className="font-semibold truncate">{chat.nome || 'Grupo sem nome'}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono truncate">{chatId}</p>
+                                </div>
+                                <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 transition-colors ${
+                                  isSelected ? 'bg-purple-500 border-purple-400 text-white font-bold' : 'border-white/20'
+                                }`}>
+                                  {isSelected && <Check className="w-3 h-3 text-white font-bold" />}
+                                </div>
+                              </div>
+                            );
+                          })
+                      )}
+                    </div>
+
+                    {/* Inserir JID Manual */}
+                    <div className="pt-2 border-t border-white/[0.04] flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Ou cole o JID manual (ex: 12036...)"
+                        value={inputDestinoManual}
+                        onChange={e => setInputDestinoManual(e.target.value)}
+                        className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-[11px] text-white placeholder-slate-500 focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const val = inputDestinoManual.trim();
+                          if (val && !rotaDestinos.includes(val)) {
+                            setRotaDestinos([...rotaDestinos, val]);
+                            setInputDestinoManual('');
+                          }
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-bold"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Grid: 2 Colunas (Origens vs Destinos) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Coluna 1: Grupos de Origem */}
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-cyan-500/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <Droplets className="w-3.5 h-3.5" />
-                        1. Grupos de Origem
-                      </h4>
-                      <p className="text-[11px] text-slate-400">O robô copia ofertas daqui</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                      {rotaOrigens.length} selecionado(s)
-                    </span>
-                  </div>
-
-                  {/* Busca e Atualizar */}
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Buscar grupo..."
-                        value={filtroChatOrigem}
-                        onChange={e => setFiltroChatOrigem(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={carregarChats}
-                      disabled={carregandoChats}
-                      className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300"
-                      title="Sincronizar grupos do WhatsApp"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${carregandoChats ? 'animate-spin' : ''}`} />
-                    </button>
-                  </div>
-
-                  {/* Lista de Grupos com Checkbox */}
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                    {chatsWhatsapp.length === 0 ? (
-                      <p className="text-[11px] text-slate-500 text-center py-4">
-                        {carregandoChats ? 'Carregando grupos...' : 'Nenhum grupo encontrado no cache. Cole o JID abaixo se preferir.'}
-                      </p>
-                    ) : (
-                      chatsWhatsapp
-                        .filter(c => !filtroChatOrigem || (c.nome || c.id).toLowerCase().includes(filtroChatOrigem.toLowerCase()))
-                        .map(chat => {
-                          const isSelected = rotaOrigens.includes(chat.id);
-                          return (
-                            <div
-                              key={chat.id}
-                              onClick={() => {
-                                if (isSelected) {
-                                  setRotaOrigens(rotaOrigens.filter(id => id !== chat.id));
-                                } else {
-                                  setRotaOrigens([...rotaOrigens, chat.id]);
-                                }
-                              }}
-                              className={`p-2 rounded-lg cursor-pointer transition-all flex items-center justify-between text-xs border ${
-                                isSelected
-                                  ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-200'
-                                  : 'bg-white/[0.02] border-white/[0.04] text-slate-300 hover:bg-white/[0.05]'
-                              }`}
-                            >
-                              <div className="truncate mr-2">
-                                <p className="font-semibold truncate">{chat.nome || 'Grupo sem nome'}</p>
-                                <p className="text-[10px] text-slate-500 font-mono truncate">{chat.id}</p>
-                              </div>
-                              <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ${
-                                isSelected ? 'bg-cyan-500 border-cyan-400 text-slate-950 font-bold' : 'border-white/20'
-                              }`}>
-                                {isSelected && <Check className="w-3 h-3" />}
-                              </div>
-                            </div>
-                          );
-                        })
-                    )}
-                  </div>
-
-                  {/* Inserir JID Manual */}
-                  <div className="pt-2 border-t border-white/[0.04] flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Ou cole o JID manual (ex: 12036...)"
-                      value={inputOrigemManual}
-                      onChange={e => setInputOrigemManual(e.target.value)}
-                      className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-[11px] text-white placeholder-slate-500 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const val = inputOrigemManual.trim();
-                        if (val && !rotaOrigens.includes(val)) {
-                          setRotaOrigens([...rotaOrigens, val]);
-                          setInputOrigemManual('');
-                        }
-                      }}
-                      className="px-2.5 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold"
-                    >
-                      + Add
-                    </button>
-                  </div>
-                </div>
-
-                {/* Coluna 2: Grupos de Destino */}
-                <div className="p-4 rounded-xl bg-white/[0.02] border border-purple-500/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <Send className="w-3.5 h-3.5" />
-                        2. Grupos de Destino
-                      </h4>
-                      <p className="text-[11px] text-slate-400">O robô envia ofertas convertidas para cá</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">
-                      {rotaDestinos.length} selecionado(s)
-                    </span>
-                  </div>
-
-                  {/* Busca e Atualizar */}
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Buscar grupo..."
-                        value={filtroChatDestino}
-                        onChange={e => setFiltroChatDestino(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500/50"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={carregarChats}
-                      disabled={carregandoChats}
-                      className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300"
-                      title="Sincronizar grupos do WhatsApp"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${carregandoChats ? 'animate-spin' : ''}`} />
-                    </button>
-                  </div>
-
-                  {/* Lista de Grupos com Checkbox */}
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                    {chatsWhatsapp.length === 0 ? (
-                      <p className="text-[11px] text-slate-500 text-center py-4">
-                        {carregandoChats ? 'Carregando grupos...' : 'Nenhum grupo encontrado no cache. Cole o JID abaixo se preferir.'}
-                      </p>
-                    ) : (
-                      chatsWhatsapp
-                        .filter(c => !filtroChatDestino || (c.nome || c.id).toLowerCase().includes(filtroChatDestino.toLowerCase()))
-                        .map(chat => {
-                          const isSelected = rotaDestinos.includes(chat.id);
-                          return (
-                            <div
-                              key={chat.id}
-                              onClick={() => {
-                                if (isSelected) {
-                                  setRotaDestinos(rotaDestinos.filter(id => id !== chat.id));
-                                } else {
-                                  setRotaDestinos([...rotaDestinos, chat.id]);
-                                }
-                              }}
-                              className={`p-2 rounded-lg cursor-pointer transition-all flex items-center justify-between text-xs border ${
-                                isSelected
-                                  ? 'bg-purple-500/15 border-purple-500/40 text-purple-200'
-                                  : 'bg-white/[0.02] border-white/[0.04] text-slate-300 hover:bg-white/[0.05]'
-                              }`}
-                            >
-                              <div className="truncate mr-2">
-                                <p className="font-semibold truncate">{chat.nome || 'Grupo sem nome'}</p>
-                                <p className="text-[10px] text-slate-500 font-mono truncate">{chat.id}</p>
-                              </div>
-                              <div className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 ${
-                                isSelected ? 'bg-purple-500 border-purple-400 text-white font-bold' : 'border-white/20'
-                              }`}>
-                                {isSelected && <Check className="w-3 h-3" />}
-                              </div>
-                            </div>
-                          );
-                        })
-                    )}
-                  </div>
-
-                  {/* Inserir JID Manual */}
-                  <div className="pt-2 border-t border-white/[0.04] flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Ou cole o JID manual (ex: 12036...)"
-                      value={inputDestinoManual}
-                      onChange={e => setInputDestinoManual(e.target.value)}
-                      className="flex-1 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/10 text-[11px] text-white placeholder-slate-500 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const val = inputDestinoManual.trim();
-                        if (val && !rotaDestinos.includes(val)) {
-                          setRotaDestinos([...rotaDestinos, val]);
-                          setInputDestinoManual('');
-                        }
-                      }}
-                      className="px-2.5 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 text-xs font-bold"
-                    >
-                      + Add
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Botões do Rodapé */}
-              <div className="flex items-center justify-between pt-3 border-t border-white/10">
+              {/* Botões do Rodapé (Fixo na parte inferior do modal) */}
+              <div className="flex items-center justify-between pt-4 mt-4 border-t border-white/10 shrink-0">
                 {rotaIdEditando ? (
                   <button
                     type="button"
                     onClick={() => handleExcluirRota(rotaIdEditando, rotaNome)}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-all"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-all cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Excluir Rota</span>
@@ -2413,14 +2528,14 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                   <button
                     type="button"
                     onClick={() => setModalRotaAberto(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={salvandoRota}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-50"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     {salvandoRota ? (
                       <>
@@ -2429,7 +2544,7 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                       </>
                     ) : (
                       <>
-                        <Check className="w-4 h-4" />
+                        <Check className="w-4 h-4 text-slate-950 font-bold" />
                         <span>{rotaIdEditando ? 'Salvar Alterações' : 'Criar Rota'}</span>
                       </>
                     )}

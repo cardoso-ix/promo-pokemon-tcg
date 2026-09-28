@@ -276,17 +276,22 @@ export class MeliAffiliateService {
           if (dailyRes.ok) {
             const dData = (await dailyRes.json()) as any;
             if (Array.isArray(dData.item_list)) {
-              dailyData.length = 0;
+              const mapExisting = new Map<string, any>(dailyData.map(d => [normalizeDateToIsoDay(d.date), d]));
               for (const d of dData.item_list) {
-                dailyData.push({
-                  date: String(d.date || ''),
-                  orders: Number(d.orders) || 0,
-                  quantity: Number(d.quantity) || 0,
-                  earnings: Number(d.earnings) || 0,
-                  touchpoints: Number(d.touchpoints) || 0,
-                  cvr: Number(d.cvr) || 0
-                });
+                const dateKey = normalizeDateToIsoDay(d.date);
+                if (dateKey) {
+                  mapExisting.set(dateKey, {
+                    date: dateKey,
+                    orders: Number(d.orders) || 0,
+                    quantity: Number(d.quantity) || 0,
+                    earnings: Number(d.earnings) || 0,
+                    touchpoints: Number(d.touchpoints) || 0,
+                    cvr: Number(d.cvr) || 0
+                  });
+                }
               }
+              dailyData.length = 0;
+              dailyData.push(...Array.from(mapExisting.values()));
             }
           }
         } catch {
@@ -599,6 +604,29 @@ export class MeliAffiliateService {
     this.cache = cached;
     this.lastFetchTime = Date.now();
     return cached;
+  }
+
+  upsertDailyEntry(entry: { date: string; orders?: number; quantity?: number; earnings: number; touchpoints?: number; cvr?: number }) {
+    const cached = this.loadFromSqlite() || this.cache || this.getDefaultOverview();
+    if (!Array.isArray(cached.dailyData)) cached.dailyData = [];
+    const dateKey = normalizeDateToIsoDay(entry.date);
+    if (!dateKey) return;
+    const idx = cached.dailyData.findIndex(d => normalizeDateToIsoDay(d.date) === dateKey);
+    const item = {
+      date: dateKey,
+      orders: Number(entry.orders) || 0,
+      quantity: Number(entry.quantity) || 0,
+      earnings: Number(entry.earnings) || 0,
+      touchpoints: Number(entry.touchpoints) || 0,
+      cvr: Number(entry.cvr) || 0
+    };
+    if (idx >= 0) {
+      cached.dailyData[idx] = item;
+    } else {
+      cached.dailyData.unshift(item);
+    }
+    this.saveToSqlite(cached);
+    this.cache = cached;
   }
 
   getDefaultOverview(): MeliAffiliateOverview {

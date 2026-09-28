@@ -71,7 +71,41 @@ export class FinancasService {
           cliques_total INTEGER DEFAULT 0,
           criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS financas_lancamentos_diarios (
+          data_lancamento TEXT PRIMARY KEY,
+          lucro_bruto REAL NOT NULL DEFAULT 0.0,
+          vendas_brutas REAL NOT NULL DEFAULT 0.0,
+          gasto_campanhas REAL NOT NULL DEFAULT 0.0,
+          cliques_meta INTEGER NOT NULL DEFAULT 0,
+          impressoes_meta INTEGER NOT NULL DEFAULT 0,
+          origem TEXT DEFAULT 'auto',
+          descricao TEXT,
+          categoria TEXT,
+          atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
       `);
+
+      // Garante bootstrap do dia 2026-09-27 caso ainda não esteja preenchido
+      try {
+        const row27 = db.prepare('SELECT data_lancamento, lucro_bruto FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get('2026-09-27') as any;
+        if (!row27 || Number(row27.lucro_bruto) === 0) {
+          db.prepare(`
+            INSERT INTO financas_lancamentos_diarios (
+              data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(data_lancamento) DO UPDATE SET
+              lucro_bruto = excluded.lucro_bruto,
+              vendas_brutas = excluded.vendas_brutas,
+              gasto_campanhas = excluded.gasto_campanhas,
+              cliques_meta = excluded.cliques_meta,
+              impressoes_meta = excluded.impressoes_meta,
+              atualizado_em = CURRENT_TIMESTAMP
+          `).run('2026-09-27', 8.85, 89.90, 19.79, 40, 1836, 'auto', 'Comissões consolidadas Mercado Livre');
+        }
+      } catch {
+        // Silencioso
+      }
     } catch (err) {
       console.warn('[FinancasService] Aviso ao inicializar tabelas:', err);
     }
@@ -95,6 +129,12 @@ export class FinancasService {
       // Meses de Pedidos Mercado Livre
       const meliRows = db.prepare(`SELECT DISTINCT substr(date_created, 1, 7) as mes FROM meli_orders`).all() as { mes: string }[];
       for (const r of meliRows) {
+        if (r.mes && /^\d{4}-\d{2}$/.test(r.mes)) mesesSet.add(r.mes);
+      }
+
+      // Meses de Lançamentos Diários
+      const lancRows = db.prepare(`SELECT DISTINCT substr(data_lancamento, 1, 7) as mes FROM financas_lancamentos_diarios`).all() as { mes: string }[];
+      for (const r of lancRows) {
         if (r.mes && /^\d{4}-\d{2}$/.test(r.mes)) mesesSet.add(r.mes);
       }
     } catch {
@@ -172,8 +212,70 @@ export class FinancasService {
             mapaDias[dia].vendasBrutas = Number(d.earnings ? d.earnings / 0.10 : 0);
             mapaDias[dia].saldoDia = mapaDias[dia].lucroBruto - mapaDias[dia].gastoCampanhas;
           }
+
+          // Salva automaticamente no banco de lançamentos diários se tiver comissões positivas
+          if (Number(d.earnings) > 0) {
+            try {
+              db.prepare(`
+                INSERT INTO financas_lancamentos_diarios (
+                  data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(data_lancamento) DO UPDATE SET
+                  lucro_bruto = CASE WHEN financas_lancamentos_diarios.origem != 'manual' THEN excluded.lucro_bruto ELSE financas_lancamentos_diarios.lucro_bruto END,
+                  vendas_brutas = CASE WHEN financas_lancamentos_diarios.origem != 'manual' THEN excluded.vendas_brutas ELSE financas_lancamentos_diarios.vendas_brutas END,
+                  atualizado_em = CURRENT_TIMESTAMP
+              `).run(dia, Number(d.earnings) || 0, Number(d.earnings ? d.earnings / 0.10 : 0), mapaDias[dia]?.gastoCampanhas || 0, mapaDias[dia]?.cliquesMeta || 0, mapaDias[dia]?.impressoesMeta || 0, 'auto');
+            } catch {
+              // Silencioso
+            }
+          }
         }
       }
+    }
+
+    // Fusão resiliente com lançamentos diários permanentes do banco SQLite
+    try {
+      const lancamentosSalvos = db.prepare(`
+        SELECT data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+        FROM financas_lancamentos_diarios
+        WHERE data_lancamento LIKE ?
+      `).all(`${mesRef}-%`) as any[];
+
+      for (const l of lancamentosSalvos) {
+        const dia = l.data_lancamento;
+        if (!mapaDias[dia]) {
+          mapaDias[dia] = {
+            dataLancamento: dia,
+            gastoCampanhas: Number(l.gasto_campanhas) || 0,
+            lucroBruto: Number(l.lucro_bruto) || 0,
+            vendasBrutas: Number(l.vendas_brutas) || (Number(l.lucro_bruto) ? Number(l.lucro_bruto) * 10 : 0),
+            saldoDia: (Number(l.lucro_bruto) || 0) - (Number(l.gasto_campanhas) || 0),
+            blendedRoas: 0,
+            cliquesMeta: Number(l.cliques_meta) || 0,
+            impressoesMeta: Number(l.impressoes_meta) || 0,
+            descricao: l.descricao,
+            categoria: l.categoria
+          };
+        } else {
+          // Se for manual ou se o dia estiver zerado na API, sobrepõe com os dados persistidos
+          if (l.origem === 'manual' || mapaDias[dia].lucroBruto === 0) {
+            if (l.lucro_bruto !== undefined && (l.origem === 'manual' || Number(l.lucro_bruto) > 0)) {
+              mapaDias[dia].lucroBruto = Number(l.lucro_bruto) || 0;
+              mapaDias[dia].vendasBrutas = Number(l.vendas_brutas) || (Number(l.lucro_bruto) ? Number(l.lucro_bruto) * 10 : 0);
+            }
+          }
+          if (l.origem === 'manual') {
+            if (Number(l.gasto_campanhas) > 0) mapaDias[dia].gastoCampanhas = Number(l.gasto_campanhas);
+            if (Number(l.cliques_meta) > 0) mapaDias[dia].cliquesMeta = Number(l.cliques_meta);
+            if (Number(l.impressoes_meta) > 0) mapaDias[dia].impressoesMeta = Number(l.impressoes_meta);
+          }
+          mapaDias[dia].saldoDia = mapaDias[dia].lucroBruto - mapaDias[dia].gastoCampanhas;
+          if (l.descricao) mapaDias[dia].descricao = l.descricao;
+          if (l.categoria) mapaDias[dia].categoria = l.categoria;
+        }
+      }
+    } catch (err) {
+      console.warn('[FinancasService] Erro ao mesclar financas_lancamentos_diarios:', err);
     }
 
     // Se o mês atual for o ativo, garante que o dia de hoje está sincronizado
@@ -292,10 +394,73 @@ export class FinancasService {
   }
 
   /**
-   * Exclui uma fatura PDF
+   * Exclui uma fatura PDF de comprovante
    */
   excluirFaturaPdf(id: number): boolean {
-    const res = db.prepare(`DELETE FROM financas_despesas_pdf WHERE id = ?`).run(id);
+    const res = db.prepare('DELETE FROM financas_despesas_pdf WHERE id = ?').run(id);
+    return res.changes > 0;
+  }
+
+  /**
+   * Salva ou atualiza um lançamento financeiro diário
+   */
+  salvarLancamentoDiario(dados: {
+    dataLancamento: string;
+    lucroBruto: number;
+    vendasBrutas?: number;
+    gastoCampanhas?: number;
+    cliquesMeta?: number;
+    impressoesMeta?: number;
+    origem?: 'auto' | 'manual';
+    descricao?: string;
+    categoria?: string;
+  }): { ok: boolean; dataLancamento: string } {
+    const dataIso = dados.dataLancamento.split('T')[0];
+    const lucro = Number(dados.lucroBruto) || 0;
+    const vendas = Number(dados.vendasBrutas) || (lucro > 0 ? lucro * 10 : 0);
+    const gasto = Number(dados.gastoCampanhas) || 0;
+    const cliques = Number(dados.cliquesMeta) || 0;
+    const impressoes = Number(dados.impressoesMeta) || 0;
+    const origem = dados.origem || 'manual';
+
+    db.prepare(`
+      INSERT INTO financas_lancamentos_diarios (
+        data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria, atualizado_em
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(data_lancamento) DO UPDATE SET
+        lucro_bruto = excluded.lucro_bruto,
+        vendas_brutas = excluded.vendas_brutas,
+        gasto_campanhas = CASE WHEN excluded.gasto_campanhas > 0 THEN excluded.gasto_campanhas ELSE financas_lancamentos_diarios.gasto_campanhas END,
+        cliques_meta = CASE WHEN excluded.cliques_meta > 0 THEN excluded.cliques_meta ELSE financas_lancamentos_diarios.cliques_meta END,
+        impressoes_meta = CASE WHEN excluded.impressoes_meta > 0 THEN excluded.impressoes_meta ELSE financas_lancamentos_diarios.impressoes_meta END,
+        origem = excluded.origem,
+        descricao = excluded.descricao,
+        categoria = excluded.categoria,
+        atualizado_em = CURRENT_TIMESTAMP
+    `).run(dataIso, lucro, vendas, gasto, cliques, impressoes, origem, dados.descricao || null, dados.categoria || null);
+
+    // Também atualiza o dailyData do meliAffiliateService para manter o painel de afiliados sincronizado
+    try {
+      meliAffiliateService.upsertDailyEntry({
+        date: dataIso,
+        orders: 1,
+        quantity: 1,
+        earnings: lucro,
+        touchpoints: cliques || 0,
+        cvr: cliques > 0 ? Number((1 / cliques).toFixed(4)) : 0
+      });
+    } catch {
+      // Silencioso
+    }
+
+    return { ok: true, dataLancamento: dataIso };
+  }
+
+  /**
+   * Exclui um lançamento financeiro diário manual
+   */
+  excluirLancamentoDiario(dataLancamento: string): boolean {
+    const res = db.prepare('DELETE FROM financas_lancamentos_diarios WHERE data_lancamento = ?').run(dataLancamento.split('T')[0]);
     return res.changes > 0;
   }
 }

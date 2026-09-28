@@ -642,9 +642,82 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   app.delete('/api/financas/despesas/:id', handleDeleteDespesa);
   app.delete('/api/bot/financas/despesas/:id', handleDeleteDespesa);
 
-  // Registro de Fatura / Comprovante
-  const handleSaveDespesa = async (req: FastifyRequest<{ Body: { dataDespesa: string; valor: number; descricao?: string; nomeArquivo: string } }>) => {
-    const id = financasService.salvarFaturaPdf(req.body);
+  // Lançamentos Financeiros Diários (Adicionar / Ajustar / Excluir)
+  const handleSaveLancamento = async (
+    req: FastifyRequest<{
+      Body: {
+        dataLancamento: string;
+        lucroBruto?: number;
+        gastoCampanhas?: number;
+        vendasBrutas?: number;
+        descricao?: string;
+        categoria?: string;
+      };
+    }>,
+    reply: FastifyReply
+  ) => {
+    try {
+      const { dataLancamento, lucroBruto, gastoCampanhas, vendasBrutas, descricao, categoria } = req.body || {};
+      if (!dataLancamento) {
+        return reply.status(400).send({ ok: false, error: 'Data do lançamento é obrigatória (formato YYYY-MM-DD).' });
+      }
+      const result = financasService.salvarLancamentoDiario({
+        dataLancamento,
+        lucroBruto: Number(lucroBruto) || 0,
+        gastoCampanhas: Number(gastoCampanhas) || 0,
+        vendasBrutas: Number(vendasBrutas) || (Number(lucroBruto) ? Number(lucroBruto) * 10 : 0),
+        descricao,
+        categoria,
+        origem: 'manual'
+      });
+      return { ok: true, result, message: 'Lançamento diário registrado com sucesso.' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  };
+  app.post('/api/financas/lancamentos', handleSaveLancamento);
+  app.post('/api/bot/financas/lancamentos', handleSaveLancamento);
+
+  const handleDeleteLancamento = async (
+    req: FastifyRequest<{ Params: { data: string } }>,
+    reply: FastifyReply
+  ) => {
+    try {
+      const data = req.params.data;
+      const ok = financasService.excluirLancamentoDiario(data);
+      return { ok, message: ok ? 'Lançamento diário removido com sucesso' : 'Lançamento não encontrado' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  };
+  app.delete('/api/financas/lancamentos/:data', handleDeleteLancamento);
+  app.delete('/api/bot/financas/lancamentos/:data', handleDeleteLancamento);
+
+  // Registro de Fatura / Comprovante (com suporte a fallback de lançamento)
+  const handleSaveDespesa = async (req: FastifyRequest, reply: FastifyReply) => {
+    const body = (req.body || {}) as Record<string, any>;
+    if (body.dataLancamento) {
+      const { dataLancamento, lucroBruto, gastoCampanhas, vendasBrutas, descricao, categoria } = body;
+      const result = financasService.salvarLancamentoDiario({
+        dataLancamento,
+        lucroBruto: Number(lucroBruto) || 0,
+        gastoCampanhas: Number(gastoCampanhas) || 0,
+        vendasBrutas: Number(vendasBrutas) || (Number(lucroBruto) ? Number(lucroBruto) * 10 : 0),
+        descricao,
+        categoria,
+        origem: 'manual'
+      });
+      return { ok: true, id: 1, result, message: 'Lançamento diário registrado com sucesso' };
+    }
+    const id = financasService.salvarFaturaPdf({
+      dataDespesa: body.dataDespesa || body.data,
+      valor: Number(body.valor) || 0,
+      descricao: body.descricao,
+      nomeArquivo: body.nomeArquivo || 'comprovante.pdf',
+      tamanhoBytes: body.tamanhoBytes
+    });
     return { ok: true, id, message: 'Comprovante registrado com sucesso' };
   };
   app.post('/api/financas/despesas', handleSaveDespesa);

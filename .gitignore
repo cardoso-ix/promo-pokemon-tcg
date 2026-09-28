@@ -9,6 +9,7 @@
 *.key
 *.p12
 credentials.json
+cookies.txt
 secrets/
 
 # Dependências e build

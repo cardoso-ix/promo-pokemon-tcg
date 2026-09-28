@@ -57,6 +57,17 @@ npm test
 5. **Mensagem Matinal de Abertura (07:00 AM):**
    - Dispara automaticamente todas as manhãs no horário oficial de Brasília uma mensagem calorosa agradecendo aos membros e anunciando o início do rastreamento de ofertas do dia.
 
+6. **Gerenciador de Rotas de Grupos (Multi-Origem e Multi-Destino):**
+   - Configuração de rotas de monitoramento onde ofertas copiadas de grupos de origem são tratadas e encaminhadas para múltiplos grupos de destino.
+   - Interface com painel de tags ativas ("Grupos Selecionados"), ordenação inteligente, busca rápida, suporte a JIDs manuais e remoção instantânea com 1 clique.
+   - Endpoint normalizado `/api/rotas` e `/api/chats` com sanitização automática de IDs.
+
+7. **Módulo de Finanças, DRE & Lançamentos Diários Persistentes:**
+   - Integração analítica com Meta Ads Insights e Mercado Livre Afiliados.
+   - Tabela dedicada `financas_lancamentos_diarios` com persistência local SQLite, resiliência contra atrasos de consolidação da API do Mercado Livre (evitando lacunas como finais de semana) e bootstrap automático de histórico.
+   - Endpoints `POST /api/financas/lancamentos` e `DELETE /api/financas/lancamentos/:data` para inclusão, ajuste fino e edição de vendas, comissões e gastos de campanhas diretamente pela tabela do Cockpit.
+   - Cálculo automático de Blended ROAS, Margem de Lucro Operacional e divisão 70/30 (Reinvestimento / Lucro Líquido Disponível).
+
 ---
 
 ## 📁 Estrutura de Diretórios

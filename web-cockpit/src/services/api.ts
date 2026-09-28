@@ -197,17 +197,61 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ ativo })
     }),
-  saveRota: (dados: { id?: number; nome: string; ativa?: boolean; origens: string[]; destinos: string[] }) =>
-    request<{ ok: boolean; id: number }>('/api/rotas', {
+  saveRota: (dados: { id?: number; nome: string; ativa?: boolean; origens: string[]; destinos: string[] }) => {
+    const cleanOrigens = Array.isArray(dados.origens)
+      ? Array.from(new Set(dados.origens.map(o => String(o || '').trim()).filter(Boolean)))
+      : [];
+    const cleanDestinos = Array.isArray(dados.destinos)
+      ? Array.from(new Set(dados.destinos.map(d => String(d || '').trim()).filter(Boolean)))
+      : [];
+    return request<{ ok: boolean; id: number }>('/api/rotas', {
       method: 'POST',
-      body: JSON.stringify(dados)
-    }),
+      body: JSON.stringify({
+        ...dados,
+        nome: dados.nome.trim(),
+        origens: cleanOrigens,
+        destinos: cleanDestinos
+      })
+    });
+  },
   deleteRota: (id: number) =>
     request<{ ok: boolean }>(`/api/rotas/${id}`, {
       method: 'DELETE'
     }),
-  getChats: () => request<Array<{ id: string; nome: string; total_membros?: number }>>('/api/chats'),
-  syncChats: () => request<{ ok: boolean; total: number; chats: Array<{ id: string; nome: string }> }>('/api/chats/sync', { method: 'POST' }),
+  getChats: async (): Promise<Array<{ id: string; chat_id: string; nome: string; total_membros?: number }>> => {
+    try {
+      const raw = await request<any[]>('/api/chats');
+      if (!Array.isArray(raw)) return [];
+      return raw.map(c => {
+        const id = String(c.id || c.chat_id || '');
+        return {
+          id,
+          chat_id: id,
+          nome: String(c.nome || c.name || id || 'Grupo'),
+          total_membros: c.total_membros
+        };
+      }).filter(c => Boolean(c.id));
+    } catch {
+      return [];
+    }
+  },
+  syncChats: async (): Promise<{ ok: boolean; total: number; chats: Array<{ id: string; chat_id: string; nome: string }> }> => {
+    try {
+      const res = await request<any>('/api/chats/sync', { method: 'POST' });
+      const list = Array.isArray(res?.chats) ? res.chats : [];
+      const chats = list.map((c: any) => {
+        const id = String(c.id || c.chat_id || '');
+        return {
+          id,
+          chat_id: id,
+          nome: String(c.nome || c.name || id || 'Grupo')
+        };
+      }).filter((c: any) => Boolean(c.id));
+      return { ok: true, total: chats.length, chats };
+    } catch {
+      return { ok: false, total: 0, chats: [] };
+    }
+  },
   getReplicaConfig: () => request<Record<string, string>>('/api/configs'),
   saveReplicaConfig: (configs: Record<string, string>) =>
     request<{ ok: boolean }>('/api/configs', {
@@ -351,15 +395,18 @@ export const api = {
     dataLancamento: string;
     gastoCampanhas: number;
     lucroBruto: number;
+    vendasBrutas?: number;
+    cliquesMeta?: number;
+    impressoesMeta?: number;
     descricao?: string;
     categoria?: string;
   }) =>
-    request<{ ok: boolean; id: number }>('/api/financas/despesas', {
+    request<{ ok: boolean; id?: number; data?: string }>('/api/financas/lancamentos', {
       method: 'POST',
       body: JSON.stringify(dados)
     }),
-  deleteLancamento: (id: number) =>
-    request<{ ok: boolean }>(`/api/financas/despesas/${id}`, { method: 'DELETE' }),
+  deleteLancamento: (idOuData: number | string) =>
+    request<{ ok: boolean }>(`/api/financas/lancamentos/${encodeURIComponent(idOuData)}`, { method: 'DELETE' }),
   getDespesasPdf: (inicio = '', fim = '') =>
     request<{ ok: boolean; resumo: ResumoDespesasPdf }>(`/api/financas/despesas?inicio=${encodeURIComponent(inicio)}&fim=${encodeURIComponent(fim)}`).then(r => r.resumo),
   deleteDespesaPdf: (id: number) =>

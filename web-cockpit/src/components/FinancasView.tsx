@@ -5,6 +5,7 @@ import {
   FileSpreadsheet,
   Plus,
   Trash2,
+  Pencil,
   Calendar,
   Sparkles,
   Download,
@@ -58,6 +59,7 @@ export const FinancasView: React.FC = () => {
   const [showNovoLancamento, setShowNovoLancamento] = useState(false);
   const [novaData, setNovaData] = useState(new Date().toISOString().split('T')[0]);
   const [novoLucroML, setNovoLucroML] = useState('');
+  const [novoVendasML, setNovoVendasML] = useState('');
   const [novoGastoMeta, setNovoGastoMeta] = useState('');
   const [novaDescricao, setNovaDescricao] = useState('');
   const [novaCategoria, setNovaCategoria] = useState('mercado_livre');
@@ -133,14 +135,15 @@ export const FinancasView: React.FC = () => {
     }
   };
 
-  // Salvar novo lançamento manual diário
+  // Salvar ou atualizar lançamento manual diário
   const handleAddLancamento = async (e: React.FormEvent) => {
     e.preventDefault();
     const lucro = parseFloat(novoLucroML.replace(',', '.')) || 0;
     const gasto = parseFloat(novoGastoMeta.replace(',', '.')) || 0;
+    const vendas = parseFloat(novoVendasML.replace(',', '.')) || (lucro > 0 ? lucro * 10 : 0);
 
-    if (lucro === 0 && gasto === 0) {
-      return alert('Informe ao menos o valor de Lucro do Mercado Livre ou Gasto do Meta Ads.');
+    if (lucro === 0 && gasto === 0 && vendas === 0) {
+      return alert('Informe ao menos o valor de Lucro do Mercado Livre, Vendas ou Gasto do Meta Ads.');
     }
 
     try {
@@ -148,11 +151,13 @@ export const FinancasView: React.FC = () => {
         dataLancamento: novaData,
         gastoCampanhas: gasto,
         lucroBruto: lucro,
+        vendasBrutas: vendas,
         descricao: novaDescricao || undefined,
         categoria: novaCategoria
       });
       setShowNovoLancamento(false);
       setNovoLucroML('');
+      setNovoVendasML('');
       setNovoGastoMeta('');
       setNovaDescricao('');
       mostrarFeedback('sucesso', 'Lançamento diário registrado com sucesso!');
@@ -162,11 +167,27 @@ export const FinancasView: React.FC = () => {
     }
   };
 
+  // Abrir modal pré-preenchido para edição de qualquer dia
+  const handleEditarLancamento = (l: any) => {
+    const dataLanc = l.dataLancamento || l.data_lancamento || '';
+    const lucro = Number(l.lucroBruto ?? l.lucro_bruto) || 0;
+    const gasto = Number(l.gastoCampanhas ?? l.gasto_campanhas) || 0;
+    const vendas = Number(l.vendasBrutas ?? l.vendas_brutas) || (lucro > 0 ? lucro * 10 : 0);
+
+    setNovaData(dataLanc || new Date().toISOString().split('T')[0]);
+    setNovoLucroML(lucro > 0 ? String(lucro).replace('.', ',') : '');
+    setNovoVendasML(vendas > 0 ? String(vendas).replace('.', ',') : '');
+    setNovoGastoMeta(gasto > 0 ? String(gasto).replace('.', ',') : '');
+    setNovaDescricao(l.descricao || '');
+    setNovaCategoria(l.categoria || 'mercado_livre');
+    setShowNovoLancamento(true);
+  };
+
   // Excluir lançamento diário
-  const handleDeleteLancamento = async (id: number) => {
+  const handleDeleteLancamento = async (idOuData: number | string) => {
     if (!confirm('Deseja realmente excluir este lançamento diário?')) return;
     try {
-      await api.deleteLancamento(id);
+      await api.deleteLancamento(idOuData);
       mostrarFeedback('sucesso', 'Lançamento removido com sucesso!');
       carregarBalancoELancamentos(mesAtivo);
     } catch (err: unknown) {
@@ -686,15 +707,24 @@ export const FinancasView: React.FC = () => {
                             )}
                           </td>
                           <td className="py-2.5 px-3 text-right">
-                            {l.id && (
+                            <div className="flex items-center justify-end gap-1">
                               <button
-                                onClick={() => handleDeleteLancamento(l.id)}
-                                className="text-slate-500 hover:text-red-400 p-1 rounded-lg transition-colors cursor-pointer"
-                                title="Excluir Lançamento"
+                                onClick={() => handleEditarLancamento(l)}
+                                className="text-slate-500 hover:text-emerald-400 p-1 rounded-lg transition-colors cursor-pointer"
+                                title="Editar / Ajustar Lançamento do Dia"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <Pencil className="w-3.5 h-3.5" />
                               </button>
-                            )}
+                              {(l.id || (dataLanc && dataLanc !== '—')) && (
+                                <button
+                                  onClick={() => handleDeleteLancamento(l.id || dataLanc)}
+                                  className="text-slate-500 hover:text-red-400 p-1 rounded-lg transition-colors cursor-pointer"
+                                  title="Excluir Lançamento"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -739,7 +769,7 @@ export const FinancasView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-emerald-400 mb-1">
-                    Lucro Bruto ML (R$)
+                    Comissão ML (R$)
                   </label>
                   <input
                     type="text"
@@ -748,22 +778,36 @@ export const FinancasView: React.FC = () => {
                     onChange={e => setNovoLucroML(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-emerald-500/30 text-emerald-300 font-mono text-xs focus:outline-none focus:border-emerald-500"
                   />
-                  <span className="text-[10px] text-slate-500">Comissões do dia</span>
+                  <span className="text-[10px] text-slate-500">Lucro líquido / comissões</span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-red-400 mb-1">
-                    Gasto Meta Ads (R$)
+                  <label className="block text-xs font-semibold text-cyan-400 mb-1">
+                    Vendas Geradas ML (R$)
                   </label>
                   <input
                     type="text"
                     placeholder="0,00"
-                    value={novoGastoMeta}
-                    onChange={e => setNovoGastoMeta(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-red-500/30 text-red-300 font-mono text-xs focus:outline-none focus:border-red-500"
+                    value={novoVendasML}
+                    onChange={e => setNovoVendasML(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-cyan-500/30 text-cyan-300 font-mono text-xs focus:outline-none focus:border-cyan-500"
                   />
-                  <span className="text-[10px] text-slate-500">Consumo em anúncios</span>
+                  <span className="text-[10px] text-slate-500">Volume bruto de vendas</span>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-red-400 mb-1">
+                  Gasto Meta Ads (R$)
+                </label>
+                <input
+                  type="text"
+                  placeholder="0,00"
+                  value={novoGastoMeta}
+                  onChange={e => setNovoGastoMeta(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-red-500/30 text-red-300 font-mono text-xs focus:outline-none focus:border-red-500"
+                />
+                <span className="text-[10px] text-slate-500">Consumo em anúncios diário</span>
               </div>
 
               <div>
