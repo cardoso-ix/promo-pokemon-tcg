@@ -158,7 +158,9 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
 
   // Estados do Agendador de Mensagem de Bom Dia
   const [testandoBomDia, setTestandoBomDia] = useState(false);
+  const [salvandoBomDia, setSalvandoBomDia] = useState(false);
   const [feedbackBomDia, setFeedbackBomDia] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
+  const [configDirty, setConfigDirty] = useState(false);
 
   // Estados do Gerador de Anúncio
   const [geradorLink, setGeradorLink] = useState('');
@@ -192,7 +194,7 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
     carregarDados();
     const interval = setInterval(carregarDados, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [subTab, configDirty]);
 
   useEffect(() => {
     if (subTab === 'precos') {
@@ -271,6 +273,11 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
     buscarRadarBenchmark(item.produto || item.produto_limpo);
   };
 
+  const updateConfigField = (novasConfigs: Record<string, string>) => {
+    setConfigDirty(true);
+    setConfigs(prev => ({ ...prev, ...novasConfigs }));
+  };
+
   const carregarDados = async () => {
     try {
       const results = await Promise.allSettled([
@@ -285,7 +292,10 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
         setRotas(results[1].value);
       }
       if (results[2].status === 'fulfilled' && typeof results[2].value === 'object' && results[2].value !== null) {
-        setConfigs(results[2].value);
+        // Preserva alterações em andamento na aba de Ajustes
+        if (subTab !== 'config' || !configDirty) {
+          setConfigs(results[2].value);
+        }
       }
     } catch {
       // Ignorar falhas transitórias
@@ -399,16 +409,38 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
     }
   };
 
-  const handleSalvarConfig = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSalvarConfig = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
     try {
       await api.saveReplicaConfig(configs);
+      setConfigDirty(false);
       alert('Configurações salvas com sucesso!');
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Falha ao salvar configurações');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSalvarApenasBomDia = async () => {
+    setSalvandoBomDia(true);
+    setFeedbackBomDia(null);
+    try {
+      await api.saveReplicaConfig(configs);
+      setConfigDirty(false);
+      setFeedbackBomDia({
+        tipo: 'sucesso',
+        texto: 'Configuração da Mensagem de Bom Dia salva com sucesso!'
+      });
+    } catch (err: unknown) {
+      setFeedbackBomDia({
+        tipo: 'erro',
+        texto: err instanceof Error ? err.message : 'Erro ao salvar configurações de bom dia.'
+      });
+    } finally {
+      setSalvandoBomDia(false);
+      setTimeout(() => setFeedbackBomDia(null), 5000);
     }
   };
 
@@ -476,6 +508,10 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
     setTestandoBomDia(true);
     setFeedbackBomDia(null);
     try {
+      // Auto-save: garante que o WhatsApp receba o modelo selecionado agora mesmo
+      await api.saveReplicaConfig(configs);
+      setConfigDirty(false);
+
       const res = await api.testarAgendador();
       if (res.ok) {
         setFeedbackBomDia({
@@ -1859,7 +1895,7 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                       <input
                         type="time"
                         value={configs['msg_abertura_horario'] || '07:00'}
-                        onChange={e => setConfigs({ ...configs, msg_abertura_horario: e.target.value })}
+                        onChange={e => updateConfigField({ msg_abertura_horario: e.target.value })}
                         className="w-full px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white focus:outline-none focus:border-amber-500/50 text-xs font-mono"
                       />
                       <span className="text-[10px] text-slate-500 mt-1 block">
@@ -1889,20 +1925,23 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                           const selecionado = MODELOS_BOM_DIA.find(m => m.id === novoId);
                           if (selecionado) {
                             if (novoId === 'custom') {
-                              setConfigs({
-                                ...configs,
+                              updateConfigField({
                                 msg_abertura_modelo_id: novoId
                               });
+                            } else if (novoId === 'rotacao') {
+                              updateConfigField({
+                                msg_abertura_modelo_id: novoId,
+                                msg_abertura_texto: '[ROTACAO_DIARIA]'
+                              });
                             } else {
-                              setConfigs({
-                                ...configs,
+                              updateConfigField({
                                 msg_abertura_modelo_id: novoId,
                                 msg_abertura_texto: selecionado.texto
                               });
                             }
                           }
                         }}
-                        className="w-full px-3 py-1.5 rounded-xl bg-slate-900 border border-amber-500/30 text-amber-300 focus:outline-none focus:border-amber-400 text-xs font-semibold cursor-pointer"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-amber-500/30 text-amber-300 focus:outline-none focus:border-amber-400 text-xs font-semibold cursor-pointer truncate"
                       >
                         {MODELOS_BOM_DIA.map(mod => (
                           <option key={mod.id} value={mod.id} className="bg-slate-900 text-white py-1">
@@ -1938,7 +1977,7 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                           const modId = configs['msg_abertura_modelo_id'] || 'comunidade_gratidao';
                           const original = MODELOS_BOM_DIA.find(m => m.id === modId);
                           if (original && original.id !== 'custom') {
-                            setConfigs({ ...configs, msg_abertura_texto: original.texto });
+                            updateConfigField({ msg_abertura_texto: original.texto });
                           }
                         }}
                         className="text-[10px] text-amber-400 hover:text-amber-300 underline cursor-pointer"
@@ -1949,15 +1988,14 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                     </div>
 
                     <textarea
-                      rows={5}
+                      rows={6}
                       value={
                         configs['msg_abertura_texto'] !== undefined
                           ? configs['msg_abertura_texto']
                           : MODELOS_BOM_DIA[1].texto
                       }
                       onChange={e =>
-                        setConfigs({
-                          ...configs,
+                        updateConfigField({
                           msg_abertura_texto: e.target.value,
                           msg_abertura_modelo_id: 'custom'
                         })
@@ -1968,46 +2006,68 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                   </div>
 
                   {/* Painel de Prévia da Mensagem Formatada */}
-                  <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1">
-                        <Send className="w-3 h-3 text-emerald-400" />
-                        Prévia ao vivo no WhatsApp (Hoje: {obterDiaSemanaAtualPt()}):
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleTestarBomDia}
-                        disabled={testandoBomDia}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-[11px] border border-emerald-500/30 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                        title="Dispara a mensagem de bom dia agora nos grupos de destino para teste"
-                      >
-                        {testandoBomDia ? (
-                          <>
-                            <RefreshCw className="w-3 h-3 animate-spin" />
-                            <span>Enviando...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Send className="w-3 h-3" />
-                            <span>Testar Envio Agora</span>
-                          </>
-                        )}
-                      </button>
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-amber-500/20 space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.06] pb-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <Send className="w-3.5 h-3.5 text-amber-400" />
+                        <span className="text-[11px] uppercase font-bold tracking-wider text-slate-300">
+                          Prévia ao Vivo no WhatsApp
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-semibold">
+                          Hoje: {obterDiaSemanaAtualPt()}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleSalvarApenasBomDia}
+                          disabled={salvandoBomDia}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-[11px] border border-amber-500/40 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                          title="Salva as alterações deste modelo e horário imediatamente"
+                        >
+                          <Check className="w-3 h-3" />
+                          <span>{salvandoBomDia ? 'Salvando...' : 'Salvar Este Modelo'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleTestarBomDia}
+                          disabled={testandoBomDia}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-[11px] border border-emerald-500/30 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                          title="Salva automaticamente e dispara a mensagem de bom dia agora nos grupos para teste"
+                        >
+                          {testandoBomDia ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 animate-spin" />
+                              <span>Enviando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-3 h-3" />
+                              <span>Testar Envio Agora</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <pre className="text-[11px] text-slate-300 whitespace-pre-wrap font-sans max-h-36 overflow-y-auto p-2 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                      {(() => {
-                        let t =
-                          configs['msg_abertura_texto'] !== undefined
-                            ? configs['msg_abertura_texto']
-                            : MODELOS_BOM_DIA[1].texto;
-                        if (t === '[ROTACAO_DIARIA]') {
-                          const diaNum = new Date().getDay();
-                          const presets = MODELOS_BOM_DIA.filter(m => m.id !== 'rotacao' && m.id !== 'custom');
-                          t = presets[diaNum % presets.length]?.texto || t;
-                        }
-                        return t.replace(/\{dia_semana\}/gi, obterDiaSemanaAtualPt());
-                      })()}
-                    </pre>
+
+                    <div className="p-3 rounded-lg bg-[#0b141a] border border-[#222d34] shadow-inner max-h-56 overflow-y-auto">
+                      <div className="text-[11px] text-[#e9edef] whitespace-pre-wrap font-sans leading-relaxed">
+                        {(() => {
+                          let t =
+                            configs['msg_abertura_texto'] !== undefined
+                              ? configs['msg_abertura_texto']
+                              : MODELOS_BOM_DIA[1].texto;
+                          if (t === '[ROTACAO_DIARIA]') {
+                            const diaNum = new Date().getDay();
+                            const presets = MODELOS_BOM_DIA.filter(m => m.id !== 'rotacao' && m.id !== 'custom');
+                            t = presets[diaNum % presets.length]?.texto || t;
+                          }
+                          return t.replace(/\{dia_semana\}/gi, obterDiaSemanaAtualPt());
+                        })()}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
