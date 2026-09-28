@@ -348,3 +348,10 @@ Para permitir acompanhamento em tempo real da verba restante disponível para an
   - **Saldo Saudável (🟢):** Saldo $\ge$ Limiar configurado (ex: R$ 50,00).
   - **Saldo Baixo (🟡):** Saldo $<$ Limiar configurado, recomendando nova recarga preventiva.
   - **Recarga Urgente (🔴):** Saldo $\le$ R$ 0,00 ou conta desativada na Meta.
+
+* **Periodicidade e Camadas de Atualização:**
+  1. **Tempo Real ao Acessar / Navegar:** Toda abertura do Super Cockpit ou troca de aba consulta o saldo mais recente.
+  2. **Polling Ativo de 15 Segundos:** Mantém a interface permanentemente atualizada enquanto o operador estiver com a tela aberta.
+  3. **Rotina Agendada em Background (a cada 2 horas):** O agendador nativo (`agendador.ts`) roda 24/7 na VPS, salvando o snapshot no SQLite e emitindo alertas no log caso o caixa caia abaixo do limiar configurado.
+  4. **Botão Executivo "Sincronizar Métricas":** Permite forçar uma atualização instantânea de ponta a ponta com 1 clique.
+

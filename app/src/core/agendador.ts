@@ -1,4 +1,5 @@
 import { getConfig, setConfig, getAllRotas, DEFAULT_MSG_ABERTURA, PRESET_MSGS_ABERTURA } from '../db/database.js';
+import { metaAdsService } from '../analytics/meta.service.js';
 
 export interface HoraBrasiliaInfo {
   horaFormatada: string; // 'HH:mm'
@@ -208,6 +209,29 @@ export async function verificarEExecutarAgendador(
 }
 
 let agendadorInterval: NodeJS.Timeout | null = null;
+let caixaMetaInterval: NodeJS.Timeout | null = null;
+
+/**
+ * Executa verificação e snapshot em background do Saldo de Caixa do Meta Ads.
+ * Roda a cada 2 horas e também na inicialização.
+ */
+export async function sincronizarCaixaMetaEmBackground(): Promise<void> {
+  try {
+    const config = await metaAdsService.getConfigStatus();
+    if (!config.configured) {
+      return;
+    }
+    const res = await metaAdsService.getAdAccountBalance();
+    if (res && res.ok) {
+      console.log(`[Caixa Meta Ads] Snapshot em background sincronizado: R$ ${res.currentBalance.toFixed(2)} (${res.statusBadge.toUpperCase()})`);
+      if (res.statusBadge === 'critical' || res.statusBadge === 'warning') {
+        console.warn(`[Caixa Meta Ads Alerta] Atenção: Saldo de caixa baixo ou crítico: R$ ${res.currentBalance.toFixed(2)} (Limite: R$ ${res.alertThreshold.toFixed(2)})`);
+      }
+    }
+  } catch (err: unknown) {
+    console.warn('[Caixa Meta Ads] Aviso na sincronização em background:', err);
+  }
+}
 
 /**
  * Inicia o agendador contínuo em segundo plano (polling a cada 30 segundos).
@@ -215,6 +239,9 @@ let agendadorInterval: NodeJS.Timeout | null = null;
 export function iniciarAgendadorDiario(client: WhatsAppClientLike): void {
   if (agendadorInterval) {
     clearInterval(agendadorInterval);
+  }
+  if (caixaMetaInterval) {
+    clearInterval(caixaMetaInterval);
   }
 
   console.log('[Agendador Diário] Serviço de abertura de grupos ativado (verificação a cada 30s).');
@@ -228,6 +255,16 @@ export function iniciarAgendadorDiario(client: WhatsAppClientLike): void {
       console.error('[Agendador Diário] Erro na verificação periódica:', err);
     });
   }, 30000);
+
+  // Sincronização periódica do Caixa Meta Ads a cada 2 horas (com warmup inicial de 5s)
+  setTimeout(() => {
+    sincronizarCaixaMetaEmBackground().catch(() => {});
+  }, 5000);
+
+  const DUAS_HORAS_MS = 2 * 60 * 60 * 1000;
+  caixaMetaInterval = setInterval(() => {
+    sincronizarCaixaMetaEmBackground().catch(() => {});
+  }, DUAS_HORAS_MS);
 }
 
 /**
@@ -238,4 +275,9 @@ export function pararAgendadorDiario(): void {
     clearInterval(agendadorInterval);
     agendadorInterval = null;
   }
+  if (caixaMetaInterval) {
+    clearInterval(caixaMetaInterval);
+    caixaMetaInterval = null;
+  }
 }
+
