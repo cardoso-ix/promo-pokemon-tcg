@@ -121,15 +121,14 @@ A plataforma conta com uma suíte de testes unitários e de integração abrange
 | **Guardião TCG & Anti-Spam** | 18 | Filtro estrito de nicho (Pokémon TCG), cooldown de 30 min por produto e bloqueio de lixo | 🟢 Passou (100%) |
 | **Parser de Imagens & Mídia** | 12 | Baixa automática de fotos HD oficiais do Mercado Livre, fallback gracioso e integridade | 🟢 Passou (100%) |
 | **Gerador & Extrator de Anúncios** | 14 | Extração De/Por/Cupom em links Mercado Livre e Shopee, cópia e disparo em lote com auto-destinos | 🟢 Passou (100%) |
-| **Agendador Diário & Bom Dia** | 8 | Disparo pontual às 07:00 (Brasília), interpolação de `{dia_semana}` e rotação de 4 templates | 🟢 Passou (100%) |
+| **Agendador Diário, Bom Dia & Métricas** | 10 | Disparo às 07:00, interpolação, rotação de 4 templates e contagem real de hoje via SQL indexado | 🟢 Passou (100%) |
 | **Google Planilhas Webhook** | 6 | Conexão resiliente, formatação de valores em BRL e envio assíncrono não-bloqueante | 🟢 Passou (100%) |
 | **Autenticação & Sessão HMAC** | 10 | Login com credenciais seguras, tokens assinados HMAC e autorização de rotas privadas | 🟢 Passou (100%) |
-| **Total Consolidado** | **98 testes** | **Zero falhas na esteira de automação** | 🟢 **100% VERDE** |
+| **Total Consolidado** | **100 testes** | **Zero falhas na esteira de automação** | 🟢 **100% VERDE** |
 
 Para executar todos os testes da raiz:
 ```bash
 npm test
-```
 ```
 
 ---
