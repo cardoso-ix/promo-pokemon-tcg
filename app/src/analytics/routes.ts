@@ -510,14 +510,15 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
       const trintaDiasAtras = getBrazilDaysAgo(30);
 
       // Disparar sincronização em paralelo
-      const [metaResult, affiliateResult, meliResult] = await Promise.allSettled([
+      const [metaResult, affiliateResult, meliResult, balanceResult] = await Promise.allSettled([
         metaAdsService.syncMetaInsights(trintaDiasAtras, hoje),
         meliAffiliateService.fetchLiveMetrics(),
         meliService.getValidAccessToken().then(() => {
           const dateTo = new Date();
           const dateFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
           return meliService.syncMeliOrders(dateFrom, dateTo);
-        }).catch(() => null)
+        }).catch(() => null),
+        metaAdsService.getAdAccountBalance().catch(() => null)
       ]);
 
       await analyticsService.consolidateRange(trintaDiasAtras, hoje).catch(() => null);
@@ -528,6 +529,7 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
         meta: metaResult.status === 'fulfilled' ? metaResult.value : { error: String(metaResult.reason) },
         affiliate: affiliateResult.status === 'fulfilled' ? affiliateResult.value : { error: String(affiliateResult.reason) },
         meliOrders: meliResult.status === 'fulfilled' ? meliResult.value : null,
+        balance: balanceResult.status === 'fulfilled' ? balanceResult.value : null,
         timestamp: new Date().toISOString()
       };
     } catch (err: unknown) {

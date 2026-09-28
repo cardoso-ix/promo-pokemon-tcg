@@ -17,7 +17,8 @@ import {
   ChevronUp,
   Wallet,
   CreditCard,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import {
   AreaChart,
@@ -49,6 +50,7 @@ interface DashboardOverviewProps {
   balanco: BalancoFinanceiro | null;
   onNavigate: (module: 'replica' | 'financas' | 'afiliados' | 'dashboard') => void;
   onOpenReplicaQr: () => void;
+  onRefreshGlobal?: () => Promise<void>;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -56,7 +58,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   recentLogs,
   balanco,
   onNavigate,
-  onOpenReplicaQr
+  onOpenReplicaQr,
+  onRefreshGlobal
 }) => {
   const replica = status?.replica;
 
@@ -164,19 +167,21 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     }
   };
 
-  useEffect(() => {
-    let isMounted = true;
-    const carregarFluxoReal = async () => {
-      try {
-        const data = await api.getFluxoHorario();
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          setActivityData(data);
-        }
-      } catch {
-        // Manter dados anteriores
-      }
-    };
+  // Feedback Toast de Sincronização
+  const [syncFeedback, setSyncFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
+  const carregarFluxoReal = async () => {
+    try {
+      const data = await api.getFluxoHorario();
+      if (Array.isArray(data) && data.length > 0) {
+        setActivityData(data);
+      }
+    } catch {
+      // Manter dados anteriores
+    }
+  };
+
+  useEffect(() => {
     carregarFluxoReal();
     carregarMetaInsights();
     carregarMetaBalance();
@@ -190,7 +195,6 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       carregarMeliAffiliate();
     }, 15000);
     return () => {
-      isMounted = false;
       clearInterval(interval);
     };
   }, []);
@@ -222,15 +226,25 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     setSyncingAll(true);
     try {
       const res = await api.syncAll();
-      alert(res.message || 'Métricas do Meta Ads e Mercado Livre sincronizadas com sucesso!');
-      await Promise.all([
+      await Promise.allSettled([
         carregarMetaInsights(),
         carregarMetaBalance(),
         carregarMeliInsights(),
-        carregarMeliAffiliate(true)
+        carregarMeliAffiliate(true),
+        carregarFluxoReal(),
+        onRefreshGlobal ? onRefreshGlobal() : Promise.resolve()
       ]);
+      setSyncFeedback({
+        tipo: 'sucesso',
+        texto: res.message || 'Métricas do Meta Ads, Mercado Livre, Saldo e Ofertas sincronizadas com sucesso!'
+      });
+      setTimeout(() => setSyncFeedback(null), 4500);
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Falha na sincronização unificada');
+      setSyncFeedback({
+        tipo: 'erro',
+        texto: err instanceof Error ? err.message : 'Falha na sincronização unificada'
+      });
+      setTimeout(() => setSyncFeedback(null), 5000);
     } finally {
       setSyncingAll(false);
     }
@@ -1791,6 +1805,30 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Flutuante Elegante de Feedback de Sincronização 360 */}
+      {syncFeedback && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-xl transition-all animate-in fade-in slide-in-from-bottom-5 duration-300 ${
+            syncFeedback.tipo === 'sucesso'
+              ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200 shadow-emerald-950/50'
+              : 'bg-rose-950/90 border-rose-500/30 text-rose-200 shadow-rose-950/50'
+          }`}
+        >
+          {syncFeedback.tipo === 'sucesso' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          ) : (
+            <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+          )}
+          <span className="text-sm font-medium">{syncFeedback.texto}</span>
+          <button
+            onClick={() => setSyncFeedback(null)}
+            className="text-slate-400 hover:text-white transition-colors ml-2 p-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>

@@ -22,25 +22,32 @@ export const App: React.FC = () => {
 
   const { status, refetch } = useUnifiedStatus();
 
+  const carregarOverview = async () => {
+    try {
+      const [logs, meses]: [OfertaLog[], string[]] = await Promise.all([
+        api.getReplicaLogs(20).catch((): OfertaLog[] => []),
+        api.getFinancasMeses().catch((): string[] => [])
+      ]);
+      setRecentLogs(logs);
+
+      const mesAtual = new Date().toISOString().slice(0, 7);
+      const mesParaConsultar = meses.includes(mesAtual) ? mesAtual : meses[0] || mesAtual;
+      const bal = await api.getBalanco(mesParaConsultar).catch(() => null);
+      setBalanco(bal);
+    } catch {
+      // Ignorar
+    }
+  };
+
+  const handleRefreshGlobal = async () => {
+    await Promise.allSettled([
+      refetch(),
+      carregarOverview()
+    ]);
+  };
+
   // Carregar dados iniciais de dashboard
   useEffect(() => {
-    const carregarOverview = async () => {
-      try {
-        const [logs, meses]: [OfertaLog[], string[]] = await Promise.all([
-          api.getReplicaLogs(20).catch((): OfertaLog[] => []),
-          api.getFinancasMeses().catch((): string[] => [])
-        ]);
-        setRecentLogs(logs);
-
-        const mesAtual = new Date().toISOString().slice(0, 7);
-        const mesParaConsultar = meses.includes(mesAtual) ? mesAtual : meses[0] || mesAtual;
-        const bal = await api.getBalanco(mesParaConsultar).catch(() => null);
-        setBalanco(bal);
-      } catch {
-        // Ignorar
-      }
-    };
-
     carregarOverview();
     const interval = setInterval(carregarOverview, 5000);
     return () => clearInterval(interval);
@@ -65,6 +72,7 @@ export const App: React.FC = () => {
             balanco={balanco}
             onNavigate={(mod) => setActiveModule(mod)}
             onOpenReplicaQr={() => setReplicaQrOpen(true)}
+            onRefreshGlobal={handleRefreshGlobal}
           />
         )}
 
