@@ -871,6 +871,7 @@ export async function extrairDadosAnuncio(
     mattTool: string;
     meliCookie?: string;
     meliTag?: string;
+    linkVitrineCurto?: string;
   }
 ): Promise<AnuncioResult> {
   const rawUrl = (input.url || '').trim();
@@ -1006,29 +1007,35 @@ export async function extrairDadosAnuncio(
 
     // 4. Determinar o Link de Afiliado Final:
     let linkAfiliadoFinal = rawUrl;
-    const isAlreadyShortAffiliate =
-      /mercadolivre\.com\/sec\//i.test(rawUrl) || /meli\.la\//i.test(rawUrl);
 
-    if (isMeli && !isAlreadyShortAffiliate) {
-      const affiliateLongUrl = buildAffiliateUrl(
-        targetUrl,
-        config.mattWord,
-        config.mattTool
-      );
-
-      if (config.meliCookie && config.meliCookie.length > 10) {
-        const short = await shortenToMeli(
-          affiliateLongUrl,
-          config.meliCookie,
-          config.meliTag || config.mattWord
+    if (isMeli) {
+      // Mercado Livre: SEMPRE re-afilia obrigatoriamente para a conta do usuário!
+      // Mesmo que o link colado seja meli.la, /sec/ ou link longo de concorrente
+      const isSocialOrGeneric = targetUrl.includes('/social/') || targetUrl.includes('/cupons');
+      if (isSocialOrGeneric && config.linkVitrineCurto && config.linkVitrineCurto.startsWith('http')) {
+        linkAfiliadoFinal = config.linkVitrineCurto.trim();
+      } else {
+        const affiliateLongUrl = buildAffiliateUrl(
+          targetUrl,
+          config.mattWord,
+          config.mattTool,
+          config.linkVitrineCurto
         );
-        if (short) {
-          linkAfiliadoFinal = short;
+
+        if (config.meliCookie && config.meliCookie.trim().length > 10) {
+          const short = await shortenToMeli(
+            affiliateLongUrl,
+            config.meliCookie,
+            config.meliTag || config.mattWord
+          );
+          if (short) {
+            linkAfiliadoFinal = short;
+          } else {
+            linkAfiliadoFinal = affiliateLongUrl;
+          }
         } else {
           linkAfiliadoFinal = affiliateLongUrl;
         }
-      } else {
-        linkAfiliadoFinal = affiliateLongUrl;
       }
     } else {
       // Shopee ou outros e-commerces mantém o link informado (já com tag de afiliado se fornecido)

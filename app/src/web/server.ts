@@ -685,6 +685,7 @@ export async function createServer() {
       const mattTool = getConfig('affiliate_matt_tool', CONFIG.defaultMattTool);
       const meliCookie = getConfig('meli_cookie', '');
       const meliTag = getConfig('meli_tag', mattWord);
+      const linkVitrineCurto = getConfig('link_vitrine_curto', 'https://mercadolivre.com/sec/2rM6RPm');
 
       const precoDe = body?.precoDe !== undefined ? String(body.precoDe) : undefined;
       const precoPor = body?.precoPor !== undefined ? String(body.precoPor) : undefined;
@@ -694,7 +695,7 @@ export async function createServer() {
 
       const dados = await extrairDadosAnuncio(
         { url: rawUrl, cupom, precoDe, precoPor, valorComCupom, parcelamento },
-        { mattWord, mattTool, meliCookie, meliTag }
+        { mattWord, mattTool, meliCookie, meliTag, linkVitrineCurto }
       );
 
       return {

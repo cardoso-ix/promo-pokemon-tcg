@@ -467,6 +467,18 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
       const textoFinal = res.mensagem || res.textoGerado || '';
       setGeradorPreview(textoFinal);
       setGeradorFoto(res.fotoUrl || res.imageUrl || null);
+      if (res.linkAfiliado && res.linkAfiliado.startsWith('http')) {
+        setGeradorLink(res.linkAfiliado);
+      }
+      if (res.precoDe && !geradorDe) {
+        setGeradorDe(res.precoDe);
+      }
+      if (res.precoPor && !geradorPor) {
+        setGeradorPor(res.precoPor);
+      }
+      if (res.cupom && !geradorCupom) {
+        setGeradorCupom(res.cupom);
+      }
       // Buscar balizador histórico de preços (menor e maior valor já postado)
       buscarRadarBenchmark(textoFinal || geradorLink);
     } catch (err: unknown) {

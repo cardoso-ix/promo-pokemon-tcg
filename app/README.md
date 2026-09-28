@@ -46,9 +46,10 @@ npm test
 2. **Guardião de Nicho Pokémon TCG:**
    - Filtro inteligente que aceita cartas, boosters, boxes, fichários, decks e sleeves (Pokémon, Magic, Yu-Gi-Oh!, One Piece) e descarta produtos fora do nicho colecionável.
 
-3. **Gerador de Anúncios Manual com Auto-Extração:**
-   - Ao colar o link (`meli.la`, `sec/...` ou produto), extrai automaticamente título, foto oficial 2X HD, preço original De, preço promocional Por, cupom ativo e valor final com cupom.
-   - Gera a copy promocional iniciando diretamente pelo nome do item, pré-preenchendo os campos do formulário para edição ágil e publicação no WhatsApp com 1 clique.
+3. **Gerador de Anúncios Manual com Auto-Extração & Re-afiliação Obrigatória:**
+   - Ao colar qualquer link de concorrente (`meli.la`, `sec/...`, produto ou vitrine social), extrai automaticamente título, foto oficial 2X HD, preço original De, preço promocional Por, cupom ativo e valor final com cupom.
+   - **Re-afiliação Obrigatória:** Sobrescreve e descarta 100% de tags alheias ou concorrentes, gerando automaticamente novo link curto oficial `meli.la` ou link direto comissionado exclusivamente para o perfil configurado (`caed1312314`).
+   - Atualiza reativamente o formulário e gera a copy promocional iniciando diretamente pelo nome do item para publicação no WhatsApp com 1 clique.
    - Inclui barra de pesquisa rápida para filtrar grupos de destino.
 
 4. **Sincronização com Google Planilhas ("produtos tcg valores"):**

@@ -188,7 +188,8 @@ test('extrairDadosAnuncio deve extrair preço real de produto com valor único e
   assert.strictEqual(resultado.precoDe, undefined);
   // Copy gerada deve conter o link e o preço Por, sem linhas extras
   assert.strictEqual(resultado.textoGerado.includes('299'), true);
-  assert.strictEqual(resultado.textoGerado.includes('https://meli.la/1FRkD5j'), true);
+  assert.strictEqual(resultado.textoGerado.includes(resultado.linkAfiliado), true);
+  assert.strictEqual(resultado.linkAfiliado.includes('matt_word=meutag'), true);
   assert.strictEqual(resultado.textoGerado.includes('Produto original com estoque'), false);
 });
 
@@ -255,6 +256,31 @@ test('extrairDadosAnuncio deve ter fallback gracioso para links gerais com toler
   assert.strictEqual(resultado.textoGerado.includes('149,90'), true);
   assert.strictEqual(resultado.textoGerado.includes('exemplo.com.br'), true);
 });
+
+test('extrairDadosAnuncio SEMPRE deve re-afiliar link de concorrente (meli.la) e nunca manter link alheio', async () => {
+  const linkConcorrente = 'https://meli.la/2PTWG6y';
+  const resultado = await extrairDadosAnuncio(
+    {
+      url: linkConcorrente
+    },
+    {
+      mattWord: 'meutag-oficial',
+      mattTool: '778899',
+      meliTag: 'meutag-oficial'
+    }
+  );
+
+  assert.strictEqual(resultado.ok, true);
+  // O link final NUNCA pode ser o link original do concorrente sem re-afiliação
+  assert.notStrictEqual(resultado.linkAfiliado, linkConcorrente);
+  // Deve conter a tag do usuário no link longo ou novo link gerado
+  assert.strictEqual(
+    resultado.linkAfiliado.includes('matt_word=meutag-oficial') || resultado.linkAfiliado.startsWith('https://meli.la/'),
+    true
+  );
+  assert.strictEqual(!resultado.textoGerado.includes(linkConcorrente), true);
+});
+
 
 
 
