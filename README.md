@@ -89,6 +89,7 @@ chmod +x *.sh
 
 ### 3. 💼 Módulo de Finanças & Relatórios Executivos
 - **Sincronização Direta Meta Ads (Graph API v20.0):** Ingestão automática de gastos (`spend`), impressões, cliques, compras, CPC e CTR direto da conta de anúncios.
+- **Isolamento Temporal Estrito & Soberania Contábil:** O cache analítico do Mercado Livre isola as métricas diárias (`commissionsToday`, `ordersToday`, `totalSalesToday`, `clicksToday`), blindando contra vazamento de datas anteriores quando a sessão expirar, e estabelece precedência soberana de lançamentos manuais no DRE.
 - **Filtros Rápidos de Período (Dia / Semana / Mês / Todos):**
   - Botão **Dia** com seletor de data específica.
   - Botão **Semana** consolidando os últimos 7 dias.
@@ -111,7 +112,7 @@ chmod +x *.sh
 
 ---
 
-## 🧪 Cobertura de Testes Automatizados (98 Testes — 100% Verde)
+## 🧪 Cobertura de Testes Automatizados (101 Testes — 100% Verde)
 
 A plataforma conta com uma suíte de testes unitários e de integração abrangente em `app/test/`:
 
@@ -123,8 +124,8 @@ A plataforma conta com uma suíte de testes unitários e de integração abrange
 | **Gerador & Extrator de Anúncios** | 14 | Extração De/Por/Cupom em links Mercado Livre e Shopee, cópia e disparo em lote com auto-destinos | 🟢 Passou (100%) |
 | **Agendador Diário, Bom Dia & Métricas** | 10 | Disparo às 07:00, interpolação, rotação de 4 templates e contagem real de hoje via SQL indexado | 🟢 Passou (100%) |
 | **Google Planilhas Webhook** | 6 | Conexão resiliente, formatação de valores em BRL e envio assíncrono não-bloqueante | 🟢 Passou (100%) |
-| **Autenticação & Sessão HMAC** | 10 | Login com credenciais seguras, tokens assinados HMAC e autorização de rotas privadas | 🟢 Passou (100%) |
-| **Total Consolidado** | **100 testes** | **Zero falhas na esteira de automação** | 🟢 **100% VERDE** |
+| **Autenticação & Sessão HMAC** | 11 | Login com credenciais seguras, tokens assinados HMAC e autorização de rotas privadas | 🟢 Passou (100%) |
+| **Total Consolidado** | **101 testes** | **Zero falhas na esteira de automação** | 🟢 **100% VERDE** |
 
 Para executar todos os testes da raiz:
 ```bash

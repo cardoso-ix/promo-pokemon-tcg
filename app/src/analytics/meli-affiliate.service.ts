@@ -179,6 +179,9 @@ export class MeliAffiliateService {
 
     // Tentar ler cache existente do banco para preservar valores reais anteriores
     const cached = this.loadFromSqlite();
+    const todayIso = getBrazilToday();
+    const isCacheFromToday = cached?.updatedAt ? normalizeDateToIsoDay(cached.updatedAt) === todayIso : false;
+
     if (cached) {
       totalClicks = cached.totalClicks || totalClicks;
       totalBuyers = cached.totalBuyers || totalBuyers;
@@ -187,8 +190,10 @@ export class MeliAffiliateService {
       totalSales = cached.totalSales || totalSales;
       totalCommissions = cached.totalCommissions || totalCommissions;
       cvr = cached.cvr || cvr;
-      commissionsToday = cached.commissionsToday || commissionsToday;
-      ordersToday = cached.ordersToday || ordersToday;
+      if (isCacheFromToday) {
+        commissionsToday = cached.commissionsToday || commissionsToday;
+        ordersToday = cached.ordersToday || ordersToday;
+      }
       if (cached.recentSales?.length) recentSales.push(...cached.recentSales);
       if (cached.dailyData?.length) dailyData.push(...cached.dailyData);
       if (cached.productsSold?.length) productsSold.push(...cached.productsSold);
@@ -303,9 +308,8 @@ export class MeliAffiliateService {
     }
 
     // Cálculo Real e Auditável de Comissões e Vendas de Hoje usando o Fuso de Brasília
-    const todayIso = getBrazilToday();
-    let totalSalesToday = cached?.totalSalesToday || 0;
-    let clicksToday = cached?.clicksToday || 0;
+    let totalSalesToday = isCacheFromToday ? (cached?.totalSalesToday || 0) : 0;
+    let clicksToday = isCacheFromToday ? (cached?.clicksToday || 0) : 0;
 
     // 1. Tenta pegar do detalhe diário oficial do Meli
     for (const d of dailyData) {
@@ -334,7 +338,7 @@ export class MeliAffiliateService {
     }
 
     // 3. Se a sessão estiver expirada ou não retornou dados de hoje, preserva dados reais salvos anteriormente para a data de hoje
-    if (commissionsToday === 0 && cached && cached.commissionsToday > 0 && normalizeDateToIsoDay(cached.updatedAt) === todayIso) {
+    if (commissionsToday === 0 && cached && cached.commissionsToday > 0 && isCacheFromToday) {
       commissionsToday = cached.commissionsToday;
       ordersToday = cached.ordersToday;
       if (cached.totalSalesToday) totalSalesToday = cached.totalSalesToday;

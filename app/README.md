@@ -65,6 +65,8 @@ npm test
 
 7. **Módulo de Finanças, DRE & Lançamentos Diários Persistentes:**
    - Integração analítica com Meta Ads Insights e Mercado Livre Afiliados.
+   - **Isolamento Temporal Estrito de Cache:** O cache do Mercado Livre Afiliados isola métricas diárias (`commissionsToday`, `ordersToday`, `totalSalesToday`, `clicksToday`), impedindo vazamento de valores residuais entre viradas de data quando a sessão estiver pendente.
+   - **Soberania Contábil Auditável:** Lançamentos com `origem = 'manual'` em `financas_lancamentos_diarios` possuem prioridade sobre dados voláteis no DRE consolidado.
    - Tabela dedicada `financas_lancamentos_diarios` com persistência local SQLite, resiliência contra atrasos de consolidação da API do Mercado Livre (evitando lacunas como finais de semana) e bootstrap automático de histórico.
    - Endpoints `POST /api/financas/lancamentos` e `DELETE /api/financas/lancamentos/:data` para inclusão, ajuste fino e edição de vendas, comissões e gastos de campanhas diretamente pela tabela do Cockpit.
    - Cálculo automático de Blended ROAS, Margem de Lucro Operacional e divisão 70/30 (Reinvestimento / Lucro Líquido Disponível).

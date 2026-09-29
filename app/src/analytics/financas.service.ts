@@ -17,6 +17,7 @@ export interface BalancoItem {
   impressoesMeta: number;
   descricao?: string;
   categoria?: string;
+  origem?: 'auto' | 'manual';
 }
 
 export interface BalancoMensalResult {
@@ -243,6 +244,7 @@ export class FinancasService {
 
       for (const l of lancamentosSalvos) {
         const dia = l.data_lancamento;
+        const origemTipo = (l.origem as 'auto' | 'manual') || 'auto';
         if (!mapaDias[dia]) {
           mapaDias[dia] = {
             dataLancamento: dia,
@@ -254,7 +256,8 @@ export class FinancasService {
             cliquesMeta: Number(l.cliques_meta) || 0,
             impressoesMeta: Number(l.impressoes_meta) || 0,
             descricao: l.descricao,
-            categoria: l.categoria
+            categoria: l.categoria,
+            origem: origemTipo
           };
         } else {
           // Se for manual ou se o dia estiver zerado na API, sobrepõe com os dados persistidos
@@ -268,6 +271,7 @@ export class FinancasService {
             if (Number(l.gasto_campanhas) > 0) mapaDias[dia].gastoCampanhas = Number(l.gasto_campanhas);
             if (Number(l.cliques_meta) > 0) mapaDias[dia].cliquesMeta = Number(l.cliques_meta);
             if (Number(l.impressoes_meta) > 0) mapaDias[dia].impressoesMeta = Number(l.impressoes_meta);
+            mapaDias[dia].origem = 'manual';
           }
           mapaDias[dia].saldoDia = mapaDias[dia].lucroBruto - mapaDias[dia].gastoCampanhas;
           if (l.descricao) mapaDias[dia].descricao = l.descricao;
@@ -282,8 +286,14 @@ export class FinancasService {
     const hojeStr = getBrazilToday();
     if (hojeStr.startsWith(mesRef)) {
       const metaHoje = getMetaInsightsStats();
-      const vendasHoje = affiliate?.totalSalesToday || ((affiliate?.commissionsToday || 0) * 10);
-      if (!mapaDias[hojeStr]) {
+      const itemHoje = mapaDias[hojeStr];
+      const isManualHoje = itemHoje?.origem === 'manual';
+
+      if (!itemHoje) {
+        const vendasHoje = affiliate?.totalSalesToday || ((affiliate?.commissionsToday || 0) * 10);
+        const dRow = metaDailyRows.find(m => m.date === hojeStr);
+        const cliquesHoje = dRow ? Number(dRow.clicks) || 0 : 0;
+        const impressoesHoje = dRow ? Number(dRow.impressions) || 0 : 0;
         mapaDias[hojeStr] = {
           dataLancamento: hojeStr,
           gastoCampanhas: metaHoje.spendToday || 0,
@@ -291,14 +301,15 @@ export class FinancasService {
           vendasBrutas: vendasHoje,
           saldoDia: (affiliate?.commissionsToday || 0) - (metaHoje.spendToday || 0),
           blendedRoas: 0,
-          cliquesMeta: 0,
-          impressoesMeta: 0
+          cliquesMeta: cliquesHoje,
+          impressoesMeta: impressoesHoje,
+          origem: 'auto'
         };
       } else {
-        if (metaHoje.spendToday > 0) mapaDias[hojeStr].gastoCampanhas = metaHoje.spendToday;
-        if (affiliate?.commissionsToday && affiliate.commissionsToday > 0) {
+        if (metaHoje.spendToday > 0 && !isManualHoje) mapaDias[hojeStr].gastoCampanhas = metaHoje.spendToday;
+        if (!isManualHoje && affiliate?.commissionsToday !== undefined && affiliate.commissionsToday > 0) {
           mapaDias[hojeStr].lucroBruto = affiliate.commissionsToday;
-          mapaDias[hojeStr].vendasBrutas = vendasHoje;
+          mapaDias[hojeStr].vendasBrutas = affiliate.totalSalesToday || (affiliate.commissionsToday * 10);
         }
         mapaDias[hojeStr].saldoDia = mapaDias[hojeStr].lucroBruto - mapaDias[hojeStr].gastoCampanhas;
       }
