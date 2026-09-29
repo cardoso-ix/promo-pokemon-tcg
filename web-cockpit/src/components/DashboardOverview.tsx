@@ -983,6 +983,84 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <span className="text-[10px] text-cyan-400">Comissão Efetiva: {comissaoEfetivaHoje.toFixed(1)}%</span>
           </div>
         </div>
+
+        {/* Régua Visual de Arbitragem (Spread Bar em Tempo Real) */}
+        {(() => {
+          const custoPct = epcHoje > 0 && cpcMetaHoje > 0 ? Math.min(100, Math.round((cpcMetaHoje / epcHoje) * 100)) : 0;
+          const margemPct = epcHoje > 0 ? Math.max(0, 100 - custoPct) : 0;
+
+          return (
+            <div className="p-3.5 rounded-xl bg-slate-950/40 border border-white/[0.06] space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  Régua de Arbitragem de Tráfego · Retenção de Lucro por Clique
+                </span>
+                <span className="font-mono text-[11px] text-slate-400">
+                  {epcHoje > 0
+                    ? `Retenção Líquida: ${margemPct}% do ganho bruto por clique`
+                    : 'Aguardando cliques para cálculo da régua'}
+                </span>
+              </div>
+
+              {/* Barra de Progresso Segmentada */}
+              <div className="w-full h-3.5 rounded-full bg-white/[0.05] p-0.5 overflow-hidden flex border border-white/10">
+                {cpcMetaHoje > 0 && (
+                  <div
+                    style={{ width: `${custoPct}%` }}
+                    className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-l-full relative group transition-all duration-500"
+                    title={`Custo Meta Ads: R$ ${cpcMetaHoje.toFixed(2)} (${custoPct}%)`}
+                  />
+                )}
+                {epcHoje > 0 && margemPct > 0 && (
+                  <div
+                    style={{ width: `${margemPct}%` }}
+                    className={`h-full bg-gradient-to-r from-emerald-500 to-teal-400 relative group transition-all duration-500 ${
+                      cpcMetaHoje === 0 ? 'rounded-full' : 'rounded-r-full'
+                    }`}
+                    title={`Margem Líquida Retida: R$ ${netEpcHoje.toFixed(2)} (${margemPct}%)`}
+                  />
+                )}
+                {epcHoje === 0 && (
+                  <div className="w-full h-full bg-slate-700/40 rounded-full" />
+                )}
+              </div>
+
+              {/* Legendas e Indicadores da Régua */}
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 pt-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                  <span>
+                    Custo por Clique (CPC):{' '}
+                    <strong className="text-blue-300 font-mono">
+                      R$ {cpcMetaHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </strong>{' '}
+                    ({custoPct}%)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <span>
+                    Margem Líquida (Spread):{' '}
+                    <strong className="text-emerald-400 font-mono">
+                      R$ {netEpcHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                    </strong>{' '}
+                    ({margemPct}%)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <span>
+                    Ganho Bruto (EPC):{' '}
+                    <strong className="text-amber-300 font-mono">
+                      R$ {epcHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                    </strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Seção Principal de Gráficos Recharts */}

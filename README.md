@@ -80,7 +80,7 @@ chmod +x *.sh
   1. **Produtos Vendidos:** Tabela detalhada de itens comissionados, faturamento gerado, comissão ganha e links diretos.
   2. **Audiências:** Perfil demográfico completo dos compradores (Faixa etária, Gênero e Distribuição geográfica por estados brasileiros).
   3. **Vendas Não Efetivadas:** Análise de carrinho abandonado, pedidos cancelados e motivos de perda.
-  4. **Data:** Histórico dia a dia de receita, comissões, pedidos e taxa de conversão (CVR) com ordenação cronológica decrescente estrita no backend e frontend.
+  4. **Data (Desempenho Diário & Tendência Recharts):** Histórico dia a dia de receita, comissões, pedidos e taxa de conversão (CVR) com ordenação cronológica decrescente estrita, **3 Mini-Cards de Inteligência Estratégica (Recorde/Melhor Dia do Mês, Média Diária Ativa e Taxa de Conversão CVR)** e **Gráfico Interativo de Tendência Diária (`Recharts ComposedChart`)** com área gradiente esmeralda de comissões, linha ciano de pedidos e tooltip glassmorphism em tempo real.
   5. **Vendas:** Extrato cronológico detalhado das últimas vendas com status e comissão unitária.
   6. **Categorias:** Gráfico comparativo e ranking das categorias mais lucrativas (Brinquedos, Colecionáveis, etc.).
   7. **Etiquetas de Rastreamento:** Monitoramento de campanhas segmentadas pela tag de atribuição oficial (`matt_word` / `matt_tool`).
@@ -94,6 +94,7 @@ chmod +x *.sh
 - **Card Executivo de Arbitragem de Tráfego em Tempo Real (`Net EPC` vs `CPC Meta`):**
   - Motor de inteligência que compara instantaneamente o lucro gerado por clique de afiliado com o custo médio pago por clique nos anúncios do Meta Ads (`Net EPC = EPC - CPC Meta`).
   - Sinalizador visual com badges dinâmicos de lucratividade: **Operação Lucrativa** (spread positivo), **Neutro** (tráfego orgânico) ou **Alerta de Spread** (custo de anúncio superior à comissão unitária).
+  - **Régua Visual de Arbitragem (Spread Bar):** Barra de progresso segmentada proporcional de alta precisão exibindo a taxa percentual de retenção de margem líquida, custo do clique pago no Meta Ads e ganho bruto no Mercado Livre em tempo real.
 
 ---
 

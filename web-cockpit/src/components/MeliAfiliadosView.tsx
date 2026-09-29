@@ -20,8 +20,21 @@ import {
   Percent,
   Coins,
   ShoppingCart,
-  ShieldAlert
+  ShieldAlert,
+  Trophy,
+  Target,
+  BarChart3
 } from 'lucide-react';
+import {
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  ComposedChart,
+  Line
+} from 'recharts';
 import type { MeliAffiliateOverview } from '../types/index.ts';
 import { api } from '../services/api.ts';
 
@@ -162,6 +175,31 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
   const cestaMedia = data?.basketMultiplierToday ?? (pedidosHoje > 0 && data?.productsEstimatedToday ? (data.productsEstimatedToday / pedidosHoje) : 1);
   const produtosEstimadosHoje = data?.productsEstimatedToday ?? 0;
   const vendasNaoEfetivadasHoje = data?.unrealizedSalesToday ?? (data?.unrealizedSales?.length || 0);
+
+  // Inteligência e Gráfico da Aba Data (Desempenho Diário)
+  const dailyDataSortedDesc = [...(data?.dailyData || [])].sort((a, b) => b.date.localeCompare(a.date));
+  const dailyDataChart = [...(data?.dailyData || [])]
+    .filter(d => d.earnings > 0 || d.orders > 0 || d.touchpoints > 0)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(d => ({
+      dataLabel: d.date.length > 5 ? d.date.slice(5) : d.date,
+      dataCompleta: d.date,
+      comissoes: d.earnings,
+      pedidos: d.orders,
+      itens: d.quantity,
+      cliques: d.touchpoints,
+      cvrPercentual: Number((d.cvr * 100).toFixed(1))
+    }));
+
+  const melhorDiaRegistro = [...(data?.dailyData || [])].reduce(
+    (max, cur) => (cur.earnings > (max?.earnings || 0) ? cur : max),
+    null as { date: string; earnings: number; orders: number; quantity: number } | null
+  );
+
+  const diasComComissao = (data?.dailyData || []).filter(d => d.earnings > 0);
+  const mediaComissaoDiaria = diasComComissao.length > 0
+    ? diasComComissao.reduce((acc, d) => acc + d.earnings, 0) / diasComComissao.length
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -760,48 +798,267 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
         </div>
       )}
 
-      {/* Conteúdo da Sub-Aba 4: DATA (Detalhamento Diário) */}
+      {/* Conteúdo da Sub-Aba 4: DATA (Detalhamento Diário com Inteligência Visual) */}
       {activeTab === 'data' && (
-        <div className="glass-panel rounded-2xl border border-white/[0.08] overflow-hidden space-y-4 p-5">
-          <div className="border-b border-white/[0.06] pb-3">
-            <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-cyan-400" />
-              Histórico de Faturamento e Comissões por Data
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Consolidação dia a dia de pedidos aprovados, conversão e comissão gerada.
-            </p>
+        <div className="space-y-6">
+          {/* 3 Mini-Cards de Inteligência Estratégica */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Mini-Card 1: Recorde / Melhor Dia */}
+            <div className="glass-panel p-4 rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent relative overflow-hidden group hover:border-amber-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <Trophy className="w-4 h-4 text-amber-400" />
+                  Recorde do Mês
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-200 border border-amber-500/30">
+                  {melhorDiaRegistro ? melhorDiaRegistro.date : 'N/A'}
+                </span>
+              </div>
+              <div className="mt-2.5">
+                <div className="text-xl sm:text-2xl font-heading font-extrabold text-amber-400">
+                  R$ {melhorDiaRegistro ? melhorDiaRegistro.earnings.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '0,00'}
+                </div>
+                <p className="text-xs text-slate-300 mt-1 flex items-center gap-1">
+                  <span>🎯 {melhorDiaRegistro ? melhorDiaRegistro.orders : 0} pedidos confirmados</span>
+                  <span className="text-slate-500">·</span>
+                  <span className="text-slate-400">{melhorDiaRegistro ? melhorDiaRegistro.quantity : 0} itens</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Mini-Card 2: Média Diária */}
+            <div className="glass-panel p-4 rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-cyan-500/5 to-transparent relative overflow-hidden group hover:border-cyan-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4 text-cyan-400" />
+                  Média Diária Ativa
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/30">
+                  {diasComComissao.length} dias c/ vendas
+                </span>
+              </div>
+              <div className="mt-2.5">
+                <div className="text-xl sm:text-2xl font-heading font-extrabold text-cyan-300">
+                  R$ {mediaComissaoDiaria.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  Receita comissionada média por dia de faturamento
+                </p>
+              </div>
+            </div>
+
+            {/* Mini-Card 3: Conversão Global CVR */}
+            <div className="glass-panel p-4 rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent relative overflow-hidden group hover:border-emerald-500/40 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                  <Target className="w-4 h-4 text-emerald-400" />
+                  Conversão Geral (CVR)
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
+                  {totalPedidos} vendas totais
+                </span>
+              </div>
+              <div className="mt-2.5">
+                <div className="text-xl sm:text-2xl font-heading font-extrabold text-emerald-400">
+                  {cvr.toFixed(2)}%
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  Taxa de conversão sobre {totalCliques.toLocaleString('pt-BR')} cliques rastreados
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-white/[0.08] text-slate-400 font-semibold uppercase text-[11px]">
-                  <th className="py-3 px-4">Data</th>
-                  <th className="py-3 px-4 text-center">Pedidos</th>
-                  <th className="py-3 px-4 text-center">Quantidade de Itens</th>
-                  <th className="py-3 px-4 text-right">Comissões (R$)</th>
-                  <th className="py-3 px-4 text-center">Cliques (Touchpoints)</th>
-                  <th className="py-3 px-4 text-center">CVR (%)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/[0.04]">
-                {[...(data?.dailyData || [])].sort((a, b) => b.date.localeCompare(a.date)).map((d, idx) => (
-                  <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-3 px-4 font-mono font-medium text-slate-300">{d.date}</td>
-                    <td className="py-3 px-4 text-center font-bold text-white">{d.orders}</td>
-                    <td className="py-3 px-4 text-center text-slate-300">{d.quantity}</td>
-                    <td className="py-3 px-4 text-right font-heading font-bold text-emerald-400">
-                      R$ {d.earnings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3 px-4 text-center text-slate-400">{d.touchpoints}</td>
-                    <td className="py-3 px-4 text-center text-cyan-300 font-medium">
-                      {(d.cvr * 100).toFixed(2)}%
-                    </td>
+          {/* Gráfico Interativo de Tendência Diária */}
+          <div className="glass-panel rounded-2xl border border-white/[0.08] p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/[0.06] pb-3">
+              <div>
+                <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-400" />
+                  Tendência Diária: Comissões (R$) & Pedidos
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Acompanhe a curva diária de receita gerada e volume de vendas aprovadas
+                </p>
+              </div>
+              <div className="flex items-center gap-3 text-xs font-mono">
+                <span className="flex items-center gap-1.5 text-emerald-400">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm shadow-emerald-500/50 inline-block" />
+                  Comissão (R$)
+                </span>
+                <span className="flex items-center gap-1.5 text-cyan-400">
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-500/50 inline-block" />
+                  Pedidos
+                </span>
+              </div>
+            </div>
+
+            {dailyDataChart.length > 0 ? (
+              <div className="h-64 sm:h-72 w-full pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={dailyDataChart} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="comissaoAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="rgba(255, 255, 255, 0.05)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="dataLabel"
+                      stroke="#64748b"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={{ stroke: 'rgba(255, 255, 255, 0.08)' }}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      stroke="#64748b"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(val: number) => `R$ ${val}`}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      stroke="#64748b"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(val: number) => `${val} vd`}
+                    />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const dataPoint = payload[0].payload as {
+                            dataCompleta: string;
+                            comissoes: number;
+                            pedidos: number;
+                            itens: number;
+                            cliques: number;
+                            cvrPercentual: number;
+                          };
+                          return (
+                            <div className="rounded-xl border border-white/10 bg-slate-900/95 backdrop-blur-md p-3 shadow-2xl text-xs space-y-1.5 min-w-[180px]">
+                              <p className="font-mono font-bold text-slate-200 border-b border-white/10 pb-1 flex items-center justify-between">
+                                <span>📅 {dataPoint.dataCompleta}</span>
+                                <span className="text-[10px] text-cyan-300 font-normal">{dataPoint.cvrPercentual}% CVR</span>
+                              </p>
+                              <div className="flex justify-between items-center text-emerald-400 font-bold pt-0.5">
+                                <span>Comissões:</span>
+                                <span>R$ {dataPoint.comissoes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-cyan-300">
+                                <span>Pedidos Aprovados:</span>
+                                <span className="font-bold">{dataPoint.pedidos} vendas</span>
+                              </div>
+                              <div className="flex justify-between items-center text-slate-400 text-[11px]">
+                                <span>Itens Vendidos:</span>
+                                <span>{dataPoint.itens} unid.</span>
+                              </div>
+                              <div className="flex justify-between items-center text-slate-400 text-[11px]">
+                                <span>Cliques (Touchpoints):</span>
+                                <span>{dataPoint.cliques}</span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="comissoes"
+                      stroke="#10b981"
+                      strokeWidth={2.5}
+                      fillOpacity={1}
+                      fill="url(#comissaoAreaGrad)"
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="pedidos"
+                      stroke="#06b6d4"
+                      strokeWidth={2}
+                      dot={{ r: 3.5, fill: '#06b6d4', stroke: '#0891b2', strokeWidth: 1.5 }}
+                      activeDot={{ r: 6, fill: '#22d3ee', stroke: '#fff', strokeWidth: 2 }}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="py-12 text-center text-slate-500 text-xs">
+                Aguardando dados históricos diários para geração do gráfico.
+              </div>
+            )}
+          </div>
+
+          {/* Tabela Detalhada com Badges e Destaques */}
+          <div className="glass-panel rounded-2xl border border-white/[0.08] overflow-hidden space-y-4 p-5">
+            <div className="border-b border-white/[0.06] pb-3 flex items-center justify-between">
+              <div>
+                <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-cyan-400" />
+                  Histórico de Faturamento e Comissões por Data
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Consolidação dia a dia com identificação automática do dia recorde
+                </p>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400">
+                {dailyDataSortedDesc.length} registros
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-white/[0.08] text-slate-400 font-semibold uppercase text-[11px]">
+                    <th className="py-3 px-4">Data</th>
+                    <th className="py-3 px-4 text-center">Pedidos</th>
+                    <th className="py-3 px-4 text-center">Quantidade de Itens</th>
+                    <th className="py-3 px-4 text-right">Comissões (R$)</th>
+                    <th className="py-3 px-4 text-center">Cliques (Touchpoints)</th>
+                    <th className="py-3 px-4 text-center">CVR (%)</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {dailyDataSortedDesc.map((d, idx) => {
+                    const isMelhorDia = melhorDiaRegistro && d.date === melhorDiaRegistro.date && d.earnings > 0;
+                    return (
+                      <tr
+                        key={idx}
+                        className={`transition-colors ${
+                          isMelhorDia
+                            ? 'bg-amber-500/10 hover:bg-amber-500/15 border-l-2 border-l-amber-400'
+                            : 'hover:bg-white/[0.02]'
+                        }`}
+                      >
+                        <td className="py-3 px-4 font-mono font-medium text-slate-300 flex items-center gap-2">
+                          <span>{d.date}</span>
+                          {isMelhorDia && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-sans font-bold px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 shadow-sm">
+                              <Trophy className="w-3 h-3" /> Recorde
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-center font-bold text-white">{d.orders}</td>
+                        <td className="py-3 px-4 text-center text-slate-300">{d.quantity}</td>
+                        <td className="py-3 px-4 text-right font-heading font-bold text-emerald-400">
+                          R$ {d.earnings.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3 px-4 text-center text-slate-400">{d.touchpoints}</td>
+                        <td className="py-3 px-4 text-center text-cyan-300 font-medium">
+                          {(d.cvr * 100).toFixed(2)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
