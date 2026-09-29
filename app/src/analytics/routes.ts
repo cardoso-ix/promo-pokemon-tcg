@@ -528,6 +528,7 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
       ]);
 
       await analyticsService.consolidateRange(trintaDiasAtras, hoje).catch(() => null);
+      await financasService.sincronizarDiaHojeComAfiliados().catch(() => null);
 
       return {
         ok: true,
@@ -563,6 +564,10 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   const handleGetBalanco = async (req: FastifyRequest<{ Querystring: { mes?: string } }>, reply: FastifyReply) => {
     try {
       const mes = req.query?.mes;
+      const hojeMes = getBrazilToday().slice(0, 7);
+      if (!mes || mes === hojeMes) {
+        await financasService.sincronizarDiaHojeComAfiliados().catch(() => null);
+      }
       const balanco = await financasService.getBalancoMensal(mes);
       return { ok: true, balanco };
     } catch (err: unknown) {

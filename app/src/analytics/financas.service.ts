@@ -235,16 +235,34 @@ export class FinancasService {
     }
 
     // Fusão resiliente com lançamentos diários permanentes do banco SQLite
+    const hojeStr = getBrazilToday();
     try {
+      interface LancamentoSalvoRow {
+        data_lancamento: string;
+        lucro_bruto: number;
+        vendas_brutas: number;
+        gasto_campanhas: number;
+        cliques_meta: number;
+        impressoes_meta: number;
+        origem: string | null;
+        descricao: string | null;
+        categoria: string | null;
+      }
+
       const lancamentosSalvos = db.prepare(`
         SELECT data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
         FROM financas_lancamentos_diarios
         WHERE data_lancamento LIKE ?
-      `).all(`${mesRef}-%`) as any[];
+      `).all(`${mesRef}-%`) as LancamentoSalvoRow[];
 
       for (const l of lancamentosSalvos) {
         const dia = l.data_lancamento;
         const origemTipo = (l.origem as 'auto' | 'manual') || 'auto';
+        const isHoje = dia === hojeStr;
+        const comissaoLiveHoje = isHoje ? (affiliate?.commissionsToday || 0) : 0;
+        // O dia de hoje é dinâmico: se a API ao vivo do ML trouxer comissões superiores, prioriza o fluxo vivo
+        const apiTemMaisRecente = isHoje && comissaoLiveHoje > Number(l.lucro_bruto);
+
         if (!mapaDias[dia]) {
           mapaDias[dia] = {
             dataLancamento: dia,
@@ -255,19 +273,19 @@ export class FinancasService {
             blendedRoas: 0,
             cliquesMeta: Number(l.cliques_meta) || 0,
             impressoesMeta: Number(l.impressoes_meta) || 0,
-            descricao: l.descricao,
-            categoria: l.categoria,
-            origem: origemTipo
+            descricao: l.descricao || undefined,
+            categoria: l.categoria || undefined,
+            origem: apiTemMaisRecente ? 'auto' : origemTipo
           };
         } else {
-          // Se for manual ou se o dia estiver zerado na API, sobrepõe com os dados persistidos
-          if (l.origem === 'manual' || mapaDias[dia].lucroBruto === 0) {
+          // Se for manual e não houver dados ao vivo mais recentes da API, sobrepõe com os dados persistidos
+          if ((l.origem === 'manual' && !apiTemMaisRecente) || mapaDias[dia].lucroBruto === 0) {
             if (l.lucro_bruto !== undefined && (l.origem === 'manual' || Number(l.lucro_bruto) > 0)) {
               mapaDias[dia].lucroBruto = Number(l.lucro_bruto) || 0;
               mapaDias[dia].vendasBrutas = Number(l.vendas_brutas) || (Number(l.lucro_bruto) ? Number(l.lucro_bruto) * 10 : 0);
             }
           }
-          if (l.origem === 'manual') {
+          if (l.origem === 'manual' && !apiTemMaisRecente) {
             if (Number(l.gasto_campanhas) > 0) mapaDias[dia].gastoCampanhas = Number(l.gasto_campanhas);
             if (Number(l.cliques_meta) > 0) mapaDias[dia].cliquesMeta = Number(l.cliques_meta);
             if (Number(l.impressoes_meta) > 0) mapaDias[dia].impressoesMeta = Number(l.impressoes_meta);
@@ -282,36 +300,77 @@ export class FinancasService {
       console.warn('[FinancasService] Erro ao mesclar financas_lancamentos_diarios:', err);
     }
 
-    // Se o mês atual for o ativo, garante que o dia de hoje está sincronizado
-    const hojeStr = getBrazilToday();
+    // Se o mês atual for o ativo, garante que o dia de hoje está perfeitamente sincronizado com o fluxo ao vivo
     if (hojeStr.startsWith(mesRef)) {
       const metaHoje = getMetaInsightsStats();
       const itemHoje = mapaDias[hojeStr];
-      const isManualHoje = itemHoje?.origem === 'manual';
+      const liveComissao = affiliate?.commissionsToday || 0;
+      const liveVendas = affiliate?.totalSalesToday || (liveComissao > 0 ? liveComissao * 10 : 0);
+
+      // O dia corrente é dinâmico: absorve comissões e vendas em tempo real do Mercado Livre
+      const deveAtualizarComLive = liveComissao > 0 && (
+        itemHoje?.origem !== 'manual' || liveComissao >= (itemHoje?.lucroBruto || 0)
+      );
 
       if (!itemHoje) {
-        const vendasHoje = affiliate?.totalSalesToday || ((affiliate?.commissionsToday || 0) * 10);
         const dRow = metaDailyRows.find(m => m.date === hojeStr);
         const cliquesHoje = dRow ? Number(dRow.clicks) || 0 : 0;
         const impressoesHoje = dRow ? Number(dRow.impressions) || 0 : 0;
         mapaDias[hojeStr] = {
           dataLancamento: hojeStr,
           gastoCampanhas: metaHoje.spendToday || 0,
-          lucroBruto: affiliate?.commissionsToday || 0,
-          vendasBrutas: vendasHoje,
-          saldoDia: (affiliate?.commissionsToday || 0) - (metaHoje.spendToday || 0),
-          blendedRoas: 0,
+          lucroBruto: liveComissao,
+          vendasBrutas: liveVendas,
+          saldoDia: liveComissao - (metaHoje.spendToday || 0),
+          blendedRoas: (metaHoje.spendToday > 0 && liveVendas > 0) ? Number((liveVendas / metaHoje.spendToday).toFixed(2)) : 0,
           cliquesMeta: cliquesHoje,
           impressoesMeta: impressoesHoje,
           origem: 'auto'
         };
       } else {
-        if (metaHoje.spendToday > 0 && !isManualHoje) mapaDias[hojeStr].gastoCampanhas = metaHoje.spendToday;
-        if (!isManualHoje && affiliate?.commissionsToday !== undefined && affiliate.commissionsToday > 0) {
-          mapaDias[hojeStr].lucroBruto = affiliate.commissionsToday;
-          mapaDias[hojeStr].vendasBrutas = affiliate.totalSalesToday || (affiliate.commissionsToday * 10);
+        if (metaHoje.spendToday > 0) {
+          mapaDias[hojeStr].gastoCampanhas = metaHoje.spendToday;
+        }
+        if (deveAtualizarComLive) {
+          mapaDias[hojeStr].lucroBruto = liveComissao;
+          mapaDias[hojeStr].vendasBrutas = liveVendas;
+          mapaDias[hojeStr].origem = 'auto'; // Transforma para auto para refletir a sincronização
         }
         mapaDias[hojeStr].saldoDia = mapaDias[hojeStr].lucroBruto - mapaDias[hojeStr].gastoCampanhas;
+        if (mapaDias[hojeStr].gastoCampanhas > 0 && mapaDias[hojeStr].vendasBrutas > 0) {
+          mapaDias[hojeStr].blendedRoas = Number((mapaDias[hojeStr].vendasBrutas / mapaDias[hojeStr].gastoCampanhas).toFixed(2));
+        }
+      }
+
+      // Auto-persistência atômica da linha de hoje na tabela SQLite financas_lancamentos_diarios
+      if (liveComissao > 0) {
+        try {
+          db.prepare(`
+            INSERT INTO financas_lancamentos_diarios (
+              data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+            ) VALUES (?, ?, ?, ?, ?, ?, 'auto', 'Mercado Livre Afiliados (Live Sync)', 'mercado_livre')
+            ON CONFLICT(data_lancamento) DO UPDATE SET
+              lucro_bruto = excluded.lucro_bruto,
+              vendas_brutas = excluded.vendas_brutas,
+              gasto_campanhas = CASE WHEN excluded.gasto_campanhas > 0 THEN excluded.gasto_campanhas ELSE financas_lancamentos_diarios.gasto_campanhas END,
+              cliques_meta = CASE WHEN excluded.cliques_meta > 0 THEN excluded.cliques_meta ELSE financas_lancamentos_diarios.cliques_meta END,
+              impressoes_meta = CASE WHEN excluded.impressoes_meta > 0 THEN excluded.impressoes_meta ELSE financas_lancamentos_diarios.impressoes_meta END,
+              origem = 'auto',
+              atualizado_em = CURRENT_TIMESTAMP
+            WHERE financas_lancamentos_diarios.data_lancamento = ?
+              AND (financas_lancamentos_diarios.lucro_bruto <= excluded.lucro_bruto OR financas_lancamentos_diarios.origem != 'manual')
+          `).run(
+            hojeStr,
+            liveComissao,
+            liveVendas,
+            mapaDias[hojeStr].gastoCampanhas || 0,
+            mapaDias[hojeStr].cliquesMeta || 0,
+            mapaDias[hojeStr].impressoesMeta || 0,
+            hojeStr
+          );
+        } catch (err) {
+          console.warn('[FinancasService] Aviso ao persistir auto-sync de hoje:', err);
+        }
       }
     }
 
@@ -473,6 +532,46 @@ export class FinancasService {
   excluirLancamentoDiario(dataLancamento: string): boolean {
     const res = db.prepare('DELETE FROM financas_lancamentos_diarios WHERE data_lancamento = ?').run(dataLancamento.split('T')[0]);
     return res.changes > 0;
+  }
+
+  /**
+   * Sincroniza forçadamente a linha de hoje de Finanças com os dados ao vivo do Mercado Livre Afiliados
+   */
+  async sincronizarDiaHojeComAfiliados(): Promise<boolean> {
+    const hojeStr = getBrazilToday();
+    const affiliate = await meliAffiliateService.getMetrics(false).catch(() => null);
+    if (!affiliate || !affiliate.commissionsToday) return false;
+
+    const liveComissao = affiliate.commissionsToday;
+    const liveVendas = affiliate.totalSalesToday || (liveComissao > 0 ? liveComissao * 10 : 0);
+    const metaHoje = getMetaInsightsStats();
+
+    try {
+      db.prepare(`
+        INSERT INTO financas_lancamentos_diarios (
+          data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+        ) VALUES (?, ?, ?, ?, ?, ?, 'auto', 'Mercado Livre Afiliados (Auto Sync)', 'mercado_livre')
+        ON CONFLICT(data_lancamento) DO UPDATE SET
+          lucro_bruto = excluded.lucro_bruto,
+          vendas_brutas = excluded.vendas_brutas,
+          gasto_campanhas = CASE WHEN excluded.gasto_campanhas > 0 THEN excluded.gasto_campanhas ELSE financas_lancamentos_diarios.gasto_campanhas END,
+          cliques_meta = CASE WHEN excluded.cliques_meta > 0 THEN excluded.cliques_meta ELSE financas_lancamentos_diarios.cliques_meta END,
+          impressoes_meta = CASE WHEN excluded.impressoes_meta > 0 THEN excluded.impressoes_meta ELSE financas_lancamentos_diarios.impressoes_meta END,
+          origem = 'auto',
+          atualizado_em = CURRENT_TIMESTAMP
+      `).run(
+        hojeStr,
+        liveComissao,
+        liveVendas,
+        metaHoje.spendToday || 0,
+        metaHoje.totalClicks || 0,
+        metaHoje.totalImpressions || 0
+      );
+      return true;
+    } catch (err) {
+      console.warn('[FinancasService] Erro ao sincronizar hoje com afiliados:', err);
+      return false;
+    }
   }
 }
 

@@ -100,7 +100,7 @@ chmod +x *.sh
 ### 3. 💼 Módulo de Finanças & Relatórios Executivos
 - **Sincronização Direta Meta Ads (Graph API v20.0):** Ingestão automática de gastos (`spend`), impressões, cliques, compras, CPC e CTR direto da conta de anúncios.
 - **Auto-Sync Periódico & Midnight Watcher (00:00 BRT):** Sincronização contínua em background da API oficial do Mercado Livre a cada 20 minutos e monitor a cada 30s que reseta pontualmente às 00:00:00 de Brasília comissões, vendas e pedidos de hoje para R$ 0,00, espelhando fielmente o portal do Mercado Livre.
-- **Isolamento Temporal Estrito & Soberania Contábil:** O cache analítico do Mercado Livre isola as métricas diárias (`commissionsToday`, `ordersToday`, `totalSalesToday`, `clicksToday`), blindando contra vazamento de datas anteriores quando a sessão expirar, e estabelece precedência soberana de lançamentos manuais no DRE.
+- **Isolamento Temporal Estrito & Soberania Dinâmica do Dia Corrente:** O cache analítico do Mercado Livre isola as métricas diárias (`commissionsToday`, `ordersToday`, `totalSalesToday`, `clicksToday`), blindando contra vazamento de datas anteriores quando a sessão expirar. Aplica **Soberania Dinâmica ao dia corrente**: quando a API oficial do Mercado Livre detecta novas vendas ao longo do dia, o Extrato Diário e o DRE de Finanças (`financas_lancamentos_diarios`) são atualizados e persistidos automaticamente sem ficar congelados por lançamentos manuais antigos, enquanto os lançamentos manuais de dias anteriores permanecem 100% protegidos e imutáveis.
 - **Filtros Rápidos de Período (Dia / Semana / Mês / Todos):**
   - Botão **Dia** com seletor de data específica.
   - Botão **Semana** consolidando os últimos 7 dias.
