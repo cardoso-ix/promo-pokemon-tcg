@@ -303,7 +303,7 @@ export class MeliAffiliateService {
                 }
               }
               dailyData.length = 0;
-              dailyData.push(...Array.from(mapExisting.values()));
+              dailyData.push(...Array.from(mapExisting.values()).sort((a, b) => b.date.localeCompare(a.date)));
             }
           }
         } catch {
@@ -731,6 +731,9 @@ export class MeliAffiliateService {
    */
   private saveToSqlite(overview: MeliAffiliateOverview): void {
     try {
+      if (Array.isArray(overview.dailyData)) {
+        overview.dailyData.sort((a, b) => b.date.localeCompare(a.date));
+      }
       const json = JSON.stringify(overview);
       db.prepare(`
         INSERT INTO meli_affiliate_cache (id, data_json, updated_at)

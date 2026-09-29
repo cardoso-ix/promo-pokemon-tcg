@@ -786,7 +786,7 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/[0.04]">
-                {(data?.dailyData || []).map((d, idx) => (
+                {[...(data?.dailyData || [])].sort((a, b) => b.date.localeCompare(a.date)).map((d, idx) => (
                   <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
                     <td className="py-3 px-4 font-mono font-medium text-slate-300">{d.date}</td>
                     <td className="py-3 px-4 text-center font-bold text-white">{d.orders}</td>

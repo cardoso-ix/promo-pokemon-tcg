@@ -80,7 +80,7 @@ chmod +x *.sh
   1. **Produtos Vendidos:** Tabela detalhada de itens comissionados, faturamento gerado, comissão ganha e links diretos.
   2. **Audiências:** Perfil demográfico completo dos compradores (Faixa etária, Gênero e Distribuição geográfica por estados brasileiros).
   3. **Vendas Não Efetivadas:** Análise de carrinho abandonado, pedidos cancelados e motivos de perda.
-  4. **Data:** Histórico dia a dia de receita, comissões, pedidos e taxa de conversão (CVR).
+  4. **Data:** Histórico dia a dia de receita, comissões, pedidos e taxa de conversão (CVR) com ordenação cronológica decrescente estrita no backend e frontend.
   5. **Vendas:** Extrato cronológico detalhado das últimas vendas com status e comissão unitária.
   6. **Categorias:** Gráfico comparativo e ranking das categorias mais lucrativas (Brinquedos, Colecionáveis, etc.).
   7. **Etiquetas de Rastreamento:** Monitoramento de campanhas segmentadas pela tag de atribuição oficial (`matt_word` / `matt_tool`).

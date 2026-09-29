@@ -77,6 +77,7 @@ npm test
    - **KPIs de Ouro de Afiliados:** Cálculo automático e persistente de EPC Hoje (`commissionsToday / clicksToday`), Ticket Médio/AOV (`totalSalesToday / ordersToday`), Comissão Efetiva Real % (`(commissionsToday / totalSalesToday) * 100`), Cesta Média (`productsEstimatedToday / ordersToday`), Produtos Estimados e Vendas Não Efetivadas.
    - **Card de Arbitragem de Tráfego em Tempo Real:** Confronto direto entre o ganho gerado por clique no Mercado Livre e o custo médio pago por clique nos anúncios do Meta Ads (`Net EPC = EPC - CPC Meta`), fornecendo visibilidade instantânea do lucro líquido por clique e alertas automáticos de spread.
    - Endpoint `POST /api/dashboard/meli-affiliate/manual` expandido para suportar ajuste e auditoria em tempo real de produtos estimados, vendas brutas e vendas canceladas.
+   - **Ordenação Cronológica Estrita:** O histórico diário de faturamento e comissões (`dailyData`) é normalizado e ordenado por `date DESC` tanto no backend quanto no frontend, garantindo visualização contínua e sem saltos de datas.
 
 ---
 
