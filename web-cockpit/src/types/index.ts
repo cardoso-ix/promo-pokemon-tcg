@@ -364,6 +364,13 @@ export interface MeliAffiliateOverview {
   ordersToday: number;
   totalSalesToday?: number;
   clicksToday?: number;
+  buyersToday?: number;
+  productsEstimatedToday?: number;
+  unrealizedSalesToday?: number;
+  epcToday?: number;
+  aovToday?: number;
+  effectiveCommissionRateToday?: number;
+  basketMultiplierToday?: number;
   sessionExpired?: boolean;
   recentSales: MeliAffiliateSale[];
   dailyData: MeliAffiliateDaily[];

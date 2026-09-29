@@ -73,6 +73,11 @@ npm test
    - Endpoints `POST /api/financas/lancamentos` e `DELETE /api/financas/lancamentos/:data` para inclusão, ajuste fino e edição de vendas, comissões e gastos de campanhas diretamente pela tabela do Cockpit.
    - Cálculo automático de Blended ROAS, Margem de Lucro Operacional e divisão 70/30 (Reinvestimento / Lucro Líquido Disponível).
 
+8. **Métricas Avançadas de Afiliados & Arbitragem de Tráfego (`Net EPC` vs `CPC Meta`):**
+   - **KPIs de Ouro de Afiliados:** Cálculo automático e persistente de EPC Hoje (`commissionsToday / clicksToday`), Ticket Médio/AOV (`totalSalesToday / ordersToday`), Comissão Efetiva Real % (`(commissionsToday / totalSalesToday) * 100`), Cesta Média (`productsEstimatedToday / ordersToday`), Produtos Estimados e Vendas Não Efetivadas.
+   - **Card de Arbitragem de Tráfego em Tempo Real:** Confronto direto entre o ganho gerado por clique no Mercado Livre e o custo médio pago por clique nos anúncios do Meta Ads (`Net EPC = EPC - CPC Meta`), fornecendo visibilidade instantânea do lucro líquido por clique e alertas automáticos de spread.
+   - Endpoint `POST /api/dashboard/meli-affiliate/manual` expandido para suportar ajuste e auditoria em tempo real de produtos estimados, vendas brutas e vendas canceladas.
+
 ---
 
 ## 📁 Estrutura de Diretórios

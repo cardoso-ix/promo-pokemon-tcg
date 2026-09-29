@@ -84,6 +84,16 @@ chmod +x *.sh
   5. **Vendas:** Extrato cronológico detalhado das últimas vendas com status e comissão unitária.
   6. **Categorias:** Gráfico comparativo e ranking das categorias mais lucrativas (Brinquedos, Colecionáveis, etc.).
   7. **Etiquetas de Rastreamento:** Monitoramento de campanhas segmentadas pela tag de atribuição oficial (`matt_word` / `matt_tool`).
+- **Barra de KPIs de Ouro de Afiliados:**
+  - **EPC Hoje (Ganho por Clique):** `commissionsToday / clicksToday` — valor líquido gerado por cada visita comissionada recebida.
+  - **Ticket Médio (AOV):** `totalSalesToday / ordersToday` — valor médio faturado por pedido realizado.
+  - **Comissão Real %:** `(commissionsToday / totalSalesToday) * 100` — taxa média efetiva de comissionamento (*take-rate* real).
+  - **Cesta Média:** `productsEstimatedToday / ordersToday` — quantidade média de itens por carrinho aprovado.
+  - **Produtos Estimados:** Total de unidades físicas adquiridas nos pedidos de hoje.
+  - **Vendas Não Efetivadas:** Monitoramento de pedidos cancelados ou não aprovados com impacto financeiro.
+- **Card Executivo de Arbitragem de Tráfego em Tempo Real (`Net EPC` vs `CPC Meta`):**
+  - Motor de inteligência que compara instantaneamente o lucro gerado por clique de afiliado com o custo médio pago por clique nos anúncios do Meta Ads (`Net EPC = EPC - CPC Meta`).
+  - Sinalizador visual com badges dinâmicos de lucratividade: **Operação Lucrativa** (spread positivo), **Neutro** (tráfego orgânico) ou **Alerta de Spread** (custo de anúncio superior à comissão unitária).
 
 ---
 

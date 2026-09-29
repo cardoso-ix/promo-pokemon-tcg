@@ -16,7 +16,11 @@ import {
   AlertTriangle,
   Copy,
   SlidersHorizontal,
-  Package
+  Package,
+  Percent,
+  Coins,
+  ShoppingCart,
+  ShieldAlert
 } from 'lucide-react';
 import type { MeliAffiliateOverview } from '../types/index.ts';
 import { api } from '../services/api.ts';
@@ -38,10 +42,12 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
   const [modalAjusteAberto, setModalAjusteAberto] = useState(false);
   const [salvandoAjuste, setSalvandoAjuste] = useState(false);
   const [formAjuste, setFormAjuste] = useState({
-    commissionsToday: '8.85',
+    commissionsToday: '8.46',
     ordersToday: '1',
-    totalSalesToday: '89.90',
-    clicksToday: '36'
+    totalSalesToday: '85.98',
+    clicksToday: '62',
+    productsEstimatedToday: '2',
+    unrealizedSalesToday: '0'
   });
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   const [unrealizedImgErrors, setUnrealizedImgErrors] = useState<Record<string, boolean>>({});
@@ -95,10 +101,12 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
 
   const abrirModalAjuste = () => {
     setFormAjuste({
-      commissionsToday: String(data?.commissionsToday ?? 8.85),
+      commissionsToday: String(data?.commissionsToday ?? 8.46),
       ordersToday: String(data?.ordersToday ?? 1),
-      totalSalesToday: String(data?.totalSalesToday ?? 89.90),
-      clicksToday: String(data?.clicksToday ?? 36)
+      totalSalesToday: String(data?.totalSalesToday ?? 85.98),
+      clicksToday: String(data?.clicksToday ?? 62),
+      productsEstimatedToday: String(data?.productsEstimatedToday ?? 2),
+      unrealizedSalesToday: String(data?.unrealizedSalesToday ?? 0)
     });
     setModalAjusteAberto(true);
   };
@@ -111,7 +119,9 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
         commissionsToday: parseFloat(formAjuste.commissionsToday.replace(',', '.')) || 0,
         ordersToday: parseInt(formAjuste.ordersToday, 10) || 0,
         totalSalesToday: parseFloat(formAjuste.totalSalesToday.replace(',', '.')) || 0,
-        clicksToday: parseInt(formAjuste.clicksToday, 10) || 0
+        clicksToday: parseInt(formAjuste.clicksToday, 10) || 0,
+        productsEstimatedToday: parseInt(formAjuste.productsEstimatedToday, 10) || 0,
+        unrealizedSalesToday: parseInt(formAjuste.unrealizedSalesToday, 10) || 0
       });
       if (res.data) {
         setData(res.data);
@@ -143,6 +153,15 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
   const cvr = (data?.cvr || 0) * 100;
   const pedidosHoje = data?.ordersToday || 0;
   const totalPedidos = data?.totalOrders || 0;
+
+  // Novos KPIs de Ouro (Opção 1)
+  const cliquesHoje = data?.clicksToday || 0;
+  const epcHoje = data?.epcToday ?? (cliquesHoje > 0 ? (comissoesHoje / cliquesHoje) : 0);
+  const aovHoje = data?.aovToday ?? (pedidosHoje > 0 ? ((data?.totalSalesToday || 0) / pedidosHoje) : 0);
+  const taxaComissaoEfetiva = data?.effectiveCommissionRateToday ?? (data?.totalSalesToday && data.totalSalesToday > 0 ? ((comissoesHoje / data.totalSalesToday) * 100) : 0);
+  const cestaMedia = data?.basketMultiplierToday ?? (pedidosHoje > 0 && data?.productsEstimatedToday ? (data.productsEstimatedToday / pedidosHoje) : 1);
+  const produtosEstimadosHoje = data?.productsEstimatedToday ?? 0;
+  const vendasNaoEfetivadasHoje = data?.unrealizedSalesToday ?? (data?.unrealizedSales?.length || 0);
 
   return (
     <div className="space-y-6">
@@ -244,6 +263,93 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
               {totalCliques.toLocaleString('pt-BR')} <span className="text-xs text-slate-400 font-normal">cliques</span>
             </p>
             <span className="text-[10px] text-emerald-400 font-medium">Taxa de Conversão: {cvr.toFixed(2)}%</span>
+          </div>
+        </div>
+
+        {/* Barra de KPIs de Ouro de Afiliados (Opção 1) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-3 border-t border-white/[0.06]">
+          {/* 1. EPC Hoje */}
+          <div className="p-3 rounded-xl bg-amber-500/[0.06] border border-amber-500/20 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">EPC Hoje</span>
+              <Coins className="w-3.5 h-3.5 text-amber-400" />
+            </div>
+            <div className="mt-1.5">
+              <p className="text-lg font-heading font-extrabold text-amber-300">
+                R$ {epcHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+              </p>
+              <span className="text-[9px] text-slate-400">Ganho médio / clique</span>
+            </div>
+          </div>
+
+          {/* 2. Ticket Médio (AOV) */}
+          <div className="p-3 rounded-xl bg-cyan-500/[0.06] border border-cyan-500/20 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">Ticket Médio (AOV)</span>
+              <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
+            </div>
+            <div className="mt-1.5">
+              <p className="text-lg font-heading font-extrabold text-cyan-300">
+                R$ {aovHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <span className="text-[9px] text-slate-400">Venda média / pedido</span>
+            </div>
+          </div>
+
+          {/* 3. Comissão Real % */}
+          <div className="p-3 rounded-xl bg-emerald-500/[0.06] border border-emerald-500/20 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider">Comissão Real %</span>
+              <Percent className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <div className="mt-1.5">
+              <p className="text-lg font-heading font-extrabold text-emerald-300">
+                {taxaComissaoEfetiva.toFixed(2)}%
+              </p>
+              <span className="text-[9px] text-slate-400">Take-rate efetivo</span>
+            </div>
+          </div>
+
+          {/* 4. Cesta Média */}
+          <div className="p-3 rounded-xl bg-purple-500/[0.06] border border-purple-500/20 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-purple-300 font-bold uppercase tracking-wider">Cesta Média</span>
+              <ShoppingCart className="w-3.5 h-3.5 text-purple-400" />
+            </div>
+            <div className="mt-1.5">
+              <p className="text-lg font-heading font-extrabold text-purple-300">
+                {cestaMedia.toFixed(1)} <span className="text-xs text-slate-400 font-normal">itens</span>
+              </p>
+              <span className="text-[9px] text-slate-400">Média de itens / pedido</span>
+            </div>
+          </div>
+
+          {/* 5. Produtos Estimados */}
+          <div className="p-3 rounded-xl bg-blue-500/[0.06] border border-blue-500/20 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-blue-300 font-bold uppercase tracking-wider">Prod. Estimados</span>
+              <Package className="w-3.5 h-3.5 text-blue-400" />
+            </div>
+            <div className="mt-1.5">
+              <p className="text-lg font-heading font-extrabold text-blue-300">
+                {produtosEstimadosHoje} <span className="text-xs text-slate-400 font-normal">un</span>
+              </p>
+              <span className="text-[9px] text-slate-400">Itens em pedidos hoje</span>
+            </div>
+          </div>
+
+          {/* 6. Vendas Não Efetivadas */}
+          <div className="p-3 rounded-xl bg-rose-500/[0.06] border border-rose-500/20 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-rose-300 font-bold uppercase tracking-wider">Não Efetivadas</span>
+              <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+            </div>
+            <div className="mt-1.5">
+              <p className="text-lg font-heading font-extrabold text-rose-300">
+                {vendasNaoEfetivadasHoje} <span className="text-xs text-slate-400 font-normal">tentativas</span>
+              </p>
+              <span className="text-[9px] text-slate-400">Não pagas / canceladas</span>
+            </div>
           </div>
         </div>
       </div>
@@ -878,9 +984,32 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
                   type="text"
                   value={formAjuste.totalSalesToday}
                   onChange={e => setFormAjuste({ ...formAjuste, totalSalesToday: e.target.value })}
-                  placeholder="Ex: 89.90"
+                  placeholder="Ex: 85.98"
                   className="w-full p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-amber-500"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] text-slate-300 mb-1 font-semibold">Produtos Estimados Hoje</label>
+                  <input
+                    type="number"
+                    value={formAjuste.productsEstimatedToday}
+                    onChange={e => setFormAjuste({ ...formAjuste, productsEstimatedToday: e.target.value })}
+                    placeholder="Ex: 2"
+                    className="w-full p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-slate-300 mb-1 font-semibold">Vendas Não Efetivadas</label>
+                  <input
+                    type="number"
+                    value={formAjuste.unrealizedSalesToday}
+                    onChange={e => setFormAjuste({ ...formAjuste, unrealizedSalesToday: e.target.value })}
+                    placeholder="Ex: 0"
+                    className="w-full p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.08]">

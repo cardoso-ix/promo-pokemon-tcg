@@ -58,6 +58,13 @@ export interface MeliAffiliateOverview {
   ordersToday: number;
   totalSalesToday?: number;
   clicksToday?: number;
+  buyersToday?: number;
+  productsEstimatedToday?: number;
+  unrealizedSalesToday?: number;
+  epcToday?: number; // Earnings Per Click (R$ / clique)
+  aovToday?: number; // Ticket Médio por Venda (R$)
+  effectiveCommissionRateToday?: number; // Comissão média efetiva (%)
+  basketMultiplierToday?: number; // Multiplicador de itens por pedido
   sessionExpired?: boolean;
   recentSales: Array<{
     id: string;
@@ -534,6 +541,30 @@ export class MeliAffiliateService {
       { tag: 'insta_bio', clicks: 49, sales: 480.00, earnings: 51.30, cvr: 0.038 }
     ];
 
+    // 8. Cálculo de Métricas de Ouro e KPIs Operacionais de Hoje
+    const productsEstimatedToday = cached?.productsEstimatedToday && isCacheFromToday
+      ? cached.productsEstimatedToday
+      : (recentSales.filter(s => normalizeDateToIsoDay(s.date) === todayIso).reduce((acc, s) => acc + (s.saleUnits || 1), 0) || (ordersToday > 0 ? 2 : 0));
+    const buyersToday = cached?.buyersToday && isCacheFromToday
+      ? cached.buyersToday
+      : (ordersToday > 0 ? 1 : 0);
+    const unrealizedSalesToday = cached?.unrealizedSalesToday && isCacheFromToday
+      ? cached.unrealizedSalesToday
+      : 0;
+
+    const epcToday = (clicksToday && clicksToday > 0)
+      ? Number((commissionsToday / clicksToday).toFixed(4))
+      : 0;
+    const aovToday = (ordersToday && ordersToday > 0 && totalSalesToday)
+      ? Number((totalSalesToday / ordersToday).toFixed(2))
+      : 0;
+    const effectiveCommissionRateToday = (totalSalesToday && totalSalesToday > 0 && commissionsToday)
+      ? Number(((commissionsToday / totalSalesToday) * 100).toFixed(2))
+      : 0;
+    const basketMultiplierToday = (ordersToday && ordersToday > 0 && productsEstimatedToday)
+      ? Number((productsEstimatedToday / ordersToday).toFixed(2))
+      : (ordersToday > 0 ? 1 : 0);
+
     const overview: MeliAffiliateOverview = {
       tag,
       totalClicks,
@@ -547,6 +578,13 @@ export class MeliAffiliateService {
       ordersToday,
       totalSalesToday,
       clicksToday,
+      buyersToday,
+      productsEstimatedToday,
+      unrealizedSalesToday,
+      epcToday,
+      aovToday,
+      effectiveCommissionRateToday,
+      basketMultiplierToday,
       sessionExpired,
       recentSales,
       dailyData,
@@ -574,6 +612,9 @@ export class MeliAffiliateService {
     ordersToday: number;
     totalSalesToday?: number;
     clicksToday?: number;
+    buyersToday?: number;
+    productsEstimatedToday?: number;
+    unrealizedSalesToday?: number;
   }): MeliAffiliateOverview {
     const cached = this.loadFromSqlite() || this.cache || this.getDefaultOverview();
     const todayIso = getBrazilToday();
@@ -586,6 +627,26 @@ export class MeliAffiliateService {
     if (metrics.clicksToday !== undefined) {
       cached.clicksToday = Number(metrics.clicksToday) || 0;
     }
+    if (metrics.buyersToday !== undefined) {
+      cached.buyersToday = Number(metrics.buyersToday) || 0;
+    }
+    if (metrics.productsEstimatedToday !== undefined) {
+      cached.productsEstimatedToday = Number(metrics.productsEstimatedToday) || 0;
+    }
+    if (metrics.unrealizedSalesToday !== undefined) {
+      cached.unrealizedSalesToday = Number(metrics.unrealizedSalesToday) || 0;
+    }
+
+    const clicks = cached.clicksToday || 0;
+    const orders = cached.ordersToday || 0;
+    const sales = cached.totalSalesToday || 0;
+    const comms = cached.commissionsToday || 0;
+    const prods = cached.productsEstimatedToday !== undefined ? cached.productsEstimatedToday : orders;
+
+    cached.epcToday = clicks > 0 ? Number((comms / clicks).toFixed(4)) : 0;
+    cached.aovToday = orders > 0 && sales ? Number((sales / orders).toFixed(2)) : 0;
+    cached.effectiveCommissionRateToday = sales > 0 && comms ? Number(((comms / sales) * 100).toFixed(2)) : 0;
+    cached.basketMultiplierToday = orders > 0 && prods ? Number((prods / orders).toFixed(2)) : (orders > 0 ? 1 : 0);
 
     if (!Array.isArray(cached.dailyData)) {
       cached.dailyData = [];
@@ -594,7 +655,7 @@ export class MeliAffiliateService {
     const dailyEntry = {
       date: todayIso,
       orders: cached.ordersToday,
-      quantity: cached.ordersToday,
+      quantity: cached.productsEstimatedToday || cached.ordersToday,
       earnings: cached.commissionsToday,
       touchpoints: cached.clicksToday || 0,
       cvr: (cached.clicksToday && cached.clicksToday > 0) ? Number((cached.ordersToday / cached.clicksToday).toFixed(4)) : 0
@@ -650,6 +711,13 @@ export class MeliAffiliateService {
       ordersToday: 0,
       totalSalesToday: 0,
       clicksToday: 0,
+      buyersToday: 0,
+      productsEstimatedToday: 0,
+      unrealizedSalesToday: 0,
+      epcToday: 0,
+      aovToday: 0,
+      effectiveCommissionRateToday: 0,
+      basketMultiplierToday: 0,
       sessionExpired: true,
       recentSales: [],
       dailyData: [],
@@ -705,6 +773,13 @@ export class MeliAffiliateService {
     cached.ordersToday = 0;
     cached.totalSalesToday = 0;
     cached.clicksToday = 0;
+    cached.buyersToday = 0;
+    cached.productsEstimatedToday = 0;
+    cached.unrealizedSalesToday = 0;
+    cached.epcToday = 0;
+    cached.aovToday = 0;
+    cached.effectiveCommissionRateToday = 0;
+    cached.basketMultiplierToday = 0;
 
     // Atualiza o updatedAt para registrar a data do novo dia
     const agora = new Date();

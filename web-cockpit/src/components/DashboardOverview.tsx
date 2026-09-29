@@ -18,7 +18,10 @@ import {
   Wallet,
   CreditCard,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Scale,
+  Coins,
+  Percent
 } from 'lucide-react';
 import {
   AreaChart,
@@ -408,6 +411,23 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const roasBlended = gastoMetaAds > 0 && vendasGeradasMeli > 0 ? (vendasGeradasMeli / gastoMetaAds) : (balanco?.roiPercentual ? balanco.roiPercentual / 100 : 0);
   const isMetaConnected = Boolean(metaData?.configured);
 
+  // Métricas de Arbitragem de Tráfego (Net EPC vs CPC Meta - Opção 1)
+  const cliquesMeliHoje = affiliateData?.clicksToday || 0;
+  const epcHoje = affiliateData?.epcToday ?? (cliquesMeliHoje > 0 ? (comissoesHoje / cliquesMeliHoje) : 0);
+  const aovHoje = affiliateData?.aovToday ?? (affiliateData?.ordersToday ? ((affiliateData?.totalSalesToday || 0) / affiliateData.ordersToday) : 0);
+  const comissaoEfetivaHoje = affiliateData?.effectiveCommissionRateToday ?? (affiliateData?.totalSalesToday && affiliateData.totalSalesToday > 0 ? ((comissoesHoje / affiliateData.totalSalesToday) * 100) : 0);
+  const cestaMediaHoje = affiliateData?.basketMultiplierToday ?? (affiliateData?.ordersToday && affiliateData?.productsEstimatedToday ? (affiliateData.productsEstimatedToday / affiliateData.ordersToday) : 1);
+
+  const cliquesMetaHoje = metaData?.data?.totalClicks || 0;
+  const gastoMetaHoje = metaData?.data?.spendToday || 0;
+  const cpcMetaHoje = cliquesMetaHoje > 0 && gastoMetaHoje > 0 
+    ? (gastoMetaHoje / cliquesMetaHoje) 
+    : (metaData?.data?.avgCpc || 0);
+  const netEpcHoje = epcHoje - cpcMetaHoje;
+  const arbitStatus = netEpcHoje > 0 
+    ? 'lucrativo' 
+    : (netEpcHoje === 0 && epcHoje === 0 ? 'neutro' : 'alerta');
+
   const pieData = [
     { name: 'Lucro Sócios (30%)', value: disponivel30 || balanco?.valorLucroDisponivel || 0, color: '#10b981' },
     { name: 'Reinvestimento (70%)', value: reinvestir70 || balanco?.valorReinvestimentoCampanhas || 0, color: '#00e5ff' },
@@ -711,6 +731,26 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
 
+        {/* Micro-Badges de KPIs Estratégicos de Hoje */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/[0.04] text-[11px]">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-amber-500/[0.05] border border-amber-500/15">
+            <span className="text-slate-400">EPC Hoje (Ganho/Clique):</span>
+            <span className="font-mono font-bold text-amber-300">R$ {epcHoje.toFixed(4)}</span>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-lg bg-cyan-500/[0.05] border border-cyan-500/15">
+            <span className="text-slate-400">Ticket Médio (AOV):</span>
+            <span className="font-mono font-bold text-cyan-300">R$ {aovHoje.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/15">
+            <span className="text-slate-400">Comissão Real:</span>
+            <span className="font-mono font-bold text-emerald-300">{comissaoEfetivaHoje.toFixed(2)}%</span>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-lg bg-purple-500/[0.05] border border-purple-500/15">
+            <span className="text-slate-400">Cesta Média:</span>
+            <span className="font-mono font-bold text-purple-300">{cestaMediaHoje.toFixed(1)} itens/venda</span>
+          </div>
+        </div>
+
         {/* Lista de Vendas Recentes de Afiliado (se houver dados) */}
         {affiliateData?.recentSales && affiliateData.recentSales.length > 0 && (
           <div className="pt-2 border-t border-white/[0.06]">
@@ -849,6 +889,100 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Card Executivo de Arbitragem de Tráfego: Net EPC vs CPC Meta (Opção 1) */}
+      <div className="glass-panel rounded-2xl p-5 border border-emerald-500/25 bg-gradient-to-r from-emerald-950/30 via-slate-900/70 to-teal-950/20 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-lg">
+              <Scale className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-heading font-bold text-base text-white">Arbitragem de Tráfego · Lucro Líquido por Clique</h3>
+                <span
+                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-semibold border ${
+                    arbitStatus === 'lucrativo'
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : arbitStatus === 'neutro'
+                      ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                      : 'bg-amber-500/15 text-amber-400 border-amber-500/30 animate-pulse'
+                  }`}
+                >
+                  {arbitStatus === 'lucrativo'
+                    ? `● Operação Lucrativa (+R$ ${netEpcHoje.toFixed(2)}/clique)`
+                    : arbitStatus === 'neutro'
+                    ? '○ Tráfego Orgânico / Monitorando'
+                    : `▲ Alerta de Spread (-R$ ${Math.abs(netEpcHoje).toFixed(2)}/clique)`}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Comparativo em tempo real entre o Ganho por Clique (EPC Mercado Livre) e o Custo por Clique (CPC Meta Ads)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-right">
+              <span className="text-[10px] text-slate-400 block uppercase font-medium">Margem Líquida / Clique</span>
+              <span className={`text-sm font-mono font-bold ${netEpcHoje >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {netEpcHoje >= 0 ? '+' : ''}R$ {netEpcHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 4 Cards de Métricas de Arbitragem */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-white/[0.06]">
+          {/* Card 1: EPC Meli */}
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-[11px] uppercase font-medium">EPC Mercado Livre</span>
+              <Coins className="w-3.5 h-3.5 text-amber-400" />
+            </div>
+            <p className="text-lg font-heading font-extrabold text-amber-400 mt-1">
+              R$ {epcHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+            </p>
+            <span className="text-[10px] text-slate-400">Receita por clique recebido</span>
+          </div>
+
+          {/* Card 2: CPC Meta Ads */}
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-[11px] uppercase font-medium">CPC Meta Ads</span>
+              <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+            </div>
+            <p className="text-lg font-heading font-extrabold text-blue-400 mt-1">
+              R$ {cpcMetaHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <span className="text-[10px] text-slate-400">Custo médio por clique pago</span>
+          </div>
+
+          {/* Card 3: Net EPC (Spread) */}
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-[11px] uppercase font-medium">Net EPC (Spread)</span>
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            </div>
+            <p className={`text-lg font-heading font-extrabold mt-1 ${netEpcHoje >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {netEpcHoje >= 0 ? '+' : ''}R$ {netEpcHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+            </p>
+            <span className="text-[10px] text-slate-400">Lucro líquido / clique</span>
+          </div>
+
+          {/* Card 4: Ticket Médio & Cesta */}
+          <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-[11px] uppercase font-medium">Ticket Médio (AOV)</span>
+              <Percent className="w-3.5 h-3.5 text-cyan-400" />
+            </div>
+            <p className="text-lg font-heading font-extrabold text-cyan-300 mt-1">
+              R$ {aovHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+            <span className="text-[10px] text-cyan-400">Comissão Efetiva: {comissaoEfetivaHoje.toFixed(1)}%</span>
+          </div>
+        </div>
       </div>
 
       {/* Seção Principal de Gráficos Recharts */}

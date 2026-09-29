@@ -475,6 +475,9 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
           ordersToday: number;
           totalSalesToday?: number;
           clicksToday?: number;
+          buyersToday?: number;
+          productsEstimatedToday?: number;
+          unrealizedSalesToday?: number;
         };
       }>,
       reply: FastifyReply
@@ -485,7 +488,10 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
           commissionsToday: Number(body.commissionsToday) || 0,
           ordersToday: Number(body.ordersToday) || 0,
           totalSalesToday: body.totalSalesToday !== undefined ? Number(body.totalSalesToday) : undefined,
-          clicksToday: body.clicksToday !== undefined ? Number(body.clicksToday) : undefined
+          clicksToday: body.clicksToday !== undefined ? Number(body.clicksToday) : undefined,
+          buyersToday: body.buyersToday !== undefined ? Number(body.buyersToday) : undefined,
+          productsEstimatedToday: body.productsEstimatedToday !== undefined ? Number(body.productsEstimatedToday) : undefined,
+          unrealizedSalesToday: body.unrealizedSalesToday !== undefined ? Number(body.unrealizedSalesToday) : undefined
         });
         return {
           ok: true,

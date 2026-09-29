@@ -291,6 +291,9 @@ export const api = {
     ordersToday: number;
     totalSalesToday?: number;
     clicksToday?: number;
+    buyersToday?: number;
+    productsEstimatedToday?: number;
+    unrealizedSalesToday?: number;
   }) =>
     request<{ ok: boolean; message: string; data: MeliAffiliateOverview }>('/api/dashboard/meli-affiliate/manual', {
       method: 'POST',
