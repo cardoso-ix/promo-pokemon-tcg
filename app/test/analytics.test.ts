@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { encryptToken, decryptToken } from '../src/analytics/security.js';
 import { metaAdsService } from '../src/analytics/meta.service.js';
+import { meliAffiliateService } from '../src/analytics/meli-affiliate.service.js';
 import {
   integrationTokens,
   meliOrders,
@@ -128,4 +129,36 @@ test('Meta Ads - Atualização de Saldo Manual e Histórico de Recargas', async 
 
   assert.equal(saldoZerado.currentBalance, 0.0);
   assert.equal(saldoZerado.statusBadge, 'critical');
+});
+
+test('Meli Afiliados - resetarNovoDia zera comissões de hoje e preserva histórico', async () => {
+  // 1. Salvar dados simulados
+  meliAffiliateService.saveManualTodayMetrics({
+    commissionsToday: 8.46,
+    ordersToday: 1,
+    totalSalesToday: 85.98,
+    clicksToday: 62
+  });
+
+  // 2. Executar resetarNovoDia para um novo dia simulado (ex: '2026-09-30')
+  const resetado = meliAffiliateService.resetarNovoDia('2026-09-30');
+
+  assert.equal(resetado.commissionsToday, 0, 'Comissões de hoje devem ser resetadas para 0');
+  assert.equal(resetado.ordersToday, 0, 'Pedidos de hoje devem ser resetados para 0');
+  assert.equal(resetado.totalSalesToday, 0, 'Vendas de hoje devem ser resetadas para 0');
+  assert.equal(resetado.clicksToday, 0, 'Cliques de hoje devem ser resetados para 0');
+
+  // Histórico dailyData deve conter a nova entrada de 2026-09-30 e preservar a anterior de 2026-09-29
+  assert.ok(Array.isArray(resetado.dailyData));
+  const entryHoje = resetado.dailyData.find(d => d.date === '2026-09-30');
+  assert.ok(entryHoje, 'Deve conter entrada diária para a nova data');
+  assert.equal(entryHoje.earnings, 0, 'Ganhos da nova data devem iniciar em 0');
+
+  // Restaurar dados do dia 29/09 para integridade dos dados reais de hoje
+  meliAffiliateService.saveManualTodayMetrics({
+    commissionsToday: 8.46,
+    ordersToday: 1,
+    totalSalesToday: 85.98,
+    clicksToday: 62
+  });
 });

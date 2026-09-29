@@ -341,8 +341,10 @@ export class MeliAffiliateService {
     if (commissionsToday === 0 && cached && cached.commissionsToday > 0 && isCacheFromToday) {
       commissionsToday = cached.commissionsToday;
       ordersToday = cached.ordersToday;
-      if (cached.totalSalesToday) totalSalesToday = cached.totalSalesToday;
-      if (cached.clicksToday) clicksToday = cached.clicksToday;
+    }
+    if (isCacheFromToday && cached) {
+      if (cached.totalSalesToday && totalSalesToday === 0) totalSalesToday = cached.totalSalesToday;
+      if (cached.clicksToday && clicksToday === 0) clicksToday = cached.clicksToday;
     }
 
     // 3. Montagem da Tabela de "Produtos Vendidos" (Replicando o painel oficial do Mercado Livre)
@@ -692,25 +694,93 @@ export class MeliAffiliateService {
   }
 
   /**
-   * Retorna os dados consolidados (com cache inteligente e atualização em background)
+   * Reseta as métricas diárias (Comissões, Vendas, Pedidos e Cliques de Hoje) para 0.00
+   * na virada do dia oficial de Brasília, preservando acumuladores históricos e dailyData anterior.
+   */
+  resetarNovoDia(novoDiaIso?: string): MeliAffiliateOverview {
+    const todayIso = novoDiaIso || getBrazilToday();
+    const cached = this.loadFromSqlite() || this.cache || this.getDefaultOverview();
+
+    cached.commissionsToday = 0;
+    cached.ordersToday = 0;
+    cached.totalSalesToday = 0;
+    cached.clicksToday = 0;
+
+    // Atualiza o updatedAt para registrar a data do novo dia
+    const agora = new Date();
+    cached.updatedAt = agora.toISOString();
+
+    // Se não existir entrada no dailyData para o novo dia, inicializa com 0
+    if (!Array.isArray(cached.dailyData)) {
+      cached.dailyData = [];
+    }
+    const idx = cached.dailyData.findIndex(d => normalizeDateToIsoDay(d.date) === todayIso);
+    if (idx < 0) {
+      cached.dailyData.unshift({
+        date: todayIso,
+        orders: 0,
+        quantity: 0,
+        earnings: 0,
+        touchpoints: 0,
+        cvr: 0
+      });
+    }
+
+    this.saveToSqlite(cached);
+    this.cache = cached;
+    this.lastFetchTime = Date.now();
+
+    console.log(`[Meli Affiliate] 🕛 Virada de dia processada para ${todayIso}. Comissões de hoje iniciadas em R$ 0,00.`);
+
+    // Se a sessão estiver configurada, dispara busca em background para atualizar se já houver vendas no novo dia
+    if (this.isConnected()) {
+      this.fetchLiveMetrics().catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn('[Meli Affiliate] Sincronização pós-virada:', msg);
+      });
+    }
+
+    return cached;
+  }
+
+  /**
+   * Retorna os dados consolidados (com cache inteligente, reset atômico de virada de dia e auto-sync)
    */
   async getMetrics(forceRefresh = false): Promise<MeliAffiliateOverview> {
     const now = Date.now();
+    const todayIso = getBrazilToday();
+
+    // 1. Se houver cache em memória de um dia anterior, invalida para garantir virada imediata
+    if (this.cache && normalizeDateToIsoDay(this.cache.updatedAt) !== todayIso) {
+      this.cache = null;
+      this.lastFetchTime = 0;
+    }
+
     if (!forceRefresh && this.cache && now - this.lastFetchTime < this.CACHE_TTL_MS) {
       return this.cache;
     }
 
+    // 2. Tenta carregar do SQLite
     const saved = this.loadFromSqlite();
-    if (saved && !forceRefresh) {
-      this.cache = saved;
-      this.lastFetchTime = now;
-      const age = now - new Date(saved.updatedAt).getTime();
-      if (age > 10 * 60 * 1000) {
-        this.fetchLiveMetrics().catch(err => {
-          console.warn('[Meli Affiliate Background Refresh] Erro:', err.message);
-        });
+    if (saved) {
+      const isToday = normalizeDateToIsoDay(saved.updatedAt) === todayIso;
+      if (!isToday) {
+        // O banco ainda está com o dia anterior: executa virada atômica para 0.00
+        return this.resetarNovoDia(todayIso);
       }
-      return saved;
+
+      if (!forceRefresh) {
+        this.cache = saved;
+        this.lastFetchTime = now;
+        const age = now - new Date(saved.updatedAt).getTime();
+        if (age > 10 * 60 * 1000) {
+          this.fetchLiveMetrics().catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn('[Meli Affiliate Background Refresh] Erro:', msg);
+          });
+        }
+        return saved;
+      }
     }
 
     return this.fetchLiveMetrics();

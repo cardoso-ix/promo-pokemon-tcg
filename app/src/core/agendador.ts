@@ -1,5 +1,6 @@
 import { getConfig, setConfig, getAllRotas, DEFAULT_MSG_ABERTURA, PRESET_MSGS_ABERTURA } from '../db/database.js';
 import { metaAdsService } from '../analytics/meta.service.js';
+import { meliAffiliateService } from '../analytics/meli-affiliate.service.js';
 
 export interface HoraBrasiliaInfo {
   horaFormatada: string; // 'HH:mm'
@@ -210,6 +211,48 @@ export async function verificarEExecutarAgendador(
 
 let agendadorInterval: NodeJS.Timeout | null = null;
 let caixaMetaInterval: NodeJS.Timeout | null = null;
+let affiliateSyncInterval: NodeJS.Timeout | null = null;
+let ultimoDiaConhecidoBRT = '';
+
+/**
+ * Monitora a transição de dia oficial de Brasília (00:00:00 BRT).
+ * Quando a data vira, reseta instantaneamente as métricas de comissão de hoje para R$ 0,00.
+ */
+export async function verificarViradaDeDia(): Promise<void> {
+  const { dataFormatada } = obterHoraBrasilia();
+  if (!ultimoDiaConhecidoBRT) {
+    ultimoDiaConhecidoBRT = dataFormatada;
+    return;
+  }
+
+  if (dataFormatada !== ultimoDiaConhecidoBRT) {
+    console.log(`[Agendador] 🕛 Virada de dia detectada no fuso de Brasília! De ${ultimoDiaConhecidoBRT} para ${dataFormatada}.`);
+    ultimoDiaConhecidoBRT = dataFormatada;
+    try {
+      meliAffiliateService.resetarNovoDia(dataFormatada);
+      console.log(`[Agendador] ✅ Novo dia iniciado (${dataFormatada}): Comissões e vendas de hoje reiniciadas em R$ 0,00 conforme Mercado Livre.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn('[Agendador] Erro ao resetar comissões no novo dia:', msg);
+    }
+  }
+}
+
+/**
+ * Executa sincronização em background das comissões do Mercado Livre a cada 20 minutos.
+ */
+export async function sincronizarAfiliadosEmBackground(): Promise<void> {
+  try {
+    if (!meliAffiliateService.isConnected()) {
+      return;
+    }
+    const metrics = await meliAffiliateService.fetchLiveMetrics();
+    console.log(`[Meli Afiliados Auto-Sync] Sincronização em background: Hoje R$ ${metrics.commissionsToday.toFixed(2)} (${metrics.ordersToday} pedidos, ${metrics.totalClicks} cliques).`);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn('[Meli Afiliados Auto-Sync] Erro na sincronização em background:', msg);
+  }
+}
 
 /**
  * Executa verificação e snapshot em background do Saldo de Caixa do Meta Ads.
@@ -243,8 +286,14 @@ export function iniciarAgendadorDiario(client: WhatsAppClientLike): void {
   if (caixaMetaInterval) {
     clearInterval(caixaMetaInterval);
   }
+  if (affiliateSyncInterval) {
+    clearInterval(affiliateSyncInterval);
+  }
 
-  console.log('[Agendador Diário] Serviço de abertura de grupos ativado (verificação a cada 30s).');
+  // Inicializa o dia conhecido de Brasília
+  ultimoDiaConhecidoBRT = obterHoraBrasilia().dataFormatada;
+
+  console.log('[Agendador Diário] Serviço de abertura de grupos e monitoramento de virada de dia ativado.');
 
   verificarEExecutarAgendador(client).catch((err) => {
     console.error('[Agendador Diário] Erro na verificação inicial:', err);
@@ -254,7 +303,21 @@ export function iniciarAgendadorDiario(client: WhatsAppClientLike): void {
     verificarEExecutarAgendador(client).catch((err) => {
       console.error('[Agendador Diário] Erro na verificação periódica:', err);
     });
+    // Verifica virada de dia a cada 30 segundos
+    verificarViradaDeDia().catch((err) => {
+      console.error('[Agendador Diário] Erro ao verificar virada de dia:', err);
+    });
   }, 30000);
+
+  // Sincronização periódica de Afiliados Mercado Livre a cada 20 minutos (warmup inicial em 10s)
+  setTimeout(() => {
+    sincronizarAfiliadosEmBackground().catch(() => {});
+  }, 10000);
+
+  const VINTE_MINUTOS_MS = 20 * 60 * 1000;
+  affiliateSyncInterval = setInterval(() => {
+    sincronizarAfiliadosEmBackground().catch(() => {});
+  }, VINTE_MINUTOS_MS);
 
   // Sincronização periódica do Caixa Meta Ads a cada 2 horas (com warmup inicial de 5s)
   setTimeout(() => {
@@ -278,6 +341,10 @@ export function pararAgendadorDiario(): void {
   if (caixaMetaInterval) {
     clearInterval(caixaMetaInterval);
     caixaMetaInterval = null;
+  }
+  if (affiliateSyncInterval) {
+    clearInterval(affiliateSyncInterval);
+    affiliateSyncInterval = null;
   }
 }
 

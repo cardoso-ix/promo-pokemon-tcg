@@ -65,6 +65,8 @@ npm test
 
 7. **Módulo de Finanças, DRE & Lançamentos Diários Persistentes:**
    - Integração analítica com Meta Ads Insights e Mercado Livre Afiliados.
+   - **Auto-Sync Periódico de Afiliados:** Rotina em background que consulta a API oficial do Mercado Livre a cada 20 minutos para manter cliques, vendas e comissões atualizados automaticamente.
+   - **Midnight Watcher (Virada de Dia 00:00 BRT):** Monitor contínuo a cada 30 segundos no fuso de Brasília (`America/Sao_Paulo`). Na transição para um novo dia, reseta instantaneamente comissões, vendas e pedidos de hoje para R$ 0,00, exatamente como opera a plataforma oficial do Mercado Livre.
    - **Isolamento Temporal Estrito de Cache:** O cache do Mercado Livre Afiliados isola métricas diárias (`commissionsToday`, `ordersToday`, `totalSalesToday`, `clicksToday`), impedindo vazamento de valores residuais entre viradas de data quando a sessão estiver pendente.
    - **Soberania Contábil Auditável:** Lançamentos com `origem = 'manual'` em `financas_lancamentos_diarios` possuem prioridade sobre dados voláteis no DRE consolidado.
    - Tabela dedicada `financas_lancamentos_diarios` com persistência local SQLite, resiliência contra atrasos de consolidação da API do Mercado Livre (evitando lacunas como finais de semana) e bootstrap automático de histórico.
