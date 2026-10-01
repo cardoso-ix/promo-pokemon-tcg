@@ -14,7 +14,11 @@ import {
   AlertCircle,
   Printer,
   ShieldCheck,
-  Wallet
+  Wallet,
+  Check,
+  Share2,
+  ArrowUpRight,
+  Clock
 } from 'lucide-react';
 import {
   BarChart,
@@ -28,7 +32,8 @@ import {
 import type {
   BalancoFinanceiro,
   LancamentoDiario,
-  MetaAdBalanceInfo
+  MetaAdBalanceInfo,
+  RelatorioMensalExecutivo
 } from '../types/index.ts';
 import { api } from '../services/api.ts';
 
@@ -52,8 +57,9 @@ export const FinancasView: React.FC = () => {
 
   // Modal Relatório Executivo Mensal (Meta Ads + Mercado Livre)
   const [showRelatorioMensalModal, setShowRelatorioMensalModal] = useState(false);
-  const [relatorioMensal, setRelatorioMensal] = useState<any>(null);
+  const [relatorioMensal, setRelatorioMensal] = useState<RelatorioMensalExecutivo | null>(null);
   const [carregandoRelatorio, setCarregandoRelatorio] = useState(false);
+  const [copiadoWhatsapp, setCopiadoWhatsapp] = useState(false);
 
   // Modal Novo Lançamento Diário
   const [showNovoLancamento, setShowNovoLancamento] = useState(false);
@@ -83,17 +89,29 @@ export const FinancasView: React.FC = () => {
     }
   };
 
-  const abrirRelatorioExecutivo = async () => {
+  const abrirRelatorioExecutivo = async (mesAlvo?: string) => {
+    const mesParaBuscar = mesAlvo || mesAtivo;
+    if (mesAlvo && mesAlvo !== mesAtivo) {
+      setMesAtivo(mesAlvo);
+    }
     setShowRelatorioMensalModal(true);
     setCarregandoRelatorio(true);
     try {
-      const rel = await api.getRelatorioMensal(mesAtivo);
+      const rel = await api.getRelatorioMensal(mesParaBuscar);
       setRelatorioMensal(rel);
     } catch {
       setRelatorioMensal(null);
     } finally {
       setCarregandoRelatorio(false);
     }
+  };
+
+  const copiarResumoWhatsapp = () => {
+    if (!relatorioMensal?.resumoWhatsapp) return;
+    navigator.clipboard.writeText(relatorioMensal.resumoWhatsapp);
+    setCopiadoWhatsapp(true);
+    mostrarFeedback('sucesso', 'Resumo executivo formatado copiado para a área de transferência!');
+    setTimeout(() => setCopiadoWhatsapp(false), 3000);
   };
 
   useEffect(() => {
@@ -333,7 +351,7 @@ export const FinancasView: React.FC = () => {
           </div>
 
           <button
-            onClick={abrirRelatorioExecutivo}
+            onClick={() => abrirRelatorioExecutivo()}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 hover:from-amber-300 hover:to-emerald-300 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-95 cursor-pointer"
             title="Gerar Relatório Executivo Consolidado do Mês com métricas arquivadas"
           >
@@ -648,7 +666,7 @@ export const FinancasView: React.FC = () => {
                           ? 'Últimos 7 dias'
                           : `Mês ${mesAtivo}`}
                         ). Clique em{' '}
-                        <strong className="text-emerald-400 cursor-pointer" onClick={abrirRelatorioExecutivo}>
+                        <strong className="text-emerald-400 cursor-pointer" onClick={() => abrirRelatorioExecutivo()}>
                           Gerar Relatório do Mês
                         </strong>{' '}
                         para consolidar os dados das bases Meta Ads e Mercado Livre.
@@ -857,51 +875,73 @@ export const FinancasView: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: RELATÓRIO EXECUTIVO MENSAL INTEGRADO */}
+      {/* MODAL: RELATÓRIO EXECUTIVO MENSAL INTEGRADO (PRINT READY + MODO DARK) */}
       {showRelatorioMensalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto">
-          <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-white/20 max-w-5xl w-full my-auto space-y-6 shadow-2xl bg-[#080d1a]/95 text-white max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto modal-print-overlay">
+          <div className="glass-panel rounded-3xl p-5 sm:p-8 border border-white/20 max-w-5xl w-full my-auto space-y-6 shadow-2xl bg-[#080d1a]/95 text-white max-h-[94vh] overflow-y-auto modal-print-container">
             
-            {/* Topbar do Relatório */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+            {/* Topbar do Relatório (Oculta ou adaptada em impressão) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5 print:border-b-2 print:border-slate-800">
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] uppercase font-bold tracking-widest">
-                    Relatório Oficial de Auditoria
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] uppercase font-bold tracking-widest print-card">
+                    {relatorioMensal?.statusCompetencia === 'em_andamento' ? 'Competência em Andamento' : 'Competência Consolidada'}
                   </span>
-                  <span className="text-slate-400 text-xs font-mono">
-                    Ref: {mesAtivo}
+                  <span className="text-slate-400 text-xs font-mono print-card-muted">
+                    Competência: <strong className="text-white print:text-black">{relatorioMensal?.rotuloMes || mesAtivo}</strong>
                   </span>
+                  {relatorioMensal?.statusCompetencia === 'em_andamento' && (
+                    <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 text-[10px] font-medium border border-cyan-500/20">
+                      {relatorioMensal.diasDecorridos} de {relatorioMensal.diasNoMes} dias ({relatorioMensal.percentualMesDecorrido}%)
+                    </span>
+                  )}
                 </div>
-                <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-white mt-1">
-                  Relatório Executivo de Aquisição & Performance
+                <h2 className="text-xl sm:text-2xl font-heading font-extrabold text-white mt-1.5 print:text-slate-900">
+                  Relatório Executivo de Aquisição & Performance Financeira
                 </h2>
-                <p className="text-xs text-slate-300">
-                  Consolidação automática dos dados arquivados do Meta Ads e Mercado Livre Afiliados.
+                <p className="text-xs text-slate-300 print:text-slate-600">
+                  Promo Pokémon TCG • Conciliação Integrada Meta Ads + Mercado Livre Afiliados
                 </p>
               </div>
 
-              {/* Botões de Ação do Relatório */}
-              <div className="flex items-center gap-2 self-end sm:self-center">
+              {/* Botões de Ação do Relatório (Ocultos na Impressão) */}
+              <div className="flex items-center gap-2 self-end sm:self-center flex-wrap no-print">
                 <button
+                  type="button"
+                  onClick={copiarResumoWhatsapp}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    copiadoWhatsapp
+                      ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/30'
+                      : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30'
+                  }`}
+                  title="Copiar resumo com formatação limpa para o WhatsApp de sócios e clientes"
+                >
+                  {copiadoWhatsapp ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                  <span>{copiadoWhatsapp ? 'Copiado p/ WhatsApp!' : 'Copiar p/ WhatsApp'}</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => window.print()}
                   className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white text-xs font-bold border border-white/15 transition-all cursor-pointer"
-                  title="Imprimir ou Salvar em PDF"
+                  title="Imprimir ou Salvar em PDF (Folha A4 formatada)"
                 >
                   <Printer className="w-4 h-4 text-cyan-400" />
                   <span>Imprimir / PDF</span>
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => api.exportarBalancoCsv(mesAtivo)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs font-bold border border-emerald-500/30 transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 text-xs font-bold border border-white/10 transition-all cursor-pointer"
                   title="Exportar dados para Excel ou CSV"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>Exportar CSV</span>
+                  <Download className="w-4 h-4 text-emerald-400" />
+                  <span>CSV</span>
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setShowRelatorioMensalModal(false)}
                   className="p-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-400 hover:text-white transition-all cursor-pointer"
                   title="Fechar Relatório"
@@ -911,121 +951,192 @@ export const FinancasView: React.FC = () => {
               </div>
             </div>
 
+            {/* Banner Informativo quando o Mês está em Andamento */}
+            {relatorioMensal?.statusCompetencia === 'em_andamento' && (
+              <div className="p-3.5 rounded-2xl bg-cyan-950/30 border border-cyan-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-cyan-200 no-print">
+                <div className="flex items-center gap-2.5">
+                  <Clock className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>
+                    <strong>Competência em curso:</strong> Este mês está em andamento ({relatorioMensal.diasDecorridos}º dia decorrido). Os valores refletem os dados acumulados até hoje.
+                  </span>
+                </div>
+                {meses.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => abrirRelatorioExecutivo(meses[1])}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 font-bold text-xs border border-cyan-500/30 transition-all shrink-0 cursor-pointer"
+                  >
+                    <span>Ver Fechamento de {meses[1]}</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {carregandoRelatorio ? (
-              <div className="py-20 text-center text-slate-400 text-sm">
-                Carregando e consolidando métricas do mês {mesAtivo}...
+              <div className="py-24 text-center space-y-3">
+                <div className="inline-block w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                <div className="text-slate-400 text-sm">
+                  Consolidando dados contábeis e métricas de tráfego do período {mesAtivo}...
+                </div>
               </div>
             ) : (
               <div className="space-y-6">
                 {/* Grade dos 6 KPIs Executivos */}
-                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-                  <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 print-card">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block print-card-muted">
                       Faturamento Meli
                     </span>
-                    <div className="text-lg font-heading font-extrabold text-white mt-1">
+                    <div className="text-lg font-heading font-extrabold text-white mt-1 print-card-text">
                       R$ {formatarMoeda(relatorioMensal?.kpis?.faturamentoMeli ?? (balanco as any)?.totalVendasBrutas)}
                     </div>
+                    <span className="text-[10px] text-slate-500 block mt-0.5 print-card-muted">
+                      Vendas Totais Geradas
+                    </span>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/25">
-                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">
-                      Comissões Confirmadas
+                  <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/25 print-card">
+                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block print-card-muted">
+                      Comissões Meli
                     </span>
-                    <div className="text-lg font-heading font-extrabold text-emerald-400 mt-1">
+                    <div className="text-lg font-heading font-extrabold text-emerald-400 mt-1 print-card-text">
                       R$ {formatarMoeda(relatorioMensal?.kpis?.comissoesConfirmadasMeli ?? balanco?.totalLucroBruto)}
                     </div>
+                    <span className="text-[10px] text-emerald-500/80 block mt-0.5 print-card-muted">
+                      Receita Bruta Afiliado
+                    </span>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-red-950/20 border border-red-500/25">
-                    <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider block">
+                  <div className="p-3.5 rounded-2xl bg-red-950/20 border border-red-500/25 print-card">
+                    <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider block print-card-muted">
                       Gasto Meta Ads
                     </span>
-                    <div className="text-lg font-heading font-extrabold text-red-400 mt-1">
+                    <div className="text-lg font-heading font-extrabold text-red-400 mt-1 print-card-text">
                       R$ {formatarMoeda(relatorioMensal?.kpis?.investimentoMetaAds ?? balanco?.totalGastoCampanhas)}
                     </div>
+                    <span className="text-[10px] text-red-500/80 block mt-0.5 print-card-muted">
+                      Tráfego Pago Injetado
+                    </span>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-cyan-950/20 border border-cyan-500/25">
-                    <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block">
+                  <div className="p-3.5 rounded-2xl bg-cyan-950/20 border border-cyan-500/25 print-card">
+                    <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block print-card-muted">
                       Lucro Líquido Real
                     </span>
-                    <div className="text-lg font-heading font-extrabold text-cyan-300 mt-1">
+                    <div className="text-lg font-heading font-extrabold text-cyan-300 mt-1 print-card-text">
                       R$ {formatarMoeda(relatorioMensal?.kpis?.lucroOperacionalLiquido ?? balanco?.resultadoLiquido)}
                     </div>
+                    <span className="text-[10px] text-cyan-400/80 block mt-0.5 print-card-muted">
+                      Margem: {(relatorioMensal?.kpis?.margemLucroPercentual ?? balanco?.margemLiquidaPercentual ?? 0).toFixed(1)}%
+                    </span>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
-                    <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block">
+                  <div className="p-3.5 rounded-2xl bg-purple-950/20 border border-purple-500/25 print-card">
+                    <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block print-card-muted">
                       Blended ROAS
                     </span>
-                    <div className="text-lg font-heading font-extrabold text-purple-300 mt-1">
+                    <div className="text-lg font-heading font-extrabold text-purple-300 mt-1 print-card-text">
                       {(relatorioMensal?.kpis?.blendedRoas ?? (balanco as any)?.blendedRoas ?? 0).toFixed(2)}x
                     </div>
+                    <span className="text-[10px] text-purple-400/80 block mt-0.5 print-card-muted">
+                      Retorno s/ Mídia
+                    </span>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
-                    <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">
-                      Margem Líquida
+                  <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-500/25 print-card">
+                    <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block print-card-muted">
+                      Mídia & Cliques
                     </span>
-                    <div className="text-lg font-heading font-extrabold text-amber-300 mt-1">
-                      {(relatorioMensal?.kpis?.margemLucroPercentual ?? balanco?.margemLiquidaPercentual ?? 0).toFixed(1)}%
+                    <div className="text-lg font-heading font-extrabold text-amber-300 mt-1 print-card-text">
+                      {(relatorioMensal?.kpis?.cliquesMeta || 0).toLocaleString('pt-BR')} <span className="text-xs font-normal text-amber-400">cliques</span>
                     </div>
+                    <span className="text-[10px] text-amber-400/80 block mt-0.5 print-card-muted">
+                      CPC: R$ {formatarMoeda(relatorioMensal?.kpis?.cpcMedio)}
+                    </span>
                   </div>
                 </div>
 
-                {/* Quadro da Regra dos 70/30 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4.5 rounded-2xl bg-gradient-to-r from-purple-950/30 via-slate-900/60 to-emerald-950/30 border border-purple-500/20">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                {/* Quadro da Regra dos 70/30 & Distribuição de Capital */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-5 rounded-2xl bg-gradient-to-r from-purple-950/30 via-slate-900/60 to-emerald-950/30 border border-purple-500/20 print-card">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
                       <TrendingUp className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="text-xs text-purple-300 font-bold uppercase tracking-wide">
-                        Reinvestimento em Campanhas (70%)
+                      <span className="text-xs text-purple-300 font-bold uppercase tracking-wide print-card-muted">
+                        Reinvestimento em Tráfego (70%)
                       </span>
-                      <div className="text-xl font-heading font-extrabold text-white mt-0.5">
+                      <div className="text-2xl font-heading font-extrabold text-white mt-0.5 print-card-text">
                         R$ {formatarMoeda(relatorioMensal?.kpis?.reservaReinvestimento70 ?? balanco?.valorReinvestimentoCampanhas)}
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        Capital destinado para escala de tráfego pago no próximo ciclo.
+                      <p className="text-[11px] text-slate-400 mt-0.5 print-card-muted">
+                        Capital protegido para reinvestir em campanhas no próximo ciclo.
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 border-t sm:border-t-0 sm:border-l border-white/10 pt-3 sm:pt-0 sm:pl-4">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <div className="flex items-center gap-3.5 border-t sm:border-t-0 sm:border-l border-white/10 pt-4 sm:pt-0 sm:pl-5 print:border-l print:border-slate-300">
+                    <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
                       <DollarSign className="w-5 h-5" />
                     </div>
                     <div>
-                      <span className="text-xs text-emerald-400 font-bold uppercase tracking-wide">
-                        Lucro Disponível para Retirada (30%)
+                      <span className="text-xs text-emerald-400 font-bold uppercase tracking-wide print-card-muted">
+                        Lucro Líquido para Retirada (30%)
                       </span>
-                      <div className="text-xl font-heading font-extrabold text-white mt-0.5">
+                      <div className="text-2xl font-heading font-extrabold text-white mt-0.5 print-card-text">
                         R$ {formatarMoeda(relatorioMensal?.kpis?.lucroDisponivel30 ?? balanco?.valorLucroDisponivel)}
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        Retirada líquida de sócios sem descapitalizar o tráfego.
+                      <p className="text-[11px] text-slate-400 mt-0.5 print-card-muted">
+                        Disponível para saque e distribuição de lucros aos sócios.
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Tabela de Métricas Arquivadas Dia a Dia */}
+                {/* Parecer Gerencial & Diagnóstico Estratégico */}
+                {relatorioMensal?.diagnostico && (
+                  <div className="p-4.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-2 print-card">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 print-card-text">
+                        <Sparkles className="w-4 h-4 text-amber-400" />
+                        Parecer & Diagnóstico Gerencial da Operação
+                      </span>
+                      <span className="text-[11px] font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 print-card">
+                        {relatorioMensal.diagnostico.statusRoas}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed print-card-text">
+                      {relatorioMensal.diagnostico.recomendacaoRoas}
+                    </p>
+                    <div className="flex items-center gap-4 pt-1 text-[11px] text-slate-400 print-card-muted flex-wrap">
+                      <span>• Dias com movimentação: <strong className="text-white print:text-black">{relatorioMensal.kpis.diasComMovimento}</strong></span>
+                      <span>• Dias com saldo positivo: <strong className="text-emerald-400">{relatorioMensal.kpis.diasLucrativos}</strong></span>
+                      {relatorioMensal.kpis.diasPrejuizo > 0 && (
+                        <span>• Dias com saldo negativo: <strong className="text-red-400">{relatorioMensal.kpis.diasPrejuizo}</strong></span>
+                      )}
+                      {relatorioMensal.kpis.mediaDiariaFaturamento > 0 && (
+                        <span>• Média diária de vendas: <strong className="text-cyan-300">R$ {formatarMoeda(relatorioMensal.kpis.mediaDiariaFaturamento)}</strong></span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tabela de Métricas Arquivadas Dia a Dia (Sem corte na impressão) */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 print-card-text">
                       <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                      Histórico Arquivado Dia a Dia ({relatorioMensal?.detalhamentoDiario?.length || lancamentos.length} dias)
+                      Histórico Diário Detalhado ({relatorioMensal?.detalhamentoDiario?.length || lancamentos.length} dias registrados)
                     </h4>
-                    <span className="text-[11px] text-slate-400 font-mono">
-                      Dados auditados via API
+                    <span className="text-[11px] text-slate-400 font-mono print-card-muted">
+                      Base auditada via API
                     </span>
                   </div>
 
-                  <div className="overflow-x-auto rounded-xl border border-white/10 max-h-72 overflow-y-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-white/10 bg-[#0e172a] sticky top-0 z-10">
+                  <div className="overflow-x-auto rounded-xl border border-white/10 max-h-80 overflow-y-auto print-expand-table print:border-slate-300">
+                    <table className="w-full text-left text-xs print-table">
+                      <thead className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-white/10 bg-[#0e172a] sticky top-0 z-10 print:bg-slate-100 print:text-slate-900 print:border-b-2 print:border-slate-300">
                         <tr>
                           <th className="py-2.5 px-3">Data</th>
                           <th className="py-2.5 px-3 text-right">Investimento Meta</th>
@@ -1037,7 +1148,7 @@ export const FinancasView: React.FC = () => {
                           <th className="py-2.5 px-3 text-right">ROAS</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/[0.04] bg-white/[0.01]">
+                      <tbody className="divide-y divide-white/[0.04] bg-white/[0.01] print:bg-white print:divide-slate-200">
                         {((relatorioMensal?.detalhamentoDiario || lancamentos) as any[]).map((d, i) => {
                           const dataDia = d.dataLancamento || d.data_lancamento || '—';
                           const gasto = Number(d.gastoCampanhas ?? d.gasto_campanhas) || 0;
@@ -1051,28 +1162,28 @@ export const FinancasView: React.FC = () => {
                             : (gasto > 0 && vendas > 0 ? (vendas / gasto) : 0);
 
                           return (
-                            <tr key={i} className="hover:bg-white/[0.03]">
-                              <td className="py-2 px-3 font-mono font-medium text-slate-300">
+                            <tr key={i} className="hover:bg-white/[0.03] print:hover:bg-transparent">
+                              <td className="py-2 px-3 font-mono font-medium text-slate-300 print:text-slate-900">
                                 {dataDia}
                               </td>
-                              <td className="py-2 px-3 text-right font-mono text-red-400">
-                                {gasto > 0 ? `R$ ${formatarMoeda(gasto)}` : <span className="text-slate-600">—</span>}
+                              <td className="py-2 px-3 text-right font-mono text-red-400 print:text-slate-900">
+                                {gasto > 0 ? `R$ ${formatarMoeda(gasto)}` : <span className="text-slate-600 print:text-slate-400">—</span>}
                               </td>
-                              <td className="py-2 px-3 text-right font-mono text-slate-400">
-                                {cliques > 0 ? cliques : <span className="text-slate-600">—</span>}
+                              <td className="py-2 px-3 text-right font-mono text-slate-400 print:text-slate-800">
+                                {cliques > 0 ? cliques.toLocaleString('pt-BR') : <span className="text-slate-600 print:text-slate-400">—</span>}
                               </td>
-                              <td className="py-2 px-3 text-right font-mono text-slate-400">
-                                {impressoes > 0 ? impressoes : <span className="text-slate-600">—</span>}
+                              <td className="py-2 px-3 text-right font-mono text-slate-400 print:text-slate-800">
+                                {impressoes > 0 ? impressoes.toLocaleString('pt-BR') : <span className="text-slate-600 print:text-slate-400">—</span>}
                               </td>
-                              <td className="py-2 px-3 text-right font-mono text-cyan-300">
-                                {vendas > 0 ? `R$ ${formatarMoeda(vendas)}` : <span className="text-slate-600">—</span>}
+                              <td className="py-2 px-3 text-right font-mono text-cyan-300 print:text-slate-900">
+                                {vendas > 0 ? `R$ ${formatarMoeda(vendas)}` : <span className="text-slate-600 print:text-slate-400">—</span>}
                               </td>
-                              <td className="py-2 px-3 text-right font-mono text-emerald-400 font-semibold">
-                                {lucro > 0 ? `R$ ${formatarMoeda(lucro)}` : <span className="text-slate-600">—</span>}
+                              <td className="py-2 px-3 text-right font-mono text-emerald-400 font-semibold print:text-emerald-700">
+                                {lucro > 0 ? `R$ ${formatarMoeda(lucro)}` : <span className="text-slate-600 print:text-slate-400">—</span>}
                               </td>
                               <td
                                 className={`py-2 px-3 text-right font-mono font-bold ${
-                                  saldo >= 0 ? 'text-emerald-300' : 'text-red-400'
+                                  saldo >= 0 ? 'text-emerald-300 print:text-emerald-700' : 'text-red-400 print:text-red-700'
                                 }`}
                               >
                                 {saldo >= 0 ? '+' : ''} R$ {formatarMoeda(saldo)}
@@ -1080,12 +1191,12 @@ export const FinancasView: React.FC = () => {
                               <td className="py-2 px-3 text-right font-mono">
                                 {roas > 0 ? (
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                    roas >= 4 ? 'bg-emerald-500/20 text-emerald-300' : roas >= 2 ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300'
+                                    roas >= 4 ? 'bg-emerald-500/20 text-emerald-300 print:text-emerald-800' : roas >= 2 ? 'bg-amber-500/20 text-amber-300 print:text-amber-800' : 'bg-red-500/20 text-red-300 print:text-red-800'
                                   }`}>
                                     {roas.toFixed(2)}x
                                   </span>
                                 ) : (
-                                  <span className="text-slate-600">—</span>
+                                  <span className="text-slate-600 print:text-slate-400">—</span>
                                 )}
                               </td>
                             </tr>
@@ -1096,19 +1207,21 @@ export const FinancasView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Rodapé do Relatório */}
-                <div className="flex items-center justify-between pt-3 border-t border-white/10 text-[11px] text-slate-400">
-                  <div className="flex items-center gap-1.5 text-emerald-400">
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>Relatório emitido pelo Cockpit Promos Pokémon TCG • Conciliação Meta + Mercado Livre</span>
+                {/* Rodapé Executivo do Relatório */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-white/10 text-[11px] text-slate-400 print:border-t-2 print:border-slate-300">
+                  <div className="flex items-center gap-1.5 text-emerald-400 print:text-slate-700">
+                    <ShieldCheck className="w-4 h-4 shrink-0" />
+                    <span>Relatório emitido pelo Super Cockpit Promo Pokémon TCG • Conciliação Contábil Automatizada</span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowRelatorioMensalModal(false)}
-                    className="px-4 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white font-semibold transition-all cursor-pointer"
-                  >
-                    Fechar
-                  </button>
+                  <div className="flex items-center gap-2 self-end sm:self-center no-print">
+                    <button
+                      type="button"
+                      onClick={() => setShowRelatorioMensalModal(false)}
+                      className="px-4 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white font-semibold transition-all cursor-pointer"
+                    >
+                      Fechar
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

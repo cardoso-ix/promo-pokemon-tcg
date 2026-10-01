@@ -15,7 +15,8 @@ import type {
   MetaAdBalanceInfo,
   RadarBuscaFiltros,
   RadarItem,
-  RadarBuscaResponse
+  RadarBuscaResponse,
+  RelatorioMensalExecutivo
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro e resiliência
@@ -368,35 +369,7 @@ export const api = {
   getLancamentos: (mes: string) =>
     request<{ ok: boolean; balanco: BalancoFinanceiro }>(`/api/financas/balanco?mes=${encodeURIComponent(mes)}`).then(r => r.balanco?.itens || []),
   getRelatorioMensal: (mes: string) =>
-    request<{
-      ok: boolean;
-      mesReferencia: string;
-      geradoEm: string;
-      kpis: {
-        faturamentoMeli: number;
-        comissoesConfirmadasMeli: number;
-        investimentoMetaAds: number;
-        lucroOperacionalLiquido: number;
-        reservaReinvestimento70: number;
-        lucroDisponivel30: number;
-        blendedRoas: number;
-        margemLucroPercentual: number;
-        cliquesMeta: number;
-        impressoesMeta: number;
-        cpcMedio: number;
-        ctrMedio: number;
-      };
-      detalhamentoDiario: Array<{
-        dataLancamento: string;
-        gastoCampanhas: number;
-        lucroBruto: number;
-        vendasBrutas: number;
-        saldoDia: number;
-        blendedRoas: number;
-        cliquesMeta: number;
-        impressoesMeta: number;
-      }>;
-    }>(`/api/financas/relatorio-mensal?mes=${encodeURIComponent(mes)}`),
+    request<RelatorioMensalExecutivo>(`/api/financas/relatorio-mensal?mes=${encodeURIComponent(mes)}`),
   addLancamento: (dados: {
     dataLancamento: string;
     gastoCampanhas: number;

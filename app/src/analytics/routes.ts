@@ -578,18 +578,99 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   app.get('/api/financas/balanco', handleGetBalanco);
   app.get('/api/bot/financas/balanco', handleGetBalanco);
 
-  // Relatório Mensal Executivo Arquivado
+  // Relatório Mensal Executivo Arquivado (Meta Ads + Mercado Livre Afiliados)
   app.get(
     '/api/financas/relatorio-mensal',
     async (req: FastifyRequest<{ Querystring: { mes?: string } }>, reply: FastifyReply) => {
       try {
-        const mes = req.query?.mes || getBrazilToday().slice(0, 7);
+        const hojeStr = getBrazilToday();
+        const mesAtualStr = hojeStr.slice(0, 7);
+        const mes = req.query?.mes && /^\d{4}-\d{2}$/.test(req.query.mes) ? req.query.mes : mesAtualStr;
+
         const balanco = await financasService.getBalancoMensal(mes);
         const metaStats = getMetaInsightsStats(`${mes}-01`, `${mes}-31`);
+
+        const [anoStr, mesNumStr] = mes.split('-');
+        const ano = parseInt(anoStr, 10);
+        const mesNum = parseInt(mesNumStr, 10);
+        const totalDiasNoMes = new Date(ano, mesNum, 0).getDate();
+
+        const ehMesAtual = mes === mesAtualStr;
+        const diaAtualNum = parseInt(hojeStr.slice(8, 10), 10);
+        const diasDecorridos = ehMesAtual ? Math.min(diaAtualNum, totalDiasNoMes) : totalDiasNoMes;
+        const statusCompetencia: 'em_andamento' | 'fechado' = ehMesAtual ? 'em_andamento' : 'fechado';
+
+        // Estatísticas dos dias registrados
+        const diasComMovimento = balanco.itens.length;
+        const diasLucrativos = balanco.itens.filter((i) => i.saldoDia > 0).length;
+        const diasPrejuizo = balanco.itens.filter((i) => i.saldoDia < 0).length;
+        const mediaDiariaFaturamento = diasDecorridos > 0 ? Number((balanco.totalVendasBrutas / diasDecorridos).toFixed(2)) : 0;
+        const mediaDiariaGasto = diasDecorridos > 0 ? Number((balanco.totalGastoCampanhas / diasDecorridos).toFixed(2)) : 0;
+        const mediaDiariaLucro = diasDecorridos > 0 ? Number((balanco.resultadoLiquido / diasDecorridos).toFixed(2)) : 0;
+
+        // Diagnóstico Gerencial Automatizado
+        let statusRoas = 'Neutro';
+        let recomendacaoRoas = 'Manter monitoramento de métricas diárias.';
+        if (balanco.blendedRoas >= 4.0) {
+          statusRoas = 'Excelente (Escala Altamente Recomendada)';
+          recomendacaoRoas = 'Retorno sobre investimento muito alto. Aumentar orçamento de tráfego gradualmente para acelerar captação de leads.';
+        } else if (balanco.blendedRoas >= 2.0) {
+          statusRoas = 'Saudável (Retorno Positivo)';
+          recomendacaoRoas = 'Operação em faixa lucrativa sólida. Preservar regra dos 70/30 para retroalimentar campanhas.';
+        } else if (balanco.blendedRoas > 0) {
+          statusRoas = 'Atenção (Próximo ao Break-Even)';
+          recomendacaoRoas = 'ROAS abaixo de 2.0x. Otimizar criativos, palavras-chave e ofertas enviadas para elevar taxa de conversão.';
+        } else if (balanco.totalGastoCampanhas > 0 && balanco.totalVendasBrutas === 0) {
+          statusRoas = 'Alerta de Gasto sem Vendas';
+          recomendacaoRoas = 'Houve gasto em tráfego sem faturamento registrado no período. Avaliar links de afiliado e apuração de conversões.';
+        } else {
+          statusRoas = 'Competência Recém-Iniciada / Sem Dados';
+          recomendacaoRoas = 'Inicie o lançamento das campanhas e aguarde as primeiras conversões do período.';
+        }
+
+        const formatarBRL = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        // Gerar resumo pré-formatado para WhatsApp
+        const nomeMeses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+        const rotuloMes = `${nomeMeses[mesNum] || mes} de ${ano}`;
+
+        const resumoWhatsapp = [
+          `📊 *RELATÓRIO FINANCEIRO EXECUTIVO · ${rotuloMes.toUpperCase()}*`,
+          `🏛️ *Promo Pokémon TCG · Auditoria Meta Ads & Mercado Livre*`,
+          `📅 *Status:* ${statusCompetencia === 'em_andamento' ? `Em Andamento (${diasDecorridos}/${totalDiasNoMes} dias decorridos)` : 'Competência Fechada & Consolidada'}`,
+          ``,
+          `💰 *RESUMO OPERACIONAL:*`,
+          `• *Faturamento Meli:* R$ ${formatarBRL(balanco.totalVendasBrutas)}`,
+          `• *Comissões Confirmadas:* R$ ${formatarBRL(balanco.totalLucroBruto)}`,
+          `• *Investimento Meta Ads:* R$ ${formatarBRL(balanco.totalGastoCampanhas)}`,
+          `• *Lucro Operacional Líquido:* R$ ${formatarBRL(balanco.resultadoLiquido)}`,
+          `• *Blended ROAS:* ${balanco.blendedRoas.toFixed(2)}x`,
+          `• *Margem Líquida:* ${balanco.margemPercentual.toFixed(1)}%`,
+          ``,
+          `⚖️ *DISTRIBUIÇÃO DA REGRA 70/30:*`,
+          `• 🔄 *Reinvestimento Tráfego (70%):* R$ ${formatarBRL(balanco.valorReinvestimentoCampanhas)}`,
+          `• 💵 *Lucro Livre p/ Retirada (30%):* R$ ${formatarBRL(balanco.valorLucroDisponivel)}`,
+          ``,
+          `🎯 *TRÁFEGO & EFICIÊNCIA (META ADS):*`,
+          `• *Cliques no Período:* ${metaStats.totalClicks.toLocaleString('pt-BR')}`,
+          `• *Impressões:* ${metaStats.totalImpressions.toLocaleString('pt-BR')}`,
+          `• *CPC Médio:* R$ ${formatarBRL(metaStats.avgCpc)}`,
+          `• *CTR Médio:* ${metaStats.avgCtr.toFixed(2)}%`,
+          ``,
+          `📌 *Parecer:* ${statusRoas}`,
+          `💡 *Recomendação:* ${recomendacaoRoas}`,
+          ``,
+          `_Emitido automaticamente via Super Cockpit Promo TCG em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}_`
+        ].join('\n');
 
         return {
           ok: true,
           mesReferencia: mes,
+          rotuloMes,
+          statusCompetencia,
+          diasNoMes: totalDiasNoMes,
+          diasDecorridos,
+          percentualMesDecorrido: Number(((diasDecorridos / totalDiasNoMes) * 100).toFixed(1)),
           geradoEm: new Date().toISOString(),
           kpis: {
             faturamentoMeli: balanco.totalVendasBrutas,
@@ -603,8 +684,19 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
             cliquesMeta: metaStats.totalClicks,
             impressoesMeta: metaStats.totalImpressions,
             cpcMedio: metaStats.avgCpc,
-            ctrMedio: metaStats.avgCtr
+            ctrMedio: metaStats.avgCtr,
+            diasComMovimento,
+            diasLucrativos,
+            diasPrejuizo,
+            mediaDiariaFaturamento,
+            mediaDiariaGasto,
+            mediaDiariaLucro
           },
+          diagnostico: {
+            statusRoas,
+            recomendacaoRoas
+          },
+          resumoWhatsapp,
           detalhamentoDiario: balanco.itens
         };
       } catch (err: unknown) {

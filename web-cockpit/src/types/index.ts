@@ -510,3 +510,54 @@ export interface MetaAdBalanceInfo {
   error?: string;
 }
 
+export interface RelatorioMensalKpis {
+  faturamentoMeli: number;
+  comissoesConfirmadasMeli: number;
+  investimentoMetaAds: number;
+  lucroOperacionalLiquido: number;
+  reservaReinvestimento70: number;
+  lucroDisponivel30: number;
+  blendedRoas: number;
+  margemLucroPercentual: number;
+  cliquesMeta: number;
+  impressoesMeta: number;
+  cpcMedio: number;
+  ctrMedio: number;
+  diasComMovimento: number;
+  diasLucrativos: number;
+  diasPrejuizo: number;
+  mediaDiariaFaturamento: number;
+  mediaDiariaGasto: number;
+  mediaDiariaLucro: number;
+}
+
+export interface RelatorioMensalItemDiario {
+  dataLancamento: string;
+  gastoCampanhas: number;
+  lucroBruto: number;
+  vendasBrutas: number;
+  saldoDia: number;
+  blendedRoas: number;
+  cliquesMeta: number;
+  impressoesMeta: number;
+  descricao?: string;
+  categoria?: string;
+}
+
+export interface RelatorioMensalExecutivo {
+  ok: boolean;
+  mesReferencia: string;
+  rotuloMes: string;
+  statusCompetencia: 'em_andamento' | 'fechado';
+  diasNoMes: number;
+  diasDecorridos: number;
+  percentualMesDecorrido: number;
+  geradoEm: string;
+  kpis: RelatorioMensalKpis;
+  diagnostico: {
+    statusRoas: string;
+    recomendacaoRoas: string;
+  };
+  resumoWhatsapp: string;
+  detalhamentoDiario: RelatorioMensalItemDiario[];
+}

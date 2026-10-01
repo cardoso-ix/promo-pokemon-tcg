@@ -62,3 +62,109 @@
 .animate-pokeball {
   animation: pokeball-spin 20s linear infinite;
 }
+
+/* ==========================================================================
+   ESTILOS DE IMPRESSÃO EXECUTIVA (A4 PRINT / PDF PROFISSIONAL)
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm 15mm 10mm;
+  }
+
+  /* Oculta tudo que não faz parte do relatório executivo timbrado */
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body > *:not(#root) {
+    display: none !important;
+  }
+
+  /* Na árvore do React, oculta elementos normais da interface */
+  header,
+  nav,
+  footer,
+  aside,
+  .no-print,
+  button,
+  .print-hide {
+    display: none !important;
+  }
+
+  /* Força o container do modal a se comportar como folha de papel normal */
+  .modal-print-overlay {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .modal-print-container {
+    position: static !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  /* Desbloqueia o overflow de rolagem interna de tabelas para imprimir todos os dias */
+  .print-expand-table {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  /* Estilização corporativa dos cards de KPIs para folha impressa */
+  .print-card {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border-radius: 8px !important;
+  }
+
+  .print-card-text {
+    color: #0f172a !important;
+  }
+
+  .print-card-muted {
+    color: #475569 !important;
+  }
+
+  /* Estilização da tabela diária para folha A4 limpa */
+  .print-table {
+    border: 1px solid #cbd5e1 !important;
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  .print-table th {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+    border-bottom: 2px solid #cbd5e1 !important;
+    font-weight: 700 !important;
+  }
+
+  .print-table td {
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #1e293b !important;
+  }
+
+  .print-table tr:nth-child(even) td {
+    background: #f8fafc !important;
+  }
+}

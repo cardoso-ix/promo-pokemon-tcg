@@ -301,11 +301,19 @@ Com a integração das bases analíticas, o módulo de finanças opera de forma 
   - `DELETE /api/financas/despesas/:id`: Remove lançamento de fatura.
 
 * **Recursos do Gerador Executivo no Frontend (`FinancasView`):**
-  - Botão **"Gerar Relatório do Mês"**: Abre modal executivo com design institucional de auditoria.
-  - Visualização de 6 KPIs Chave: Faturamento Meli, Investimento Meta Ads, Comissões Confirmadas, Lucro Operacional Líquido, Blended ROAS e Margem Operacional.
-  - Painel de Governança 70/30 (Reinvestimento em Tráfego vs Caixa Livre).
-  - Tabela Diária Completa: Data, Gasto Meta, Cliques, Impressões, Vendas, Comissões, Saldo Líquido e Blended ROAS do dia.
-  - Impressão formatada para PDF (`window.print()`) e exportação direta em CSV.
+  - Botão **"Gerar Relatório do Mês"**: Abre modal executivo com design institucional timbrado de auditoria contábil.
+  - **Suporte a Competência em Curso vs Fechada:** Detecta automaticamente o status da competência (ex: mês corrente em andamento com dias decorridos e percentual do mês, com atalho rápido para consultar o fechamento consolidado do mês anterior).
+  - **Visualização de KPIs Expandida:** Faturamento Meli, Investimento Meta Ads, Comissões Confirmadas, Lucro Operacional Líquido, Blended ROAS, Margem Operacional %, Cliques, Impressões e CPC médio.
+  - **Parecer & Diagnóstico Gerencial Automatizado:** Análise inteligente de saúde do ROAS e recomendações estratégicas de escala de mídia.
+  - **Painel de Governança 70/30:** Cálculo transparente de Reinvestimento em Tráfego (70%) vs Lucro Livre para Retirada de Sócios (30%).
+  - **Botão "Copiar p/ WhatsApp":** Exporta em 1 clique um resumo executivo formatado com emojis, marcadores e números consolidados para compartilhamento com sócios e parceiros.
+  - **Impressão Profissional A4 (@media print):** Transforma o modal em folha timbrada corporativa A4 de fundo branco, expandindo a tabela diária completa sem cortes de rolagem para geração perfeita de PDF.
+  - **Exportação CSV:** Download de extrato diário auditado para integração em planilhas financeiras.
+
+* **Operação de Transição de Mês (Meta Ads & Finanças):**
+  - **Autonomia Contínua:** Não requer nenhuma reconfiguração de tokens, webhooks ou IDs de conta ao virar o mês calendário.
+  - **Janela Móvel:** A sincronização da Graph API do Meta Ads opera com janela retroativa de 30 dias contínuos, garantindo a captura do novo mês sem descontinuidade dos últimos dias do mês anterior.
+  - **Caixa & Saldo:** O saldo de anúncios transita naturalmente de mês a mês no modo Híbrido/Auto. Novas recargas bancárias são adicionadas facilmente via "+ Adicionar Recarga".
 
 ---
 
