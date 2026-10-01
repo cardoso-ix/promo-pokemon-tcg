@@ -3,7 +3,8 @@ import {
   Activity,
   ShoppingBag,
   Droplets,
-  DollarSign
+  DollarSign,
+  Search
 } from 'lucide-react';
 import type { ActiveModule } from '../types/index.ts';
 
@@ -37,6 +38,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       icon: Droplets,
       colorActive: 'text-cyan-300',
       bgActive: 'bg-cyan-600/20 border-cyan-500/40 text-cyan-300'
+    },
+    {
+      id: 'radar' as const,
+      label: 'Radar TCG',
+      icon: Search,
+      colorActive: 'text-cyan-300',
+      bgActive: 'bg-blue-600/20 border-blue-500/40 text-cyan-300'
     },
     {
       id: 'financas' as const,

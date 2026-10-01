@@ -1,4 +1,53 @@
-export type ActiveModule = 'dashboard' | 'afiliados' | 'replica' | 'financas';
+export type ActiveModule = 'dashboard' | 'afiliados' | 'replica' | 'financas' | 'radar';
+
+export interface RadarBuscaFiltros {
+  apenasOficiaisOuPlatinum?: boolean;
+  apenasNovos?: boolean;
+  apenasFreteGratis?: boolean;
+  apenasFull?: boolean;
+  apenasSemJuros?: boolean;
+  precoMin?: number;
+  precoMax?: number;
+  ordenarPor?: 'price_asc' | 'relevance';
+}
+
+export interface RadarItem {
+  id: string;
+  title: string;
+  price: number;
+  original_price: number | null;
+  currency_id: string;
+  thumbnail: string;
+  permalink: string;
+  condition: string;
+  official_store_id?: number | null;
+  official_store_name?: string | null;
+  seloVendedor: string;
+  ehOficial: boolean;
+  ehPlatinum: boolean;
+  ehFull: boolean;
+  parcelamentoFormatado: string;
+  linkAfiliado: string;
+  fotoHd: string;
+  copyCliente: string;
+  copyGrupo: string;
+  shipping?: {
+    free_shipping?: boolean;
+    logistic_type?: string;
+  };
+  installments?: {
+    quantity: number;
+    amount: number;
+    rate: number;
+  };
+}
+
+export interface RadarBuscaResponse {
+  ok: boolean;
+  total: number;
+  itens: RadarItem[];
+  erro?: string;
+}
 
 export type SubTabReplica = 'feed' | 'rotas' | 'gerador' | 'precos' | 'conectar' | 'config';
 export type SubTabBot = 'visao-geral' | 'grupos' | 'leads' | 'campanhas' | 'meta-cloud' | 'anti-ban' | 'logs';

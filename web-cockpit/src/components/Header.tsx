@@ -7,7 +7,8 @@ import {
   QrCode,
   ShieldCheck,
   AlertTriangle,
-  ShoppingBag
+  ShoppingBag,
+  Search
 } from 'lucide-react';
 import type { ActiveModule } from '../types/index.ts';
 import { useUnifiedStatus } from '../hooks/useUnifiedStatus.ts';
@@ -104,6 +105,18 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Droplets className="w-3.5 h-3.5 text-cyan-300" />
           <span>Replicador</span>
+        </button>
+
+        <button
+          onClick={() => onSelectModule('radar')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
+            activeModule === 'radar'
+              ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md shadow-cyan-500/25 border border-cyan-400/30'
+              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+          }`}
+        >
+          <Search className="w-3.5 h-3.5 text-cyan-300" />
+          <span>Radar TCG</span>
         </button>
 
         <button

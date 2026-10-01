@@ -63,6 +63,8 @@ import {
   buildClearCookie
 } from './auth.js';
 import { setupAnalyticsModule } from '../analytics/index.js';
+import { meliService } from '../analytics/meli.service.js';
+import { buscarNoRadar, formatarCopyCliente, formatarCopyGrupo, type FiltrosRadar, type ResultadoRadarItem } from '../core/radar.js';
 
 import fs from 'node:fs';
 
@@ -994,6 +996,57 @@ export async function createServer() {
       }
       return reply.status(400).send({ ok: false, motivo: res.motivo, error: msg });
     }
+  });
+
+  // ==========================================
+  // API REST: Radar de Preços TCG (Busca & Personal Shopper 1-a-1)
+  // ==========================================
+  app.post<{
+    Body: {
+      query: string;
+      filtros?: FiltrosRadar;
+    };
+  }>('/api/radar/buscar', async (req, reply) => {
+    const { query, filtros } = req.body || {};
+    if (!query || !query.trim()) {
+      return reply.status(400).send({ ok: false, error: 'Por favor, informe um termo de busca ou link do produto.' });
+    }
+
+    let accessToken: string | undefined;
+    try {
+      accessToken = await meliService.getValidAccessToken();
+    } catch {
+      // Continua sem token se não estiver configurado
+    }
+
+    const res = await buscarNoRadar(
+      query.trim(),
+      filtros || { apenasOficiaisOuPlatinum: true, apenasNovos: true },
+      accessToken
+    );
+
+    if (!res.ok && res.total === 0) {
+      return reply.status(200).send(res);
+    }
+    return res;
+  });
+
+  app.post<{
+    Body: {
+      item: ResultadoRadarItem;
+      tipo: 'cliente' | 'grupo';
+      linkAfiliadoPersonalizado?: string;
+    };
+  }>('/api/radar/formatar-copy', async (req, reply) => {
+    const { item, tipo, linkAfiliadoPersonalizado } = req.body || {};
+    if (!item) {
+      return reply.status(400).send({ ok: false, error: 'Item não fornecido para formatação de copy.' });
+    }
+
+    const linkFinal = linkAfiliadoPersonalizado || item.linkAfiliado;
+    const copy = tipo === 'grupo' ? formatarCopyGrupo(item, linkFinal) : formatarCopyCliente(item, linkFinal);
+
+    return { ok: true, copy };
   });
 
   // Módulo de Ingestão Analítica (Mercado Livre + Meta Ads + PostgreSQL Drizzle)

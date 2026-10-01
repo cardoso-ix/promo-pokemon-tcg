@@ -12,7 +12,10 @@ import type {
   ProdutoValorConsolidado,
   RegistroHistoricoProduto,
   BenchmarkPrecoProduto,
-  MetaAdBalanceInfo
+  MetaAdBalanceInfo,
+  RadarBuscaFiltros,
+  RadarItem,
+  RadarBuscaResponse
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro e resiliência
@@ -452,6 +455,19 @@ export const api = {
     request<{ ok: boolean; pergunta?: string; resposta?: string; message?: string }>('/api/bot/deepseek/test', {
       method: 'POST',
       body: JSON.stringify({ prompt: mensagem, promptSistema })
+    }),
+
+  // --- RADAR DE PREÇOS TCG (PERSONAL SHOPPER & BUSCA) ---
+  buscarRadar: (query: string, filtros?: RadarBuscaFiltros) =>
+    request<RadarBuscaResponse>('/api/radar/buscar', {
+      method: 'POST',
+      body: JSON.stringify({ query, filtros })
+    }),
+
+  formatarCopyRadar: (item: RadarItem, tipo: 'cliente' | 'grupo', linkAfiliadoPersonalizado?: string) =>
+    request<{ ok: boolean; copy: string }>('/api/radar/formatar-copy', {
+      method: 'POST',
+      body: JSON.stringify({ item, tipo, linkAfiliadoPersonalizado })
     }),
 
   // --- LOGOUT UNIFICADO ---
