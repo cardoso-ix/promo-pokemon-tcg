@@ -1333,9 +1333,44 @@ export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, of
     const params: (string | number)[] = [];
 
     if (busca && busca.trim()) {
-      const termoLimpo = `%${normalizarNomeProduto(busca)}%`;
-      whereClause = 'WHERE h.produto_limpo LIKE ? OR h.produto LIKE ? OR h.chave_canonica LIKE ?';
-      params.push(termoLimpo, `%${busca.trim()}%`, termoLimpo);
+      const termoNormalizado = normalizarNomeProduto(busca);
+      const palavras = termoNormalizado
+        .split(' ')
+        .filter((w) => w.length >= 2 && !['de', 'do', 'da', 'dos', 'das', 'com', 'para', 'em', 'um', 'uma'].includes(w));
+
+      if (palavras.length > 0) {
+        // 1. Tentar primeiro com AND de todas as palavras
+        const conditionsAnd = palavras.map(() => '(h.produto_limpo LIKE ? OR h.produto LIKE ? OR h.chave_canonica LIKE ?)');
+        const paramsAnd: string[] = [];
+        for (const p of palavras) {
+          const pat = `%${p}%`;
+          paramsAnd.push(pat, pat, pat);
+        }
+
+        const countAnd = db.prepare(`
+          SELECT COUNT(DISTINCT COALESCE(h.chave_canonica, h.produto_limpo)) as total 
+          FROM historico_produtos_valores h
+          WHERE ${conditionsAnd.join(' AND ')}
+        `).get(...paramsAnd) as { total?: number } | undefined;
+
+        if (countAnd && countAnd.total && countAnd.total > 0) {
+          whereClause = `WHERE ${conditionsAnd.join(' AND ')}`;
+          params.push(...paramsAnd);
+        } else {
+          // 2. Fallback: Se AND não encontrar nada, usa OR com as palavras mais relevantes
+          const conditionsOr = palavras.map(() => '(h.produto_limpo LIKE ? OR h.produto LIKE ? OR h.chave_canonica LIKE ?)');
+          const paramsOr: string[] = [];
+          for (const p of palavras) {
+            const pat = `%${p}%`;
+            paramsOr.push(pat, pat, pat);
+          }
+          whereClause = `WHERE ${conditionsOr.join(' OR ')}`;
+          params.push(...paramsOr);
+        }
+      } else {
+        whereClause = 'WHERE h.produto_limpo LIKE ? OR h.produto LIKE ?';
+        params.push(`%${termoNormalizado}%`, `%${busca.trim()}%`);
+      }
     }
 
     const totalRow = db.prepare(`
