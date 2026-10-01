@@ -36,7 +36,8 @@ import {
   extrairPrecoUnitario,
   determinarTipoMensagem,
   calcularDesconto,
-  deveBuscarFotoExterna
+  deveBuscarFotoExterna,
+  obterFotoCupomBuffer
 } from '../core/anuncio.js';
 import { notificarDisparadorOferta } from '../core/internal-sync.js';
 
@@ -892,10 +893,17 @@ export class WhatsAppManager {
     if (this.sock) {
       let safeImageBuffer: Buffer | null = imageBuffer;
 
-      // Blindagem absoluta: Se for publicação de NOVO CUPOM PURO (sem produto específico) e veio apenas como digitação (sem imagem no concorrente),
-      // NUNCA anexar fotos! O envio DEVE ser estritamente texto puro.
-      if (!messageHasImage && isPublicacaoCupomPuro) {
-        safeImageBuffer = null;
+      // REGRA OFICIAL SOLICITADA:
+      // Quando for anúncio/mensagem de cupom disponível (tela de cupom, comunicado ou cupom detectado),
+      // se não houver foto específica de produto anexada pelo concorrente, usa OBRIGATORIAMENTE a foto oficial amarela "NOVO CUPOM"!
+      if (isCupom || isPublicacaoCupomPuro) {
+        if (!hasProdutoEspecifico || !safeImageBuffer) {
+          const bufferOficialCupom = obterFotoCupomBuffer();
+          if (bufferOficialCupom) {
+            safeImageBuffer = bufferOficialCupom;
+            console.log(`[Cupom WhatsApp] Anexando foto oficial "NOVO CUPOM" (${Math.round(bufferOficialCupom.length / 1024)} KB).`);
+          }
+        }
       }
 
       if (safeImageBuffer && safeImageBuffer.length > 8 * 1024 * 1024) {

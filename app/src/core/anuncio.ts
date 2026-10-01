@@ -1,4 +1,47 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { expandUrl, normalizarFotoMl, shortenToMeli, buildAffiliateUrl, isImagemValidaProdutoMl } from './affiliate.js';
+
+export const FOTO_CUPOM_OFICIAL_URL = '/assets/cupom-mercadolivre.png';
+
+let cachedCupomBuffer: Buffer | null = null;
+
+/**
+ * Retorna o buffer binário da foto oficial amarela do Mercado Livre para anúncios de cupons
+ */
+export function obterFotoCupomBuffer(): Buffer | null {
+  if (cachedCupomBuffer) return cachedCupomBuffer;
+
+  const currentDir = typeof __dirname !== 'undefined'
+    ? __dirname
+    : path.dirname(fileURLToPath(import.meta.url));
+
+  const candidatePaths = [
+    path.resolve(process.cwd(), 'src/public/assets/cupom-mercadolivre.png'),
+    path.resolve(process.cwd(), 'dist/public/assets/cupom-mercadolivre.png'),
+    path.resolve(process.cwd(), 'public/assets/cupom-mercadolivre.png'),
+    path.resolve(process.cwd(), 'app/src/public/assets/cupom-mercadolivre.png'),
+    path.resolve(process.cwd(), 'app/dist/public/assets/cupom-mercadolivre.png'),
+    path.resolve(currentDir, '../public/assets/cupom-mercadolivre.png'),
+    path.resolve(currentDir, '../../src/public/assets/cupom-mercadolivre.png'),
+    path.resolve(currentDir, '../../dist/public/assets/cupom-mercadolivre.png')
+  ];
+
+  for (const p of candidatePaths) {
+    if (fs.existsSync(p)) {
+      try {
+        cachedCupomBuffer = fs.readFileSync(p);
+        console.log(`[Foto Cupom] Carregada imagem oficial de cupom com sucesso (${Math.round(cachedCupomBuffer.length / 1024)} KB) de: ${p}`);
+        return cachedCupomBuffer;
+      } catch (e) {
+        console.warn('[Foto Cupom] Erro ao ler foto de cupom de', p, e);
+      }
+    }
+  }
+
+  return null;
+}
 
 export interface AnuncioInput {
   url: string;
@@ -1094,6 +1137,17 @@ export async function extrairDadosAnuncio(
       valorComCupom: valorComCupomFinal,
       parcelamento: parcelamentoFinal
     });
+
+    // Se for anúncio/mensagem de cupom e não houver foto de produto específico (ou for vitrine/cupom puro), usa a foto oficial de cupom
+    const isVitrineOuCupomUrl = targetUrl.includes('/sec/') || targetUrl.includes('/cupons') || targetUrl.includes('/social/');
+    const isAnuncioCupom = Boolean(
+      cupomFinal ||
+      isVitrineOuCupomUrl ||
+      titulo.toLowerCase().includes('cupom')
+    );
+    if (isAnuncioCupom && (!imageUrl || isVitrineOuCupomUrl || titulo.toLowerCase().includes('cupom'))) {
+      imageUrl = FOTO_CUPOM_OFICIAL_URL;
+    }
 
     return {
       ok: true,

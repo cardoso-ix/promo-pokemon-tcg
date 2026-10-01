@@ -57,6 +57,7 @@ chmod +x *.sh
   - **🌅 Mensagem Diária de Abertura:** Templates profissionais com rotação automática diária e suporte a texto livre.
   - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script.
 - **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, radar de precificação integrado, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
+- **🎟️ Foto Oficial de "NOVO CUPOM" Mercado Livre:** Tratamento visual inteligente para anúncios e alertas de cupons. Quando uma mensagem replicada for um comunicado de cupom sem foto de produto anexa, ou quando o usuário gerar um anúncio de cupom/vitrine, o sistema anexa e publica automaticamente a imagem oficial em alta definição amarela do Mercado Livre com o selo "NOVO CUPOM", tornando os alertas de cupons muito mais atrativos e profissionais.
 - **🔄 Botão de Sincronização Unificada:** Sincronização instantânea das métricas do Meta Ads (Graph API v20.0) e Mercado Livre Afiliados com recálculo em tempo real de ROAS, comissões do dia e lucro líquido.
 
 ---

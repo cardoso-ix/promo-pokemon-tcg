@@ -47,7 +47,9 @@ import {
   extrairCupom,
   extrairParcelamento,
   extrairPrecoUnitario,
-  determinarTipoMensagem
+  determinarTipoMensagem,
+  obterFotoCupomBuffer,
+  FOTO_CUPOM_OFICIAL_URL
 } from '../core/anuncio.js';
 import {
   extrairDadosOferta,
@@ -581,6 +583,8 @@ export async function createServer() {
             imagePreviewUrl = `data:image/jpeg;base64,${imgBuf.toString('base64')}`;
           }
         }
+      } else {
+        imagePreviewUrl = FOTO_CUPOM_OFICIAL_URL;
       }
 
       const isMeliActive = Boolean(meliCookie && meliCookie.trim().length > 10);
@@ -749,7 +753,9 @@ export async function createServer() {
 
     try {
       let imageBuffer: Buffer | null = null;
-      if (imageUrl && imageUrl.startsWith('http')) {
+      if (imageUrl && imageUrl.includes('cupom-mercadolivre.png')) {
+        imageBuffer = obterFotoCupomBuffer();
+      } else if (imageUrl && imageUrl.startsWith('http')) {
         try {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 10000);
@@ -767,6 +773,8 @@ export async function createServer() {
         } catch (e) {
           console.warn('[Publicar Anúncio] Falha ao baixar imagem remota:', e);
         }
+      } else if (!imageUrl && (texto.toLowerCase().includes('cupom') || /\bcupo(?:m|ns)\b/i.test(texto))) {
+        imageBuffer = obterFotoCupomBuffer();
       }
 
       let enviados = 0;
