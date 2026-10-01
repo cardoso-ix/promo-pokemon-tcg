@@ -49,10 +49,15 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 
 ## 4. Cobertura de Testes Automatizados
 
-- **Total de Testes:** **129 testes unitários e de integração** (100% aprovados, 0 falhas).
-  - `app` (Replicador): **91 testes aprovados** (Guardião TCG expandido, parcelamento sem juros higienizado, fotos 2X HD).
-  - `bot-disparador`: **38 testes aprovados**.
+- **Total de Testes:** **109 testes unitários e de integração** (100% aprovados, 0 falhas).
+  - `app` (Replicador): **109 testes aprovados** (Guardião TCG expandido, parcelamento sem juros higienizado, fotos 2X HD, vitrine social e deduplicação inteligente).
 - Executável com um único comando na raiz do projeto: `npm test`.
+
+### 4.1. Melhorias Recentes de Performance e Radar TCG (Opção 1)
+- **Guardião TCG Expandido:** Mais de 35 novos termos e Pokémons icônicos mapeados (Greninja, Sylveon, Umbreon, Rayquaza, Mew, Coleção 30 Anos, Celebrações, etc.), eliminando falsos descartes por `fora_nicho_tcg`.
+- **Higienização de Parcelamento:** Cálculo unitário preciso de parcelas sem placeholders brutos do ML (`{o} {price_total} {en}`) e remoção de "sem juros" duplicado.
+- **Miniaturas HD no Feed ao Vivo:** Renderização nativa da foto real do produto no card de atividade do WhatsApp no Cockpit, com suporte a visualização ampliada ao clicar e badge `2X HD`.
+- **Rota Multi-Grupo Oficial:** Monitoramento simultâneo de todos os 9 grupos de TCG para não perder nenhuma oferta enviada em tempo real.
 
 ---
 
