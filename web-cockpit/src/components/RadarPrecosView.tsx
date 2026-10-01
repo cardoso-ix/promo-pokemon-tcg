@@ -17,7 +17,8 @@ import {
   Table as TableIcon,
   Tag,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  RotateCcw
 } from 'lucide-react';
 import type { RadarItem, RadarBuscaFiltros } from '../types/index.ts';
 import { api } from '../services/api.ts';
@@ -36,6 +37,8 @@ export const RadarPrecosView: React.FC = () => {
   // Filtros
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>('todos');
   const [faixaPrecoAtiva, setFaixaPrecoAtiva] = useState<string>('todos');
+  const [precoMinCustom, setPrecoMinCustom] = useState<string>('');
+  const [precoMaxCustom, setPrecoMaxCustom] = useState<string>('');
 
   const [filtros, setFiltros] = useState<RadarBuscaFiltros>({
     apenasOficiaisOuPlatinum: true,
@@ -70,13 +73,37 @@ export const RadarPrecosView: React.FC = () => {
     { id: 'Poster Box', label: '🖼️ Poster Box' }
   ];
 
-  const faixasPreco = [
-    { id: 'todos', label: 'Qualquer Preço' },
-    { id: 'ate_50', label: 'Até R$ 50' },
-    { id: '50_150', label: 'R$ 50 a R$ 150' },
-    { id: '150_300', label: 'R$ 150 a R$ 300' },
-    { id: 'acima_300', label: 'Acima de R$ 300' }
+  const faixasPrecoRapidas = [
+    { id: 'todos', label: 'Todos os Preços', min: '', max: '' },
+    { id: 'ate_30', label: 'Até R$ 30', min: '', max: '30' },
+    { id: '30_80', label: 'R$ 30 a R$ 80', min: '30', max: '80' },
+    { id: '80_150', label: 'R$ 80 a R$ 150', min: '80', max: '150' },
+    { id: '150_250', label: 'R$ 150 a R$ 250', min: '150', max: '250' },
+    { id: '250_400', label: 'R$ 250 a R$ 400', min: '250', max: '400' },
+    { id: 'acima_400', label: 'Acima de R$ 400', min: '400', max: '' }
   ];
+
+  const selecionarFaixaRapida = (faixa: typeof faixasPrecoRapidas[0]) => {
+    setFaixaPrecoAtiva(faixa.id);
+    setPrecoMinCustom(faixa.min);
+    setPrecoMaxCustom(faixa.max);
+  };
+
+  const handleCustomMinChange = (valor: string) => {
+    setPrecoMinCustom(valor);
+    setFaixaPrecoAtiva('custom');
+  };
+
+  const handleCustomMaxChange = (valor: string) => {
+    setPrecoMaxCustom(valor);
+    setFaixaPrecoAtiva('custom');
+  };
+
+  const limparFiltrosPreco = () => {
+    setFaixaPrecoAtiva('todos');
+    setPrecoMinCustom('');
+    setPrecoMaxCustom('');
+  };
 
   useEffect(() => {
     // Carregamento inicial automático para apresentar ofertas imediatamente
@@ -93,7 +120,14 @@ export const RadarPrecosView: React.FC = () => {
     setLoading(true);
     setErro(null);
 
-    const f = filtrosOverride || filtros;
+    const minNum = precoMinCustom ? parseFloat(precoMinCustom.replace(',', '.')) : undefined;
+    const maxNum = precoMaxCustom ? parseFloat(precoMaxCustom.replace(',', '.')) : undefined;
+
+    const f: RadarBuscaFiltros = {
+      ...(filtrosOverride || filtros),
+      precoMin: !isNaN(Number(minNum)) ? minNum : undefined,
+      precoMax: !isNaN(Number(maxNum)) ? maxNum : undefined
+    };
 
     try {
       const res = await api.buscarRadar(q, f);
@@ -141,8 +175,11 @@ export const RadarPrecosView: React.FC = () => {
     }
   };
 
-  // Itens filtrados no frontend por categoria e faixa de preço rápida
+  // Itens filtrados no frontend por categoria e faixa de preço dinâmica (Min / Max)
   const itensExibidos = useMemo(() => {
+    const minVal = precoMinCustom ? parseFloat(precoMinCustom.replace(',', '.')) : null;
+    const maxVal = precoMaxCustom ? parseFloat(precoMaxCustom.replace(',', '.')) : null;
+
     return itens.filter((item) => {
       // Filtro de categoria
       if (categoriaAtiva !== 'todos') {
@@ -152,15 +189,17 @@ export const RadarPrecosView: React.FC = () => {
         }
       }
 
-      // Filtro de faixa de preço
-      if (faixaPrecoAtiva === 'ate_50' && item.price > 50) return false;
-      if (faixaPrecoAtiva === '50_150' && (item.price < 50 || item.price > 150)) return false;
-      if (faixaPrecoAtiva === '150_300' && (item.price < 150 || item.price > 300)) return false;
-      if (faixaPrecoAtiva === 'acima_300' && item.price <= 300) return false;
+      // Filtro de faixa de preço dinâmico (Min / Max)
+      if (minVal !== null && !isNaN(minVal) && item.price < minVal) {
+        return false;
+      }
+      if (maxVal !== null && !isNaN(maxVal) && item.price > maxVal) {
+        return false;
+      }
 
       return true;
     });
-  }, [itens, categoriaAtiva, faixaPrecoAtiva]);
+  }, [itens, categoriaAtiva, precoMinCustom, precoMaxCustom]);
 
   return (
     <div className="space-y-6 animate-fadeIn pb-12">
@@ -309,25 +348,81 @@ export const RadarPrecosView: React.FC = () => {
             </div>
           </div>
 
-          {/* Faixas de Preço */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
-              <Filter className="w-3 h-3 text-amber-400" /> Faixa de Preço:
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {faixasPreco.map((faixa) => (
+          {/* Faixas de Preço & Inputs Min/Max */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                <Filter className="w-3 h-3 text-amber-400" /> Faixa de Preço (Min & Max):
+              </label>
+              {(precoMinCustom || precoMaxCustom || faixaPrecoAtiva !== 'todos') && (
                 <button
-                  key={faixa.id}
-                  onClick={() => setFaixaPrecoAtiva(faixa.id)}
-                  className={`text-xs px-2.5 py-1 rounded-lg font-medium border transition-all ${
-                    faixaPrecoAtiva === faixa.id
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm shadow-amber-500/20'
-                      : 'bg-white/[0.03] text-slate-400 border-white/[0.06] hover:text-slate-200'
-                  }`}
+                  type="button"
+                  onClick={limparFiltrosPreco}
+                  className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold transition-colors"
                 >
-                  {faixa.label}
+                  <RotateCcw className="w-2.5 h-2.5" />
+                  <span>Limpar Preço</span>
                 </button>
-              ))}
+              )}
+            </div>
+
+            {/* Inputs Customizados: Mínimo e Máximo */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-bold">De R$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0,00"
+                  value={precoMinCustom}
+                  onChange={(e) => handleCustomMinChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-full bg-[#070d18] border border-white/10 rounded-lg pl-14 pr-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 transition-all font-mono"
+                />
+              </div>
+
+              <div className="relative flex-1">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-bold">Até R$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0,00"
+                  value={precoMaxCustom}
+                  onChange={(e) => handleCustomMaxChange(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="w-full bg-[#070d18] border border-white/10 rounded-lg pl-14 pr-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/60 transition-all font-mono"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => executarBusca()}
+                disabled={loading}
+                className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold transition-all shrink-0 flex items-center gap-1"
+                title="Aplicar filtro de preço na busca remota do Mercado Livre"
+              >
+                <span>Filtrar</span>
+              </button>
+            </div>
+
+            {/* Badges Rápidos de Faixas Populares Pokémon TCG */}
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {faixasPrecoRapidas.map((faixa) => {
+                const ativa = faixaPrecoAtiva === faixa.id;
+                return (
+                  <button
+                    key={faixa.id}
+                    onClick={() => selecionarFaixaRapida(faixa)}
+                    className={`text-[11px] px-2.5 py-1 rounded-lg font-medium border transition-all ${
+                      ativa
+                        ? 'bg-amber-500/25 text-amber-200 border-amber-500/50 shadow-sm shadow-amber-500/20 font-semibold'
+                        : 'bg-white/[0.03] text-slate-400 border-white/[0.06] hover:text-slate-200'
+                    }`}
+                  >
+                    {faixa.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

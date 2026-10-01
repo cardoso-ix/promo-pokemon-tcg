@@ -67,8 +67,7 @@ chmod +x *.sh
   - Filtro semântico estrito com pontuação por relevância que prioriza correspondências exatas de expansões e produtos, eliminando falsos positivos.
 - **Visualização Flexível (Cards Compactos & Tabela de Cotação):**
   - **Cards Compactos & Densos:** Miniaturas 84x84 com descrição padronizada `[CATEGORIA] • NOME • PREÇO • VENDEDOR`, badges rápidos de envio Full, Frete Grátis e Desconto (%).
-  - **Modo Tabela de Cotação Dinâmica:** Visão em grade densa ideal para consulta rápida de preços, cotações ao vivo e comparação imediata de múltiplos anúncios.
-  - **Filtros Avançados:** Filtro por Categoria (*Booster Box*, *ETB*, *Box Especial*, *Blister*, *Fichário & Álbum*, *Poster Box*) e Faixas de Preço pré-definidas (*Até R$ 50*, *R$ 50 a R$ 150*, *R$ 150 a R$ 300*, *Acima de R$ 300*).
+  - **Filtros Avançados & Faixa de Preço Flexível (Min & Max):** Filtro por Categoria (*Booster Box*, *ETB*, *Box Especial*, *Blister*, *Fichário & Álbum*, *Poster Box*), inputs numéricos para definir faixa personalizada livre (`De R$ [Min]` até `Até R$ [Max]`) e 7 badges rápidos de 1 clique (*Até R$ 30*, *R$ 30 a R$ 80*, *R$ 80 a R$ 150*, *R$ 150 a R$ 250*, *R$ 250 a R$ 400*, *Acima de R$ 400*) com botão para limpar filtros instantaneamente.
 - **Personal Shopper 1-a-1 & Disparo para Grupos:**
   - **Copy Consultivo para WhatsApp Privado:** Mensagens personalizadas, educadas e prontas para fechar vendas no 1-a-1 com cliente, destacando preço parcelado sem juros, envio Full e link de afiliado oficial.
   - **Copy Promocional para Grupo:** Formato oficial limpo com badges de destaque (⚡ FULL, 🚚 FRETE GRÁTIS) e selo de produto 100% lacrado Copag.
