@@ -802,6 +802,12 @@ export class MeliAffiliateService {
         touchpoints: 0,
         cvr: 0
       });
+    } else {
+      cached.dailyData[idx].earnings = 0;
+      cached.dailyData[idx].orders = 0;
+      cached.dailyData[idx].quantity = 0;
+      cached.dailyData[idx].touchpoints = 0;
+      cached.dailyData[idx].cvr = 0;
     }
 
     this.saveToSqlite(cached);

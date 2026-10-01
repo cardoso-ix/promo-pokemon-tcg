@@ -19,15 +19,17 @@ export const PRESET_MSGS_ABERTURA: ModeloAbertura[] = [
     texto: `@pokemon_tcg_promo
 
 🌅 *BOM DIA, TREINADORES E COLECIONADORES!* ⚡
-O nosso grupo oficial de ofertas de Pokémon TCG está oficialmente *ABERTO* para o dia de hoje!
+O nosso grupo oficial de ofertas de Pokémon TCG está oficialmente *ABERTO* nesta {dia_semana}!
 
-Quero agradecer de coração a cada um de vocês por fazer parte da nossa comunidade. É muito gratificante ver a nossa família de colecionadores crescendo todos os dias! 🙏✨
+Sejam muito bem-vindos todos os novos membros que entraram no grupo nas últimas horas! É muito gratificante ver a nossa família de colecionadores crescendo todos os dias! 🙏✨
 
-🔎 Passo boa parte do meu dia garimpando pessoalmente lojas oficiais, distribuidores e estoques confiáveis para encontrar ofertas reais, cupons que funcionam de verdade e oportunidades selecionadas a dedo em boosters, boxes, latas, ETBs e produtos lacrados. Aqui dedico meu tempo para que você não pague preços abusivos e consiga colecionar gastando o justo.
+🔎 Passo boa parte do meu dia garimpando pessoalmente lojas oficiais, distribuidores e estoques confiáveis no Mercado Livre e parceiros oficiais Copag. O meu objetivo aqui é simples: encontrar ofertas reais, cupons que funcionam de verdade no carrinho e produtos lacrados pelo preço justo de tabela, sem ágio abusivo de cambistas.
 
-👥 *Dica especial:* Se você tem amigos ou conhecidos que também amam Pokémon TCG e querem economizar com segurança, fique 100% à vontade para adicioná-los ou mandar o link do nosso grupo. Quanto mais gente junta, mais forte fica a nossa comunidade! 🚀
+🔔 *Dica de ouro:* Mantenham as notificações do grupo ativadas! As melhores oportunidades (ETBs, caixas com desconto e cupons relâmpago) costumam esgotar em poucos minutos.
 
-Tenham todos uma excelente {dia_semana} e um dia cheio de bons pulls! 🔥`
+👥 *Convide seus amigos:* Fique 100% à vontade para mandar o link do grupo para amigos que também amam colecionar. Quanto mais forte o nosso grupo, mais força temos para garimpar as melhores promoções! 🚀
+
+Tenham todos uma excelente {dia_semana} e um dia cheio de bons pulls e raridades! 🔥🃏`
   },
   {
     id: 'radar_drops',
