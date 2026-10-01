@@ -779,6 +779,12 @@
         </div>
       </div>
       <div class="${bubbleClass}">
+        ${log.foto_url ? `
+          <div class="feed-media-container" title="Clique para ver imagem oficial em alta resolução" onclick="window.open('${escapeHtml(log.foto_url)}', '_blank')" style="cursor: pointer;">
+            <img src="${escapeHtml(log.foto_url)}" alt="Foto do Produto" class="feed-media-img" loading="lazy" onerror="this.closest('.feed-media-container').style.display='none'">
+            <span class="feed-media-hd-badge">✨ FOTO 2X HD</span>
+          </div>
+        ` : ''}
         <div>${escapeHtml(rawContent)}</div>
         <div class="wa-bubble-footer">
           <span>${timeFormatted}</span>

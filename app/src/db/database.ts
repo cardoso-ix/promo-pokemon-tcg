@@ -137,6 +137,7 @@ export function initDatabase() {
       texto_original TEXT,
       texto_publicado TEXT,
       tem_foto INTEGER DEFAULT 0,
+      foto_url TEXT,
       links_convertidos INTEGER DEFAULT 0,
       status TEXT NOT NULL,
       motivo TEXT,
@@ -225,6 +226,11 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_hist_prod_data ON historico_produtos_valores(criado_em);
     CREATE INDEX IF NOT EXISTS idx_hist_prod_preco ON historico_produtos_valores(preco_por);
   `);
+
+  // Migração suave para adicionar foto_url se a tabela já existia sem a coluna
+  try {
+    db.prepare('ALTER TABLE logs ADD COLUMN foto_url TEXT').run();
+  } catch {}
 
   // Semear valores padrão se não existirem
   const defaultConfigs: Record<string, string> = {
@@ -422,20 +428,21 @@ export interface LogEntry {
   texto_original: string;
   texto_publicado: string;
   tem_foto: boolean;
+  foto_url?: string | null;
   links_convertidos: number;
   status: 'enviado' | 'ignorado' | 'descartado' | 'erro';
   motivo: string;
   criado_em: string;
 }
 
-export function insertLog(log: Omit<LogEntry, 'id' | 'criado_em' | 'tem_foto'> & { tem_foto: boolean }): boolean {
+export function insertLog(log: Omit<LogEntry, 'id' | 'criado_em' | 'tem_foto'> & { tem_foto: boolean; foto_url?: string | null }): boolean {
   try {
     db.prepare(`
       INSERT INTO logs (
         origem_chat_id, origem_nome, destino_chat_id, hash_conteudo,
-        texto_original, texto_publicado, tem_foto, links_convertidos,
+        texto_original, texto_publicado, tem_foto, foto_url, links_convertidos,
         status, motivo
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       log.origem_chat_id,
       log.origem_nome,
@@ -444,6 +451,7 @@ export function insertLog(log: Omit<LogEntry, 'id' | 'criado_em' | 'tem_foto'> &
       log.texto_original,
       log.texto_publicado,
       log.tem_foto ? 1 : 0,
+      log.foto_url || null,
       log.links_convertidos,
       log.status,
       log.motivo
@@ -460,7 +468,7 @@ export function insertLog(log: Omit<LogEntry, 'id' | 'criado_em' | 'tem_foto'> &
 export function getRecentLogs(limit = 50): LogEntry[] {
   const rows = db.prepare(`
     SELECT id, origem_chat_id, origem_nome, destino_chat_id, hash_conteudo,
-           texto_original, texto_publicado, tem_foto, links_convertidos,
+           texto_original, texto_publicado, tem_foto, foto_url, links_convertidos,
            status, motivo, criado_em
     FROM logs
     ORDER BY id DESC
@@ -469,7 +477,8 @@ export function getRecentLogs(limit = 50): LogEntry[] {
 
   return rows.map((r) => ({
     ...r,
-    tem_foto: Boolean(r.tem_foto)
+    tem_foto: Boolean(r.tem_foto),
+    foto_url: r.foto_url || null
   }));
 }
 

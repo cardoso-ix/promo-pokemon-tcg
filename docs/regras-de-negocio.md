@@ -56,7 +56,8 @@ Toda mensagem que chega aos grupos de WhatsApp em que o chip participa é avalia
 ### 3.1. Guardião de Nicho TCG (Filtro Inteligente de Card Games)
 - A esteira analisa o título, texto e slug do produto contra uma lista inteligente de termos do ecossistema TCG.
 - **Categorias e Franquias Aceitas**: Pokémon TCG, Magic: The Gathering (MTG), Yu-Gi-Oh!, One Piece Card Game, Lorcana, Digimon, Dragon Ball Super Card Game, Copag, Konami, Wizards of the Coast, Bandai.
-- **Produtos Aceitos**: Booster, Booster Box, ETB (Treinador Avançado), Blister, Tripack, Fichário, Sleeves/Shields, Decks, Playmat, Latas Colecionáveis e Cartas Avulsas.
+- **Pokémons e Coleções Reconhecidos**: Pokémons de alto valor comercial e colecionável (*Greninja, Sylveon, Umbreon, Espeon, Vaporeon, Jolteon, Flareon, Glaceon, Leafeon, Rayquaza, Lugia, Ho-Oh, Mew, Mewtwo, Gengar, Lucario, Charizard, Pikachu, Blastoise, Venusaur, Tyranitar, Dragonite, Arceus, Meowscarada, Miraidon, Koraidon, Ogerpon, Terapagos*), além de coleções (*30 Anos, 25 Anos, Celebrações, Evoluções Prismáticas, Destinos Brilhantes, Fogo Fantasmagórico, Heróis Excelsos, 151, Força Temporal*).
+- **Produtos Aceitos**: Booster, Booster Box, ETB (Treinador Avançado), Blister, Tripack, Quadpack, Fichário, Sleeves/Shields, Decks, Playmat, Latas Colecionáveis e Cartas Avulsas.
 - **Produtos Rejeitados**: Itens fora do nicho postados por concorrentes (como panelas, eletrônicos, vestuário geral ou cosméticos) são ignorados automaticamente (`status: 'ignorado'`, `motivo: 'fora_nicho_tcg'`).
 
 ### 3.2. Desduplicação Global Cross-Group por ID Canônico (MLB ID ou Hash de Cupom + 30 min Cooldown)

@@ -114,10 +114,22 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
     // Parcelamento estritamente sem juros no JSON
     const instMatch = priceBlock.match(/"installments":\{"text":"([^"]+)","no_interest":(true|false)/);
     if (instMatch && instMatch[2] === 'true') {
-      const priceValMatch = priceBlock.match(/"price":\{"value":([\d\.]+)/);
-      const parcelaNum = priceValMatch ? parseFloat(priceValMatch[1]) : 0;
-      const parcelaStr = Number.isInteger(parcelaNum) ? String(parcelaNum) : parcelaNum.toFixed(2).replace('.', ',');
-      parcelamento = instMatch[1].replace('{price}', `R$ ${parcelaStr}`) + ' sem juros';
+      const matchQtd = instMatch[1].match(/(\d{1,2})\s*x/i) || priceBlock.match(/"quantity":(\d{1,2})/);
+      const matchAmount = priceBlock.match(/"amount":([\d\.]+)/);
+      let parcelaNum = matchAmount ? parseFloat(matchAmount[1]) : 0;
+
+      if ((!parcelaNum || isNaN(parcelaNum)) && precoPor && matchQtd) {
+        const qtd = parseInt(matchQtd[1], 10);
+        const precoPorFloat = parseFloat(precoPor.replace(/\./g, '').replace(',', '.'));
+        if (qtd > 0 && !isNaN(precoPorFloat) && precoPorFloat > 0) {
+          parcelaNum = precoPorFloat / qtd;
+        }
+      }
+
+      if (matchQtd && !isNaN(parcelaNum) && parcelaNum > 0) {
+        const parcelaStr = Number.isInteger(parcelaNum) ? String(parcelaNum) : parcelaNum.toFixed(2).replace('.', ',');
+        parcelamento = `${matchQtd[1]}x de R$ ${parcelaStr} sem juros`;
+      }
     }
   }
 
@@ -392,6 +404,10 @@ export function isProdutoTCG(texto?: string, titulo?: string, slug?: string): bo
   const termosAceitos = [
     // Franquias e Fabricantes Principais
     'pokemon', 'copag', 'pikachu', 'charizard', 'mewtwo', 'eevee',
+    'greninja', 'sylveon', 'umbreon', 'espeon', 'vaporeon', 'jolteon', 'flareon', 'glaceon', 'leafeon',
+    'rayquaza', 'lugia', 'ho-oh', 'mew', 'gengar', 'lucario', 'blastoise', 'venusaur', 'tyranitar',
+    'dragonite', 'arceus', 'giratina', 'dialga', 'palkia', 'meowscarada', 'skeledirge', 'quaquaval',
+    'gardevoir', 'roaring moon', 'iron valiant', 'miraidon', 'koraidon', 'ogerpon', 'terapagos',
     'yu-gi-oh', 'yugioh', 'konami',
     'magic the gathering', 'magic: the gathering', 'mtg', 'wizards of the coast',
     'one piece card game', 'one piece tcg', 'bandai',
@@ -399,6 +415,15 @@ export function isProdutoTCG(texto?: string, titulo?: string, slug?: string): bo
     'digimon card game',
     'dragon ball super card', 'dbs card',
     'star wars unlimited',
+    // Coleções e Linhas Especiais do TCG
+    '30 anos', '25 anos', 'celebracoes', 'celebration',
+    'evolucoes prismaticas', 'prismatic evolutions',
+    'destinos brilhantes', 'shining fates',
+    'fogo fantasmagorico', 'herois excelsos', 'forca temporal', 'faixas faiscantes',
+    'mascara do crepusculo', 'fagulhas cintilantes', 'coroa estelar', '151',
+    'origem perdida', 'astros cintilantes', 'ceus em evolucao', 'golpe fusao',
+    'voltagem vivida', 'escuridao incandescente', 'espada e escudo', 'escarlate e violeta',
+    'poster collection', 'colecao especial', 'colecao premium', 'colecao comemorativa',
     // Termos de Produtos de Card Games
     'tcg', 'card game', 'card games', 'trading card',
     'booster', 'boosters', 'booster box',

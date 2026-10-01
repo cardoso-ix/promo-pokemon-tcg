@@ -49,8 +49,10 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 
 ## 4. Cobertura de Testes Automatizados
 
-- **Total de Testes:** **99 testes unitários e de integração** (100% aprovados, 0 falhas).
-  - Executável com um único comando na raiz do projeto: `npm test`.
+- **Total de Testes:** **129 testes unitários e de integração** (100% aprovados, 0 falhas).
+  - `app` (Replicador): **91 testes aprovados** (Guardião TCG expandido, parcelamento sem juros higienizado, fotos 2X HD).
+  - `bot-disparador`: **38 testes aprovados**.
+- Executável com um único comando na raiz do projeto: `npm test`.
 
 ---
 

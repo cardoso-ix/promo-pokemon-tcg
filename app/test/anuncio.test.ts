@@ -281,6 +281,24 @@ test('extrairDadosAnuncio SEMPRE deve re-afiliar link de concorrente (meli.la) e
   assert.strictEqual(!resultado.textoGerado.includes(linkConcorrente), true);
 });
 
+test('extrairDetalhesPrecoECupom deve higienizar placeholders do JSON do ML e formatar parcelamento sem juros limpo', () => {
+  const jsonHtml = `
+    <html>
+      <body>
+        <script>
+          {"type":"price","original_price":{"value":516.27},"current_price":{"value":464.64},"installments":{"text":"{o} {price_total} {en} 10x {price} sem juros","no_interest":true,"quantity":10,"amount":46.46}}
+        </script>
+      </body>
+    </html>
+  `;
 
+  const detalhes = extrairDetalhesPrecoECupom(jsonHtml);
+  assert.strictEqual(detalhes.precoDe, '516,27');
+  assert.strictEqual(detalhes.precoPor, '464,64');
+  assert.strictEqual(detalhes.parcelamento?.includes('{o}'), false);
+  assert.strictEqual(detalhes.parcelamento?.includes('{price_total}'), false);
+  assert.strictEqual(detalhes.parcelamento?.includes('sem juros sem juros'), false);
+  assert.strictEqual(detalhes.parcelamento, '10x de R$ 46,46 sem juros');
+});
 
 

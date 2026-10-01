@@ -990,6 +990,7 @@ export class WhatsAppManager {
       texto_original: rawText,
       texto_publicado: textoFinalPublicar,
       tem_foto: Boolean(imageBuffer && imageBuffer.length > 0),
+      foto_url: productImageUrl || null,
       links_convertidos: linksConvertidos,
       status: statusFinal,
       motivo: motivoFinal

@@ -7,6 +7,13 @@ test('Guardião de Nicho TCG - Aceita produtos de Pokémon TCG', () => {
   assert.strictEqual(isProdutoTCG('ETB Treinador Avançado Pokémon TCG', 'Treinador Avançado'), true);
   assert.strictEqual(isProdutoTCG('Lata Pokémon Charizard com 4 boosters', 'Lata Charizard'), true);
   assert.strictEqual(isProdutoTCG('Deck Inicial Batalha Deluxe Meowscarada ex', 'Deck Batalha'), true);
+  // Produtos com Pokémons famosos ou coleções especiais sem a palavra Pokémon explícita
+  assert.strictEqual(isProdutoTCG('*BOX 30 ANOS - GRENINJA _OU_ SYLVEON (SORTIDO!)*', 'Box 30 Anos'), true);
+  assert.strictEqual(isProdutoTCG('Coleção Especial Sylveon ex 6 boosters Copag', 'Coleção Sylveon'), true);
+  assert.strictEqual(isProdutoTCG('Lata Rayquaza Destinos Brilhantes 4 boosters', 'Lata Rayquaza'), true);
+  assert.strictEqual(isProdutoTCG('Blister Triplo Umbreon Evoluções Prismáticas', 'Blister Umbreon'), true);
+  assert.strictEqual(isProdutoTCG('Box Celebrações 25 Anos Lacrada', 'Box Celebrações'), true);
+  assert.strictEqual(isProdutoTCG('Combo De Booster Heróis Excelsos 108 Cartas', 'Heróis Excelsos'), true);
 });
 
 test('Guardião de Nicho TCG - Aceita Yu-Gi-Oh!, Magic The Gathering e One Piece Card Game', () => {
