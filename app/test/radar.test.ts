@@ -217,14 +217,14 @@ describe('Radar de Preços TCG - Core & Filtros de Confiabilidade', () => {
     assert.ok(copy.includes('OPORTUNIDADE POKÉMON TCG'));
   });
 
-  it('resolverImagemProdutoTCG deve mapear corretamente cada categoria de produto TCG', () => {
-    assert.equal(resolverImagemProdutoTCG('Box Charizard ex Fogo Supremo Copag'), '/assets/products/p8.svg');
-    assert.equal(resolverImagemProdutoTCG('Elite Trainer Box Destinos de Paldea'), '/assets/products/p5.svg');
-    assert.equal(resolverImagemProdutoTCG('Fichário Álbum 30 Anos Pokémon TCG Oficial'), '/assets/products/p5.svg');
-    assert.equal(resolverImagemProdutoTCG('Display Booster Box 360 Escarlate e Violeta'), '/assets/products/p4.svg');
-    assert.equal(resolverImagemProdutoTCG('Blister Quádruplo Pokémon TCG 4 Boosters'), '/assets/products/p2.svg');
-    assert.equal(resolverImagemProdutoTCG('Blister Triplo Pokémon TCG com Carta Holográfica'), '/assets/products/p3.svg');
-    assert.equal(resolverImagemProdutoTCG('Coleção Especial 30 Anos Poster Box'), '/assets/products/p1.svg');
+  it('resolverImagemProdutoTCG deve mapear corretamente cada categoria de produto TCG com fotos reais HD', () => {
+    assert.ok(resolverImagemProdutoTCG('Box Charizard ex Fogo Supremo Copag').includes('mlstatic.com'));
+    assert.ok(resolverImagemProdutoTCG('Elite Trainer Box Destinos de Paldea').includes('mlstatic.com'));
+    assert.ok(resolverImagemProdutoTCG('Fichário Álbum 30 Anos Pokémon TCG Oficial').includes('mlstatic.com'));
+    assert.ok(resolverImagemProdutoTCG('Display Booster Box 360 Escarlate e Violeta').includes('mlstatic.com'));
+    assert.ok(resolverImagemProdutoTCG('Blister Quádruplo Pokémon TCG 4 Boosters').includes('mlstatic.com'));
+    assert.ok(resolverImagemProdutoTCG('Blister Triplo Pokémon TCG com Carta Holográfica').includes('mlstatic.com'));
+    assert.ok(resolverImagemProdutoTCG('Coleção Especial 30 Anos Poster Box').includes('mlstatic.com'));
     // Deve preservar URLs reais caso fornecidas
     assert.equal(
       resolverImagemProdutoTCG('Qualquer', 'http://http2.mlstatic.com/D_123-O.jpg'),
@@ -239,18 +239,20 @@ describe('Radar de Preços TCG - Core & Filtros de Confiabilidade', () => {
     assert.ok(res.itens.length > 0);
 
     for (const item of res.itens) {
-      assert.ok(item.fotoHd && item.fotoHd.trim().length > 0, `fotoHd não pode ser vazia para: ${item.title}`);
-      assert.ok(item.thumbnail && item.thumbnail.trim().length > 0, `thumbnail não pode ser vazia para: ${item.title}`);
+      assert.ok(item.fotoHd && item.fotoHd.startsWith('http'), `fotoHd deve ser URL real para: ${item.title}`);
+      assert.ok(item.thumbnail && item.thumbnail.startsWith('http'), `thumbnail deve ser URL real para: ${item.title}`);
+      assert.ok(item.categoria && item.categoria.length > 0, `categoria deve ser classificada para: ${item.title}`);
+      assert.ok(item.descricaoPadronizada && item.descricaoPadronizada.length > 0, `descricaoPadronizada deve existir para: ${item.title}`);
       assert.ok(item.price > 0);
       assert.ok(item.linkAfiliado.includes('matt_word'));
     }
   });
 
-  it('buscarNoRadar deve encontrar e priorizar item exato do Charizard', async () => {
+  it('buscarNoRadar deve encontrar e priorizar item exato do Charizard com foto real', async () => {
     const res = await buscarNoRadar('Box Charizard ex');
     assert.ok(res.ok);
     assert.ok(res.itens.length > 0);
     assert.ok(res.itens[0].title.toLowerCase().includes('charizard'));
-    assert.equal(res.itens[0].fotoHd, '/assets/products/p8.svg');
+    assert.ok(res.itens[0].fotoHd.includes('mlstatic.com'));
   });
 });

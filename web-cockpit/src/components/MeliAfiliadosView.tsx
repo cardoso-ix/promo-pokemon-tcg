@@ -140,7 +140,7 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
         setData(res.data);
       }
       setModalAjusteAberto(false);
-      mostrarFeedback('Métricas de hoje atualizadas com sucesso no Cockpit e Finanças!');
+      mostrarFeedback('Métricas de hoje atualizadas com sucesso no Dashboard e Finanças!');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Falha ao salvar';
       mostrarFeedback(`Erro: ${msg}`);
@@ -1195,7 +1195,7 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
             </div>
 
             <p className="text-xs text-slate-300 leading-relaxed">
-              Confirme os valores conforme exibidos no seu painel oficial do Mercado Livre Afiliados. Esses números atualizam instantaneamente o Cockpit, o Dashboard e o DRE Financeiro de hoje.
+              Confirme os valores conforme exibidos no seu painel oficial do Mercado Livre Afiliados. Esses números atualizam instantaneamente o Dashboard e o DRE Financeiro de hoje.
             </p>
 
             <form onSubmit={handleSalvarAjuste} className="space-y-3.5 text-xs">

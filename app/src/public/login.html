@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-  <title>Login · Réplica Promo Cockpit</title>
+  <title>Login · Promo Pokémon TCG Dashboard</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -366,7 +366,7 @@
         </svg>
       </div>
       <h1 class="brand-title">RÉPLICA PROMO</h1>
-      <p class="brand-subtitle">POKÉMON TCG · ULTRA BALL COCKPIT</p>
+      <p class="brand-subtitle">POKÉMON TCG · ULTRA BALL DASHBOARD</p>
     </div>
 
     <div id="error-alert" class="error-box">
@@ -413,7 +413,7 @@
 
       <button type="submit" id="btn-submit" class="btn-submit">
         <span class="spinner" id="btn-spinner"></span>
-        <span id="btn-text">Entrar no Cockpit</span>
+        <span id="btn-text">Entrar no Dashboard</span>
       </button>
     </form>
 
@@ -493,7 +493,7 @@
           showError(data.error || 'Credenciais inválidas.');
           submitBtn.disabled = false;
           btnSpinner.style.display = 'none';
-          btnText.textContent = 'Entrar no Cockpit';
+          btnText.textContent = 'Entrar no Dashboard';
           passInput.focus();
           passInput.select();
         }
@@ -501,7 +501,7 @@
         showError('Erro de conexão ao servidor. Tente novamente.');
         submitBtn.disabled = false;
         btnSpinner.style.display = 'none';
-        btnText.textContent = 'Entrar no Cockpit';
+        btnText.textContent = 'Entrar no Dashboard';
       }
     });
   </script>

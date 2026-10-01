@@ -32,58 +32,47 @@ chmod +x *.sh
 
 ## 📦 Plataforma Unificada em Produção
 
-### ⚡ Super Cockpit Unificado (`web-cockpit` + `app/` — Porta 3000)
+### ⚡ Dashboard Pokémon TCG (`web-cockpit` + `app/` — Porta 3000)
 - **Status:** 🟢 **Online 24/7 (VPS HostGator + Coolify)**
 - **Painel em Produção:** 👉 **`http://108.174.145.77:3000`** | **Local:** 👉 **`http://localhost:3000`**
 - **Arquitetura Moderna & Leve (SPA Nativa sem Iframes):**
-  - **Stack Visual de Ponta:** Desenvolvido em **React 19, Tailwind CSS v4, Recharts e Lucide Icons**.
+  - **Stack Visual de Ponta:** Desenvolvido em **React 19, Tailwind CSS v4, Recharts e Lucide Icons** com estética Pokémon TCG Pro.
   - **Suporte Mobile & PWA Nativo:** Compatível com instalação direta em smartphones (Android e iOS) via Progressive Web App (`manifest.json`), execução em tela cheia (`standalone`) e **Bottom Navigation Bar** inferior ergonômica para navegação com o polegar.
-  - **Visão Geral 360°:** Dashboard executivo unificando fluxo horário com granularidade de **1 em 1 hora** (Cliques de Afiliados e Ofertas Replicadas) e **Planilha Horária Integrada**, investimento Meta Ads em tempo real, comissões do Mercado Livre, Blended ROAS e regra dos 70% de reinvestimento.
-  - **Módulo Replicador (Água 💧):** Feed de ofertas ao vivo, rotas de transmissão com toggles rápidos, gerador de anúncios TCG com auto-extração de foto/preço e **re-afiliação obrigatória de links concorrentes (`meli.la` e `/sec/`)**, prévia em tempo real com auto-preenchimento, Sentinel do Mercado Livre e **Central de Ajustes Modular Completa** (coordenação de tags de comissão, regras anti-spam, filtros estritos TCG, higienização de assinaturas concorrentes, seletor visual e alternância entre 4 modelos de Mensagens de Bom Dia com rotação automática diária, prévia em tempo real e botão de teste de disparo, além de sincronização com Google Sheets).
-  - **Módulo Meli Afiliados (Ouro 🛍️):** 7 visões analíticas completas replicando o portal oficial com catálogo visual imune a bloqueios (assets locais em SVG de alta definição, sanitização automática de URLs, `referrerPolicy` defensivo e fallback inteligente sem ícones quebrados).
-  - **Módulo Finanças & DRE Executivo (Esmeralda 💼):** Dados 100% reais alimentados automaticamente via API do Meta Ads e Mercado Livre Afiliados, **Persistência SQLite dedicada de lançamentos diários** com resiliência a atrasos de consolidação da API do ML, edição/ajuste e exclusão direta pela tabela de lançamentos com 1 clique, **Filtros Rápidos de Período (Dia, Semana, Mês e Geral)** com recálculo reativo instantâneo de todos os KPIs, gráficos DRE dinâmicos, extrato diário auditado e **Gerador de Relatórios Executivos Mensais** com exportação CSV e impressão em PDF.
-- **Performance:** Aplicação ultraleve após a desintegração do disparador de mensagens frias, concentrando 100% dos recursos em tráfego pago escalável (Meta Ads) e afiliados oficiais.
+  - **Visão Geral 360°:** Dashboard executivo unificando fluxo horário com granularidade de **1 em 1 hora** (Cliques de Afiliados e Ofertas Replicadas) e **Planilha Horária Integrada**, caixa de investimento Meta Ads 100% automatizada direto da Graph API v20.0, comissões do Mercado Livre, Blended ROAS e regra dos 70% de reinvestimento.
+  - **Módulo Replicador (Água 💧):** Feed de ofertas ao vivo, rotas de transmissão com toggles rápidos, gerador de anúncios TCG com auto-extração de foto/preço e **re-afiliação obrigatória de links concorrentes (`meli.la` e `/sec/`)**, prévia em tempo real com auto-preenchimento, Sentinel do Mercado Livre e **Central de Ajustes Modular Completa** (coordenação de tags de comissão, regras anti-spam, filtros estritos TCG, higienização de assinaturas concorrentes, seletor visual e alternância entre modelos de Mensagens de Bom Dia, além de sincronização com Google Sheets).
+  - **Módulo Radar de Preços TCG (Personal Shopper PRO 🎯):** Monitor de cotação em tempo real com mini-cards compactos e modo alternável para **Tabela de Cotação Dinâmica**, fotos reais oficiais do Mercado Livre CDN em WebP, descrições comerciais padronizadas (`[CATEGORIA] • NOME • PREÇO • VENDEDOR`) e filtros de precisão por Categoria e Faixas de Preço.
+  - **Módulo Meli Afiliados (Ouro 🛍️):** 7 visões analíticas completas replicando o portal oficial com catálogo visual imune a bloqueios (assets em WebP/alta definição, sanitização automática de URLs, `referrerPolicy` defensivo e fallback inteligente sem ícones quebrados).
+  - **Módulo Finanças & DRE Executivo (Esmeralda 💼):** Dados 100% reais alimentados automaticamente via API do Meta Ads e Mercado Livre Afiliados, **Persistência SQLite dedicada de lançamentos diários**, edição/ajuste e exclusão direta pela tabela de lançamentos, **Filtros Rápidos de Período (Dia, Semana, Mês e Geral)** com recálculo reativo instantâneo de todos os KPIs, gráficos DRE dinâmicos, extrato diário auditado e **Gerador de Relatórios Executivos Mensais com Impressão A4 Profissional e Cópia Universal para WhatsApp**.
+- **Performance:** Aplicação ultraleve concentrando 100% dos recursos em tráfego pago escalável (Meta Ads) e afiliados oficiais.
 
 ---
 
 ### 1. 🌊 Módulo Replicador de Ofertas & Central de Ajustes
 - **Objetivo:** Monitora grupos de ofertas concorrentes 24/7, intercepta links de produtos, higieniza mensagens removendo assinaturas de terceiros, gera links de afiliados oficiais com encurtamento `meli.la`, preserva/baixa fotos oficiais em 2X HD e replica nos seus grupos VIP.
+- **Centralização Inteligente:** Base de preços unificada com o Radar TCG para eliminar redundâncias e focar na rápida geração e replicação de ofertas.
 - **⚙️ Central de Ajustes & Coordenação:**
   - **Tags de Afiliado:** Controle instantâneo de `matt_word`, `matt_tool` e link da vitrine oficial.
   - **Regras de Postagem & Filtros Anti-Spam:** Toggles visuais para Filtro Exclusivo Pokémon TCG Copag, Somente Mercado Livre, Cooldown anti-duplicidade (minutos), Teto máximo de postagens por hora, Atraso máximo tolerável e Delay entre envios.
   - **Limpeza de Concorrentes:** Caixa multilinhas para raspar arrobas e menções indesejadas (ex: `@rasgabooster.tcg`, `#rasgaboot`).
-  - **🌅 Mensagem Diária de Abertura & Seletor de Modelos:**
-    - Alternância visual instantânea entre os 4 templates profissionais + Modo **Rotação Automática Diária** + Modo **Mensagem Personalizada**.
-    - Suporte a personalização de texto livre com interpolação dinâmica de `{dia_semana}`.
-    - **Isolamento de Polling (`configDirty`):** Previne qualquer reversão involuntária da mensagem selecionada ao editar na aba de Ajustes.
-    - **Auto-Save Inteligente:** Ao clicar em *"Testar Envio Agora"*, o sistema salva automaticamente o modelo selecionado no banco de dados antes do disparo, garantindo que o WhatsApp receba exatamente a mensagem ativa.
-    - Botão dedicado **"Salvar Este Modelo"** diretamente no card para persistência instantânea.
-    - Prévia ao vivo com balão autêntico de WhatsApp iniciando no topo sem cortes descompensados.
+  - **🌅 Mensagem Diária de Abertura:** Templates profissionais com rotação automática diária e suporte a texto livre.
   - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script.
-  - **📈 Base de Preços TCG & Motor Canônico Inteligente (Planilha Nativa Integrada):**
-    - **Deduplicação Canônica Automática:** Motor TCG que identifica o formato (*Booster Box*, *ETB*, *Blister Triplo*, *Blister Quádruplo*, *Lata*, *Deck*, *Fichário*) e a expansão oficial (*Escuridão Absoluta/ME05*, *Evoluções Prismáticas/SV8.5*, *Faíscas Volumosas*, *Coroa Estelar*, *151*, *30 Anos*, etc.).
-    - **Unificação de Variações de Vendedores:** Agrupa títulos diferentes para o mesmo produto em uma **única linha canônica** no SQLite (`chave_canonica`), eliminando dezenas de duplicidades redundantes.
-    - **Métricas Consolidadas:** Identifica o **Menor Preço Real 🟢 (mínimo histórico consolidado)** e **Maior Preço Real 🔴 (teto histórico)** entre todas as postagens combinadas, preço médio e soma de ocorrências.
-    - **Radar de Precificação Canônico no Gerador de Anúncios:** Balizador instantâneo que busca primeiro pela chave canônica do produto, permitindo sugerir na hora o preço ideal e menor valor já postado para guiar novas ofertas manuais.
-    - Extrato cronológico detalhado com linha do tempo de todas as postagens unificadas daquele produto e sincronização retroativa inteligente.
-- **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre, Shopee ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, radar de precificação canônica integrada, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
+- **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, radar de precificação integrado, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
 - **🔄 Botão de Sincronização Unificada:** Sincronização instantânea das métricas do Meta Ads (Graph API v20.0) e Mercado Livre Afiliados com recálculo em tempo real de ROAS, comissões do dia e lucro líquido.
 
 ---
 
 ### 2. 🎯 Radar de Preços TCG (Personal Shopper & Monitor de Ofertas)
 - **Engine Híbrido de Alta Performance (< 20ms):**
-  - Motor de busca multicamadas que combina o histórico consolidado do banco de dados SQLite com um **Catálogo Canônico Oficial de Produtos Pokémon TCG** de alta demanda (*Poster Box 30 Anos*, *Display Booster Box 360*, *ETB Destinos de Paldea*, *Fichário 30 Anos*, *Box Charizard ex*, *Blisters*, etc.).
+  - Motor de busca multicamadas que combina o histórico consolidado do banco de dados SQLite com um **Catálogo Canônico Oficial de Produtos Pokémon TCG** com fotos reais em WebP do Mercado Livre CDN (*Poster Box 30 Anos*, *Display Booster Box 360*, *ETB Destinos de Paldea*, *Fichário 30 Anos*, *Box Charizard ex*, *Blisters*, etc.).
   - Filtro semântico estrito com pontuação por relevância que prioriza correspondências exatas de expansões e produtos, eliminando falsos positivos.
-- **Pipeline Visual Blindado & Resolvedor de Imagens TCG:**
-  - **Zero Imagens Quebradas:** Cada produto é acompanhado de sua foto oficial em alta resolução ou arte temática vetorial SVG correspondente (`p1.svg` a `p8.svg`).
-  - **Proteção Anti-CORS e Referrer Policy:** Renderização de fotos com `referrerPolicy="no-referrer"` e `crossOrigin="anonymous"`, contornando bloqueios de hotlinking do Mercado Livre no navegador.
-  - **Handler Defensivo `onError`:** Fallback gracioso automático que substitui qualquer URL inacessível por vetores locais em milissegundos.
-  - **Persistência Retroativa de Imagens:** Coluna `imagem_url` integrada nativamente na tabela `historico_produtos_valores` com migração e enriquecimento automáticos.
+- **Visualização Flexível (Cards Compactos & Tabela de Cotação):**
+  - **Cards Compactos & Densos:** Miniaturas 84x84 com descrição padronizada `[CATEGORIA] • NOME • PREÇO • VENDEDOR`, badges rápidos de envio Full, Frete Grátis e Desconto (%).
+  - **Modo Tabela de Cotação Dinâmica:** Visão em grade densa ideal para consulta rápida de preços, cotações ao vivo e comparação imediata de múltiplos anúncios.
+  - **Filtros Avançados:** Filtro por Categoria (*Booster Box*, *ETB*, *Box Especial*, *Blister*, *Fichário & Álbum*, *Poster Box*) e Faixas de Preço pré-definidas (*Até R$ 50*, *R$ 50 a R$ 150*, *R$ 150 a R$ 300*, *Acima de R$ 300*).
 - **Personal Shopper 1-a-1 & Disparo para Grupos:**
-  - **Copy Consultivo para WhatsApp Privado:** Gera mensagens personalizadas, educadas e prontas para fechar vendas no 1-a-1 com cliente, destacando preço parcelado sem juros, envio Full e link de afiliado oficial.
+  - **Copy Consultivo para WhatsApp Privado:** Mensagens personalizadas, educadas e prontas para fechar vendas no 1-a-1 com cliente, destacando preço parcelado sem juros, envio Full e link de afiliado oficial.
   - **Copy Promocional para Grupo:** Formato oficial limpo com badges de destaque (⚡ FULL, 🚚 FRETE GRÁTIS) e selo de produto 100% lacrado Copag.
-  - **Busca por Link Direto:** Suporta colar qualquer anúncio do Mercado Livre para extrair dados, normalizar fotos e gerar as copies com link afiliado em 1 clique.
+  - **Cópia Universal:** Suporte a cópia de mensagens via Clipboard API com fallback automático de textarea invisível para compatibilidade total em conexões HTTP diretas por IP.
 
 ---
 

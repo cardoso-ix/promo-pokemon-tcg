@@ -36,6 +36,8 @@ import type {
   RelatorioMensalExecutivo
 } from '../types/index.ts';
 import { api } from '../services/api.ts';
+import { copiarParaClipboard } from '../utils/clipboard.ts';
+import { imprimirRelatorioExecutivo } from '../utils/relatorio-print.ts';
 
 function formatarMoeda(val?: number): string {
   if (typeof val !== 'number' || isNaN(val)) return '0,00';
@@ -106,12 +108,16 @@ export const FinancasView: React.FC = () => {
     }
   };
 
-  const copiarResumoWhatsapp = () => {
+  const copiarResumoWhatsapp = async () => {
     if (!relatorioMensal?.resumoWhatsapp) return;
-    navigator.clipboard.writeText(relatorioMensal.resumoWhatsapp);
-    setCopiadoWhatsapp(true);
-    mostrarFeedback('sucesso', 'Resumo executivo formatado copiado para a área de transferência!');
-    setTimeout(() => setCopiadoWhatsapp(false), 3000);
+    const sucesso = await copiarParaClipboard(relatorioMensal.resumoWhatsapp);
+    if (sucesso) {
+      setCopiadoWhatsapp(true);
+      mostrarFeedback('sucesso', 'Resumo executivo copiado para o WhatsApp com sucesso!');
+      setTimeout(() => setCopiadoWhatsapp(false), 3000);
+    } else {
+      mostrarFeedback('erro', 'Não foi possível copiar automaticamente. Selecione e copie o texto manualmente.');
+    }
   };
 
   useEffect(() => {
@@ -922,12 +928,12 @@ export const FinancasView: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={() => relatorioMensal && imprimirRelatorioExecutivo(relatorioMensal)}
                   className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-white text-xs font-bold border border-white/15 transition-all cursor-pointer"
-                  title="Imprimir ou Salvar em PDF (Folha A4 formatada)"
+                  title="Gerar Folha A4 Executiva Limpa sem fundo escuro e pronta para PDF"
                 >
                   <Printer className="w-4 h-4 text-cyan-400" />
-                  <span>Imprimir / PDF</span>
+                  <span>Imprimir / PDF A4</span>
                 </button>
 
                 <button
@@ -1211,7 +1217,7 @@ export const FinancasView: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-white/10 text-[11px] text-slate-400 print:border-t-2 print:border-slate-300">
                   <div className="flex items-center gap-1.5 text-emerald-400 print:text-slate-700">
                     <ShieldCheck className="w-4 h-4 shrink-0" />
-                    <span>Relatório emitido pelo Super Cockpit Promo Pokémon TCG • Conciliação Contábil Automatizada</span>
+                    <span>Relatório emitido pelo Dashboard Promo Pokémon TCG • Conciliação Contábil Automatizada</span>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-center no-print">
                     <button

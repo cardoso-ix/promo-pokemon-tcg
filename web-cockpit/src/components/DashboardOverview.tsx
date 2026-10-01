@@ -278,7 +278,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     try {
       const res = await api.updateMetaBalance({
         recarga: val,
-        descricao: balanceDescInput || `Recarga de saldo Meta Ads via Cockpit: R$ ${val.toFixed(2)}`
+        descricao: balanceDescInput || `Recarga de saldo Meta Ads via Dashboard: R$ ${val.toFixed(2)}`
       });
       alert(res.message || 'Recarga registrada com sucesso!');
       setMetaBalance(res.data);
@@ -447,7 +447,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <span className={`w-1.5 h-1.5 rounded-full ${isReplicaOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-              {isReplicaOnline ? 'WhatsApp & Cockpit Online' : 'Cockpit Ativo'}
+              {isReplicaOnline ? 'WhatsApp & Dashboard Online' : 'Dashboard Ativo'}
             </span>
             <span className="text-xs text-slate-400 font-mono">
               {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -531,14 +531,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </span>
             <button
               type="button"
-              onClick={() => {
-                setBalanceSaldoInput(metaBalance ? String(metaBalance.currentBalance) : '');
-                setShowBalanceModal(true);
-              }}
-              title="Gerenciar Caixa & Recargas do Meta Ads"
-              className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-110 hover:bg-emerald-500/30 transition-all cursor-pointer"
+              onClick={handleSyncMetaNow}
+              disabled={syncingMeta}
+              title="Sincronizar saldo e gastos diretamente da Graph API Meta Ads"
+              className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-110 hover:bg-emerald-500/30 transition-all cursor-pointer disabled:opacity-50"
             >
-              <Wallet className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${syncingMeta ? 'animate-spin' : ''}`} />
             </button>
           </div>
           <div className="flex items-baseline gap-2">
@@ -571,16 +569,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 ? 'Saldo Baixo'
                 : 'Recarga Urgente'}
             </span>
-            <button
-              type="button"
-              onClick={() => {
-                setBalanceSaldoInput(metaBalance ? String(metaBalance.currentBalance) : '');
-                setShowBalanceModal(true);
-              }}
-              className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-medium cursor-pointer"
-            >
-              Recarregar / Ajustar
-            </button>
+            <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+              Auto Graph API
+            </span>
           </div>
           <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
             <div
@@ -1941,7 +1933,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   >
                     <option value="hybrid">Híbrido (Recomendado: Graph API + Ajuste Manual de Recargas)</option>
                     <option value="auto">Automático (Consulta direta Graph API Meta Ads)</option>
-                    <option value="manual">Manual (Apenas recargas manuais informadas no Cockpit)</option>
+                    <option value="manual">Manual (Apenas recargas manuais informadas no Dashboard)</option>
                   </select>
                 </div>
 

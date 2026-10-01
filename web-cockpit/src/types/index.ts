@@ -8,7 +8,8 @@ export interface RadarBuscaFiltros {
   apenasSemJuros?: boolean;
   precoMin?: number;
   precoMax?: number;
-  ordenarPor?: 'price_asc' | 'relevance';
+  categoria?: string;
+  ordenarPor?: 'price_asc' | 'relevance' | 'discount_desc';
 }
 
 export interface RadarItem {
@@ -26,6 +27,8 @@ export interface RadarItem {
   ehOficial: boolean;
   ehPlatinum: boolean;
   ehFull: boolean;
+  categoria?: string;
+  descricaoPadronizada?: string;
   parcelamentoFormatado: string;
   linkAfiliado: string;
   fotoHd: string;
@@ -49,7 +52,7 @@ export interface RadarBuscaResponse {
   erro?: string;
 }
 
-export type SubTabReplica = 'feed' | 'rotas' | 'gerador' | 'precos' | 'conectar' | 'config';
+export type SubTabReplica = 'feed' | 'rotas' | 'gerador' | 'conectar' | 'config';
 export type SubTabBot = 'visao-geral' | 'grupos' | 'leads' | 'campanhas' | 'meta-cloud' | 'anti-ban' | 'logs';
 
 export type WhatsAppConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr';

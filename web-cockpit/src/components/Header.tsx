@@ -62,10 +62,10 @@ export const Header: React.FC<HeaderProps> = ({
           <h1 className="font-heading font-bold text-xs sm:text-sm tracking-tight text-white flex items-center gap-1.5">
             Promo Pokémon TCG
             <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold hidden xs:inline">
-              Pro Hub
+              Dashboard PRO
             </span>
           </h1>
-          <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium hidden sm:block">Cockpit Unificado de Automação</p>
+          <p className="text-[10px] sm:text-[11px] text-cyan-300/80 font-medium hidden sm:block">Dashboard Pokémon TCG</p>
         </div>
       </div>
 

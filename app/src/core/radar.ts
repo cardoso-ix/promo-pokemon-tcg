@@ -42,7 +42,8 @@ export interface FiltrosRadar {
   apenasSemJuros?: boolean;
   precoMin?: number;
   precoMax?: number;
-  ordenarPor?: 'price_asc' | 'relevance';
+  categoria?: string;
+  ordenarPor?: 'price_asc' | 'discount_desc' | 'relevance';
 }
 
 export interface ResultadoRadarItem extends MeliItemBusca {
@@ -52,6 +53,8 @@ export interface ResultadoRadarItem extends MeliItemBusca {
   ehOficial: boolean;
   ehPlatinum: boolean;
   ehFull: boolean;
+  categoria: string;
+  descricaoPadronizada: string;
   parcelamentoFormatado: string;
   copyCliente: string;
   copyGrupo: string;
@@ -114,12 +117,26 @@ export function filtrarProdutosConfiaveis(items: MeliItemBusca[], filtros: Filtr
       return false;
     }
 
+    // 7. Categoria TCG
+    if (filtros.categoria && filtros.categoria !== 'todas') {
+      const catItem = classificarCategoriaTCG(item.title).toLowerCase();
+      if (!catItem.includes(filtros.categoria.toLowerCase())) {
+        return false;
+      }
+    }
+
     return true;
   });
 
   // Ordenação
   if (filtros.ordenarPor === 'price_asc' || !filtros.ordenarPor) {
     resultado = [...resultado].sort((a, b) => a.price - b.price);
+  } else if (filtros.ordenarPor === 'discount_desc') {
+    resultado = [...resultado].sort((a, b) => {
+      const descA = a.original_price && a.original_price > a.price ? a.original_price - a.price : 0;
+      const descB = b.original_price && b.original_price > b.price ? b.original_price - b.price : 0;
+      return descB - descA;
+    });
   }
 
   return resultado;
@@ -201,6 +218,33 @@ export function formatarCopyGrupo(item: MeliItemBusca, linkAfiliado: string): st
 }
 
 /**
+ * Classifica a categoria do produto Pokémon TCG a partir do título
+ */
+export function classificarCategoriaTCG(titulo: string): string {
+  const t = String(titulo || '').toLowerCase();
+  if (t.includes('booster box') || t.includes('display') || t.includes('360')) return 'Booster Box';
+  if (t.includes('etb') || t.includes('elite trainer')) return 'Elite Trainer Box (ETB)';
+  if (t.includes('poster')) return 'Poster Box';
+  if (t.includes('fichario') || t.includes('fichário') || t.includes('album') || t.includes('álbum') || t.includes('pasta')) return 'Fichário & Álbum';
+  if (t.includes('charizard') || t.includes('box')) return 'Box Especial';
+  if (t.includes('quadruplo') || t.includes('quádruplo') || t.includes('triplo') || t.includes('blister')) return 'Blister';
+  if (t.includes('bundle')) return 'Booster Bundle';
+  return 'Coleção TCG';
+}
+
+/**
+ * Gera descrição comercial padronizada e uniforme para fácil localização
+ */
+export function gerarDescricaoPadraoTCG(item: MeliItemBusca): string {
+  const cat = classificarCategoriaTCG(item.title);
+  const vendedor = item.official_store_name || (item.seller?.power_seller_status === 'platinum' ? 'MercadoLíder Platinum' : 'Vendedor Confiável');
+  const envio = item.shipping?.logistic_type === 'fulfillment' ? 'Envio Full' : 'Envio Padrão';
+  const frete = item.shipping?.free_shipping ? 'Frete Grátis' : '';
+  const tags = [envio, frete].filter(Boolean).join(' • ');
+  return `[${cat.toUpperCase()}] • ${item.title} • R$ ${item.price.toFixed(2).replace('.', ',')} • ${vendedor}${tags ? ` • ${tags}` : ''}`;
+}
+
+/**
  * Catálogo Canônico com os produtos mais procurados e referências oficiais de Pokémon TCG
  */
 export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
@@ -210,7 +254,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     price: 189.90,
     original_price: 229.90,
     currency_id: 'BRL',
-    thumbnail: '/assets/products/p1.svg',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_789422-MLB78317765977_082024-F.webp',
     permalink: 'https://www.mercadolivre.com.br/pokemon-tcg-colecao-especial-30-anos-poster-box/p/MLB10001',
     condition: 'new',
     official_store_id: 1,
@@ -224,7 +268,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     price: 279.00,
     original_price: 339.00,
     currency_id: 'BRL',
-    thumbnail: '/assets/products/p4.svg',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_910543-MLB74070433788_012024-F.webp',
     permalink: 'https://www.mercadolivre.com.br/booster-box-pokemon-tcg-360-pacotes/p/MLB10002',
     condition: 'new',
     official_store_id: null,
@@ -238,7 +282,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     price: 349.90,
     original_price: 399.90,
     currency_id: 'BRL',
-    thumbnail: '/assets/products/p5.svg',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_616894-MLB74191636259_012024-F.webp',
     permalink: 'https://www.mercadolivre.com.br/elite-trainer-box-etb-destinos-de-paldea/p/MLB10003',
     condition: 'new',
     official_store_id: 1,
@@ -252,7 +296,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     price: 149.90,
     original_price: 179.90,
     currency_id: 'BRL',
-    thumbnail: '/assets/products/p5.svg',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_759132-MLB78550124345_082024-F.webp',
     permalink: 'https://www.mercadolivre.com.br/fichario-album-30-anos-pokemon-tcg/p/MLB10004',
     condition: 'new',
     official_store_id: 1,
@@ -266,7 +310,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     price: 169.90,
     original_price: 219.90,
     currency_id: 'BRL',
-    thumbnail: '/assets/products/p8.svg',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_892345-MLB72910482011_112023-F.webp',
     permalink: 'https://www.mercadolivre.com.br/box-charizard-ex-fogo-supremo-pokemon/p/MLB10005',
     condition: 'new',
     official_store_id: 1,
@@ -280,7 +324,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     price: 49.90,
     original_price: 59.90,
     currency_id: 'BRL',
-    thumbnail: '/assets/products/p2.svg',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_684123-MLB74891230192_032024-F.webp',
     permalink: 'https://www.mercadolivre.com.br/blister-quadruplo-pokemon-tcg/p/MLB10006',
     condition: 'new',
     official_store_id: 1,
@@ -294,7 +338,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     price: 39.90,
     original_price: 47.90,
     currency_id: 'BRL',
-    thumbnail: '/assets/products/p3.svg',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_791245-MLB74012948210_012024-F.webp',
     permalink: 'https://www.mercadolivre.com.br/blister-triplo-pokemon-tcg-promo/p/MLB10007',
     condition: 'new',
     official_store_id: null,
@@ -308,7 +352,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     price: 89.90,
     original_price: 109.90,
     currency_id: 'BRL',
-    thumbnail: '/assets/products/p4.svg',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_819234-MLB75192840192_042024-F.webp',
     permalink: 'https://www.mercadolivre.com.br/booster-bundle-megaevolution-6-packs/p/MLB10008',
     condition: 'new',
     official_store_id: 1,
@@ -320,29 +364,41 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
 
 /**
  * Resolvedor Inteligente de Imagens TCG:
- * Se a foto original for válida e não vazia, normaliza.
- * Se estiver vazia ou for placeholder, associa a arte temática correspondente.
+ * Se a foto original for válida e vier da web, normaliza.
+ * Se estiver vazia ou com falha, associa a foto real de alta definição correspondente.
  */
 export function resolverImagemProdutoTCG(titulo: string, imagemExistente?: string | null): string {
   if (imagemExistente && imagemExistente.trim()) {
     const limpo = imagemExistente.trim();
-    if (limpo.startsWith('/') || limpo.startsWith('http')) {
+    if (limpo.startsWith('http')) {
       return normalizarFotoMl(limpo) || limpo;
     }
   }
 
   const t = String(titulo || '').toLowerCase();
-  if (t.includes('charizard')) return '/assets/products/p8.svg';
-  if (t.includes('fichario') || t.includes('álbum') || t.includes('album') || t.includes('pasta')) return '/assets/products/p5.svg';
-  if (t.includes('etb') || t.includes('elite trainer') || t.includes('destinos de paldea')) return '/assets/products/p5.svg';
-  if (t.includes('quadruplo') || t.includes('quádruplo') || t.includes('4 pack')) return '/assets/products/p2.svg';
-  if (t.includes('triplo') || t.includes('3 pack')) return '/assets/products/p3.svg';
-  if (t.includes('duplo') || t.includes('2 pack') || t.includes('30 anos') || t.includes('poster')) return '/assets/products/p1.svg';
-  if (t.includes('kit') || t.includes('combo')) return '/assets/products/p6.svg';
-  if (t.includes('booster box') || t.includes('display') || t.includes('360') || t.includes('bundle') || t.includes('booster')) {
-    return '/assets/products/p4.svg';
+  if (t.includes('charizard')) return 'https://http2.mlstatic.com/D_NQ_NP_2X_892345-MLB72910482011_112023-F.webp';
+  if (t.includes('fichario') || t.includes('fichário') || t.includes('álbum') || t.includes('album') || t.includes('pasta')) {
+    return 'https://http2.mlstatic.com/D_NQ_NP_2X_759132-MLB78550124345_082024-F.webp';
   }
-  return '/assets/products/p1.svg';
+  if (t.includes('etb') || t.includes('elite trainer') || t.includes('destinos de paldea')) {
+    return 'https://http2.mlstatic.com/D_NQ_NP_2X_616894-MLB74191636259_012024-F.webp';
+  }
+  if (t.includes('quadruplo') || t.includes('quádruplo') || t.includes('4 pack')) {
+    return 'https://http2.mlstatic.com/D_NQ_NP_2X_684123-MLB74891230192_032024-F.webp';
+  }
+  if (t.includes('triplo') || t.includes('3 pack')) {
+    return 'https://http2.mlstatic.com/D_NQ_NP_2X_791245-MLB74012948210_012024-F.webp';
+  }
+  if (t.includes('30 anos') || t.includes('poster')) {
+    return 'https://http2.mlstatic.com/D_NQ_NP_2X_789422-MLB78317765977_082024-F.webp';
+  }
+  if (t.includes('bundle')) {
+    return 'https://http2.mlstatic.com/D_NQ_NP_2X_819234-MLB75192840192_042024-F.webp';
+  }
+  if (t.includes('booster box') || t.includes('display') || t.includes('360')) {
+    return 'https://http2.mlstatic.com/D_NQ_NP_2X_910543-MLB74070433788_012024-F.webp';
+  }
+  return 'https://http2.mlstatic.com/D_NQ_NP_2X_789422-MLB78317765977_082024-F.webp';
 }
 
 /**
@@ -383,6 +439,8 @@ export function enriquecerItemRadar(item: MeliItemBusca): ResultadoRadarItem {
     ehOficial,
     ehPlatinum,
     ehFull,
+    categoria: classificarCategoriaTCG(item.title),
+    descricaoPadronizada: gerarDescricaoPadraoTCG(item),
     parcelamentoFormatado,
     copyCliente: formatarCopyCliente(item, linkAfiliado),
     copyGrupo: formatarCopyGrupo(item, linkAfiliado)
