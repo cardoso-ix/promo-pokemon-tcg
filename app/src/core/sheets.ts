@@ -256,10 +256,10 @@ export function extrairDadosOferta(
   let valorPor = '';
   let valorDe = '';
 
-  // Regex Por com barreira anti-backtracking de dígitos (?!\d) e bloqueio estrito de % e parcelas (x/vezes)
-  // Aceita perfeitamente sufixos promocionais normais: "reais", "no pix", "a vista", "cada", "com cupom", etc.
+  // Regex Por com barreira anti-backtracking de dígitos (?!\d) e bloqueio estrito de unidades, % e parcelas
+  // Rejeita preposições como "por 8 boosters", "troque por 4 pacotes", etc.
   const porMatch = texto.match(
-    /(?:👉🏼?|👉)?\s*\*?(?:por\s*apenas|por)[:\s\*👉🏼✅]*R?\$?\s*(\d+(?:[.,]\d+)*)(?!\d)(?!\s*[%xX]|\s*vezes)/i
+    /(?:👉🏼?|👉)?\s*\*?(?:por\s*apenas|por)[:\s\*👉🏼✅]*R?\$?\s*(\d+(?:[.,]\d+)*)(?!\d)(?!\s*(?:anos?|dias?|mes(?:es)?|horas?|cartas?|cards?|boosters?|pacotes?|unidades?|unids?|und?|pe[çc]as?|pcs?|sleeves?|p[áa]ginas?|pags?|bolsos?|folhas?|vezes|mazos?|[xX%]))/i
   );
   if (porMatch && porMatch[1]) {
     valorPor = normalizarMoeda(porMatch[1]);
@@ -325,6 +325,17 @@ export function extrairDadosOferta(
     const numPor = parseValorMoeda(valorPor);
     if (numPor > 0 && numDe <= numPor) {
       valorDe = '';
+    }
+  }
+
+  // 4.1 Validação de Sanidade TCG (piso de mercado por categoria):
+  // Uma Box, Display ou ETB NUNCA custa R$ 4, R$ 8 ou R$ 20 (falso positivo de "8 boosters", etc.)
+  if (valorPor && valorPor !== 'Consultar') {
+    const numPor = parseValorMoeda(valorPor);
+    const prodLower = produto.toLowerCase();
+    const isBoxOuColecao = prodLower.includes('box') || prodLower.includes('display') || prodLower.includes('etb') || prodLower.includes('treinador') || prodLower.includes('360');
+    if (isBoxOuColecao && numPor < 30) {
+      valorPor = 'Consultar';
     }
   }
 

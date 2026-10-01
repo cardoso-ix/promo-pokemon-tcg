@@ -69,10 +69,12 @@ chmod +x *.sh
 - **Visualização Flexível (Cards Compactos & Tabela de Cotação):**
   - **Cards Compactos & Densos:** Miniaturas 84x84 com descrição padronizada `[CATEGORIA] • NOME • PREÇO • VENDEDOR`, badges rápidos de envio Full, Frete Grátis e Desconto (%).
   - **Filtros Avançados & Faixa de Preço Flexível (Min & Max):** Filtro por Categoria (*Booster Box*, *ETB*, *Box Especial*, *Blister*, *Fichário & Álbum*, *Poster Box*), inputs numéricos para definir faixa personalizada livre (`De R$ [Min]` até `Até R$ [Max]`) e 7 badges rápidos de 1 clique (*Até R$ 30*, *R$ 30 a R$ 80*, *R$ 80 a R$ 150*, *R$ 150 a R$ 250*, *R$ 250 a R$ 400*, *Acima de R$ 400*) com botão para limpar filtros instantaneamente.
-- **Personal Shopper 1-a-1 & Disparo para Grupos (com Link Curto Apresentável):**
+- **Personal Shopper 1-a-1 & Disparo para Grupos (com Link Curto & Botão Ver no ML Preciso):**
   - **Copy Consultivo para WhatsApp Privado (1-a-1):** Mensagens personalizadas e educadas com procedência, parcelamento sem juros e **link curto oficial do Mercado Livre** (`mercadolivre.com/sec/2rM6RPm` ou `meli.la`), eliminando URLs longas e feias cheias de parâmetros técnicos.
   - **Copy Promocional para Grupo:** Formato oficial limpo com badges de destaque (⚡ FULL, 🚚 FRETE GRÁTIS), selo Copag lacrado e link curto oficial para WhatsApp.
   - **Ação Rápida de Copiar Link Curto:** Botão dedicado em 1 clique tanto nos cards quanto na tabela de cotação para copiar instantaneamente apenas o link curto do Mercado Livre.
+  - **Botão "Ver no ML" Cirúrgico (`linkVerNoMl`):** Abre garantidamente os anúncios daquele produto no Mercado Livre com comissão de afiliado. NUNCA redireciona para páginas genéricas de vitrine ou recomendações (`/sec/`), buscando o produto real do catálogo caso o link gravado não seja um link direto de produto.
+  - **Guardião de Sanidade de Preços TCG:** Pisos de mercado por categoria (Display/Booster Box > R$ 140, ETB > R$ 160, Box/Coleção > R$ 50, Blister > R$ 15/R$ 25), eliminando qualquer falso positivo de parsing (ex: "8 boosters" virando R$ 8,00 ou "4 pacotes" virando R$ 4,00) e purgando registros corrompidos legados no SQLite.
   - **Cópia Universal:** Suporte a cópia de mensagens via Clipboard API com fallback automático de textarea invisível para compatibilidade total em conexões HTTP diretas por IP.
 
 ---

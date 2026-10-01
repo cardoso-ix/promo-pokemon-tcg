@@ -7,6 +7,8 @@ import {
   identificarTipoEntradaRadar,
   resolverImagemProdutoTCG,
   buscarNoRadar,
+  resolverLinkVerNoMl,
+  obterPrecoMinimoCategoriaTCG,
   type MeliItemBusca,
   type FiltrosRadar
 } from '../src/core/radar.js';
@@ -274,5 +276,30 @@ describe('Radar de Preços TCG - Core & Filtros de Confiabilidade', () => {
       item.copyGrupo.includes(item.linkCurto),
       'copyGrupo para WhatsApp de ofertas deve conter o link curto oficial do Mercado Livre'
     );
+  });
+
+  it('resolverLinkVerNoMl NUNCA deve redirecionar para a vitrine (/sec/) e deve gerar busca com afiliado para o produto', () => {
+    // 1. Caso com link de vitrine / recomendações
+    const linkVitrine = 'https://mercadolivre.com/sec/2rM6RPm';
+    const titulo = 'Box Pokémon Tcg Mega Forças - Mega Zeraora Ex 8 Boosters Copag';
+    const linkResolvido = resolverLinkVerNoMl(linkVitrine, titulo, 'caed1312314', '96097202');
+
+    assert.ok(!linkResolvido.includes('/sec/'), 'Não pode conter /sec/');
+    assert.ok(linkResolvido.includes('lista.mercadolivre.com.br'), 'Deve apontar para a listagem do Mercado Livre');
+    assert.ok(linkResolvido.includes('caed1312314'), 'Deve incluir a tag de afiliado matt_word');
+    assert.ok(linkResolvido.includes('Zeraora'), 'Deve conter o nome do produto na busca');
+
+    // 2. Caso com link direto de produto do Mercado Livre (deve preservar o anúncio direto)
+    const linkProduto = 'https://www.mercadolivre.com.br/pokemon-tcg-poster-box/p/MLB12345';
+    const linkDireto = resolverLinkVerNoMl(linkProduto, titulo, 'caed1312314', '96097202');
+    assert.ok(linkDireto.includes('/p/MLB12345'), 'Deve preservar o link direto do produto');
+    assert.ok(linkDireto.includes('matt_word=caed1312314'), 'Deve afilhar o link direto');
+  });
+
+  it('obterPrecoMinimoCategoriaTCG deve definir pisos de mercado realistas para produtos Copag', () => {
+    assert.strictEqual(obterPrecoMinimoCategoriaTCG('Display Booster Box Pokémon 360'), 140.0);
+    assert.strictEqual(obterPrecoMinimoCategoriaTCG('Elite Trainer Box Destinos de Paldea'), 160.0);
+    assert.strictEqual(obterPrecoMinimoCategoriaTCG('Box Pokémon Tcg Mega Forças - Mega Zeraora Ex 8 Boosters'), 50.0);
+    assert.strictEqual(obterPrecoMinimoCategoriaTCG('Blister Triplo Pokémon'), 25.0);
   });
 });

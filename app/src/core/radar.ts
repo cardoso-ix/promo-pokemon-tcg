@@ -49,6 +49,7 @@ export interface FiltrosRadar {
 export interface ResultadoRadarItem extends MeliItemBusca {
   linkAfiliado: string;
   linkCurto?: string;
+  linkVerNoMl: string;
   fotoHd: string;
   seloVendedor: string;
   ehOficial: boolean;
@@ -403,6 +404,51 @@ export function resolverImagemProdutoTCG(titulo: string, imagemExistente?: strin
 }
 
 /**
+ * Retorna o piso mínimo de mercado para um produto Pokémon TCG.
+ * Produtos legítimos de Pokémon TCG Copag lacrados nunca custam valores irrisórios de parsing.
+ */
+export function obterPrecoMinimoCategoriaTCG(titulo: string): number {
+  const t = String(titulo || '').toLowerCase();
+  if (t.includes('display') || t.includes('booster box') || t.includes('360')) return 140.0;
+  if (t.includes('etb') || t.includes('elite trainer') || t.includes('treinador avançado')) return 160.0;
+  if (t.includes('poster')) return 60.0;
+  if (t.includes('bundle') || t.includes('fichario') || t.includes('fichário') || t.includes('album') || t.includes('álbum')) return 45.0;
+  if (t.includes('box') || t.includes('coleção') || t.includes('colecao') || t.includes('charizard') || t.includes('zeraora') || t.includes('zygarde') || t.includes('lucario')) return 50.0;
+  if (t.includes('blister quadruplo') || t.includes('quádruplo') || t.includes('4 boosters')) return 35.0;
+  if (t.includes('blister triplo') || t.includes('3 boosters')) return 25.0;
+  if (t.includes('blister') || t.includes('booster')) return 8.0;
+  return 15.0;
+}
+
+/**
+ * Garante que o botão 'Ver no ML' sempre aponte para os anúncios do produto real no Mercado Livre,
+ * NUNCA redirecionando para páginas genéricas de vitrine ou recomendações (/sec/).
+ */
+export function resolverLinkVerNoMl(permalink: string | undefined, titulo: string, mattWord: string, mattTool: string): string {
+  const url = String(permalink || '').trim();
+  const isProdutoDireto =
+    url.startsWith('http') &&
+    (url.includes('/p/MLB') || url.includes('/MLB-') || url.includes('/up/MLBU') || url.includes('produto.mercadolivre.com.br')) &&
+    !url.includes('/sec/') &&
+    !url.includes('/social/') &&
+    !url.includes('/cupons');
+
+  if (isProdutoDireto) {
+    return buildAffiliateUrl(url, mattWord, mattTool);
+  }
+
+  // Se for vitrine (/sec/) ou não tiver link direto de produto, gera a listagem de busca do produto específico
+  const termoLimpo = titulo
+    .replace(/\[.*?\]/g, '')
+    .replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const searchUrl = `https://lista.mercadolivre.com.br/${encodeURIComponent(termoLimpo)}`;
+  return buildAffiliateUrl(searchUrl, mattWord, mattTool);
+}
+
+/**
  * Enriquece item do Meli com links e textos prontos
  */
 export function enriquecerItemRadar(item: MeliItemBusca): ResultadoRadarItem {
@@ -414,6 +460,9 @@ export function enriquecerItemRadar(item: MeliItemBusca): ResultadoRadarItem {
   // Link curto oficial para WhatsApp (muito mais apresentável e sem parâmetros longos de rastreamento)
   const isPermalinkCurto = item.permalink?.includes('meli.la/') || item.permalink?.includes('/sec/');
   const linkCurto = isPermalinkCurto ? item.permalink : (linkVitrineCurto || linkAfiliado);
+
+  // Link garantido para o botão 'Ver no ML' abrir os anúncios reais do produto (nunca a vitrine /sec/)
+  const linkVerNoMl = resolverLinkVerNoMl(item.permalink, item.title, mattWord, mattTool);
   
   const fotoHd = resolverImagemProdutoTCG(item.title, item.thumbnail);
   const ehOficial = Boolean(item.official_store_id || item.official_store_name);
@@ -441,6 +490,7 @@ export function enriquecerItemRadar(item: MeliItemBusca): ResultadoRadarItem {
     thumbnail: fotoHd,
     linkAfiliado,
     linkCurto,
+    linkVerNoMl,
     fotoHd,
     seloVendedor,
     ehOficial,
@@ -567,15 +617,51 @@ export async function buscarNoRadar(
     const mattWord = getConfig('matt_word', CONFIG.defaultMattWord);
     const mattTool = getConfig('matt_tool', CONFIG.defaultMattTool);
 
-    const itensMapeados: MeliItemBusca[] = resBanco.itens.map((p) => {
-      const linkReal = p.ultimo_link || `https://lista.mercadolivre.com.br/${encodeURIComponent(p.produto)}`;
+    const itensMapeados: MeliItemBusca[] = [];
+    for (const p of resBanco.itens) {
+      const pisoCategoria = obterPrecoMinimoCategoriaTCG(p.produto);
+      let precoValido = p.menor_preco;
+
+      // Sanidade TCG: se o menor_preco violar o piso da categoria (ex: Box com R$ 8 capturado de 8 boosters)
+      if (precoValido < pisoCategoria) {
+        if (p.ultimo_preco && p.ultimo_preco >= pisoCategoria) {
+          precoValido = p.ultimo_preco;
+        } else if (p.maior_preco && p.maior_preco >= pisoCategoria) {
+          precoValido = p.maior_preco;
+        } else if (p.menor_preco_de && p.menor_preco_de >= pisoCategoria) {
+          precoValido = p.menor_preco_de;
+        } else {
+          // Se todos os preços registrados forem irreais (ex: R$ 8), ignora o registro corrompido
+          continue;
+        }
+      }
+
+      // Se o desconto for absurdo (> 80%) e o precoPor for anormalmente baixo, corrige com preco_de
+      if (p.menor_preco_de && p.menor_preco_de > precoValido) {
+        const desconto = (p.menor_preco_de - precoValido) / p.menor_preco_de;
+        if (desconto > 0.80 && precoValido < pisoCategoria) {
+          precoValido = p.menor_preco_de;
+        }
+      }
+
+      // Se o último link for vitrine (/sec/) ou página de recomendações, gera a listagem do produto no Mercado Livre
+      const isUltimoLinkProduto = p.ultimo_link && 
+        (p.ultimo_link.includes('/p/MLB') || p.ultimo_link.includes('/MLB-') || p.ultimo_link.includes('produto.mercadolivre.com.br')) &&
+        !p.ultimo_link.includes('/sec/') &&
+        !p.ultimo_link.includes('/social/');
+
+      const termoBuscaML = p.produto.replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ').replace(/\s+/g, ' ').trim();
+      const linkReal = (isUltimoLinkProduto && p.ultimo_link)
+        ? p.ultimo_link
+        : `https://lista.mercadolivre.com.br/${encodeURIComponent(termoBuscaML)}`;
+
       const foto = resolverImagemProdutoTCG(p.produto, p.imagem_url);
 
-      return {
+      itensMapeados.push({
         id: p.chave_canonica || `TCG_${Date.now()}`,
         title: p.produto,
-        price: p.menor_preco,
-        original_price: p.menor_preco_de || p.maior_preco,
+        price: precoValido,
+        original_price: (p.menor_preco_de && p.menor_preco_de > precoValido) ? p.menor_preco_de : null,
         currency_id: 'BRL',
         thumbnail: foto,
         permalink: linkReal,
@@ -583,9 +669,9 @@ export async function buscarNoRadar(
         official_store_id: 1,
         official_store_name: 'Histórico Validado',
         shipping: { free_shipping: true, logistic_type: 'fulfillment' },
-        installments: { quantity: 10, amount: p.menor_preco / 10, rate: 0 }
-      };
-    });
+        installments: { quantity: 10, amount: Number((precoValido / 10).toFixed(2)), rate: 0 }
+      });
+    }
 
     // 4. Se a busca local retornou poucos itens, complementar com o Catálogo Canônico TCG
     const itensCanonicosFiltrados = CATALOGO_CANONICO_TCG.filter((item) => {

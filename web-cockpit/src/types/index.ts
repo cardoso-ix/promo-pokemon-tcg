@@ -32,6 +32,7 @@ export interface RadarItem {
   parcelamentoFormatado: string;
   linkAfiliado: string;
   linkCurto?: string;
+  linkVerNoMl?: string;
   fotoHd: string;
   copyCliente: string;
   copyGrupo: string;

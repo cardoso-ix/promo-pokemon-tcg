@@ -331,6 +331,7 @@ export function initDatabase() {
 
     migrarLogsParaHistoricoProdutos();
     reprocessarChavesCanonicasHistorico();
+    limparRegistrosPrecosInvalidos();
   } catch (errHist: unknown) {
     console.warn('[Database Migration] Aviso ao migrar/reprocessar histórico de produtos:', errHist);
   }
@@ -1274,7 +1275,14 @@ export function inserirOfertaHistorico(item: {
     if (!nomeLimpo || nomeLimpo.length < 3) return false;
 
     const precoPor = parseMoedaParaNumero(item.precoPor);
-    if (precoPor <= 0) return false;
+    if (precoPor < 6) return false;
+
+    // Sanidade de Preço TCG: Rejeitar falso positivo de parsing para Box/Display/ETB/Bundle (ex: R$ 8 de 8 boosters)
+    const tLower = nomeOriginal.toLowerCase();
+    const isBox = tLower.includes('box') || tLower.includes('display') || tLower.includes('etb') || tLower.includes('treinador') || tLower.includes('360') || tLower.includes('bundle');
+    if (isBox && precoPor < 35) {
+      return false;
+    }
 
     const precoDe = item.precoDe ? parseMoedaParaNumero(item.precoDe) : undefined;
     const precoUnitario = item.precoUnitario ? parseMoedaParaNumero(item.precoUnitario) : undefined;
@@ -1390,6 +1398,9 @@ export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, of
         params.push(`%${termoNormalizado}%`, `%${busca.trim()}%`);
       }
     }
+
+    const filtroSanidade = "(h.preco_por >= 6.00 AND NOT (h.preco_por < 35.00 AND (LOWER(h.produto) LIKE '%box%' OR LOWER(h.produto) LIKE '%display%' OR LOWER(h.produto) LIKE '%etb%' OR LOWER(h.produto) LIKE '%treinador%' OR LOWER(h.produto) LIKE '%360%')))";
+    whereClause = whereClause ? `${whereClause} AND ${filtroSanidade}` : `WHERE ${filtroSanidade}`;
 
     const totalRow = db.prepare(`
       SELECT COUNT(DISTINCT COALESCE(h.chave_canonica, h.produto_limpo)) as total 
@@ -1751,6 +1762,53 @@ export function migrarLogsParaHistoricoProdutos(): number {
     return inseridos;
   } catch (err: unknown) {
     console.warn('[Database] Erro na migração retroativa de logs:', err);
+    return 0;
+  }
+}
+
+/**
+ * Remove registros corrompidos e falsos positivos de preços no histórico
+ * (ex: Box com precoPor de R$ 8 capturado de "8 boosters" ou R$ 4 de "4 pacotes")
+ */
+export function limparRegistrosPrecosInvalidos(): number {
+  try {
+    const res1 = db.prepare(`
+      DELETE FROM historico_produtos_valores 
+      WHERE preco_por < 35 
+        AND (
+          LOWER(produto) LIKE '%box%' 
+          OR LOWER(produto) LIKE '%display%' 
+          OR LOWER(produto) LIKE '%etb%' 
+          OR LOWER(produto) LIKE '%treinador%'
+          OR LOWER(produto) LIKE '%boosters%'
+          OR LOWER(produto) LIKE '%bundle%'
+          OR LOWER(produto) LIKE '%poster%'
+          OR LOWER(produto) LIKE '%fichario%'
+          OR LOWER(produto) LIKE '%fichário%'
+          OR LOWER(produto) LIKE '%album%'
+          OR LOWER(produto) LIKE '%álbum%'
+        )
+    `).run();
+
+    const res2 = db.prepare(`
+      DELETE FROM historico_produtos_valores 
+      WHERE preco_por < 6
+    `).run();
+
+    const res3 = db.prepare(`
+      DELETE FROM historico_produtos_valores 
+      WHERE preco_de IS NOT NULL 
+        AND preco_de > 50 
+        AND preco_por <= (preco_de * 0.20)
+    `).run();
+
+    const totalLimpos = (res1.changes || 0) + (res2.changes || 0) + (res3.changes || 0);
+    if (totalLimpos > 0) {
+      console.log(`[Database] Limpeza de preços TCG: ${totalLimpos} registros corrompidos/falsos positivos removidos.`);
+    }
+    return totalLimpos;
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao limpar registros de preços inválidos:', err);
     return 0;
   }
 }
