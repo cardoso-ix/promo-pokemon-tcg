@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Search,
   Zap,
@@ -45,6 +45,11 @@ export const RadarPrecosView: React.FC = () => {
     'Fichario 30 anos',
     'Box Charizard ex'
   ];
+
+  useEffect(() => {
+    // Carregamento inicial automático para apresentar ofertas imediatamente
+    executarBusca('Pokemon TCG');
+  }, []);
 
   const executarBusca = async (termoParaBuscar?: string, filtrosOverride?: RadarBuscaFiltros) => {
     const q = (termoParaBuscar !== undefined ? termoParaBuscar : query).trim();
@@ -313,16 +318,20 @@ export const RadarPrecosView: React.FC = () => {
               <div className="space-y-3">
                 {/* Imagem + Badges */}
                 <div className="relative aspect-video sm:aspect-square w-full rounded-xl bg-[#060a14] overflow-hidden flex items-center justify-center border border-white/[0.05]">
-                  {item.fotoHd || item.thumbnail ? (
-                    <img
-                      src={item.fotoHd || item.thumbnail}
-                      alt={item.title}
-                      className="object-contain w-full h-full p-2 group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="text-slate-600 text-xs">Sem Imagem</div>
-                  )}
+                  <img
+                    src={item.fotoHd || item.thumbnail || '/assets/products/p4.svg'}
+                    alt={item.title}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    className="object-contain w-full h-full p-2 group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      if (!img.src.includes('p4.svg')) {
+                        img.src = '/assets/products/p4.svg';
+                      }
+                    }}
+                  />
 
                   {/* Badges Flutuantes */}
                   <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">

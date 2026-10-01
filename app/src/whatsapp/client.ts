@@ -938,7 +938,7 @@ export class WhatsAppManager {
         }
 
         try {
-          const dadosParaPlanilha = extrairDadosOferta(textoFinalPublicar, resolvedProductUrl, origemNome);
+          const dadosParaPlanilha = extrairDadosOferta(textoFinalPublicar, resolvedProductUrl, origemNome, productImageUrl);
           registrarOfertaPlanilha(dadosParaPlanilha).catch((e: unknown) => {
             console.warn('[Google Sheets] Erro em background ao registrar oferta:', e);
           });
@@ -948,7 +948,7 @@ export class WhatsAppManager {
 
         // 13.1. Notificar Bot Disparador via rede interna Docker/Coolify
         try {
-          const dadosParaSync = extrairDadosOferta(textoFinalPublicar, resolvedProductUrl, origemNome);
+          const dadosParaSync = extrairDadosOferta(textoFinalPublicar, resolvedProductUrl, origemNome, productImageUrl);
           const precoDeNum = parseFloat(
             (dadosParaSync.valorDe || '').replace(/R\$/gi, '').replace(/\s+/g, '').replace(/\./g, '').replace(',', '.')
           ) || undefined;

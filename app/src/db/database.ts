@@ -201,6 +201,7 @@ export function initDatabase() {
       preco_de REAL,
       preco_unitario REAL,
       link TEXT,
+      imagem_url TEXT,
       grupo TEXT,
       origem TEXT DEFAULT 'auto',
       criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -317,9 +318,12 @@ export function initDatabase() {
 
   // Migração retroativa dos logs para a tabela de histórico de valores de produtos
   try {
-    // Garantir que a coluna chave_canonica existe em bancos legados
+    // Garantir que as colunas chave_canonica e imagem_url existem em bancos legados
     try {
       db.exec("ALTER TABLE historico_produtos_valores ADD COLUMN chave_canonica TEXT;");
+    } catch {}
+    try {
+      db.exec("ALTER TABLE historico_produtos_valores ADD COLUMN imagem_url TEXT;");
     } catch {}
     try {
       db.exec("CREATE INDEX IF NOT EXISTS idx_hist_prod_canonico ON historico_produtos_valores(chave_canonica);");
@@ -1058,6 +1062,7 @@ export interface ProdutoValorConsolidado {
   primeira_postagem: string;
   ultima_postagem: string;
   ultimo_link?: string;
+  imagem_url?: string;
   grupo_recente?: string;
   variacao_perc: number;
 }
@@ -1071,6 +1076,7 @@ export interface RegistroHistoricoProduto {
   preco_de?: number;
   preco_unitario?: number;
   link?: string;
+  imagem_url?: string;
   grupo?: string;
   origem?: string;
   criado_em: string;
@@ -1255,6 +1261,7 @@ export function inserirOfertaHistorico(item: {
   precoDe?: number | string;
   precoUnitario?: number | string;
   link?: string;
+  imagemUrl?: string;
   grupo?: string;
   origem?: string;
   criadoEm?: string;
@@ -1290,7 +1297,25 @@ export function inserirOfertaHistorico(item: {
     if (item.criadoEm) {
       db.prepare(`
         INSERT INTO historico_produtos_valores (
-          produto, produto_limpo, chave_canonica, preco_por, preco_de, preco_unitario, link, grupo, origem, criado_em
+          produto, produto_limpo, chave_canonica, preco_por, preco_de, preco_unitario, link, imagem_url, grupo, origem, criado_em
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        nomeOriginal,
+        nomeLimpo,
+        chaveCanonica,
+        precoPor,
+        precoDe || null,
+        precoUnitario || null,
+        item.link || null,
+        item.imagemUrl || null,
+        item.grupo || 'Grupo Pokémon TCG',
+        item.origem || 'auto',
+        item.criadoEm
+      );
+    } else {
+      db.prepare(`
+        INSERT INTO historico_produtos_valores (
+          produto, produto_limpo, chave_canonica, preco_por, preco_de, preco_unitario, link, imagem_url, grupo, origem
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         nomeOriginal,
@@ -1300,23 +1325,7 @@ export function inserirOfertaHistorico(item: {
         precoDe || null,
         precoUnitario || null,
         item.link || null,
-        item.grupo || 'Grupo Pokémon TCG',
-        item.origem || 'auto',
-        item.criadoEm
-      );
-    } else {
-      db.prepare(`
-        INSERT INTO historico_produtos_valores (
-          produto, produto_limpo, chave_canonica, preco_por, preco_de, preco_unitario, link, grupo, origem
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        nomeOriginal,
-        nomeLimpo,
-        chaveCanonica,
-        precoPor,
-        precoDe || null,
-        precoUnitario || null,
-        item.link || null,
+        item.imagemUrl || null,
         item.grupo || 'Grupo Pokémon TCG',
         item.origem || 'auto'
       );
@@ -1406,7 +1415,8 @@ export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, of
         MAX(h.criado_em) as ultima_postagem,
         (SELECT h3.preco_por FROM historico_produtos_valores h3 WHERE COALESCE(h3.chave_canonica, h3.produto_limpo) = COALESCE(h.chave_canonica, h.produto_limpo) ORDER BY h3.criado_em DESC, h3.id DESC LIMIT 1) as ultimo_preco,
         (SELECT h4.link FROM historico_produtos_valores h4 WHERE COALESCE(h4.chave_canonica, h4.produto_limpo) = COALESCE(h.chave_canonica, h.produto_limpo) ORDER BY h4.criado_em DESC, h4.id DESC LIMIT 1) as ultimo_link,
-        (SELECT h5.grupo FROM historico_produtos_valores h5 WHERE COALESCE(h5.chave_canonica, h5.produto_limpo) = COALESCE(h.chave_canonica, h.produto_limpo) ORDER BY h5.criado_em DESC, h5.id DESC LIMIT 1) as grupo_recente
+        (SELECT h5.imagem_url FROM historico_produtos_valores h5 WHERE COALESCE(h5.chave_canonica, h5.produto_limpo) = COALESCE(h.chave_canonica, h.produto_limpo) AND h5.imagem_url IS NOT NULL AND h5.imagem_url != '' ORDER BY h5.criado_em DESC, h5.id DESC LIMIT 1) as imagem_url,
+        (SELECT h6.grupo FROM historico_produtos_valores h6 WHERE COALESCE(h6.chave_canonica, h6.produto_limpo) = COALESCE(h.chave_canonica, h.produto_limpo) ORDER BY h6.criado_em DESC, h6.id DESC LIMIT 1) as grupo_recente
       FROM historico_produtos_valores h
       ${whereClause}
       GROUP BY COALESCE(h.chave_canonica, h.produto_limpo)
@@ -1439,6 +1449,7 @@ export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, of
         primeira_postagem: String(r.primeira_postagem),
         ultima_postagem: String(r.ultima_postagem),
         ultimo_link: r.ultimo_link ? String(r.ultimo_link) : undefined,
+        imagem_url: r.imagem_url ? String(r.imagem_url) : undefined,
         grupo_recente: r.grupo_recente ? String(r.grupo_recente) : undefined,
         variacao_perc: variacao
       };

@@ -9,6 +9,7 @@ export interface OfertaPlanilha {
   valorDe: string;
   valorUnitario?: string;
   link: string;
+  imagemUrl?: string;
   grupo: string;
 }
 
@@ -144,7 +145,8 @@ function doPost(e) {
 export function extrairDadosOferta(
   textoMensagem: string,
   resolvedUrl?: string,
-  origemNome?: string
+  origemNome?: string,
+  imagemUrl?: string
 ): OfertaPlanilha {
   const agoraFormatado = new Date().toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -336,6 +338,7 @@ export function extrairDadosOferta(
     valorDe: valorDe || '',
     valorUnitario: precoUnitarioExtraido || undefined,
     link,
+    imagemUrl: imagemUrl || undefined,
     grupo: origemNome || 'Grupo Pokémon TCG'
   };
 }
@@ -364,6 +367,7 @@ export async function registrarOfertaPlanilha(
       precoDe: oferta.valorDe,
       precoUnitario: oferta.valorUnitario,
       link: oferta.link,
+      imagemUrl: oferta.imagemUrl,
       grupo: oferta.grupo,
       origem: 'planilha'
     });

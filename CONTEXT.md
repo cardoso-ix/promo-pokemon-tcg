@@ -90,14 +90,19 @@ npm run build:all    # Compila TypeScript e assets dos dois módulos
 
 ```text
 promo-pokemon-tcg/
-├── app/                              # Módulo Replicador de Ofertas (:3000)
+├── app/                              # Módulo Replicador de Ofertas & Backend Fastify (:3000)
 │   ├── src/
-│   │   ├── core/                     # Lógica de negócio, scraping, regex e afiliados
-│   │   ├── db/                       # Banco SQLite better-sqlite3 (replica.db)
-│   │   ├── public/                   # Frontend do Cockpit (index.html, style.css, app.js, login.html)
-│   │   ├── web/                      # Rotas da API Fastify e autenticação
+│   │   ├── core/                     # Lógica de negócio, scraping, regex, afiliados e radar.ts
+│   │   ├── db/                       # Banco SQLite better-sqlite3 (promo.db) com histórico de preços e imagens
+│   │   ├── public/                   # Frontend unificado servido pelo Fastify (assets estáticos e SPA)
+│   │   ├── web/                      # Rotas da API Fastify, autenticação e /api/radar/*
 │   │   └── whatsapp/                 # Conector Baileys, listeners e desembrulho de mídia
-│   └── test/                         # 90 testes unitários automatizados
+│   └── test/                         # 111 testes automatizados (radar, anúncio, afiliados, analytics)
+├── web-cockpit/                      # Frontend SPA React 19 + Vite + Tailwind CSS
+│   └── src/
+│       ├── components/               # RadarPrecosView, FinancasView, MeliAfiliadosView, ReplicadorView
+│       ├── services/                 # api.ts (cliente HTTP REST unificado)
+│       └── types/                    # Tipagens TypeScript estritas
 │
 ├── bot-disparador/                   # Módulo Disparador & Atendimento IA (:3333)
 │   ├── src/

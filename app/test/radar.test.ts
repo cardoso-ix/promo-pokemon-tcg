@@ -5,6 +5,8 @@ import {
   formatarCopyCliente,
   formatarCopyGrupo,
   identificarTipoEntradaRadar,
+  resolverImagemProdutoTCG,
+  buscarNoRadar,
   type MeliItemBusca,
   type FiltrosRadar
 } from '../src/core/radar.js';
@@ -213,5 +215,42 @@ describe('Radar de Preços TCG - Core & Filtros de Confiabilidade', () => {
     assert.ok(copy.includes('R$ 229,90')); // Preço De
     assert.ok(copy.includes(linkAfiliado));
     assert.ok(copy.includes('OPORTUNIDADE POKÉMON TCG'));
+  });
+
+  it('resolverImagemProdutoTCG deve mapear corretamente cada categoria de produto TCG', () => {
+    assert.equal(resolverImagemProdutoTCG('Box Charizard ex Fogo Supremo Copag'), '/assets/products/p8.svg');
+    assert.equal(resolverImagemProdutoTCG('Elite Trainer Box Destinos de Paldea'), '/assets/products/p5.svg');
+    assert.equal(resolverImagemProdutoTCG('Fichário Álbum 30 Anos Pokémon TCG Oficial'), '/assets/products/p5.svg');
+    assert.equal(resolverImagemProdutoTCG('Display Booster Box 360 Escarlate e Violeta'), '/assets/products/p4.svg');
+    assert.equal(resolverImagemProdutoTCG('Blister Quádruplo Pokémon TCG 4 Boosters'), '/assets/products/p2.svg');
+    assert.equal(resolverImagemProdutoTCG('Blister Triplo Pokémon TCG com Carta Holográfica'), '/assets/products/p3.svg');
+    assert.equal(resolverImagemProdutoTCG('Coleção Especial 30 Anos Poster Box'), '/assets/products/p1.svg');
+    // Deve preservar URLs reais caso fornecidas
+    assert.equal(
+      resolverImagemProdutoTCG('Qualquer', 'http://http2.mlstatic.com/D_123-O.jpg'),
+      'http://http2.mlstatic.com/D_123-O.jpg'
+    );
+  });
+
+  it('buscarNoRadar deve retornar ofertas ricas com fotoHd e thumbnail válidos para termos sugeridos', async () => {
+    const res = await buscarNoRadar('Booster Box 360', { apenasOficiaisOuPlatinum: true, apenasNovos: true });
+    assert.ok(res.ok);
+    assert.ok(res.total > 0);
+    assert.ok(res.itens.length > 0);
+
+    for (const item of res.itens) {
+      assert.ok(item.fotoHd && item.fotoHd.trim().length > 0, `fotoHd não pode ser vazia para: ${item.title}`);
+      assert.ok(item.thumbnail && item.thumbnail.trim().length > 0, `thumbnail não pode ser vazia para: ${item.title}`);
+      assert.ok(item.price > 0);
+      assert.ok(item.linkAfiliado.includes('matt_word'));
+    }
+  });
+
+  it('buscarNoRadar deve encontrar e priorizar item exato do Charizard', async () => {
+    const res = await buscarNoRadar('Box Charizard ex');
+    assert.ok(res.ok);
+    assert.ok(res.itens.length > 0);
+    assert.ok(res.itens[0].title.toLowerCase().includes('charizard'));
+    assert.equal(res.itens[0].fotoHd, '/assets/products/p8.svg');
   });
 });

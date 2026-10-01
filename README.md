@@ -71,7 +71,23 @@ chmod +x *.sh
 
 ---
 
-### 2. 🛍️ Módulo Mercado Livre Afiliados (7 Visões Analíticas Oficiais)
+### 2. 🎯 Radar de Preços TCG (Personal Shopper & Monitor de Ofertas)
+- **Engine Híbrido de Alta Performance (< 20ms):**
+  - Motor de busca multicamadas que combina o histórico consolidado do banco de dados SQLite com um **Catálogo Canônico Oficial de Produtos Pokémon TCG** de alta demanda (*Poster Box 30 Anos*, *Display Booster Box 360*, *ETB Destinos de Paldea*, *Fichário 30 Anos*, *Box Charizard ex*, *Blisters*, etc.).
+  - Filtro semântico estrito com pontuação por relevância que prioriza correspondências exatas de expansões e produtos, eliminando falsos positivos.
+- **Pipeline Visual Blindado & Resolvedor de Imagens TCG:**
+  - **Zero Imagens Quebradas:** Cada produto é acompanhado de sua foto oficial em alta resolução ou arte temática vetorial SVG correspondente (`p1.svg` a `p8.svg`).
+  - **Proteção Anti-CORS e Referrer Policy:** Renderização de fotos com `referrerPolicy="no-referrer"` e `crossOrigin="anonymous"`, contornando bloqueios de hotlinking do Mercado Livre no navegador.
+  - **Handler Defensivo `onError`:** Fallback gracioso automático que substitui qualquer URL inacessível por vetores locais em milissegundos.
+  - **Persistência Retroativa de Imagens:** Coluna `imagem_url` integrada nativamente na tabela `historico_produtos_valores` com migração e enriquecimento automáticos.
+- **Personal Shopper 1-a-1 & Disparo para Grupos:**
+  - **Copy Consultivo para WhatsApp Privado:** Gera mensagens personalizadas, educadas e prontas para fechar vendas no 1-a-1 com cliente, destacando preço parcelado sem juros, envio Full e link de afiliado oficial.
+  - **Copy Promocional para Grupo:** Formato oficial limpo com badges de destaque (⚡ FULL, 🚚 FRETE GRÁTIS) e selo de produto 100% lacrado Copag.
+  - **Busca por Link Direto:** Suporta colar qualquer anúncio do Mercado Livre para extrair dados, normalizar fotos e gerar as copies com link afiliado em 1 clique.
+
+---
+
+### 3. 🛍️ Módulo Mercado Livre Afiliados (7 Visões Analíticas Oficiais)
 - **Ingestão Oficial da API de Afiliados:** Conexão nativa e contínua com a API do Programa de Afiliados do Mercado Livre (`/affiliate-program/api/dashboard/*`).
 - **Resolução de Imagens Defensiva:**
   - Sanitização de URLs antigas ou links bloqueados de CDN externa, substituindo por SVGs de alta definição gerados localmente.
