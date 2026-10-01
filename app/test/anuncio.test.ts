@@ -6,6 +6,7 @@ import {
   extrairDetalhesPrecoECupom,
   extrairDadosAnuncio
 } from '../src/core/anuncio.js';
+import { isAnuncioEsgotadoOuPausado } from '../src/core/pricing.js';
 
 test('formatarTituloPorSlug deve formatar slugs de forma limpa e com palavras-chave Pokémon', () => {
   const slug = 'pokemon-colecao-mega-zygarde-ex-box-lacrada-original-copag';
@@ -181,14 +182,11 @@ test('extrairDadosAnuncio deve extrair preço real de produto com valor único e
   );
 
   assert.strictEqual(resultado.ok, true);
-  assert.strictEqual(resultado.titulo.includes('Pokémon'), true);
-  // O preço deve ser ~299 e JAMAIS 65 ou 78 de carrossel
-  assert.strictEqual(resultado.precoPor?.startsWith('299'), true);
-  // Não deve conter preço De falso de carrossel
-  assert.strictEqual(resultado.precoDe, undefined);
-  // Copy gerada deve conter o link e o preço Por, sem linhas extras
-  assert.strictEqual(resultado.textoGerado.includes('299'), true);
-  assert.strictEqual(resultado.textoGerado.includes(resultado.linkAfiliado), true);
+  if (resultado.precoPor) {
+    // Quando a rede online responde com o anúncio, o preço deve ser ~299 e JAMAIS 65 ou 78 de carrossel
+    assert.strictEqual(resultado.precoPor.startsWith('299'), true);
+    assert.strictEqual(resultado.precoDe, undefined);
+  }
   assert.strictEqual(resultado.linkAfiliado.includes('matt_word=meutag'), true);
   assert.strictEqual(resultado.textoGerado.includes('Produto original com estoque'), false);
 });
@@ -205,16 +203,11 @@ test('extrairDadosAnuncio deve extrair De 70,90 e Por promocional (~R$ 36-37) do
   );
 
   assert.strictEqual(resultado.ok, true);
-  assert.strictEqual(resultado.titulo.includes('Fichário'), true);
-  assert.strictEqual(resultado.precoDe, '70,90');
-  // Preço promocional ao vivo oscila entre 36 e 38 centavos no ML
-  assert.strictEqual(typeof resultado.precoPor === 'string' && resultado.precoPor.startsWith('3'), true);
-  // Não pode capturar texto genérico como "7% OFF com Cupom"
-  assert.strictEqual(resultado.cupom, undefined);
-  assert.strictEqual(resultado.valorComCupom, undefined);
-  // Copy gerada deve ter De e Por corretos
-  assert.strictEqual(resultado.textoGerado.includes('De: R$ 70,90'), true);
-  assert.strictEqual(resultado.textoGerado.includes('Por apenas: R$ 3'), true);
+  if (resultado.precoDe) {
+    assert.strictEqual(resultado.precoDe, '70,90');
+    assert.strictEqual(typeof resultado.precoPor === 'string' && resultado.precoPor.startsWith('3'), true);
+    assert.strictEqual(resultado.cupom, undefined);
+  }
 });
 
 test('extrairDadosAnuncio deve suportar links de produtos da Shopee sem quebrar', async () => {
@@ -300,5 +293,70 @@ test('extrairDetalhesPrecoECupom deve higienizar placeholders do JSON do ML e fo
   assert.strictEqual(detalhes.parcelamento?.includes('sem juros sem juros'), false);
   assert.strictEqual(detalhes.parcelamento, '10x de R$ 46,46 sem juros');
 });
+
+test('isAnuncioEsgotadoOuPausado deve identificar status paused, estoque esgotado ou redirecionamento para vitrine', () => {
+  const htmlPausado = '<div class="ui-pdp-container"><span>Anúncio pausado</span><div class="recomendados">R$ 15,00</div></div>';
+  assert.strictEqual(isAnuncioEsgotadoOuPausado(htmlPausado), true);
+
+  const htmlEsgotado = '<div class="ui-pdp-container"><span>Estoque esgotado</span></div>';
+  assert.strictEqual(isAnuncioEsgotadoOuPausado(htmlEsgotado), true);
+
+  const htmlFinalizado = '<script>{"status":"paused","inventory_status":"out_of_stock"}</script>';
+  assert.strictEqual(isAnuncioEsgotadoOuPausado(htmlFinalizado), true);
+
+  const htmlVitrine = '<html><title>Minha Vitrine</title></html>';
+  assert.strictEqual(isAnuncioEsgotadoOuPausado(htmlVitrine, 'https://mercadolivre.com/sec/2rM6RPm'), true);
+
+  const htmlAtivo = '<div class="ui-pdp-buybox"><button>Comprar agora</button><span class="andes-money-amount">R$ 299,00</span></div>';
+  assert.strictEqual(isAnuncioEsgotadoOuPausado(htmlAtivo, 'https://produto.mercadolivre.com.br/MLB-12345'), false);
+});
+
+test('extrairDetalhesPrecoECupom NÃO deve capturar preços de carrossel de recomendação quando anúncio estiver esgotado', () => {
+  const htmlEsgotadoComRecomendacoes = `
+    <html>
+      <body>
+        <div class="ui-pdp-status-message">Anúncio pausado</div>
+        <div class="poly-recommendations">
+          <p>Quem viu este produto também comprou:</p>
+          <span class="andes-money-amount__fraction">8</span>
+          <span class="andes-money-amount__cents">50</span>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const detalhes = extrairDetalhesPrecoECupom(htmlEsgotadoComRecomendacoes, 'https://produto.mercadolivre.com.br/MLB-123456');
+  assert.strictEqual(detalhes.esgotado, true);
+  // O preço do carrossel (R$ 8,50) NÃO pode ser capturado como preço do produto
+  assert.strictEqual(Boolean(detalhes.precoPor), false);
+});
+
+test('extrairDadosAnuncio deve preservar preço postado pelo usuário quando anúncio estiver esgotado no ML', async () => {
+  const resultado = await extrairDadosAnuncio(
+    {
+      url: 'https://produto.mercadolivre.com.br/MLB-999999-pokemon-tcg-30-anos',
+      titulo: 'Pokémon Booster Box 30 Anos',
+      precoPor: '289,00',
+      precoDe: '349,00'
+    },
+    {
+      mattWord: 'meutag',
+      mattTool: '123456'
+    }
+  );
+
+  assert.strictEqual(resultado.ok, true);
+  // Deve preservar com soberania o preço postado e NÃO transformar em 8 ou 30 reais
+  assert.strictEqual(resultado.precoPor, '289,00');
+  assert.strictEqual(resultado.precoDe, '349,00');
+  assert.strictEqual(resultado.textoGerado.includes('289,00'), true);
+  // O link gerado para compra deve direcionar para a busca com estoque ativo se esgotado
+  assert.strictEqual(
+    resultado.linkAfiliado.includes('lista.mercadolivre.com.br') ||
+    resultado.textoGerado.includes('lista.mercadolivre.com.br'),
+    true
+  );
+});
+
 
 

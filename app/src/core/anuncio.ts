@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expandUrl, normalizarFotoMl, shortenToMeli, buildAffiliateUrl, isImagemValidaProdutoMl } from './affiliate.js';
+import { isAnuncioEsgotadoOuPausado, sanearPrecoHistoricoTCG } from './pricing.js';
 
 export const FOTO_CUPOM_OFICIAL_URL = '/assets/cupom-mercadolivre.png';
 
@@ -45,6 +46,7 @@ export function obterFotoCupomBuffer(): Buffer | null {
 
 export interface AnuncioInput {
   url: string;
+  titulo?: string;
   cupom?: string;
   precoDe?: string;
   precoPor?: string;
@@ -113,12 +115,14 @@ export interface DetalhesProdutoMl {
   cupom?: string;
   valorComCupom?: string;
   parcelamento?: string;
+  esgotado?: boolean;
 }
 
 /**
- * Extrai preços (De/Por), cupons, descontos e parcelamento diretamente do HTML do Mercado Livre
+ * Extrai preços (De/Por), cupons, descontos e parcelamento diretamente do HTML do Mercado Livre.
+ * Bloqueia contaminação de preços de produtos recomendados quando o anúncio original está pausado/esgotado.
  */
-export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string): DetalhesProdutoMl {
+export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string, urlOrigem?: string): DetalhesProdutoMl {
   let precoDe = '';
   let precoPor = '';
   let cupom = '';
@@ -128,50 +132,55 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
 
   if (!html) return {};
 
+  const esgotado = isAnuncioEsgotadoOuPausado(html, urlOrigem);
+
   // 1. Tentar primeiro extração de alta precisão via JSON de estado do produto principal do Mercado Livre
-  // O primeiro "type":"price" do documento HTML pertence SEMPRE ao produto principal
-  const firstPriceIdx = html.indexOf('"type":"price"');
-  if (firstPriceIdx !== -1) {
-    const priceBlock = html.substring(firstPriceIdx, firstPriceIdx + 1500);
+  // ATENÇÃO: Se o produto estiver esgotado/pausado, o primeiro "type":"price" pertence a produtos recomendados no carrossel!
+  // NUNCA extrair preço ativo de recomendação se o produto principal estiver esgotado!
+  if (!esgotado) {
+    const firstPriceIdx = html.indexOf('"type":"price"');
+    if (firstPriceIdx !== -1) {
+      const priceBlock = html.substring(firstPriceIdx, firstPriceIdx + 1500);
 
-    const currentMatch = priceBlock.match(/"current_price":\{"value":([\d\.]+)/);
-    if (currentMatch) {
-      const valCurrent = parseFloat(currentMatch[1]);
-      if (!isNaN(valCurrent) && valCurrent > 0) {
-        precoPor = Number.isInteger(valCurrent)
-          ? String(valCurrent)
-          : valCurrent.toFixed(2).replace('.', ',');
-      }
-    }
-
-    const prevMatch = priceBlock.match(/"(?:previous_price|original_price)":\{"value":([\d\.]+)/);
-    if (prevMatch) {
-      const valPrev = parseFloat(prevMatch[1]);
-      if (!isNaN(valPrev) && valPrev > 0 && (!precoPor || valPrev > parseFloat(currentMatch?.[1] || '0'))) {
-        precoDe = Number.isInteger(valPrev)
-          ? String(valPrev)
-          : valPrev.toFixed(2).replace('.', ',');
-      }
-    }
-
-    // Parcelamento estritamente sem juros no JSON
-    const instMatch = priceBlock.match(/"installments":\{"text":"([^"]+)","no_interest":(true|false)/);
-    if (instMatch && instMatch[2] === 'true') {
-      const matchQtd = instMatch[1].match(/(\d{1,2})\s*x/i) || priceBlock.match(/"quantity":(\d{1,2})/);
-      const matchAmount = priceBlock.match(/"amount":([\d\.]+)/);
-      let parcelaNum = matchAmount ? parseFloat(matchAmount[1]) : 0;
-
-      if ((!parcelaNum || isNaN(parcelaNum)) && precoPor && matchQtd) {
-        const qtd = parseInt(matchQtd[1], 10);
-        const precoPorFloat = parseFloat(precoPor.replace(/\./g, '').replace(',', '.'));
-        if (qtd > 0 && !isNaN(precoPorFloat) && precoPorFloat > 0) {
-          parcelaNum = precoPorFloat / qtd;
+      const currentMatch = priceBlock.match(/"current_price":\{"value":([\d\.]+)/);
+      if (currentMatch) {
+        const valCurrent = parseFloat(currentMatch[1]);
+        if (!isNaN(valCurrent) && valCurrent > 0) {
+          precoPor = Number.isInteger(valCurrent)
+            ? String(valCurrent)
+            : valCurrent.toFixed(2).replace('.', ',');
         }
       }
 
-      if (matchQtd && !isNaN(parcelaNum) && parcelaNum > 0) {
-        const parcelaStr = Number.isInteger(parcelaNum) ? String(parcelaNum) : parcelaNum.toFixed(2).replace('.', ',');
-        parcelamento = `${matchQtd[1]}x de R$ ${parcelaStr} sem juros`;
+      const prevMatch = priceBlock.match(/"(?:previous_price|original_price)":\{"value":([\d\.]+)/);
+      if (prevMatch) {
+        const valPrev = parseFloat(prevMatch[1]);
+        if (!isNaN(valPrev) && valPrev > 0 && (!precoPor || valPrev > parseFloat(currentMatch?.[1] || '0'))) {
+          precoDe = Number.isInteger(valPrev)
+            ? String(valPrev)
+            : valPrev.toFixed(2).replace('.', ',');
+        }
+      }
+
+      // Parcelamento estritamente sem juros no JSON
+      const instMatch = priceBlock.match(/"installments":\{"text":"([^"]+)","no_interest":(true|false)/);
+      if (instMatch && instMatch[2] === 'true') {
+        const matchQtd = instMatch[1].match(/(\d{1,2})\s*x/i) || priceBlock.match(/"quantity":(\d{1,2})/);
+        const matchAmount = priceBlock.match(/"amount":([\d\.]+)/);
+        let parcelaNum = matchAmount ? parseFloat(matchAmount[1]) : 0;
+
+        if ((!parcelaNum || isNaN(parcelaNum)) && precoPor && matchQtd) {
+          const qtd = parseInt(matchQtd[1], 10);
+          const precoPorFloat = parseFloat(precoPor.replace(/\./g, '').replace(',', '.'));
+          if (qtd > 0 && !isNaN(precoPorFloat) && precoPorFloat > 0) {
+            parcelaNum = precoPorFloat / qtd;
+          }
+        }
+
+        if (matchQtd && !isNaN(parcelaNum) && parcelaNum > 0) {
+          const parcelaStr = Number.isInteger(parcelaNum) ? String(parcelaNum) : parcelaNum.toFixed(2).replace('.', ',');
+          parcelamento = `${matchQtd[1]}x de R$ ${parcelaStr} sem juros`;
+        }
       }
     }
   }
@@ -226,8 +235,8 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
       }
     }
 
-    // 2. Extração de Preço "Por" (Atual / A Pagar)
-    if (!precoPor) {
+    // 2. Extração de Preço "Por" (Atual / A Pagar) - Se o produto estiver esgotado, ignora preços de recomendações!
+    if (!precoPor && !esgotado) {
       const currAria = bloco.match(/aria-label="(?:Agora:\s*)?(\d+)\s*reais(?:(?:\s*com\s*|\s*e\s*)(\d+)\s*centavos)?"/i);
       if (currAria) {
         const r = currAria[1];
@@ -340,7 +349,8 @@ export function extrairDetalhesPrecoECupom(html: string, slugDesejado?: string):
     precoPor: precoPor || undefined,
     cupom: cupom || undefined,
     valorComCupom: valorComCupom || undefined,
-    parcelamento: parcelamento || undefined
+    parcelamento: parcelamento || undefined,
+    esgotado
   };
 }
 
@@ -963,7 +973,10 @@ export async function extrairDadosAnuncio(
       config.meliCookie || ''
     );
 
-    const targetUrl = resolvedUrl || rawUrl;
+    let targetUrl = resolvedUrl || rawUrl;
+    if (targetUrl.includes('account-verification') || targetUrl.includes('/login') || targetUrl.includes('/gz/')) {
+      targetUrl = rawUrl;
+    }
     let htmlConteudo = rawHtml || '';
 
     const isMeli = /mercadolivre\.com|meli\.la/i.test(targetUrl) || /mercadolivre\.com|meli\.la/i.test(rawUrl);
@@ -988,7 +1001,9 @@ export async function extrairDadosAnuncio(
       } catch {}
     }
 
-    let titulo = formatarTituloPorSlug(slug);
+    let titulo = (input.titulo && input.titulo.trim().length > 3)
+      ? input.titulo.trim()
+      : formatarTituloPorSlug(slug);
 
     // 3. Obter a foto oficial e inspecionar HTML se necessário
     let imageUrl: string | null = null;
@@ -996,6 +1011,7 @@ export async function extrairDadosAnuncio(
       imageUrl = isMeli ? normalizarFotoMl(productImageUrl) : productImageUrl;
     }
 
+    let isPaginaNaoEncontrada = false;
     if ((!htmlConteudo || !imageUrl) && targetUrl && !targetUrl.includes('/social/')) {
       try {
         const res = await fetch(targetUrl, {
@@ -1007,38 +1023,53 @@ export async function extrairDadosAnuncio(
           }
         });
         if (res.ok) {
-          htmlConteudo = await res.text();
+          const body = await res.text();
+          if (res.url.includes('account-verification') || res.url.includes('/login')) {
+            isPaginaNaoEncontrada = true;
+          } else {
+            htmlConteudo = body;
+          }
+        } else if (res.status === 404 || res.status === 410) {
+          isPaginaNaoEncontrada = true;
         }
       } catch (err) {
         console.warn('[Anúncio Extrator] Falha ao inspecionar página:', err);
       }
     }
 
-    // Extrair detalhes estruturados do HTML (Preço De, Por, Cupom, Parcelamento, Título)
-    const detalhes = isMeli ? extrairDetalhesPrecoECupom(htmlConteudo, slug) : {};
+    // Extrair detalhes estruturados do HTML (Preço De, Por, Cupom, Parcelamento, Título, Esgotado)
+    const detalhes = isMeli ? extrairDetalhesPrecoECupom(htmlConteudo, slug, targetUrl) : {};
+    const isEsgotado = Boolean(
+      detalhes.esgotado ||
+      isPaginaNaoEncontrada ||
+      isAnuncioEsgotadoOuPausado(htmlConteudo, targetUrl)
+    );
 
-    if (detalhes.titulo && detalhes.titulo.length > 5) {
-      titulo = detalhes.titulo;
-    } else if (htmlConteudo) {
-      const ogTitle = htmlConteudo.match(
-        /<meta[^>]+(?:property|name)=["']og:title["'][^>]+content=["']([^"']+)["']/i
-      );
-      if (ogTitle && ogTitle[1]) {
-        const parsedTitle = ogTitle[1]
-          .replace(/\s*\|\s*(?:Mercado\s*Livre|Shopee\s*Brasil|Shopee|Amazon).*$/i, '')
-          .replace(/^Compre\s+/i, '')
-          .trim();
-        if (parsedTitle && parsedTitle.length > 5 && !/minhas listas|recomenda[çc][õo]es|vitrine|perfil/i.test(parsedTitle)) {
-          titulo = parsedTitle;
-        }
-      } else {
-        const rawTitle = htmlConteudo.match(/<title[^>]*>([^<]+)<\/title>/i);
-        if (rawTitle && rawTitle[1]) {
-          const parsedTitle = rawTitle[1]
+    // Se o usuário não informou título próprio, tenta obter da página
+    if (!input.titulo || input.titulo.trim().length <= 3) {
+      if (detalhes.titulo && detalhes.titulo.length > 5 && !/mercado\s*li[bv]re|login|acesso/i.test(detalhes.titulo)) {
+        titulo = detalhes.titulo;
+      } else if (htmlConteudo) {
+        const ogTitle = htmlConteudo.match(
+          /<meta[^>]+(?:property|name)=["']og:title["'][^>]+content=["']([^"']+)["']/i
+        );
+        if (ogTitle && ogTitle[1]) {
+          const parsedTitle = ogTitle[1]
             .replace(/\s*\|\s*(?:Mercado\s*Livre|Shopee\s*Brasil|Shopee|Amazon).*$/i, '')
+            .replace(/^Compre\s+/i, '')
             .trim();
-          if (parsedTitle.length > 5) {
+          if (parsedTitle.length > 5 && !/mercado\s*li[bv]re|minhas listas|recomenda[çc][õo]es|vitrine|perfil/i.test(parsedTitle)) {
             titulo = parsedTitle;
+          }
+        } else {
+          const rawTitle = htmlConteudo.match(/<title[^>]*>([^<]+)<\/title>/i);
+          if (rawTitle && rawTitle[1]) {
+            const parsedTitle = rawTitle[1]
+              .replace(/\s*\|\s*(?:Mercado\s*Livre|Shopee\s*Brasil|Shopee|Amazon).*$/i, '')
+              .trim();
+            if (parsedTitle.length > 5 && !/mercado\s*li[bv]re|login|acesso/i.test(parsedTitle)) {
+              titulo = parsedTitle;
+            }
           }
         }
       }
@@ -1077,32 +1108,35 @@ export async function extrairDadosAnuncio(
     let linkAfiliadoFinal = rawUrl;
 
     if (isMeli) {
-      // Mercado Livre: SEMPRE re-afilia obrigatoriamente para a conta do usuário!
-      // Mesmo que o link colado seja meli.la, /sec/ ou link longo de concorrente
-      const isSocialOrGeneric = targetUrl.includes('/social/') || targetUrl.includes('/cupons');
-      if (isSocialOrGeneric && config.linkVitrineCurto && config.linkVitrineCurto.startsWith('http')) {
-        linkAfiliadoFinal = config.linkVitrineCurto.trim();
+      // Se o anúncio está ESGOTADO/PAUSADO no Mercado Livre, o link direto do produto expirou
+      // e o Mercado Livre redireciona para a vitrine /sec/ ou página de erro/recomendações.
+      // Nesse caso, direciona para a busca dos anúncios que têm ESTOQUE ATIVO ordenados por menor preço:
+      if (isEsgotado && titulo && !targetUrl.includes('/cupons')) {
+        const termoBusca = titulo.replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ').replace(/\s+/g, ' ').trim();
+        const slugBusca = encodeURIComponent(termoBusca).replace(/%20/g, '-');
+        linkAfiliadoFinal = `https://lista.mercadolivre.com.br/${slugBusca}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(config.mattWord)}&matt_tool=${encodeURIComponent(config.mattTool)}`;
       } else {
-        const affiliateLongUrl = buildAffiliateUrl(
-          targetUrl,
-          config.mattWord,
-          config.mattTool,
-          config.linkVitrineCurto
-        );
-
-        if (config.meliCookie && config.meliCookie.trim().length > 10) {
-          const short = await shortenToMeli(
-            affiliateLongUrl,
-            config.meliCookie,
-            config.meliTag || config.mattWord
+        const isSocialOrGeneric = targetUrl.includes('/social/') || targetUrl.includes('/cupons');
+        if (isSocialOrGeneric && config.linkVitrineCurto && config.linkVitrineCurto.startsWith('http')) {
+          linkAfiliadoFinal = config.linkVitrineCurto.trim();
+        } else {
+          const affiliateLongUrl = buildAffiliateUrl(
+            targetUrl,
+            config.mattWord,
+            config.mattTool,
+            config.linkVitrineCurto
           );
-          if (short) {
-            linkAfiliadoFinal = short;
+
+          if (config.meliCookie && config.meliCookie.trim().length > 10) {
+            const short = await shortenToMeli(
+              affiliateLongUrl,
+              config.meliCookie,
+              config.meliTag || config.mattWord
+            );
+            linkAfiliadoFinal = short || affiliateLongUrl;
           } else {
             linkAfiliadoFinal = affiliateLongUrl;
           }
-        } else {
-          linkAfiliadoFinal = affiliateLongUrl;
         }
       }
     } else {
@@ -1110,9 +1144,26 @@ export async function extrairDadosAnuncio(
       linkAfiliadoFinal = rawUrl;
     }
 
-    // 5. Preços e Cupons Finais (Prioriza o digitado manualmente pelo usuário, fallback para extração automática)
+    // 5. Preços e Cupons Finais (Prioriza SEMPRE o valor digitado/postado na mensagem)
     const rawPrecoDe = (input.precoDe || '').trim() || detalhes.precoDe || undefined;
-    const precoPorFinal = (input.precoPor || '').trim() || detalhes.precoPor || undefined;
+    let precoPorFinal = (input.precoPor || '').trim() || detalhes.precoPor || undefined;
+
+    // REGRA DE OURO: SE O PRODUTO ACABOU ESTOQUE, PRESERVA RIGOROSAMENTE O VALOR DO ANÚNCIO POSTADO!
+    if (isEsgotado) {
+      if (input.precoPor && input.precoPor.trim()) {
+        // Se a mensagem do WhatsApp/post continha o preço, ele é soberano e fica exatamente o mesmo!
+        precoPorFinal = input.precoPor.trim();
+      } else {
+        // Se não havia input manual e o anúncio esgotou, calibra pelo título canônico oficial
+        // para NUNCA exibir o preço bugado de recomendação (ex: R$ 8 da moeda)
+        const valorNum = precoPorFinal ? parseFloat(precoPorFinal.replace(/\./g, '').replace(',', '.')) : 0;
+        const saneado = sanearPrecoHistoricoTCG(titulo, valorNum);
+        if (saneado.valido && saneado.precoPor > 0) {
+          precoPorFinal = Number.isInteger(saneado.precoPor) ? String(saneado.precoPor) : saneado.precoPor.toFixed(2).replace('.', ',');
+        }
+      }
+    }
+
     const precoDeFinal = (rawPrecoDe && precoPorFinal && rawPrecoDe === precoPorFinal) ? undefined : rawPrecoDe;
 
     let cupomFinal = (input.cupom || '').trim() || detalhes.cupom || undefined;
