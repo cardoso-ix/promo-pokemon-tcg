@@ -3,7 +3,7 @@ import { meliService } from './meli.service.js';
 import { meliAffiliateService } from './meli-affiliate.service.js';
 import { metaAdsService } from './meta.service.js';
 import { analyticsService } from './analytics.service.js';
-import { getMetaInsightsStats, getMeliOrdersStats } from '../db/database.js';
+import { getMetaInsightsStats, getMeliOrdersStats, getConfig } from '../db/database.js';
 import { getBrazilToday, getBrazilDaysAgo } from '../utils/date.js';
 import { financasService } from './financas.service.js';
 
@@ -633,6 +633,7 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
         // Gerar resumo pré-formatado para WhatsApp
         const nomeMeses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
         const rotuloMes = `${nomeMeses[mesNum] || mes} de ${ano}`;
+        const linkVitrineCurto = getConfig('link_vitrine_curto', 'https://mercadolivre.com/sec/2rM6RPm');
 
         const resumoWhatsapp = [
           `📊 *RELATÓRIO FINANCEIRO EXECUTIVO · ${rotuloMes.toUpperCase()}*`,
@@ -659,6 +660,8 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
           ``,
           `📌 *Parecer:* ${statusRoas}`,
           `💡 *Recomendação:* ${recomendacaoRoas}`,
+          ``,
+          `🛒 *Canal / Vitrine Oficial Mercado Livre:* ${linkVitrineCurto}`,
           ``,
           `_Emitido automaticamente via Super Cockpit Promo TCG em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}_`
         ].join('\n');

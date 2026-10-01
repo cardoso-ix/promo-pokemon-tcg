@@ -69,9 +69,10 @@ chmod +x *.sh
 - **Visualização Flexível (Cards Compactos & Tabela de Cotação):**
   - **Cards Compactos & Densos:** Miniaturas 84x84 com descrição padronizada `[CATEGORIA] • NOME • PREÇO • VENDEDOR`, badges rápidos de envio Full, Frete Grátis e Desconto (%).
   - **Filtros Avançados & Faixa de Preço Flexível (Min & Max):** Filtro por Categoria (*Booster Box*, *ETB*, *Box Especial*, *Blister*, *Fichário & Álbum*, *Poster Box*), inputs numéricos para definir faixa personalizada livre (`De R$ [Min]` até `Até R$ [Max]`) e 7 badges rápidos de 1 clique (*Até R$ 30*, *R$ 30 a R$ 80*, *R$ 80 a R$ 150*, *R$ 150 a R$ 250*, *R$ 250 a R$ 400*, *Acima de R$ 400*) com botão para limpar filtros instantaneamente.
-- **Personal Shopper 1-a-1 & Disparo para Grupos:**
-  - **Copy Consultivo para WhatsApp Privado:** Mensagens personalizadas, educadas e prontas para fechar vendas no 1-a-1 com cliente, destacando preço parcelado sem juros, envio Full e link de afiliado oficial.
-  - **Copy Promocional para Grupo:** Formato oficial limpo com badges de destaque (⚡ FULL, 🚚 FRETE GRÁTIS) e selo de produto 100% lacrado Copag.
+- **Personal Shopper 1-a-1 & Disparo para Grupos (com Link Curto Apresentável):**
+  - **Copy Consultivo para WhatsApp Privado (1-a-1):** Mensagens personalizadas e educadas com procedência, parcelamento sem juros e **link curto oficial do Mercado Livre** (`mercadolivre.com/sec/2rM6RPm` ou `meli.la`), eliminando URLs longas e feias cheias de parâmetros técnicos.
+  - **Copy Promocional para Grupo:** Formato oficial limpo com badges de destaque (⚡ FULL, 🚚 FRETE GRÁTIS), selo Copag lacrado e link curto oficial para WhatsApp.
+  - **Ação Rápida de Copiar Link Curto:** Botão dedicado em 1 clique tanto nos cards quanto na tabela de cotação para copiar instantaneamente apenas o link curto do Mercado Livre.
   - **Cópia Universal:** Suporte a cópia de mensagens via Clipboard API com fallback automático de textarea invisível para compatibilidade total em conexões HTTP diretas por IP.
 
 ---

@@ -634,6 +634,23 @@ export const RadarPrecosView: React.FC = () => {
                   {item.descricaoPadronizada || `[${item.categoria || 'TCG'}] • ${item.title} • R$ ${item.price.toFixed(2).replace('.', ',')}`}
                 </div>
 
+                {/* Link Curto Mercado Livre Apresentável */}
+                <div className="mt-2 flex items-center justify-between gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px]">
+                  <div className="flex items-center gap-1 text-amber-300 font-mono truncate" title={item.linkCurto || 'https://mercadolivre.com/sec/2rM6RPm'}>
+                    <Tag className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                    <span className="font-semibold text-amber-200">Link Curto:</span>
+                    <span className="truncate">{(item.linkCurto || 'https://mercadolivre.com/sec/2rM6RPm').replace(/^https?:\/\//, '')}</span>
+                  </div>
+                  <button
+                    onClick={() => copiarTexto(item.id, item.linkCurto || 'https://mercadolivre.com/sec/2rM6RPm', 'link')}
+                    className="shrink-0 px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-[9px] font-bold transition flex items-center gap-0.5"
+                    title="Copiar apenas o link curto do Mercado Livre"
+                  >
+                    {copiadoId === `${item.id}_link` ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
+                    <span>{copiadoId === `${item.id}_link` ? 'Copiado!' : 'Copiar'}</span>
+                  </button>
+                </div>
+
                 {/* Ações Compactas */}
                 <div className="mt-3 pt-2.5 border-t border-white/[0.06] space-y-1.5">
                   <button
@@ -811,6 +828,19 @@ export const RadarPrecosView: React.FC = () => {
                             title="Copiar mensagem formatada para grupo de promoções"
                           >
                             <Share2 className="w-3 h-3" />
+                          </button>
+
+                          <button
+                            onClick={() => copiarTexto(item.id, item.linkCurto || 'https://mercadolivre.com/sec/2rM6RPm', 'link')}
+                            className={`px-2 py-1.5 rounded-lg text-[11px] font-medium border transition-all flex items-center gap-1 ${
+                              copiadoId === `${item.id}_link`
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                : 'bg-white/[0.04] text-amber-300/80 border-white/[0.08] hover:bg-amber-500/10 hover:text-amber-300'
+                            }`}
+                            title="Copiar apenas o link curto do Mercado Livre"
+                          >
+                            {copiadoId === `${item.id}_link` ? <Check className="w-3 h-3 text-emerald-400" /> : <Tag className="w-3 h-3 text-amber-400" />}
+                            <span className="hidden xl:inline">{copiadoId === `${item.id}_link` ? 'Copiado!' : 'Link'}</span>
                           </button>
 
                           <a

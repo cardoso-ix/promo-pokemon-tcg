@@ -255,4 +255,24 @@ describe('Radar de Preços TCG - Core & Filtros de Confiabilidade', () => {
     assert.ok(res.itens[0].title.toLowerCase().includes('charizard'));
     assert.ok(res.itens[0].fotoHd.includes('mlstatic.com'));
   });
+
+  it('Radar TCG deve utilizar linkCurto oficial nas copies para WhatsApp (1-a-1 e Grupo)', async () => {
+    const res = await buscarNoRadar('Poster Box');
+    assert.ok(res.ok);
+    assert.ok(res.itens.length > 0);
+    const item = res.itens[0];
+    assert.ok(item.linkCurto, 'linkCurto deve estar preenchido');
+    assert.ok(
+      item.linkCurto.includes('/sec/') || item.linkCurto.includes('meli.la/'),
+      `linkCurto deve ser um link curto oficial do Mercado Livre, recebido: ${item.linkCurto}`
+    );
+    assert.ok(
+      item.copyCliente.includes(item.linkCurto),
+      'copyCliente para WhatsApp 1-a-1 deve conter o link curto oficial do Mercado Livre'
+    );
+    assert.ok(
+      item.copyGrupo.includes(item.linkCurto),
+      'copyGrupo para WhatsApp de ofertas deve conter o link curto oficial do Mercado Livre'
+    );
+  });
 });

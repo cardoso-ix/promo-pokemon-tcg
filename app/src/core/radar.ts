@@ -48,6 +48,7 @@ export interface FiltrosRadar {
 
 export interface ResultadoRadarItem extends MeliItemBusca {
   linkAfiliado: string;
+  linkCurto?: string;
   fotoHd: string;
   seloVendedor: string;
   ehOficial: boolean;
@@ -407,7 +408,12 @@ export function resolverImagemProdutoTCG(titulo: string, imagemExistente?: strin
 export function enriquecerItemRadar(item: MeliItemBusca): ResultadoRadarItem {
   const mattWord = getConfig('matt_word', CONFIG.defaultMattWord);
   const mattTool = getConfig('matt_tool', CONFIG.defaultMattTool);
+  const linkVitrineCurto = getConfig('link_vitrine_curto', 'https://mercadolivre.com/sec/2rM6RPm');
   const linkAfiliado = buildAffiliateUrl(item.permalink, mattWord, mattTool);
+
+  // Link curto oficial para WhatsApp (muito mais apresentável e sem parâmetros longos de rastreamento)
+  const isPermalinkCurto = item.permalink?.includes('meli.la/') || item.permalink?.includes('/sec/');
+  const linkCurto = isPermalinkCurto ? item.permalink : (linkVitrineCurto || linkAfiliado);
   
   const fotoHd = resolverImagemProdutoTCG(item.title, item.thumbnail);
   const ehOficial = Boolean(item.official_store_id || item.official_store_name);
@@ -434,6 +440,7 @@ export function enriquecerItemRadar(item: MeliItemBusca): ResultadoRadarItem {
     ...item,
     thumbnail: fotoHd,
     linkAfiliado,
+    linkCurto,
     fotoHd,
     seloVendedor,
     ehOficial,
@@ -442,8 +449,8 @@ export function enriquecerItemRadar(item: MeliItemBusca): ResultadoRadarItem {
     categoria: classificarCategoriaTCG(item.title),
     descricaoPadronizada: gerarDescricaoPadraoTCG(item),
     parcelamentoFormatado,
-    copyCliente: formatarCopyCliente(item, linkAfiliado),
-    copyGrupo: formatarCopyGrupo(item, linkAfiliado)
+    copyCliente: formatarCopyCliente(item, linkCurto),
+    copyGrupo: formatarCopyGrupo(item, linkCurto)
   };
 }
 
