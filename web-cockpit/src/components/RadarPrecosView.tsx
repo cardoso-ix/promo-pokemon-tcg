@@ -162,21 +162,41 @@ export const RadarPrecosView: React.FC = () => {
           </button>
         </div>
 
-        {/* Sugestões Rápidas */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-xs text-slate-400 font-medium">Sugestões:</span>
-          {sugestoesRapidas.map((sug) => (
-            <button
-              key={sug}
-              onClick={() => {
-                setQuery(sug);
-                executarBusca(sug);
-              }}
-              className="text-xs px-2.5 py-1 rounded-md bg-white/[0.04] hover:bg-cyan-500/10 hover:text-cyan-300 text-slate-300 border border-white/[0.06] hover:border-cyan-500/30 transition-all"
+        {/* Sugestões Rápidas & Atalho de Busca ao Vivo no Mercado Livre */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-400 font-medium">Sugestões:</span>
+            {sugestoesRapidas.map((sug) => (
+              <button
+                key={sug}
+                onClick={() => {
+                  setQuery(sug);
+                  executarBusca(sug);
+                }}
+                className="text-xs px-2.5 py-1 rounded-md bg-white/[0.04] hover:bg-cyan-500/10 hover:text-cyan-300 text-slate-300 border border-white/[0.06] hover:border-cyan-500/30 transition-all"
+              >
+                {sug}
+              </button>
+            ))}
+          </div>
+
+          {query.trim() && (
+            <a
+              href={`https://lista.mercadolivre.com.br/${encodeURIComponent(query.trim())}_OrderId_PRICE_ASC_NoIndex_True`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all"
+              title="Abrir pesquisa direta no Mercado Livre em nova aba com menor preço"
             >
-              {sug}
-            </button>
-          ))}
+              <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+              <span>Ver no ML Ao Vivo (Menor Preço) ↗</span>
+            </a>
+          )}
+        </div>
+
+        {/* Dica rápida de uso */}
+        <div className="text-[11px] text-slate-400 bg-white/[0.02] border border-white/[0.04] rounded-lg p-2.5 flex items-center justify-between">
+          <span>💡 <strong>Dica de ouro:</strong> Cole o link de qualquer anúncio do Mercado Livre aqui para extrair os dados e gerar a resposta do WhatsApp na hora com seu link de afiliado!</span>
         </div>
 
         {/* Barra de Filtros de Confiabilidade */}
