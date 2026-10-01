@@ -9,9 +9,11 @@ import {
   buscarNoRadar,
   resolverLinkVerNoMl,
   obterPrecoMinimoCategoriaTCG,
+  sanearPrecoHistoricoTCG,
   type MeliItemBusca,
   type FiltrosRadar
 } from '../src/core/radar.js';
+import { limparRegistrosPrecosInvalidos } from '../src/db/database.js';
 
 describe('Radar de Preços TCG - Core & Filtros de Confiabilidade', () => {
   const mockItems: MeliItemBusca[] = [
@@ -301,5 +303,46 @@ describe('Radar de Preços TCG - Core & Filtros de Confiabilidade', () => {
     assert.strictEqual(obterPrecoMinimoCategoriaTCG('Elite Trainer Box Destinos de Paldea'), 160.0);
     assert.strictEqual(obterPrecoMinimoCategoriaTCG('Box Pokémon Tcg Mega Forças - Mega Zeraora Ex 8 Boosters'), 50.0);
     assert.strictEqual(obterPrecoMinimoCategoriaTCG('Blister Triplo Pokémon'), 25.0);
+  });
+
+  it('sanearPrecoHistoricoTCG deve calibrar categoricamente falso positivo de 30 anos e boxes com 8 boosters', () => {
+    // 1. Caso explícito do usuário: "30 anos por 30 reais"
+    const caso30AnosPoster = sanearPrecoHistoricoTCG('Pokémon TCG Coleção 30 Anos Poster Box Copag', 30.00, 30.00);
+    assert.strictEqual(caso30AnosPoster.valido, true);
+    assert.strictEqual(caso30AnosPoster.precoPor, 189.90, 'Deve calibrar para o valor real da Poster Box 30 Anos');
+    assert.strictEqual(caso30AnosPoster.precoDe, 229.90);
+
+    const caso30AnosFichario = sanearPrecoHistoricoTCG('Fichário Álbum 30 Anos Pokémon TCG Oficial 360 Cartas', 30.00);
+    assert.strictEqual(caso30AnosFichario.valido, true);
+    assert.strictEqual(caso30AnosFichario.precoPor, 149.90, 'Deve calibrar para o valor real do Fichário 30 Anos');
+    assert.strictEqual(caso30AnosFichario.precoDe, 179.90);
+
+    // 2. Caso explícito do usuário da foto: Box Zeraora por R$ 8 capturado de "8 boosters"
+    const casoZeraora = sanearPrecoHistoricoTCG('Box Pokémon Tcg Mega Forças - Mega Zeraora Ex 8 Boosters Copag', 8.00);
+    assert.strictEqual(casoZeraora.valido, true);
+    assert.strictEqual(casoZeraora.precoPor, 139.90, 'Deve calibrar para o valor real da Box Zeraora');
+    assert.strictEqual(casoZeraora.precoDe, 169.90);
+
+    // 3. Caso Display 360 com R$ 36 capturado de "36 boosters"
+    const casoDisplay = sanearPrecoHistoricoTCG('Display Booster Box Pokémon 360 (36 Pacotes)', 36.00);
+    assert.strictEqual(casoDisplay.valido, true);
+    assert.strictEqual(casoDisplay.precoPor, 279.00);
+    assert.strictEqual(casoDisplay.precoDe, 339.00);
+
+    // 4. Caso Elite Trainer Box por R$ 20
+    const casoEtb = sanearPrecoHistoricoTCG('Elite Trainer Box Destinos de Paldea', 20.00);
+    assert.strictEqual(casoEtb.valido, true);
+    assert.strictEqual(casoEtb.precoPor, 349.90);
+    assert.strictEqual(casoEtb.precoDe, 399.90);
+
+    // 5. Caso produto genérico com preço irrisório abaixo de R$ 12
+    const casoInvalido = sanearPrecoHistoricoTCG('Produto Aleatório', 5.00);
+    assert.strictEqual(casoInvalido.valido, false, 'Deve invalidar produto com preço irrisório < 12');
+  });
+
+  it('limparRegistrosPrecosInvalidos deve executar com sucesso no banco de dados', () => {
+    const total = limparRegistrosPrecosInvalidos();
+    assert.ok(typeof total === 'number', 'Deve retornar número de registros limpos');
+    assert.ok(total >= 0);
   });
 });

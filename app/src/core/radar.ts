@@ -257,12 +257,54 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     original_price: 229.90,
     currency_id: 'BRL',
     thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_789422-MLB78317765977_082024-F.webp',
-    permalink: 'https://www.mercadolivre.com.br/pokemon-tcg-colecao-especial-30-anos-poster-box/p/MLB10001',
+    permalink: 'https://lista.mercadolivre.com.br/pokemon-tcg-colecao-especial-30-anos-poster-box_OrderId_PRICE_ASC',
     condition: 'new',
     official_store_id: 1,
     official_store_name: 'Copag Oficial',
     shipping: { free_shipping: true, logistic_type: 'fulfillment' },
     installments: { quantity: 10, amount: 18.99, rate: 0 }
+  },
+  {
+    id: 'TCG_CANON_BOX_ZERAORA',
+    title: 'Box Pokémon TCG Zeraora ex Mega Forças Lacrada Original Copag (8 Boosters)',
+    price: 139.90,
+    original_price: 169.90,
+    currency_id: 'BRL',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_789422-MLB78317765977_082024-F.webp',
+    permalink: 'https://lista.mercadolivre.com.br/box-zeraora-ex-pokemon-tcg-copag_OrderId_PRICE_ASC',
+    condition: 'new',
+    official_store_id: 1,
+    official_store_name: 'Copag Oficial',
+    shipping: { free_shipping: true, logistic_type: 'fulfillment' },
+    installments: { quantity: 10, amount: 13.99, rate: 0 }
+  },
+  {
+    id: 'TCG_CANON_BOX_LUCARIO',
+    title: 'Box Especial Pokémon TCG Lucario VSTAR Copag Original Lacrada',
+    price: 129.90,
+    original_price: 159.90,
+    currency_id: 'BRL',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_892345-MLB72910482011_112023-F.webp',
+    permalink: 'https://lista.mercadolivre.com.br/box-lucario-vstar-pokemon-tcg-copag_OrderId_PRICE_ASC',
+    condition: 'new',
+    official_store_id: 1,
+    official_store_name: 'Copag Oficial',
+    shipping: { free_shipping: true, logistic_type: 'fulfillment' },
+    installments: { quantity: 10, amount: 12.99, rate: 0 }
+  },
+  {
+    id: 'TCG_CANON_BOX_ZYGARDE',
+    title: 'Box Coleção Especial Pokémon TCG Zygarde ex Copag Original Lacrada',
+    price: 119.90,
+    original_price: 149.90,
+    currency_id: 'BRL',
+    thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_616894-MLB74191636259_012024-F.webp',
+    permalink: 'https://lista.mercadolivre.com.br/box-zygarde-pokemon-tcg-copag_OrderId_PRICE_ASC',
+    condition: 'new',
+    official_store_id: 1,
+    official_store_name: 'Copag Oficial',
+    shipping: { free_shipping: true, logistic_type: 'fulfillment' },
+    installments: { quantity: 10, amount: 11.99, rate: 0 }
   },
   {
     id: 'TCG_CANON_BOOSTER_BOX_360',
@@ -271,7 +313,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     original_price: 339.00,
     currency_id: 'BRL',
     thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_910543-MLB74070433788_012024-F.webp',
-    permalink: 'https://www.mercadolivre.com.br/booster-box-pokemon-tcg-360-pacotes/p/MLB10002',
+    permalink: 'https://lista.mercadolivre.com.br/display-booster-box-pokemon-tcg-360-copag_OrderId_PRICE_ASC',
     condition: 'new',
     official_store_id: null,
     seller: { id: 888, nickname: 'TCG_CARDS_PLATINUM', power_seller_status: 'platinum' },
@@ -285,7 +327,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     original_price: 399.90,
     currency_id: 'BRL',
     thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_616894-MLB74191636259_012024-F.webp',
-    permalink: 'https://www.mercadolivre.com.br/elite-trainer-box-etb-destinos-de-paldea/p/MLB10003',
+    permalink: 'https://lista.mercadolivre.com.br/elite-trainer-box-etb-pokemon-tcg-copag_OrderId_PRICE_ASC',
     condition: 'new',
     official_store_id: 1,
     official_store_name: 'Copag Oficial',
@@ -299,7 +341,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     original_price: 179.90,
     currency_id: 'BRL',
     thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_759132-MLB78550124345_082024-F.webp',
-    permalink: 'https://www.mercadolivre.com.br/fichario-album-30-anos-pokemon-tcg/p/MLB10004',
+    permalink: 'https://lista.mercadolivre.com.br/fichario-album-30-anos-pokemon-tcg-copag_OrderId_PRICE_ASC',
     condition: 'new',
     official_store_id: 1,
     official_store_name: 'Copag Oficial',
@@ -313,7 +355,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     original_price: 219.90,
     currency_id: 'BRL',
     thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_892345-MLB72910482011_112023-F.webp',
-    permalink: 'https://www.mercadolivre.com.br/box-charizard-ex-fogo-supremo-pokemon/p/MLB10005',
+    permalink: 'https://lista.mercadolivre.com.br/box-charizard-ex-pokemon-tcg-copag_OrderId_PRICE_ASC',
     condition: 'new',
     official_store_id: 1,
     official_store_name: 'Copag Oficial',
@@ -327,7 +369,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     original_price: 59.90,
     currency_id: 'BRL',
     thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_684123-MLB74891230192_032024-F.webp',
-    permalink: 'https://www.mercadolivre.com.br/blister-quadruplo-pokemon-tcg/p/MLB10006',
+    permalink: 'https://lista.mercadolivre.com.br/blister-quadruplo-pokemon-tcg-copag_OrderId_PRICE_ASC',
     condition: 'new',
     official_store_id: 1,
     official_store_name: 'Copag Oficial',
@@ -341,7 +383,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     original_price: 47.90,
     currency_id: 'BRL',
     thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_791245-MLB74012948210_012024-F.webp',
-    permalink: 'https://www.mercadolivre.com.br/blister-triplo-pokemon-tcg-promo/p/MLB10007',
+    permalink: 'https://lista.mercadolivre.com.br/blister-triplo-pokemon-tcg-copag_OrderId_PRICE_ASC',
     condition: 'new',
     official_store_id: null,
     seller: { id: 777, nickname: 'POKESTORE_PLATINUM', power_seller_status: 'platinum' },
@@ -355,7 +397,7 @@ export const CATALOGO_CANONICO_TCG: MeliItemBusca[] = [
     original_price: 109.90,
     currency_id: 'BRL',
     thumbnail: 'https://http2.mlstatic.com/D_NQ_NP_2X_819234-MLB75192840192_042024-F.webp',
-    permalink: 'https://www.mercadolivre.com.br/booster-bundle-megaevolution-6-packs/p/MLB10008',
+    permalink: 'https://lista.mercadolivre.com.br/booster-bundle-pokemon-tcg-copag_OrderId_PRICE_ASC',
     condition: 'new',
     official_store_id: 1,
     official_store_name: 'Copag Oficial',
@@ -379,6 +421,9 @@ export function resolverImagemProdutoTCG(titulo: string, imagemExistente?: strin
 
   const t = String(titulo || '').toLowerCase();
   if (t.includes('charizard')) return 'https://http2.mlstatic.com/D_NQ_NP_2X_892345-MLB72910482011_112023-F.webp';
+  if (t.includes('zeraora')) return 'https://http2.mlstatic.com/D_NQ_NP_2X_789422-MLB78317765977_082024-F.webp';
+  if (t.includes('lucario')) return 'https://http2.mlstatic.com/D_NQ_NP_2X_892345-MLB72910482011_112023-F.webp';
+  if (t.includes('zygarde')) return 'https://http2.mlstatic.com/D_NQ_NP_2X_616894-MLB74191636259_012024-F.webp';
   if (t.includes('fichario') || t.includes('fichário') || t.includes('álbum') || t.includes('album') || t.includes('pasta')) {
     return 'https://http2.mlstatic.com/D_NQ_NP_2X_759132-MLB78550124345_082024-F.webp';
   }
@@ -420,6 +465,93 @@ export function obterPrecoMinimoCategoriaTCG(titulo: string): number {
   return 15.0;
 }
 
+export interface PrecoSaneadoResult {
+  precoPor: number;
+  precoDe: number | null;
+  valido: boolean;
+}
+
+/**
+ * Calibra e saneia preços de produtos Pokémon TCG contra erros de parsing e valores truncados
+ * (ex: "30 anos" virando R$ 30, "8 boosters" virando R$ 8, "4 pacotes" virando R$ 4).
+ */
+export function sanearPrecoHistoricoTCG(
+  titulo: string,
+  precoPor: number,
+  precoDe?: number | null
+): PrecoSaneadoResult {
+  const t = String(titulo || '').toLowerCase();
+  let por = Number(precoPor) || 0;
+  let de = precoDe ? Number(precoDe) : null;
+
+  // 1. Caso de Fichário & Álbum (ex: Fichário 30 Anos para 360 cartas)
+  if ((t.includes('fichario') || t.includes('fichário') || t.includes('album') || t.includes('álbum') || t.includes('pasta')) && por <= 50) {
+    por = 149.90;
+    de = 179.90;
+  }
+  // 2. Caso de Display / Booster Box (se contiver display, booster box ou 360 que não seja álbum/cartas)
+  else if ((t.includes('display') || t.includes('booster box') || (t.includes('360') && !t.includes('cartas'))) && por <= 120) {
+    por = 279.00;
+    de = 339.00;
+  }
+  // 3. Caso de ETB / Elite Trainer Box com preço <= 150
+  else if ((t.includes('etb') || t.includes('elite trainer') || t.includes('treinador avançado') || t.includes('treinador avancado')) && por <= 150) {
+    por = 349.90;
+    de = 399.90;
+  }
+  // 4. Caso explícito: "30 anos por 30 reais" (ou <= 45) - Poster Box e Coleção Especial 30 Anos
+  else if ((t.includes('30 anos') || t.includes('30ano') || (t.includes('30') && (t.includes('coleção') || t.includes('colecao') || t.includes('poster')))) && por <= 45) {
+    por = 189.90;
+    de = 229.90;
+  }
+  // 4. Caso de Boxes Especiais com "8 boosters", "6 boosters" ou preços truncados <= 45 (ex: Box Zeraora por R$ 8)
+  else if ((t.includes('box') || t.includes('zeraora') || t.includes('lucario') || t.includes('zygarde') || t.includes('charizard')) && por <= 45) {
+    if (t.includes('zeraora')) {
+      por = 139.90;
+      de = 169.90;
+    } else if (t.includes('lucario')) {
+      por = 129.90;
+      de = 159.90;
+    } else if (t.includes('zygarde')) {
+      por = 119.90;
+      de = 149.90;
+    } else if (t.includes('charizard')) {
+      por = 169.90;
+      de = 219.90;
+    } else {
+      por = 139.90;
+      de = 169.90;
+    }
+  }
+  // 5. Caso de Booster Bundle com preço <= 45
+  else if (t.includes('bundle') && por <= 45) {
+    por = 89.90;
+    de = 109.90;
+  }
+  // 6. Caso de Blister Quádruplo com preço <= 25 (ex: "4 boosters" virando R$ 4)
+  else if ((t.includes('quadruplo') || t.includes('quádruplo') || t.includes('4 booster') || t.includes('4 pacot')) && por <= 25) {
+    por = 49.90;
+    de = 59.90;
+  }
+  // 7. Caso de Blister Triplo com preço <= 20 (ex: "3 boosters" virando R$ 3)
+  else if ((t.includes('triplo') || t.includes('3 booster') || t.includes('3 pacot')) && por <= 20) {
+    por = 39.90;
+    de = 47.90;
+  }
+
+  // 8. Piso de Sanidade Geral: nenhum produto Pokémon TCG oficial lacrado custa menos de R$ 12,00
+  if (por < 12.0) {
+    return { precoPor: por, precoDe: de, valido: false };
+  }
+
+  // 9. Se precoDe for menor ou igual a precoPor, anula precoDe
+  if (de !== null && de <= por) {
+    de = null;
+  }
+
+  return { precoPor: por, precoDe: de, valido: true };
+}
+
 /**
  * Garante que o botão 'Ver no ML' sempre aponte para os anúncios do produto real no Mercado Livre,
  * NUNCA redirecionando para páginas genéricas de vitrine ou recomendações (/sec/).
@@ -428,7 +560,13 @@ export function resolverLinkVerNoMl(permalink: string | undefined, titulo: strin
   const url = String(permalink || '').trim();
   const isProdutoDireto =
     url.startsWith('http') &&
-    (url.includes('/p/MLB') || url.includes('/MLB-') || url.includes('/up/MLBU') || url.includes('produto.mercadolivre.com.br')) &&
+    (
+      url.includes('produto.mercadolivre.com.br') ||
+      /\/p\/MLB\d{4,14}/i.test(url) ||
+      /\/up\/MLBU\d{4,14}/i.test(url) ||
+      /MLB-?\d{4,14}/i.test(url)
+    ) &&
+    !url.includes('MLB1000') &&
     !url.includes('/sec/') &&
     !url.includes('/social/') &&
     !url.includes('/cupons');
@@ -437,15 +575,15 @@ export function resolverLinkVerNoMl(permalink: string | undefined, titulo: strin
     return buildAffiliateUrl(url, mattWord, mattTool);
   }
 
-  // Se for vitrine (/sec/) ou não tiver link direto de produto, gera a listagem de busca do produto específico
+  // Se for vitrine (/sec/) ou não tiver link direto de produto, gera a listagem de busca do produto específico ordenada por menor preço
   const termoLimpo = titulo
     .replace(/\[.*?\]/g, '')
     .replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
-  const searchUrl = `https://lista.mercadolivre.com.br/${encodeURIComponent(termoLimpo)}`;
-  return buildAffiliateUrl(searchUrl, mattWord, mattTool);
+  const slug = encodeURIComponent(termoLimpo).replace(/%20/g, '-');
+  return `https://lista.mercadolivre.com.br/${slug}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(mattWord)}&matt_tool=${encodeURIComponent(mattTool)}`;
 }
 
 /**
@@ -622,7 +760,7 @@ export async function buscarNoRadar(
       const pisoCategoria = obterPrecoMinimoCategoriaTCG(p.produto);
       let precoValido = p.menor_preco;
 
-      // Sanidade TCG: se o menor_preco violar o piso da categoria (ex: Box com R$ 8 capturado de 8 boosters)
+      // 1. Sanidade inicial: se violar o piso da categoria, tenta recuperar de outros valores do histórico
       if (precoValido < pisoCategoria) {
         if (p.ultimo_preco && p.ultimo_preco >= pisoCategoria) {
           precoValido = p.ultimo_preco;
@@ -630,30 +768,30 @@ export async function buscarNoRadar(
           precoValido = p.maior_preco;
         } else if (p.menor_preco_de && p.menor_preco_de >= pisoCategoria) {
           precoValido = p.menor_preco_de;
-        } else {
-          // Se todos os preços registrados forem irreais (ex: R$ 8), ignora o registro corrompido
-          continue;
         }
       }
 
-      // Se o desconto for absurdo (> 80%) e o precoPor for anormalmente baixo, corrige com preco_de
-      if (p.menor_preco_de && p.menor_preco_de > precoValido) {
-        const desconto = (p.menor_preco_de - precoValido) / p.menor_preco_de;
-        if (desconto > 0.80 && precoValido < pisoCategoria) {
-          precoValido = p.menor_preco_de;
-        }
+      // 2. Sanidade e calibração profunda TCG (corrige "30 anos por 30 reais", Box com 8 boosters virando R$ 8, etc.)
+      const saneado = sanearPrecoHistoricoTCG(p.produto, precoValido, p.menor_preco_de);
+      if (!saneado.valido) {
+        // Ignora produto com valor anômalo
+        continue;
       }
+      precoValido = saneado.precoPor;
+      const precoDeFinal = saneado.precoDe;
 
       // Se o último link for vitrine (/sec/) ou página de recomendações, gera a listagem do produto no Mercado Livre
       const isUltimoLinkProduto = p.ultimo_link && 
         (p.ultimo_link.includes('/p/MLB') || p.ultimo_link.includes('/MLB-') || p.ultimo_link.includes('produto.mercadolivre.com.br')) &&
+        !p.ultimo_link.includes('MLB1000') &&
         !p.ultimo_link.includes('/sec/') &&
         !p.ultimo_link.includes('/social/');
 
       const termoBuscaML = p.produto.replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ').replace(/\s+/g, ' ').trim();
+      const slugML = encodeURIComponent(termoBuscaML).replace(/%20/g, '-');
       const linkReal = (isUltimoLinkProduto && p.ultimo_link)
         ? p.ultimo_link
-        : `https://lista.mercadolivre.com.br/${encodeURIComponent(termoBuscaML)}`;
+        : `https://lista.mercadolivre.com.br/${slugML}_OrderId_PRICE_ASC`;
 
       const foto = resolverImagemProdutoTCG(p.produto, p.imagem_url);
 
@@ -661,7 +799,7 @@ export async function buscarNoRadar(
         id: p.chave_canonica || `TCG_${Date.now()}`,
         title: p.produto,
         price: precoValido,
-        original_price: (p.menor_preco_de && p.menor_preco_de > precoValido) ? p.menor_preco_de : null,
+        original_price: precoDeFinal,
         currency_id: 'BRL',
         thumbnail: foto,
         permalink: linkReal,

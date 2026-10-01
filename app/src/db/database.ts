@@ -1768,20 +1768,23 @@ export function migrarLogsParaHistoricoProdutos(): number {
 
 /**
  * Remove registros corrompidos e falsos positivos de preços no histórico
- * (ex: Box com precoPor de R$ 8 capturado de "8 boosters" ou R$ 4 de "4 pacotes")
+ * (ex: Box com precoPor de R$ 8 capturado de "8 boosters", "30 anos" virando R$ 30, Display por R$ 36 de "36 boosters", etc.)
  */
 export function limparRegistrosPrecosInvalidos(): number {
   try {
+    // 1. Remove qualquer produto com preco_por < 12.00 (nenhum produto TCG oficial lacrado custa isso)
     const res1 = db.prepare(`
       DELETE FROM historico_produtos_valores 
-      WHERE preco_por < 35 
+      WHERE preco_por < 12.0
+    `).run();
+
+    // 2. Remove "30 anos por 30 reais" e similares (<= 45)
+    const res2 = db.prepare(`
+      DELETE FROM historico_produtos_valores 
+      WHERE preco_por <= 45 
         AND (
-          LOWER(produto) LIKE '%box%' 
-          OR LOWER(produto) LIKE '%display%' 
-          OR LOWER(produto) LIKE '%etb%' 
-          OR LOWER(produto) LIKE '%treinador%'
-          OR LOWER(produto) LIKE '%boosters%'
-          OR LOWER(produto) LIKE '%bundle%'
+          LOWER(produto) LIKE '%30%' 
+          OR LOWER(produto) LIKE '%anos%'
           OR LOWER(produto) LIKE '%poster%'
           OR LOWER(produto) LIKE '%fichario%'
           OR LOWER(produto) LIKE '%fichário%'
@@ -1790,21 +1793,70 @@ export function limparRegistrosPrecosInvalidos(): number {
         )
     `).run();
 
-    const res2 = db.prepare(`
-      DELETE FROM historico_produtos_valores 
-      WHERE preco_por < 6
-    `).run();
-
+    // 3. Remove Boxes e coleções com preços truncados (< 55) como "8 boosters" virando R$ 8
     const res3 = db.prepare(`
       DELETE FROM historico_produtos_valores 
+      WHERE preco_por < 55 
+        AND (
+          LOWER(produto) LIKE '%box%' 
+          OR LOWER(produto) LIKE '%zeraora%' 
+          OR LOWER(produto) LIKE '%lucario%' 
+          OR LOWER(produto) LIKE '%zygarde%' 
+          OR LOWER(produto) LIKE '%charizard%' 
+          OR LOWER(produto) LIKE '%boosters%' 
+          OR LOWER(produto) LIKE '%pacotes%'
+        )
+    `).run();
+
+    // 4. Remove Display / Booster Box / 360 com preco_por < 140
+    const res4 = db.prepare(`
+      DELETE FROM historico_produtos_valores 
+      WHERE preco_por < 140 
+        AND (
+          LOWER(produto) LIKE '%display%' 
+          OR LOWER(produto) LIKE '%booster box%' 
+          OR LOWER(produto) LIKE '%360%'
+        )
+    `).run();
+
+    // 5. Remove ETB / Elite Trainer Box com preco_por < 160
+    const res5 = db.prepare(`
+      DELETE FROM historico_produtos_valores 
+      WHERE preco_por < 160 
+        AND (
+          LOWER(produto) LIKE '%etb%' 
+          OR LOWER(produto) LIKE '%elite trainer%' 
+          OR LOWER(produto) LIKE '%treinador%'
+        )
+    `).run();
+
+    // 6. Remove produtos onde o desconto é absurdo (> 80%) e preco_por < 50
+    const res6 = db.prepare(`
+      DELETE FROM historico_produtos_valores 
       WHERE preco_de IS NOT NULL 
-        AND preco_de > 50 
+        AND preco_de > 60 
         AND preco_por <= (preco_de * 0.20)
     `).run();
 
-    const totalLimpos = (res1.changes || 0) + (res2.changes || 0) + (res3.changes || 0);
+    // 7. Limpa também registros em logs para não serem remigrados futuramente
+    try {
+      db.prepare(`
+        DELETE FROM logs 
+        WHERE preco_por IS NOT NULL 
+          AND (
+            preco_por < 12.0
+            OR (preco_por <= 45 AND (LOWER(produto) LIKE '%30 anos%' OR LOWER(produto) LIKE '%poster%'))
+            OR (preco_por < 55 AND (LOWER(produto) LIKE '%box%' OR LOWER(produto) LIKE '%zeraora%'))
+            OR (preco_por < 140 AND (LOWER(produto) LIKE '%display%' OR LOWER(produto) LIKE '%booster box%'))
+            OR (preco_por < 160 AND (LOWER(produto) LIKE '%etb%' OR LOWER(produto) LIKE '%treinador%'))
+          )
+      `).run();
+    } catch {}
+
+    const totalLimpos = (res1.changes || 0) + (res2.changes || 0) + (res3.changes || 0) + 
+                        (res4.changes || 0) + (res5.changes || 0) + (res6.changes || 0);
     if (totalLimpos > 0) {
-      console.log(`[Database] Limpeza de preços TCG: ${totalLimpos} registros corrompidos/falsos positivos removidos.`);
+      console.log(`[Database] Limpeza profunda de preços TCG: ${totalLimpos} registros corrompidos/falsos positivos removidos.`);
     }
     return totalLimpos;
   } catch (err: unknown) {
