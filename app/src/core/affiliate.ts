@@ -365,22 +365,39 @@ export function buildAffiliateUrl(
   rawUrl: string,
   mattWord: string,
   mattTool: string,
-  shortSocialUrl?: string
+  shortSocialUrl?: string,
+  fallbackSearchTerm?: string
 ): string {
   try {
     const urlObj = new URL(rawUrl);
 
-    // Se for vitrine de terceiros, perfil social ou cupom sem produto, redireciona para a vitrine do Eduardo
+    const isTermoProduto = Boolean(
+      fallbackSearchTerm &&
+      fallbackSearchTerm.trim().length > 3 &&
+      !/cupo(?:m|ns)|desconto|off\b|resgate|passo a passo|entre no app|recomenda[çc][õo]es|vitrine|perfil|minhas listas/i.test(fallbackSearchTerm)
+    );
+
+    // Se for vitrine de terceiros, perfil social ou cupom sem produto:
     if (urlObj.pathname.includes('/social/') || urlObj.pathname.startsWith('/cupons')) {
+      if (isTermoProduto && fallbackSearchTerm) {
+        const termoBusca = fallbackSearchTerm.replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ').replace(/\s+/g, ' ').trim();
+        const slugBusca = encodeURIComponent(termoBusca).replace(/%20/g, '-');
+        return `https://lista.mercadolivre.com.br/${slugBusca}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(mattWord)}&matt_tool=${encodeURIComponent(mattTool)}&forceInApp=true`;
+      }
       if (shortSocialUrl && shortSocialUrl.trim().startsWith('http')) {
         return shortSocialUrl.trim();
       }
       return `https://www.mercadolivre.com.br/social/${mattWord}?matt_word=${mattWord}&matt_tool=${mattTool}&forceInApp=true`;
     }
 
-    // Se for um link de encurtador (meli.la / ml.la) que não expandiu para produto, nunca anexa query params diretamente
+    // Se for um link de encurtador (meli.la / ml.la) que não expandiu para produto:
     const host = urlObj.hostname.toLowerCase();
     if (host.includes('meli.la') || host.includes('ml.la')) {
+      if (isTermoProduto && fallbackSearchTerm) {
+        const termoBusca = fallbackSearchTerm.replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ').replace(/\s+/g, ' ').trim();
+        const slugBusca = encodeURIComponent(termoBusca).replace(/%20/g, '-');
+        return `https://lista.mercadolivre.com.br/${slugBusca}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(mattWord)}&matt_tool=${encodeURIComponent(mattTool)}&forceInApp=true`;
+      }
       if (shortSocialUrl && shortSocialUrl.trim().startsWith('http')) {
         return shortSocialUrl.trim();
       }
@@ -408,9 +425,11 @@ export function buildAffiliateUrl(
 /**
  * Encurta uma URL longa de afiliado utilizando a API interna oficial do Mercado Livre com cookie
  */
-export async function shortenToMeli(url: string, cookie: string, tag = 'myshoplist'): Promise<string | null> {
+export async function shortenToMeli(url: string, cookie: string, tag = 'caed1312314'): Promise<string | null> {
   const cleanCookie = cookie.trim();
   if (!cleanCookie) return null;
+
+  const effectiveTag = (tag && tag !== 'myshoplist') ? tag.trim() : 'caed1312314';
 
   try {
     const controller = new AbortController();
@@ -429,7 +448,7 @@ export async function shortenToMeli(url: string, cookie: string, tag = 'myshopli
       },
       body: JSON.stringify({
         urls: [url],
-        tag: tag || 'myshoplist'
+        tag: effectiveTag
       }),
       signal: controller.signal
     });
@@ -441,19 +460,25 @@ export async function shortenToMeli(url: string, cookie: string, tag = 'myshopli
     }
 
     const text = await res.text();
+
+    try {
+      const data = JSON.parse(text);
+      if (data?.urls?.[0]?.short_url) {
+        return data.urls[0].short_url;
+      }
+      if (data?.short_url) {
+        return data.short_url;
+      }
+      if (data?.urls?.[0]?.url) {
+        return data.urls[0].url;
+      }
+    } catch {}
+
     // Procurar URLs no formato meli.la ou mercadolivre.com/sec/
     const match = text.match(/https?:\/\/(?:meli\.la|mercadolivre\.com\/sec\/)[a-zA-Z0-9_-]+/i);
     if (match) {
       return match[0];
     }
-
-    try {
-      const data = JSON.parse(text);
-      if (data.short_url) return data.short_url;
-      if (data.urls && data.urls[0] && (data.urls[0].short_url || data.urls[0].url)) {
-        return data.urls[0].short_url || data.urls[0].url;
-      }
-    } catch {}
 
     return null;
   } catch (err: any) {
@@ -655,7 +680,8 @@ export async function processMessageText(
 
     if (isMercadoLivreUrl(resolvedUrl)) {
       contemMercadoLivre = true;
-      const affiliateUrl = buildAffiliateUrl(resolvedUrl, mattWord, mattTool, shortSocialUrl);
+      const hintProduto = (cleanedText.split('\n')[0] || '').replace(/https?:\/\/[^\s]+/gi, '').replace(/[*_~]/g, '').trim();
+      const affiliateUrl = buildAffiliateUrl(resolvedUrl, mattWord, mattTool, shortSocialUrl, hintProduto);
 
       let finalLink = affiliateUrl;
       const isAlreadyShort = finalLink.includes('meli.la/') || finalLink.includes('mercadolivre.com/sec/');

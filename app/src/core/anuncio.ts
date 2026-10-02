@@ -1117,8 +1117,12 @@ export async function extrairDadosAnuncio(
         linkAfiliadoFinal = `https://lista.mercadolivre.com.br/${slugBusca}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(config.mattWord)}&matt_tool=${encodeURIComponent(config.mattTool)}`;
       } else {
         const isSocialOrGeneric = targetUrl.includes('/social/') || targetUrl.includes('/cupons');
-        if (isSocialOrGeneric && config.linkVitrineCurto && config.linkVitrineCurto.startsWith('http')) {
+        if (isSocialOrGeneric && (!titulo || titulo.length <= 3) && config.linkVitrineCurto && config.linkVitrineCurto.startsWith('http')) {
           linkAfiliadoFinal = config.linkVitrineCurto.trim();
+        } else if (isSocialOrGeneric && titulo && titulo.length > 3) {
+          const termoBusca = titulo.replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ').replace(/\s+/g, ' ').trim();
+          const slugBusca = encodeURIComponent(termoBusca).replace(/%20/g, '-');
+          linkAfiliadoFinal = `https://lista.mercadolivre.com.br/${slugBusca}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(config.mattWord)}&matt_tool=${encodeURIComponent(config.mattTool)}&forceInApp=true`;
         } else {
           const affiliateLongUrl = buildAffiliateUrl(
             targetUrl,

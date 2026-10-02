@@ -1094,7 +1094,7 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
 
       {/* Sub-Aba: Central de Ajustes & Coordenação Completa */}
       {subTab === 'config' && (
-        <form onSubmit={handleSalvarConfig} className="space-y-6 max-w-4xl mx-auto">
+        <form onSubmit={handleSalvarConfig} className="space-y-6 w-full animate-fadeIn">
           {/* Topo com Título e Botão de Salvar Superior */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-4">
             <div>

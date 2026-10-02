@@ -6,7 +6,15 @@ import {
   sanearPrecoHistoricoTCG,
   type PrecoSaneadoResult
 } from './pricing.js';
-import { getConfig, getHistoricoProdutosConsolidado } from '../db/database.js';
+import {
+  getConfig,
+  getHistoricoProdutosConsolidado,
+  inserirOfertaHistorico,
+  getItensOcultosRadar,
+  ocultarOuDeletarItemRadar,
+  normalizarNomeProduto,
+  extrairIdentidadeCanonicaTCG
+} from '../db/database.js';
 import { CONFIG } from '../config.js';
 
 export {
@@ -73,6 +81,8 @@ export interface ResultadoRadarItem extends MeliItemBusca {
   parcelamentoFormatado: string;
   copyCliente: string;
   copyGrupo: string;
+  ultimaAtualizacao?: string;
+  origemRegistro?: string;
 }
 
 /**
@@ -624,7 +634,26 @@ export async function buscarNoRadar(
         }
       };
 
+      // Ingestão Ativa no Radar: Salva automaticamente cotação no histórico oficial
+      if (precoNumerico >= 12.0) {
+        try {
+          inserirOfertaHistorico({
+            produto: tituloFinal,
+            precoPor: precoNumerico,
+            precoDe: precoDeNumerico || undefined,
+            link: permalinkLimpo,
+            imagemUrl: fotoResolvida,
+            grupo: 'Radar TCG (URL Inspecionada)',
+            origem: 'radar_url'
+          });
+        } catch (e) {
+          console.warn('[Radar TCG] Aviso ao salvar cotação de URL:', e);
+        }
+      }
+
       const enriquecido = enriquecerItemRadar(mockBuscaItem);
+      enriquecido.origemRegistro = 'radar_url';
+      enriquecido.ultimaAtualizacao = new Date().toISOString();
       return { ok: true, total: 1, itens: [enriquecido] };
     }
 
@@ -651,15 +680,49 @@ export async function buscarNoRadar(
           const data = (await res.json()) as { results?: MeliItemBusca[] };
           const rawItems = data.results || [];
           const filtrados = filtrarProdutosConfiaveis(rawItems, filtros);
-          itensMeliAoVivo = filtrados.map(enriquecerItemRadar);
+
+          // Ingestão Ativa no Radar: Registra produtos confiáveis encontrados
+          for (const item of filtrados) {
+            try {
+              inserirOfertaHistorico({
+                produto: item.title,
+                precoPor: item.price,
+                precoDe: item.original_price || undefined,
+                link: item.permalink,
+                imagemUrl: item.thumbnail,
+                grupo: 'Radar TCG (Busca)',
+                origem: 'radar_busca'
+              });
+            } catch {}
+          }
+
+          itensMeliAoVivo = filtrados.map((it) => {
+            const enr = enriquecerItemRadar(it);
+            enr.origemRegistro = 'radar_busca';
+            enr.ultimaAtualizacao = new Date().toISOString();
+            return enr;
+          });
         }
       } catch {
         // Silencioso: segue para base híbrida enriquecida
       }
     }
 
+    const itensOcultos = getItensOcultosRadar();
+    const isItemBloqueado = (id: string, title: string, chaveCanonica?: string): boolean => {
+      if (id && itensOcultos.ids.has(id.toLowerCase())) return true;
+      if (id && itensOcultos.chaves.has(id.toLowerCase())) return true;
+      if (chaveCanonica && itensOcultos.chaves.has(chaveCanonica.toLowerCase())) return true;
+      const limpo = normalizarNomeProduto(title);
+      if (limpo && itensOcultos.produtosLimpos.has(limpo)) return true;
+      const canonico = extrairIdentidadeCanonicaTCG(title);
+      if (canonico?.chaveCanonica && itensOcultos.chaves.has(canonico.chaveCanonica.toLowerCase())) return true;
+      return false;
+    };
+
     if (itensMeliAoVivo.length > 0) {
-      return { ok: true, total: itensMeliAoVivo.length, itens: itensMeliAoVivo };
+      const aoVivoFiltrados = itensMeliAoVivo.filter(i => !isItemBloqueado(i.id, i.title));
+      return { ok: true, total: aoVivoFiltrados.length, itens: aoVivoFiltrados };
     }
 
     // 3. Base Híbrida: Pesquisa na base consolidada do SQLite + Catálogo Canônico
@@ -669,6 +732,9 @@ export async function buscarNoRadar(
 
     const itensMapeados: MeliItemBusca[] = [];
     for (const p of resBanco.itens) {
+      if (isItemBloqueado(p.chave_canonica || '', p.produto, p.chave_canonica)) {
+        continue;
+      }
       const pisoCategoria = obterPrecoMinimoCategoriaTCG(p.produto);
       let precoValido = p.menor_preco;
 
@@ -725,6 +791,7 @@ export async function buscarNoRadar(
 
     // 4. Se a busca local retornou poucos itens, complementar com o Catálogo Canônico TCG
     const itensCanonicosFiltrados = CATALOGO_CANONICO_TCG.filter((item) => {
+      if (isItemBloqueado(item.id, item.title)) return false;
       const itemTitleLower = item.title.toLowerCase();
       if (palavrasBusca.length === 0) return true;
       return palavrasBusca.some((p) => itemTitleLower.includes(p));
@@ -741,7 +808,7 @@ export async function buscarNoRadar(
 
     // Se ainda assim não encontrou nenhum por match específico de palavra, mas o usuário buscou termo TCG genérico
     if (itensMapeados.length === 0 && (termoLower.includes('pokemon') || termoLower.includes('tcg') || termoLower.includes('copag') || termoLower.includes('box'))) {
-      itensMapeados.push(...CATALOGO_CANONICO_TCG.slice(0, 6));
+      itensMapeados.push(...CATALOGO_CANONICO_TCG.filter(it => !isItemBloqueado(it.id, it.title)).slice(0, 6));
     }
 
     // 5. Filtragem semântica estrita e ordenação inteligente por relevância
@@ -798,7 +865,8 @@ export async function buscarNoRadar(
       baseFinal = candidatosRelevantes.map((ip) => ip.item);
     }
 
-    // Aplicar filtros de confiabilidade do usuário
+    // Aplicar filtros de confiabilidade do usuário e exclusões
+    baseFinal = baseFinal.filter((it) => !isItemBloqueado(it.id, it.title));
     const filtrados = filtrarProdutosConfiaveis(baseFinal, filtros);
     const enriquecidos = filtrados.map(enriquecerItemRadar);
 
@@ -812,3 +880,38 @@ export async function buscarNoRadar(
     return { ok: false, total: 0, itens: [], erro: msg };
   }
 }
+
+/**
+ * Registra ou atualiza manualmente uma cotação no Radar de Preços TCG
+ */
+export function registrarCotacaoManualRadar(item: {
+  produto: string;
+  precoPor: number;
+  precoDe?: number;
+  precoUnitario?: number;
+  link?: string;
+  imagemUrl?: string;
+}): boolean {
+  return inserirOfertaHistorico({
+    produto: item.produto,
+    precoPor: item.precoPor,
+    precoDe: item.precoDe,
+    precoUnitario: item.precoUnitario,
+    link: item.link,
+    imagemUrl: item.imagemUrl,
+    grupo: 'Radar TCG (Cotação Manual)',
+    origem: 'radar_manual'
+  });
+}
+
+/**
+ * Exclui e oculta permanentemente um item do Radar TCG
+ */
+export function excluirItemRadar(params: {
+  id?: string | number;
+  chaveCanonica?: string;
+  produto: string;
+}): boolean {
+  return ocultarOuDeletarItemRadar(params);
+}
+

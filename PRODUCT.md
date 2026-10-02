@@ -45,3 +45,11 @@ Não é um SaaS público multitenant nem uma ferramenta de disparo em massa (spa
    - Cockpit com métricas de postagens na última hora e total diário.
    - Feed de atividades em tempo real via WebSocket.
    - Teste instantâneo de conexão com a API de Afiliados do Mercado Livre diretamente no painel.
+
+5. **Radar de Preços TCG & Ingestão Ativa de Cotações**:
+   - Monitor de cotações em tempo real com fotos HD e links de afiliados para WhatsApp (1-a-1 e grupos).
+   - Ingestão contínua e recíproca: produtos pesquisados no radar ou postados pelo bot são salvos automaticamente no histórico.
+   - Saneamento rigoroso com pisos de mercado Copag para eliminar falsos positivos de parsing.
+   - Exclusão com lista negra persistente (`radar_itens_ocultos`) para expurgar itens indesejados sem que voltem a aparecer.
+   - Carga inicial canônica e ferramenta de recalibração instantânea da base de dados.
+

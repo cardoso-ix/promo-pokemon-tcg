@@ -18,7 +18,8 @@ import {
   Tag,
   Filter,
   ArrowUpDown,
-  RotateCcw
+  RotateCcw,
+  Trash2
 } from 'lucide-react';
 import type { RadarItem, RadarBuscaFiltros } from '../types/index.ts';
 import { api } from '../services/api.ts';
@@ -52,6 +53,13 @@ export const RadarPrecosView: React.FC = () => {
   // Estado de feedback de cópia por item
   const [copiadoId, setCopiadoId] = useState<string | null>(null);
   const [modalCopy, setModalCopy] = useState<{ titulo: string; texto: string } | null>(null);
+
+  // Estado para registro de cotações e recalibração
+  const [salvandoId, setSalvandoId] = useState<string | null>(null);
+  const [salvoId, setSalvoId] = useState<string | null>(null);
+  const [deletandoId, setDeletandoId] = useState<string | null>(null);
+  const [recalibrando, setRecalibrando] = useState(false);
+  const [mensagemSucesso, setMensagemSucesso] = useState<string | null>(null);
 
   const sugestoesRapidas = [
     'Pokemon TCG',
@@ -175,6 +183,80 @@ export const RadarPrecosView: React.FC = () => {
     }
   };
 
+  const registrarCotacao = async (item: RadarItem) => {
+    setSalvandoId(item.id);
+    try {
+      const res = await api.registrarCotacaoRadar({
+        produto: item.title,
+        precoPor: item.price,
+        precoDe: item.original_price || undefined,
+        link: item.permalink,
+        imagemUrl: item.thumbnail
+      });
+      if (res.ok) {
+        setSalvoId(item.id);
+        setTimeout(() => setSalvoId(null), 3000);
+      } else {
+        setErro(res.error || 'Não foi possível registrar cotação.');
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setErro(msg || 'Erro ao registrar cotação no histórico.');
+    } finally {
+      setSalvandoId(null);
+    }
+  };
+
+  const handleDeletarItem = async (item: RadarItem) => {
+    if (!window.confirm(`Deseja remover "${item.title}" do Radar? O item será excluído da lista e não voltará a aparecer nas buscas.`)) {
+      return;
+    }
+    setDeletandoId(item.id);
+    setErro(null);
+    try {
+      const res = await api.deletarItemRadar({
+        id: item.id,
+        chaveCanonica: item.id.startsWith('TCG_CANON_') || item.id.includes('__') ? item.id : undefined,
+        produto: item.title
+      });
+      if (res.ok) {
+        setItens((prev) => prev.filter((i) => i.id !== item.id));
+        setMensagemSucesso(`"${item.title.slice(0, 35)}..." excluído do Radar com sucesso!`);
+        setTimeout(() => setMensagemSucesso(null), 4000);
+      } else {
+        setErro(res.error || 'Falha ao remover item do Radar.');
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setErro(msg || 'Erro ao remover item do Radar.');
+    } finally {
+      setDeletandoId(null);
+    }
+  };
+
+  const recalibrarHistorico = async () => {
+    if (!window.confirm('Deseja purgar os registros antigos incorretos e recalibrar com o Catálogo Canônico Oficial?')) {
+      return;
+    }
+    setRecalibrando(true);
+    setErro(null);
+    try {
+      const res = await api.recalibrarHistoricoRadar();
+      if (res.ok) {
+        setMensagemSucesso(`Base recalibrada com sucesso! ${res.deletados || 0} registros legados purgados e ${res.semeados || 0} cotações oficiais ativadas.`);
+        setTimeout(() => setMensagemSucesso(null), 5000);
+        executarBusca('Pokemon TCG');
+      } else {
+        setErro(res.error || 'Falha ao recalibrar base histórica.');
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setErro(msg || 'Erro ao recalibrar base histórica.');
+    } finally {
+      setRecalibrando(false);
+    }
+  };
+
   // Itens filtrados no frontend por categoria e faixa de preço dinâmica (Min / Max)
   const itensExibidos = useMemo(() => {
     const minVal = precoMinCustom ? parseFloat(precoMinCustom.replace(',', '.')) : null;
@@ -231,33 +313,62 @@ export const RadarPrecosView: React.FC = () => {
             </p>
           </div>
 
-          {/* Alternador de Modo de Exibição */}
-          <div className="flex items-center gap-1.5 bg-[#070d18] p-1.5 rounded-xl border border-white/10 self-start md:self-auto shadow-inner">
+          {/* Alternador de Modo de Exibição & Ações Globais */}
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
             <button
-              onClick={() => setModoVisualizacao('cards')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                modoVisualizacao === 'cards'
-                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
-                  : 'text-slate-400 hover:text-white'
-              }`}
+              onClick={recalibrarHistorico}
+              disabled={recalibrando}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/[0.04] hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all shadow-sm disabled:opacity-50"
+              title="Limpar registros defeituosos antigos e semear catálogo canônico de referência"
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Cards Compactos</span>
+              {recalibrando ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Recalibrando...</span>
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Recalibrar Base</span>
+                </>
+              )}
             </button>
-            <button
-              onClick={() => setModoVisualizacao('tabela')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                modoVisualizacao === 'tabela'
-                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <TableIcon className="w-3.5 h-3.5" />
-              <span>Tabela de Cotação</span>
-            </button>
+
+            <div className="flex items-center gap-1.5 bg-[#070d18] p-1.5 rounded-xl border border-white/10 shadow-inner">
+              <button
+                onClick={() => setModoVisualizacao('cards')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  modoVisualizacao === 'cards'
+                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Cards Compactos</span>
+              </button>
+              <button
+                onClick={() => setModoVisualizacao('tabela')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  modoVisualizacao === 'tabela'
+                    ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <TableIcon className="w-3.5 h-3.5" />
+                <span>Tabela de Cotação</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Alerta de Sucesso na Recalibração */}
+      {mensagemSucesso && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-sm animate-fadeIn">
+          <Check className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+          <span>{mensagemSucesso}</span>
+        </div>
+      )}
 
       {/* Caixa de Pesquisa e Filtros */}
       <div className="bg-[#0b1325]/90 backdrop-blur-md rounded-2xl border border-white/[0.08] p-5 shadow-xl space-y-4">
@@ -674,14 +785,15 @@ export const RadarPrecosView: React.FC = () => {
                     )}
                   </button>
 
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-4 gap-1.5">
                     <button
                       onClick={() => copiarTexto(item.id, item.copyGrupo, 'grupo')}
-                      className={`py-1 px-2 rounded-lg text-[11px] font-medium border flex items-center justify-center gap-1 transition-all ${
+                      className={`py-1 px-1 rounded-lg text-[11px] font-medium border flex items-center justify-center gap-1 transition-all ${
                         copiadoGrupo
                           ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                           : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border-white/[0.08]'
                       }`}
+                      title="Copiar copy para grupo de ofertas"
                     >
                       {copiadoGrupo ? (
                         <>
@@ -691,7 +803,32 @@ export const RadarPrecosView: React.FC = () => {
                       ) : (
                         <>
                           <Share2 className="w-3 h-3 text-slate-400" />
-                          <span>Copy Grupo</span>
+                          <span>Grupo</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => registrarCotacao(item)}
+                      disabled={salvandoId === item.id}
+                      className={`py-1 px-1 rounded-lg text-[11px] font-medium border flex items-center justify-center gap-1 transition-all ${
+                        salvoId === item.id
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm'
+                          : 'bg-white/[0.04] hover:bg-emerald-500/10 text-emerald-300/80 hover:text-emerald-300 border-white/[0.08]'
+                      }`}
+                      title="Registrar / Salvar esta cotação no histórico oficial"
+                    >
+                      {salvandoId === item.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                      ) : salvoId === item.id ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span>Salvo!</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                          <span>Cotação</span>
                         </>
                       )}
                     </button>
@@ -700,12 +837,28 @@ export const RadarPrecosView: React.FC = () => {
                       href={item.linkVerNoMl || item.linkAfiliado || item.permalink}
                       target="_blank"
                       rel="noreferrer"
-                      className="py-1 px-2 rounded-lg text-[11px] font-medium bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.08] flex items-center justify-center gap-1 transition-all hover:text-cyan-300"
+                      className="py-1 px-1 rounded-lg text-[11px] font-medium bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/[0.08] flex items-center justify-center gap-1 transition-all hover:text-cyan-300"
                       title="Abrir anúncios deste produto no Mercado Livre"
                     >
                       <ExternalLink className="w-3 h-3" />
-                      <span>Ver no ML</span>
+                      <span>Ver ML</span>
                     </a>
+
+                    <button
+                      onClick={() => handleDeletarItem(item)}
+                      disabled={deletandoId === item.id}
+                      className="py-1 px-1 rounded-lg text-[11px] font-medium bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 hover:border-rose-500/40 flex items-center justify-center gap-1 transition-all"
+                      title="Excluir este item do Radar TCG e não voltar a exibir"
+                    >
+                      {deletandoId === item.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-rose-400" />
+                      ) : (
+                        <>
+                          <Trash2 className="w-3 h-3 text-rose-400" />
+                          <span className="hidden sm:inline">Excluir</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -844,6 +997,31 @@ export const RadarPrecosView: React.FC = () => {
                             <span className="hidden xl:inline">{copiadoId === `${item.id}_link` ? 'Copiado!' : 'Link'}</span>
                           </button>
 
+                          <button
+                            onClick={() => registrarCotacao(item)}
+                            disabled={salvandoId === item.id}
+                            className={`px-2 py-1.5 rounded-lg text-[11px] font-medium border transition-all flex items-center gap-1 ${
+                              salvoId === item.id
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm'
+                                : 'bg-white/[0.04] text-emerald-300/80 hover:text-emerald-300 border-white/[0.08] hover:bg-emerald-500/10'
+                            }`}
+                            title="Registrar / Salvar esta cotação no histórico oficial"
+                          >
+                            {salvandoId === item.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                            ) : salvoId === item.id ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-400" />
+                                <span className="hidden xl:inline">Salvo!</span>
+                              </>
+                            ) : (
+                              <>
+                                <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                                <span className="hidden xl:inline">Cotação</span>
+                              </>
+                            )}
+                          </button>
+
                           <a
                             href={item.linkVerNoMl || item.linkAfiliado || item.permalink}
                             target="_blank"
@@ -853,6 +1031,19 @@ export const RadarPrecosView: React.FC = () => {
                           >
                             <ExternalLink className="w-3 h-3" />
                           </a>
+
+                          <button
+                            onClick={() => handleDeletarItem(item)}
+                            disabled={deletandoId === item.id}
+                            className="px-2 py-1.5 rounded-lg text-[11px] font-medium border border-rose-500/20 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 hover:border-rose-500/40 transition-all flex items-center justify-center"
+                            title="Excluir item do Radar TCG e não voltar a exibir"
+                          >
+                            {deletandoId === item.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin text-rose-400" />
+                            ) : (
+                              <Trash2 className="w-3 h-3" />
+                            )}
+                          </button>
                         </div>
                       </td>
                     </tr>

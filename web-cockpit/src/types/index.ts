@@ -36,6 +36,8 @@ export interface RadarItem {
   fotoHd: string;
   copyCliente: string;
   copyGrupo: string;
+  ultimaAtualizacao?: string;
+  origemRegistro?: string;
   shipping?: {
     free_shipping?: boolean;
     logistic_type?: string;

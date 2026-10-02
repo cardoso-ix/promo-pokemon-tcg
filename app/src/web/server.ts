@@ -66,7 +66,16 @@ import {
 } from './auth.js';
 import { setupAnalyticsModule } from '../analytics/index.js';
 import { meliService } from '../analytics/meli.service.js';
-import { buscarNoRadar, formatarCopyCliente, formatarCopyGrupo, type FiltrosRadar, type ResultadoRadarItem } from '../core/radar.js';
+import {
+  buscarNoRadar,
+  formatarCopyCliente,
+  formatarCopyGrupo,
+  registrarCotacaoManualRadar,
+  excluirItemRadar,
+  type FiltrosRadar,
+  type ResultadoRadarItem
+} from '../core/radar.js';
+import { purgarRegistrosCorrompidosHistorico, semearCatalogoCanonicoTCG } from '../db/database.js';
 
 import fs from 'node:fs';
 
@@ -1055,6 +1064,68 @@ export async function createServer() {
     const copy = tipo === 'grupo' ? formatarCopyGrupo(item, linkFinal) : formatarCopyCliente(item, linkFinal);
 
     return { ok: true, copy };
+  });
+
+  app.post<{
+    Body: {
+      produto: string;
+      precoPor: number;
+      precoDe?: number;
+      precoUnitario?: number;
+      link?: string;
+      imagemUrl?: string;
+    };
+  }>('/api/radar/registrar-cotacao', async (req, reply) => {
+    const { produto, precoPor, precoDe, precoUnitario, link, imagemUrl } = req.body || {};
+    if (!produto || !precoPor) {
+      return reply.status(400).send({ ok: false, error: 'Produto e Preço são obrigatórios.' });
+    }
+
+    const sucesso = registrarCotacaoManualRadar({
+      produto,
+      precoPor,
+      precoDe,
+      precoUnitario,
+      link,
+      imagemUrl
+    });
+
+    if (!sucesso) {
+      return reply.status(400).send({ ok: false, error: 'Não foi possível registrar cotação (preço incompatível com piso ou produto inválido).' });
+    }
+
+    return { ok: true, mensagem: 'Cotação registrada com sucesso no histórico oficial!' };
+  });
+
+  app.post<{
+    Body: {
+      id?: string | number;
+      chaveCanonica?: string;
+      produto: string;
+    };
+  }>('/api/radar/deletar-item', async (req, reply) => {
+    const { id, chaveCanonica, produto } = req.body || {};
+    if (!produto && !chaveCanonica && !id) {
+      return reply.status(400).send({ ok: false, error: 'Identificador do produto não fornecido.' });
+    }
+
+    const sucesso = excluirItemRadar({ id, chaveCanonica, produto: produto || '' });
+    if (!sucesso) {
+      return reply.status(500).send({ ok: false, error: 'Falha ao excluir item do Radar TCG.' });
+    }
+
+    return { ok: true, mensagem: 'Item excluído com sucesso do Radar e adicionado à lista de restrição!' };
+  });
+
+  app.post('/api/radar/recalibrar-historico', async (_req, reply) => {
+    try {
+      const deletados = purgarRegistrosCorrompidosHistorico();
+      const semeados = semearCatalogoCanonicoTCG();
+      return { ok: true, deletados, semeados, mensagem: 'Base histórica recalibrada com sucesso com referências canônicas!' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
   });
 
   // Módulo de Ingestão Analítica (Mercado Livre + Meta Ads + PostgreSQL Drizzle)

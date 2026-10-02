@@ -22,6 +22,7 @@ import {
   getChatName,
   registrarProdutoReplicado,
   consultarCooldownProduto,
+  inserirOfertaHistorico,
   db
 } from '../db/database.js';
 import { processMessageText, downloadProductImage } from '../core/affiliate.js';
@@ -822,7 +823,12 @@ export class WhatsAppManager {
       });
 
       const linkMatches = novoTexto.match(/https?:\/\/[^\s]+/gi);
-      const linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
+      let linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
+      if (hasProdutoEspecifico && (linkAfiliadoFinal === linkVitrineCurto || linkAfiliadoFinal.includes('/social/')) && dadosOferta.produto && dadosOferta.produto !== 'Colecionável Pokémon TCG') {
+        const termoBusca = dadosOferta.produto.replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ').replace(/\s+/g, ' ').trim();
+        const slugBusca = encodeURIComponent(termoBusca).replace(/%20/g, '-');
+        linkAfiliadoFinal = `https://lista.mercadolivre.com.br/${slugBusca}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(mattWord)}&matt_tool=${encodeURIComponent(mattTool)}&forceInApp=true`;
+      }
       const parcelamentoExtraido = extrairParcelamento(rawText);
 
       textoFinalPublicar = formatarMensagemReplicada({
@@ -1006,6 +1012,40 @@ export class WhatsAppManager {
 
     if (log) {
       this.notifyMessage(log);
+    }
+
+    // Ingestão Ativa no Histórico TCG: Toda oferta enviada com sucesso é salva e atualizada no histórico
+    if (enviosSucesso > 0) {
+      try {
+        const dadosExt = extrairDadosOferta(textoFinalPublicar || rawText);
+        if (dadosExt && dadosExt.produto && dadosExt.valorPor) {
+          const precoNumerico = Number(
+            String(dadosExt.valorPor).replace(/[^\d,\.]/g, '').replace(/\./g, '').replace(',', '.')
+          ) || 0;
+          const precoDeNumerico = dadosExt.valorDe
+            ? Number(String(dadosExt.valorDe).replace(/[^\d,\.]/g, '').replace(/\./g, '').replace(',', '.'))
+            : undefined;
+          const precoUnitarioNumerico = dadosExt.valorUnitario
+            ? Number(String(dadosExt.valorUnitario).replace(/[^\d,\.]/g, '').replace(/\./g, '').replace(',', '.'))
+            : undefined;
+
+          if (precoNumerico >= 12.0) {
+            inserirOfertaHistorico({
+              produto: dadosExt.produto,
+              precoPor: precoNumerico,
+              precoDe: precoDeNumerico,
+              precoUnitario: precoUnitarioNumerico,
+              link: dadosExt.link || resolvedProductUrl || undefined,
+              imagemUrl: productImageUrl || undefined,
+              grupo: destinoChatId || 'Grupo Pokémon TCG',
+              origem: 'robo_envio'
+            });
+            console.log(`[Histórico TCG] Oferta registrada automaticamente: "${dadosExt.produto}" por R$ ${precoNumerico.toFixed(2)}`);
+          }
+        }
+      } catch (eHist) {
+        console.warn('[WhatsApp] Aviso ao registrar oferta no histórico TCG:', eHist);
+      }
     }
   }
 }

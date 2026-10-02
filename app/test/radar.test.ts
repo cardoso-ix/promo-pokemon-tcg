@@ -10,10 +10,19 @@ import {
   resolverLinkVerNoMl,
   obterPrecoMinimoCategoriaTCG,
   sanearPrecoHistoricoTCG,
+  registrarCotacaoManualRadar,
+  excluirItemRadar,
   type MeliItemBusca,
   type FiltrosRadar
 } from '../src/core/radar.js';
-import { limparRegistrosPrecosInvalidos } from '../src/db/database.js';
+import {
+  limparRegistrosPrecosInvalidos,
+  purgarRegistrosCorrompidosHistorico,
+  semearCatalogoCanonicoTCG,
+  getHistoricoProdutosConsolidado,
+  inserirOfertaHistorico,
+  restaurarItemOcultoRadar
+} from '../src/db/database.js';
 
 describe('Radar de Preços TCG - Core & Filtros de Confiabilidade', () => {
   const mockItems: MeliItemBusca[] = [
@@ -344,5 +353,73 @@ describe('Radar de Preços TCG - Core & Filtros de Confiabilidade', () => {
     const total = limparRegistrosPrecosInvalidos();
     assert.ok(typeof total === 'number', 'Deve retornar número de registros limpos');
     assert.ok(total >= 0);
+  });
+
+  it('registrarCotacaoManualRadar deve registrar e atualizar cotações saneadas no histórico', () => {
+    const res = registrarCotacaoManualRadar({
+      produto: 'Box Pokémon TCG Charizard ex Fogo Supremo Copag',
+      precoPor: 169.90,
+      precoDe: 219.90,
+      link: 'https://lista.mercadolivre.com.br/box-charizard-ex-pokemon-tcg-copag',
+      imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_892345-MLB72910482011_112023-F.webp'
+    });
+    assert.strictEqual(res, true, 'Deve salvar cotação válida com sucesso');
+
+    // Rejeitar registro com preço irrisório
+    const resInvalido = registrarCotacaoManualRadar({
+      produto: 'Box Pokémon Zeraora',
+      precoPor: 5.00
+    });
+    assert.strictEqual(resInvalido, false, 'Deve rejeitar cotação com valor anômalo');
+
+    // Rejeitar frases de clickbait que não são produtos
+    const resClickbait = inserirOfertaHistorico({
+      produto: 'Colecionadores de plantão! Temos a Pokémon Coleção Mega Zygarde ex Box',
+      precoPor: 122.00
+    });
+    assert.strictEqual(resClickbait, false, 'Deve rejeitar frases de clickbait');
+  });
+
+  it('purgarRegistrosCorrompidosHistorico e semearCatalogoCanonicoTCG devem calibrar a base oficial', () => {
+    const purgados = purgarRegistrosCorrompidosHistorico();
+    assert.ok(typeof purgados === 'number');
+
+    const semeados = semearCatalogoCanonicoTCG();
+    assert.ok(semeados >= 10, 'Deve semear pelo menos 10 produtos canônicos TCG oficiais');
+
+    const consolidado = getHistoricoProdutosConsolidado('Display Booster Box 360', 10, 0);
+    assert.ok(consolidado.itens.length >= 1, 'Deve encontrar o produto canônico no histórico');
+    assert.ok(consolidado.itens[0].ultimo_preco >= 140, 'Preço deve ser coerente com o piso');
+  });
+
+  it('excluirItemRadar deve remover produto do histórico e impedir retorno nas buscas', async () => {
+    const nomeTeste = 'Box Teste Temporario Zygarde Delete TCG';
+    
+    // 1. Cadastrar cotação de teste
+    const inserido = registrarCotacaoManualRadar({
+      produto: nomeTeste,
+      precoPor: 119.90,
+      precoDe: 149.90
+    });
+    assert.strictEqual(inserido, true);
+
+    // 2. Verificar que o produto é encontrado na busca
+    const buscaAntes = await buscarNoRadar('Temporario Zygarde Delete');
+    assert.ok(buscaAntes.ok);
+    const achouAntes = buscaAntes.itens.some(i => i.title.includes('Temporario Zygarde Delete'));
+    assert.strictEqual(achouAntes, true, 'Item deve existir antes de ser excluído');
+
+    // 3. Excluir item pelo nome/chave
+    const deletado = excluirItemRadar({ produto: nomeTeste });
+    assert.strictEqual(deletado, true, 'Função de exclusão deve retornar sucesso');
+
+    // 4. Verificar que a busca agora oculta o item mesmo que buscado diretamente
+    const buscaDepois = await buscarNoRadar('Temporario Zygarde Delete');
+    assert.ok(buscaDepois.ok);
+    const achouDepois = buscaDepois.itens.some(i => i.title.includes('Temporario Zygarde Delete'));
+    assert.strictEqual(achouDepois, false, 'Item deletado NÃO deve aparecer na busca');
+
+    // 5. Limpeza: restaurar item do radar oculto para manter teste idempotente
+    restaurarItemOcultoRadar(nomeTeste);
   });
 });

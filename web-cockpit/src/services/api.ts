@@ -443,6 +443,30 @@ export const api = {
       body: JSON.stringify({ item, tipo, linkAfiliadoPersonalizado })
     }),
 
+  registrarCotacaoRadar: (dados: {
+    produto: string;
+    precoPor: number;
+    precoDe?: number;
+    precoUnitario?: number;
+    link?: string;
+    imagemUrl?: string;
+  }) =>
+    request<{ ok: boolean; mensagem?: string; error?: string }>('/api/radar/registrar-cotacao', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    }),
+
+  recalibrarHistoricoRadar: () =>
+    request<{ ok: boolean; deletados?: number; semeados?: number; mensagem?: string; error?: string }>('/api/radar/recalibrar-historico', {
+      method: 'POST'
+    }),
+
+  deletarItemRadar: (dados: { id?: string | number; chaveCanonica?: string; produto: string }) =>
+    request<{ ok: boolean; mensagem?: string; error?: string }>('/api/radar/deletar-item', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    }),
+
   // --- LOGOUT UNIFICADO ---
   logout: async () => {
     try {

@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { DB_PATH, CONFIG } from '../config.js';
 import { getBrazilToday } from '../utils/date.js';
+import { sanearPrecoHistoricoTCG } from '../core/pricing.js';
 
 export interface ModeloAbertura {
   id: string;
@@ -226,6 +227,19 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_hist_prod_limpo ON historico_produtos_valores(produto_limpo);
     CREATE INDEX IF NOT EXISTS idx_hist_prod_data ON historico_produtos_valores(criado_em);
     CREATE INDEX IF NOT EXISTS idx_hist_prod_preco ON historico_produtos_valores(preco_por);
+
+    CREATE TABLE IF NOT EXISTS radar_itens_ocultos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      item_id TEXT,
+      chave_canonica TEXT,
+      produto TEXT NOT NULL,
+      produto_limpo TEXT NOT NULL,
+      motivo TEXT DEFAULT 'manual',
+      ocultado_em DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_radar_ocultos_chave ON radar_itens_ocultos(chave_canonica);
+    CREATE INDEX IF NOT EXISTS idx_radar_ocultos_prod ON radar_itens_ocultos(produto_limpo);
   `);
 
   // Migração suave para adicionar foto_url se a tabela já existia sem a coluna
@@ -329,11 +343,12 @@ export function initDatabase() {
       db.exec("CREATE INDEX IF NOT EXISTS idx_hist_prod_canonico ON historico_produtos_valores(chave_canonica);");
     } catch {}
 
-    migrarLogsParaHistoricoProdutos();
+    purgarRegistrosCorrompidosHistorico();
+    semearCatalogoCanonicoTCG();
     reprocessarChavesCanonicasHistorico();
     limparRegistrosPrecosInvalidos();
   } catch (errHist: unknown) {
-    console.warn('[Database Migration] Aviso ao migrar/reprocessar histórico de produtos:', errHist);
+    console.warn('[Database Migration] Aviso ao calibrar histórico de produtos TCG:', errHist);
   }
 }
 
@@ -1254,7 +1269,7 @@ function parseMoedaParaNumero(valor: string | number | undefined | null): number
 }
 
 /**
- * Insere um novo registro no histórico de valores postados
+ * Insere ou atualiza um registro no histórico de valores de produtos Pokémon TCG
  */
 export function inserirOfertaHistorico(item: {
   produto: string;
@@ -1268,38 +1283,72 @@ export function inserirOfertaHistorico(item: {
   criadoEm?: string;
 }): boolean {
   try {
-    const nomeOriginal = (item.produto || '').replace(/[\*_~]/g, '').trim();
+    let nomeOriginal = (item.produto || '').replace(/[\*_~]/g, '').trim();
     if (!nomeOriginal || nomeOriginal.length < 3) return false;
+
+    // Rejeitar frases de clickbait, conversas e comunicados
+    const lowerNome = nomeOriginal.toLowerCase();
+    if (
+      lowerNome.startsWith('colecionadores de plantão') ||
+      lowerNome.startsWith('olha só essa') ||
+      lowerNome.startsWith('tá afim de') ||
+      lowerNome.startsWith('cupom esgotado') ||
+      lowerNome.includes('quem avisa') ||
+      lowerNome.includes('achadinho')
+    ) {
+      return false;
+    }
 
     const nomeLimpo = normalizarNomeProduto(nomeOriginal);
     if (!nomeLimpo || nomeLimpo.length < 3) return false;
 
-    const precoPor = parseMoedaParaNumero(item.precoPor);
-    if (precoPor < 6) return false;
+    const precoPorBruto = parseMoedaParaNumero(item.precoPor);
+    if (precoPorBruto < 6) return false;
 
-    // Sanidade de Preço TCG: Rejeitar falso positivo de parsing para Box/Display/ETB/Bundle (ex: R$ 8 de 8 boosters)
-    const tLower = nomeOriginal.toLowerCase();
-    const isBox = tLower.includes('box') || tLower.includes('display') || tLower.includes('etb') || tLower.includes('treinador') || tLower.includes('360') || tLower.includes('bundle');
-    if (isBox && precoPor < 35) {
+    const precoDeBruto = item.precoDe ? parseMoedaParaNumero(item.precoDe) : undefined;
+    const precoUnitario = item.precoUnitario ? parseMoedaParaNumero(item.precoUnitario) : undefined;
+
+    // Sanidade Estrita TCG: Protege contra erros de parsing (ex: "8 boosters" virando R$ 8)
+    const saneado = sanearPrecoHistoricoTCG(nomeOriginal, precoPorBruto, precoDeBruto);
+    if (!saneado.valido) {
       return false;
     }
-
-    const precoDe = item.precoDe ? parseMoedaParaNumero(item.precoDe) : undefined;
-    const precoUnitario = item.precoUnitario ? parseMoedaParaNumero(item.precoUnitario) : undefined;
+    const precoPor = saneado.precoPor;
+    const precoDe = saneado.precoDe;
 
     const canonico = extrairIdentidadeCanonicaTCG(nomeOriginal);
     const chaveCanonica = canonico.chaveCanonica;
 
-    // Evitar duplicidade idêntica nos últimos 5 minutos
-    const existente = db.prepare(`
-      SELECT id FROM historico_produtos_valores 
-      WHERE (chave_canonica = ? OR produto_limpo = ?) AND preco_por = ? 
-        AND criado_em >= datetime('now', '-5 minutes')
-      LIMIT 1
-    `).get(chaveCanonica, nomeLimpo, precoPor);
+    // Verificar se já existe um registro para o mesmo produto cadastrado no mesmo dia
+    const existenteHoje = db.prepare(`
+      SELECT id, preco_por FROM historico_produtos_valores 
+      WHERE (chave_canonica = ? OR produto_limpo = ?)
+        AND date(criado_em) = date('now')
+      ORDER BY id DESC LIMIT 1
+    `).get(chaveCanonica, nomeLimpo) as { id: number; preco_por: number } | undefined;
 
-    if (existente) {
-      return false;
+    if (existenteHoje) {
+      // Se já existe hoje, atualiza com a informação mais recente (ou menor preço verificado)
+      db.prepare(`
+        UPDATE historico_produtos_valores 
+        SET preco_por = ?,
+            preco_de = COALESCE(?, preco_de),
+            preco_unitario = COALESCE(?, preco_unitario),
+            link = COALESCE(?, link),
+            imagem_url = COALESCE(?, imagem_url),
+            origem = ?,
+            criado_em = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(
+        precoPor,
+        precoDe || null,
+        precoUnitario || null,
+        item.link || null,
+        item.imagemUrl || null,
+        item.origem || 'radar_sync',
+        existenteHoje.id
+      );
+      return true;
     }
 
     if (item.criadoEm) {
@@ -1317,7 +1366,7 @@ export function inserirOfertaHistorico(item: {
         item.link || null,
         item.imagemUrl || null,
         item.grupo || 'Grupo Pokémon TCG',
-        item.origem || 'auto',
+        item.origem || 'radar_sync',
         item.criadoEm
       );
     } else {
@@ -1335,7 +1384,7 @@ export function inserirOfertaHistorico(item: {
         item.link || null,
         item.imagemUrl || null,
         item.grupo || 'Grupo Pokémon TCG',
-        item.origem || 'auto'
+        item.origem || 'radar_sync'
       );
     }
 
@@ -1399,7 +1448,8 @@ export function getHistoricoProdutosConsolidado(busca?: string, limite = 100, of
       }
     }
 
-    const filtroSanidade = "(h.preco_por >= 6.00 AND NOT (h.preco_por < 35.00 AND (LOWER(h.produto) LIKE '%box%' OR LOWER(h.produto) LIKE '%display%' OR LOWER(h.produto) LIKE '%etb%' OR LOWER(h.produto) LIKE '%treinador%' OR LOWER(h.produto) LIKE '%360%')))";
+    const filtroOcultos = "NOT EXISTS (SELECT 1 FROM radar_itens_ocultos o WHERE (o.chave_canonica = h.chave_canonica AND o.chave_canonica IS NOT NULL) OR o.produto_limpo = h.produto_limpo OR o.produto = h.produto)";
+    const filtroSanidade = `(h.preco_por >= 6.00 AND NOT (h.preco_por < 35.00 AND (LOWER(h.produto) LIKE '%box%' OR LOWER(h.produto) LIKE '%display%' OR LOWER(h.produto) LIKE '%etb%' OR LOWER(h.produto) LIKE '%treinador%' OR LOWER(h.produto) LIKE '%360%'))) AND ${filtroOcultos}`;
     whereClause = whereClause ? `${whereClause} AND ${filtroSanidade}` : `WHERE ${filtroSanidade}`;
 
     const totalRow = db.prepare(`
@@ -1864,6 +1914,260 @@ export function limparRegistrosPrecosInvalidos(): number {
     return 0;
   }
 }
+
+/**
+ * Remove registros legados corrompidos/duplicados da base histórica
+ */
+export function purgarRegistrosCorrompidosHistorico(): number {
+  try {
+    // 1. Remover registros oriundos da migração antiga de logs ou com títulos poluídos
+    const resLogs = db.prepare(`
+      DELETE FROM historico_produtos_valores 
+      WHERE origem = 'migracao_logs' 
+         OR LOWER(produto) LIKE '%colecionadores de plantão%'
+         OR LOWER(produto) LIKE '%olha só essa%'
+         OR LOWER(produto) LIKE '%cupom esgotado%'
+         OR LOWER(produto) LIKE '%triplo de escuridão%'
+    `).run();
+
+    // 2. Limpar preços fora dos limites saudáveis de TCG
+    limparRegistrosPrecosInvalidos();
+
+    // 3. Garantir índice único por dia e produto para evitar duplicações
+    try {
+      db.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_hist_prod_canonico_data 
+        ON historico_produtos_valores(COALESCE(chave_canonica, produto_limpo), preco_por, date(criado_em));
+      `);
+    } catch {}
+
+    const totalDeletado = resLogs.changes || 0;
+    if (totalDeletado > 0) {
+      console.log(`[Database] Purga do histórico concluída: ${totalDeletado} registros defeituosos/duplicados removidos.`);
+    }
+    return totalDeletado;
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao purgar registros corrompidos do histórico:', err);
+    return 0;
+  }
+}
+
+/**
+ * Semeia o Catálogo Canônico com os produtos oficiais e referências de Pokémon TCG
+ */
+export function semearCatalogoCanonicoTCG(): number {
+  try {
+    const itensCanonicos = [
+      {
+        produto: 'Display Booster Box Pokémon TCG Escarlate e Violeta 360 (36 Pacotes) Copag',
+        precoPor: 279.00,
+        precoDe: 339.00,
+        link: 'https://lista.mercadolivre.com.br/display-booster-box-pokemon-tcg-360-copag_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_910543-MLB74070433788_012024-F.webp'
+      },
+      {
+        produto: 'Elite Trainer Box (ETB) Pokémon TCG Destinos de Paldea Luxo Copag',
+        precoPor: 349.90,
+        precoDe: 399.90,
+        link: 'https://lista.mercadolivre.com.br/elite-trainer-box-etb-pokemon-tcg-copag_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_616894-MLB74191636259_012024-F.webp'
+      },
+      {
+        produto: 'Pokémon TCG Coleção Especial 30 Anos Poster Box Copag Original Lacrada',
+        precoPor: 189.90,
+        precoDe: 229.90,
+        link: 'https://lista.mercadolivre.com.br/pokemon-tcg-colecao-especial-30-anos-poster-box_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_789422-MLB78317765977_082024-F.webp'
+      },
+      {
+        produto: 'Fichário Álbum 30 Anos Pokémon TCG Oficial para 360 Cartas Copag',
+        precoPor: 149.90,
+        precoDe: 179.90,
+        link: 'https://lista.mercadolivre.com.br/fichario-album-30-anos-pokemon-tcg-copag_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_759132-MLB78550124345_082024-F.webp'
+      },
+      {
+        produto: 'Box Charizard ex Fogo Supremo Pokémon TCG com Carta Gigante Copag',
+        precoPor: 169.90,
+        precoDe: 219.90,
+        link: 'https://lista.mercadolivre.com.br/box-charizard-ex-pokemon-tcg-copag_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_892345-MLB72910482011_112023-F.webp'
+      },
+      {
+        produto: 'Box Pokémon TCG Zeraora ex Mega Forças Lacrada Original Copag (8 Boosters)',
+        precoPor: 139.90,
+        precoDe: 169.90,
+        link: 'https://lista.mercadolivre.com.br/box-zeraora-ex-pokemon-tcg-copag_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_789422-MLB78317765977_082024-F.webp'
+      },
+      {
+        produto: 'Box Especial Pokémon TCG Lucario VSTAR Copag Original Lacrada',
+        precoPor: 129.90,
+        precoDe: 159.90,
+        link: 'https://lista.mercadolivre.com.br/box-lucario-vstar-pokemon-tcg-copag_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_892345-MLB72910482011_112023-F.webp'
+      },
+      {
+        produto: 'Box Coleção Especial Pokémon TCG Zygarde ex Copag Original Lacrada',
+        precoPor: 119.90,
+        precoDe: 149.90,
+        link: 'https://lista.mercadolivre.com.br/box-zygarde-pokemon-tcg-copag_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_616894-MLB74191636259_012024-F.webp'
+      },
+      {
+        produto: 'Booster Bundle Megaevolução Pokémon TCG 6 Pacotes Lacrados',
+        precoPor: 89.90,
+        precoDe: 109.90,
+        link: 'https://lista.mercadolivre.com.br/booster-bundle-pokemon-tcg-copag_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_819234-MLB75192840192_042024-F.webp'
+      },
+      {
+        produto: 'Blister Quádruplo Pokémon TCG Fogo Fantasmagórico 4 Boosters Copag',
+        precoPor: 49.90,
+        precoDe: 59.90,
+        link: 'https://lista.mercadolivre.com.br/blister-quadruplo-pokemon-tcg-copag_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_684123-MLB74891230192_032024-F.webp'
+      },
+      {
+        produto: 'Blister Triplo Pokémon TCG com Adesivo e Carta Promo Especial Copag',
+        precoPor: 39.90,
+        precoDe: 47.90,
+        link: 'https://lista.mercadolivre.com.br/blister-triplo-pokemon-tcg-copag_OrderId_PRICE_ASC',
+        imagemUrl: 'https://http2.mlstatic.com/D_NQ_NP_2X_791245-MLB74012948210_012024-F.webp'
+      }
+    ];
+
+    let inseridos = 0;
+    for (const item of itensCanonicos) {
+      const ok = inserirOfertaHistorico({
+        produto: item.produto,
+        precoPor: item.precoPor,
+        precoDe: item.precoDe,
+        link: item.link,
+        imagemUrl: item.imagemUrl,
+        grupo: 'Radar TCG Canônico',
+        origem: 'radar_canonico'
+      });
+      if (ok) inseridos++;
+    }
+
+    if (inseridos > 0) {
+      console.log(`[Database] Catálogo Canônico TCG semeado com ${inseridos} referências oficiais validadas.`);
+    }
+    return inseridos;
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao semear catálogo canônico TCG:', err);
+    return 0;
+  }
+}
+
+export interface ItemOcultoRadarInfo {
+  ids: Set<string>;
+  chaves: Set<string>;
+  produtosLimpos: Set<string>;
+}
+
+/**
+ * Retorna os identificadores de produtos ocultados/deletados pelo operador
+ */
+export function getItensOcultosRadar(): ItemOcultoRadarInfo {
+  try {
+    const rows = db.prepare('SELECT item_id, chave_canonica, produto_limpo FROM radar_itens_ocultos').all() as {
+      item_id?: string | null;
+      chave_canonica?: string | null;
+      produto_limpo: string;
+    }[];
+
+    const ids = new Set<string>();
+    const chaves = new Set<string>();
+    const produtosLimpos = new Set<string>();
+
+    for (const r of rows) {
+      if (r.item_id) ids.add(String(r.item_id).toLowerCase());
+      if (r.chave_canonica) chaves.add(r.chave_canonica.toLowerCase());
+      if (r.produto_limpo) produtosLimpos.add(r.produto_limpo.toLowerCase());
+    }
+
+    return { ids, chaves, produtosLimpos };
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao buscar itens ocultos do radar:', err);
+    return { ids: new Set(), chaves: new Set(), produtosLimpos: new Set() };
+  }
+}
+
+/**
+ * Remove do histórico de preços e adiciona à lista de ocultos para não reaparecer
+ */
+export function ocultarOuDeletarItemRadar(params: {
+  id?: string | number;
+  chaveCanonica?: string;
+  produto: string;
+}): boolean {
+  try {
+    const nomeOriginal = String(params.produto || '').trim();
+    const nomeLimpo = normalizarNomeProduto(nomeOriginal);
+    const canonico = extrairIdentidadeCanonicaTCG(nomeOriginal);
+    const chave = params.chaveCanonica || canonico.chaveCanonica;
+    const itemId = params.id ? String(params.id) : null;
+
+    db.transaction(() => {
+      // 1. Remover do histórico de valores se existir
+      if (itemId && /^\d+$/.test(itemId)) {
+        db.prepare('DELETE FROM historico_produtos_valores WHERE id = ?').run(Number(itemId));
+      }
+      if (chave && !chave.startsWith('gen__')) {
+        db.prepare('DELETE FROM historico_produtos_valores WHERE chave_canonica = ?').run(chave);
+      }
+      if (nomeLimpo) {
+        db.prepare('DELETE FROM historico_produtos_valores WHERE produto_limpo = ?').run(nomeLimpo);
+      }
+      if (nomeOriginal) {
+        db.prepare('DELETE FROM historico_produtos_valores WHERE produto = ?').run(nomeOriginal);
+      }
+
+      // 2. Inserir na lista de itens ocultos/bloqueados para não reaparecer em buscas futuras
+      const existe = db.prepare(`
+        SELECT id FROM radar_itens_ocultos 
+        WHERE (chave_canonica = ? AND chave_canonica IS NOT NULL)
+           OR produto_limpo = ?
+           OR (item_id = ? AND item_id IS NOT NULL)
+        LIMIT 1
+      `).get(chave, nomeLimpo, itemId);
+
+      if (!existe) {
+        db.prepare(`
+          INSERT INTO radar_itens_ocultos (item_id, chave_canonica, produto, produto_limpo)
+          VALUES (?, ?, ?, ?)
+        `).run(itemId, chave || null, nomeOriginal, nomeLimpo);
+      }
+    })();
+
+    console.log(`[Database] Item do Radar ocultado/excluído com sucesso: "${nomeOriginal}" (${chave})`);
+    return true;
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao ocultar/deletar item do radar:', err);
+    return false;
+  }
+}
+
+/**
+ * Restaura um item previamente ocultado
+ */
+export function restaurarItemOcultoRadar(chaveOuProduto: string): boolean {
+  try {
+    const limpo = normalizarNomeProduto(chaveOuProduto);
+    const res = db.prepare(`
+      DELETE FROM radar_itens_ocultos 
+      WHERE chave_canonica = ? OR produto_limpo = ? OR produto = ? OR item_id = ?
+    `).run(chaveOuProduto, limpo, chaveOuProduto, chaveOuProduto);
+    return (res.changes || 0) > 0;
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao restaurar item oculto do radar:', err);
+    return false;
+  }
+}
+
+
 
 
 
