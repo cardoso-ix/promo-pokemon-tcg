@@ -1183,15 +1183,17 @@ export async function createServer() {
     Body: {
       rascunho: string;
       link?: string;
+      modo?: 'chamada' | 'anuncio';
     };
   }>('/api/ia/redigir-oferta', async (req, reply) => {
-    const { rascunho, link } = req.body || {};
+    const { rascunho, link, modo } = req.body || {};
     if (!rascunho || !rascunho.trim()) {
       return reply.status(400).send({ ok: false, error: 'Digite uma frase ou rascunho para a IA formatar.' });
     }
 
     try {
       let linkAfiliadoFinal = (link || '').trim();
+      const modoFinal = modo || (linkAfiliadoFinal ? 'anuncio' : 'chamada');
       if (!linkAfiliadoFinal) {
         const urlMatch = rascunho.match(/https?:\/\/[^\s]+/i);
         if (urlMatch) {
@@ -1199,7 +1201,7 @@ export async function createServer() {
         }
       }
 
-      if (linkAfiliadoFinal) {
+      if (modoFinal === 'anuncio' && linkAfiliadoFinal) {
         const mattWord = getConfig('affiliate_matt_word', CONFIG.defaultMattWord);
         const mattTool = getConfig('affiliate_matt_tool', CONFIG.defaultMattTool);
         const meliCookie = getConfig('meli_cookie', '');
@@ -1224,7 +1226,8 @@ export async function createServer() {
 
       const resIA = await redigirOfertaComIA({
         rascunho,
-        link: linkAfiliadoFinal
+        link: modoFinal === 'anuncio' ? linkAfiliadoFinal : undefined,
+        modo: modoFinal
       });
 
       return resIA;

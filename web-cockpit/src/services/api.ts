@@ -286,9 +286,11 @@ export const api = {
       method: 'POST'
     }),
   // --- ESTÚDIO IA DE REDAÇÃO RÁPIDA (DEEPSEEK V4.1) ---
-  redigirOfertaIA: (rascunho: string, link?: string) =>
+  redigirOfertaIA: (rascunho: string, link?: string, modo?: 'chamada' | 'anuncio') =>
     request<{
       ok: boolean;
+      modo: 'chamada' | 'anuncio';
+      opcoes: string[];
       modeloUrgencia: string;
       modeloComunidade: string;
       linkAfiliado: string;
@@ -296,7 +298,7 @@ export const api = {
       erro?: string;
     }>('/api/ia/redigir-oferta', {
       method: 'POST',
-      body: JSON.stringify({ rascunho, link })
+      body: JSON.stringify({ rascunho, link, modo })
     }),
   dispararOfertaIA: (texto: string) =>
     request<{

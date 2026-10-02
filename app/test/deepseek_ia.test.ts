@@ -55,3 +55,25 @@ test('DeepSeek IA - redigirOfertaComIA deve validar rascunhos vazios de forma am
   assert.equal(res.ok, false);
   assert.ok(res.erro && res.erro.includes('Digite'));
 });
+
+test('DeepSeek IA - Modo Chamada Rápida deve embelezar texto sem arrobas, sem links e com emojis', async () => {
+  const res = await redigirOfertaComIA({
+    rascunho: 'PROMO BOA PESSOAL 5 UNIDADES',
+    modo: 'chamada'
+  });
+
+  assert.equal(res.ok, true);
+  assert.equal(res.modo, 'chamada');
+  assert.ok(res.opcoes.length >= 2, 'Deve gerar pelo menos 2 opções de chamada rápida');
+
+  for (const op of res.opcoes) {
+    // Não pode conter arrobas nem links nem avisos longos de rodapé
+    assert.ok(!op.includes('@pokemon_tcg_promo'), 'Chamada rápida NUNCA deve ter @');
+    assert.ok(!op.includes('http'), 'Chamada rápida NUNCA deve ter links');
+    assert.ok(!op.includes('Preço e estoque promocional sujeitos'), 'Chamada rápida NUNCA deve ter disclaimer pesado');
+    // Deve conter emojis
+    assert.ok(/[\u{1F300}-\u{1F9FF}]/u.test(op), 'Chamada rápida deve conter emojis');
+    // Deve conter a essência do que foi falado (ex: 5 unidades)
+    assert.ok(op.includes('5 unidades'), 'Deve preservar o número de unidades');
+  }
+});

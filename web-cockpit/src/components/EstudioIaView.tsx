@@ -10,8 +10,8 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
-  Share2,
-  Wand2
+  Wand2,
+  MessageSquare
 } from 'lucide-react';
 import { api } from '../services/api.ts';
 
@@ -20,52 +20,51 @@ interface EstudioIaViewProps {
 }
 
 export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso }) => {
+  // Modo ativo: 'chamada' (padrão ultra-rápido) ou 'anuncio' (com link de produto)
+  const [modo, setModo] = useState<'chamada' | 'anuncio'>('chamada');
+
   const [rascunho, setRascunho] = useState('');
   const [link, setLink] = useState('');
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  // Modelos gerados
+  // Modelos e opções geradas
+  const [opcoesChamada, setOpcoesChamada] = useState<string[]>([]);
   const [modeloUrgencia, setModeloUrgencia] = useState('');
   const [modeloComunidade, setModeloComunidade] = useState('');
   const [linkAfiliado, setLinkAfiliado] = useState('');
   const [fonte, setFonte] = useState<'deepseek' | 'fallback_local' | null>(null);
 
-  // Estados de cópia e disparo
-  const [copiadoUrgencia, setCopiadoUrgencia] = useState(false);
-  const [copiadoComunidade, setCopiadoComunidade] = useState(false);
-  const [disparandoUrgencia, setDisparandoUrgencia] = useState(false);
-  const [disparandoComunidade, setDisparandoComunidade] = useState(false);
+  // Feedback de cópia e disparo
+  const [copiadoIdx, setCopiadoIdx] = useState<number | null>(null);
+  const [disparandoIdx, setDisparandoIdx] = useState<number | null>(null);
   const [sucessoDisparo, setSucessoDisparo] = useState<string | null>(null);
 
-  // Exemplos rápidos para 1 clique
-  const exemplosRapidos = [
+  // Exemplos rápidos para chamadas curtas
+  const exemplosChamadas = [
+    'PROMO BOA PESSOAL 5 UNIDADES',
+    'Aproveitem que tá acabando rápido',
+    'Galera baixou muito corre',
+    'Chegou reposição poucas unidades no estoque'
+  ];
+
+  // Exemplos rápidos para anúncio completo
+  const exemplosAnuncios = [
     {
       label: '⚡ Box 36 Boosters',
-      texto: 'Promoção muito boa da Box 36 pacotes por 180 reais usando cupom POKEMON10 na Shopee com frete gratis',
-      link: 'https://shopee.com.br/product/123/456'
-    },
-    {
-      label: '📦 25 Toploader Cristal',
-      texto: '25 Toploader Cristal protetor rígido para cartas raras por R$ 37 com envio full no Mercado Livre',
+      texto: 'Promoção muito boa da Box 36 pacotes por 180 reais usando cupom POKEMON10 com frete gratis',
       link: 'https://mercadolivre.com.br/sec/exemplo'
     },
     {
-      label: '🔥 ETB Coleção Especial',
-      texto: 'Elite Trainer Box ETB com 10 boosters e sleeves especiais saindo por 249 no pix cupom limitado',
-      link: 'https://amazon.com.br/dp/B0EXEMPLO'
+      label: '📦 25 Toploader Cristal',
+      texto: '25 Toploader Cristal protetor rígido por R$ 37 com envio full',
+      link: 'https://mercadolivre.com.br/sec/exemplo'
     }
   ];
 
-  const handleAplicarExemplo = (ex: { texto: string; link: string }) => {
-    setRascunho(ex.texto);
-    setLink(ex.link);
-    setErro(null);
-  };
-
   const handleGerar = async () => {
     if (!rascunho.trim()) {
-      setErro('Por favor, digite ou cole uma frase ou ideia de promoção.');
+      setErro('Por favor, digite o que você quer falar para a IA embelezar.');
       return;
     }
 
@@ -74,14 +73,23 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
     setSucessoDisparo(null);
 
     try {
-      const resp = await api.redigirOfertaIA(rascunho.trim(), link.trim() || undefined);
+      const resp = await api.redigirOfertaIA(
+        rascunho.trim(),
+        modo === 'anuncio' ? (link.trim() || undefined) : undefined,
+        modo
+      );
+
       if (resp && resp.ok) {
-        setModeloUrgencia(resp.modeloUrgencia || '');
-        setModeloComunidade(resp.modeloComunidade || '');
-        setLinkAfiliado(resp.linkAfiliado || '');
+        if (resp.modo === 'chamada' || (resp.opcoes && resp.opcoes.length > 0)) {
+          setOpcoesChamada(resp.opcoes || [resp.modeloUrgencia, resp.modeloComunidade].filter(Boolean));
+        } else {
+          setModeloUrgencia(resp.modeloUrgencia || '');
+          setModeloComunidade(resp.modeloComunidade || '');
+          setLinkAfiliado(resp.linkAfiliado || '');
+        }
         setFonte(resp.fonte || 'deepseek');
       } else {
-        setErro(resp?.erro || 'Não foi possível gerar a copy. Tente novamente.');
+        setErro(resp?.erro || 'Não foi possível gerar as mensagens. Tente novamente.');
       }
     } catch (err: any) {
       setErro(err?.message || 'Erro de conexão ao contatar o motor de IA.');
@@ -90,27 +98,20 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
     }
   };
 
-  const handleCopiar = async (texto: string, tipo: 'urgencia' | 'comunidade') => {
+  const handleCopiar = async (texto: string, idx: number) => {
     try {
       await navigator.clipboard.writeText(texto);
-      if (tipo === 'urgencia') {
-        setCopiadoUrgencia(true);
-        setTimeout(() => setCopiadoUrgencia(false), 2000);
-      } else {
-        setCopiadoComunidade(true);
-        setTimeout(() => setCopiadoComunidade(false), 2000);
-      }
+      setCopiadoIdx(idx);
+      setTimeout(() => setCopiadoIdx(null), 2000);
     } catch {
-      // Falha silenciosa de clipboard
+      // Ignora falha silenciosa
     }
   };
 
-  const handleDisparar = async (texto: string, tipo: 'urgencia' | 'comunidade') => {
+  const handleDisparar = async (texto: string, idx: number) => {
     if (!texto.trim()) return;
 
-    if (tipo === 'urgencia') setDisparandoUrgencia(true);
-    else setDisparandoComunidade(true);
-
+    setDisparandoIdx(idx);
     setSucessoDisparo(null);
     setErro(null);
 
@@ -125,40 +126,76 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
         setErro(resp?.mensagem || 'Falha ao disparar para os grupos. Verifique a conexão com o WhatsApp.');
       }
     } catch (err: any) {
-      setErro(err?.message || 'Erro de comunicação ao disparar para o WhatsApp.');
+      setErro(err?.message || 'Erro ao disparar para o WhatsApp.');
     } finally {
-      if (tipo === 'urgencia') setDisparandoUrgencia(false);
-      else setDisparandoComunidade(false);
+      setDisparandoIdx(null);
     }
+  };
+
+  const handleAtualizarOpcao = (novoTexto: string, idx: number) => {
+    setOpcoesChamada(prev => {
+      const copia = [...prev];
+      copia[idx] = novoTexto;
+      return copia;
+    });
   };
 
   return (
     <div className="space-y-6">
-      {/* Top Banner Informativo */}
-      <div className="bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-cyan-500/10 border border-amber-500/20 rounded-2xl p-5 relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Top Banner & Seletor de Modo */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-yellow-500/5 to-cyan-500/10 border border-amber-500/20 rounded-2xl p-5 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
                 <Sparkles className="w-5 h-5" />
               </span>
               <h2 className="text-lg font-bold text-white tracking-wide">
-                Estúdio IA de Redação Rápida
+                Estúdio IA de Chamadas Rápidas
               </h2>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                DeepSeek v4.1 • OpenCode
+                DeepSeek v4.1 • Ultra-Rápido
               </span>
             </div>
             <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-              Escreva apenas a ideia solta ou detalhes básicos da promoção. O DeepSeek v4.1 aplica automaticamente a identidade visual oficial (<span className="text-amber-300 font-mono">@pokemon_tcg_promo</span>), emojis de alto impacto e formatação de preço, gerando 2 opções prontas para disparar direto aos grupos em 1 clique.
+              Digite uma frase solta (ex: <span className="text-amber-300 font-semibold">"PROMO BOA PESSOAL 5 UNIDADES"</span>) e a IA gera chamadas curtas, bonitas e com emojis, prontas para disparar direto aos grupos pelo site.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-center">
-            <span className="text-[11px] text-slate-400 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-white/5 flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-yellow-400" />
-              Fallback Local 0ms Ativo
-            </span>
+          {/* Alternador de Modo (Abas Internas) */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-950/70 border border-white/10 self-start md:self-center">
+            <button
+              type="button"
+              onClick={() => {
+                setModo('chamada');
+                setOpcoesChamada([]);
+                setErro(null);
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                modo === 'chamada'
+                  ? 'bg-amber-400 text-slate-950 shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              ⚡ Chamada Rápida (Sem Links)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setModo('anuncio');
+                setOpcoesChamada([]);
+                setErro(null);
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                modo === 'anuncio'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              📦 Anúncio Completo com Link
+            </button>
           </div>
         </div>
       </div>
@@ -169,7 +206,7 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
               <Wand2 className="w-4 h-4 text-amber-400" />
-              O que você quer postar? (Rascunho Livre)
+              {modo === 'chamada' ? 'O que você quer falar no grupo?' : 'Rascunho da Promoção:'}
             </label>
             <span className="text-[11px] text-slate-400">
               {rascunho.length} caracteres
@@ -178,40 +215,67 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
           <textarea
             value={rascunho}
             onChange={(e) => setRascunho(e.target.value)}
-            placeholder="Exemplo: promoção muito boa da box 36 pacotes de escarlate e violeta por 180 reais cupom POKEMON10 na shopee com frete gratis..."
-            rows={4}
+            placeholder={
+              modo === 'chamada'
+                ? 'Exemplo: PROMO BOA PESSOAL 5 UNIDADES ou corram que baixou muito o preço agora...'
+                : 'Exemplo: Box 36 pacotes por 180 reais usando cupom POKEMON10 na shopee...'
+            }
+            rows={modo === 'chamada' ? 3 : 4}
             className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/30 transition-all resize-y"
           />
         </div>
 
-        {/* Link Opcional */}
-        <div className="space-y-2">
-          <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-            <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
-            Link do Produto / Loja (Opcional — detectado automaticamente se já estiver no rascunho)
-          </label>
-          <input
-            type="text"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="https://mercadolivre.com.br/sec/... ou https://shopee.com.br/..."
-            className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 transition-all font-mono text-xs"
-          />
-        </div>
+        {/* Campo de Link (Exibido apenas no modo anúncio) */}
+        {modo === 'anuncio' && (
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+              Link do Produto (Opcional):
+            </label>
+            <input
+              type="text"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="https://mercadolivre.com.br/sec/..."
+              className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 transition-all font-mono text-xs"
+            />
+          </div>
+        )}
 
         {/* Pílulas de Exemplos Rápidos */}
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-[11px] text-slate-400 font-semibold">Exemplos rápidos:</span>
-          {exemplosRapidos.map((ex, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleAplicarExemplo(ex)}
-              className="text-xs px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.06] transition-all flex items-center gap-1"
-            >
-              {ex.label}
-            </button>
-          ))}
+          <span className="text-[11px] text-slate-400 font-semibold">Exemplos de 1 clique:</span>
+          {modo === 'chamada' ? (
+            exemplosChamadas.map((ex, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setRascunho(ex);
+                  setErro(null);
+                }}
+                className="text-xs px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.06] transition-all flex items-center gap-1"
+              >
+                "{ex}"
+              </button>
+            ))
+          ) : (
+            exemplosAnuncios.map((ex, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setRascunho(ex.texto);
+                  setLink(ex.link);
+                  setErro(null);
+                }}
+                className="text-xs px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.06] transition-all flex items-center gap-1"
+              >
+                {ex.label}
+              </button>
+            ))
+          )}
+
           {rascunho && (
             <button
               type="button"
@@ -221,12 +285,12 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
               }}
               className="text-xs px-2.5 py-1 rounded-lg text-slate-500 hover:text-rose-400 transition-all ml-auto"
             >
-              Limpar campos
+              Limpar
             </button>
           )}
         </div>
 
-        {/* Mensagens de Alerta ou Erro */}
+        {/* Alertas e Notificações */}
         {erro && (
           <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
@@ -241,7 +305,7 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
           </div>
         )}
 
-        {/* Botão de Ação Principal */}
+        {/* Botão Principal de Geração */}
         <div className="pt-2 flex justify-end">
           <button
             type="button"
@@ -256,26 +320,26 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
             {loading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                Redigindo com DeepSeek v4.1...
+                Embelezando texto com IA...
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                ✨ Redigir com DeepSeek v4.1
+                {modo === 'chamada' ? '✨ Embelezar Chamada com Emojis' : '✨ Redigir Anúncio Completo'}
               </>
             )}
           </button>
         </div>
       </div>
 
-      {/* Resultados Gerados (2 Modelos) */}
-      {(modeloUrgencia || modeloComunidade) && (
+      {/* RESULTADOS: MODO CHAMADA RÁPIDA (3 Opções Diretas) */}
+      {modo === 'chamada' && opcoesChamada.length > 0 && (
         <div className="space-y-4 pt-2">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Share2 className="w-4 h-4 text-emerald-400" />
-                Modelos Prontos para Publicação
+                <MessageSquare className="w-4 h-4 text-emerald-400" />
+                Chamadas Geradas (Escolha e Dispare em 1 Clique)
               </h3>
               {fonte && (
                 <span
@@ -285,6 +349,93 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
                       : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20'
                   }`}
                 >
+                  {fonte === 'deepseek' ? '✨ DeepSeek v4.1' : '⚡ Motor Fallback Local'}
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-slate-400">
+              {opcoesChamada.length} opções prontas
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {opcoesChamada.map((textoOpcao, idx) => (
+              <div
+                key={idx}
+                className="bg-slate-900/80 border border-white/10 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-lg relative overflow-hidden"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
+                    {idx === 0 ? <Flame className="w-3.5 h-3.5 text-rose-400" /> : idx === 1 ? <Zap className="w-3.5 h-3.5 text-yellow-400" /> : <Sparkles className="w-3.5 h-3.5 text-cyan-400" />}
+                    Opção {idx + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopiar(textoOpcao, idx)}
+                    className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 text-xs font-semibold flex items-center gap-1 transition-all"
+                  >
+                    {copiadoIdx === idx ? (
+                      <>
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span className="text-emerald-400 text-[11px]">Copiado!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span className="text-[11px]">Copiar</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Área de texto editável simulando balão WhatsApp */}
+                <textarea
+                  value={textoOpcao}
+                  onChange={(e) => handleAtualizarOpcao(e.target.value, idx)}
+                  rows={4}
+                  className="w-full bg-[#0d1418] border border-[#1f2c34] rounded-xl p-3 text-xs text-[#e9edef] leading-relaxed focus:outline-none focus:border-amber-400/50 resize-y selection:bg-[#00a884]/30"
+                />
+
+                {/* Botão de Disparo em 1 Clique */}
+                <button
+                  type="button"
+                  disabled={disparandoIdx === idx || !textoOpcao.trim()}
+                  onClick={() => handleDisparar(textoOpcao, idx)}
+                  className={`w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md ${
+                    disparandoIdx === idx
+                      ? 'bg-slate-800 text-slate-400 cursor-wait'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white hover:shadow-emerald-600/30 active:scale-[0.99]'
+                  }`}
+                >
+                  {disparandoIdx === idx ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      Disparando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      🚀 Disparar para os Grupos
+                    </>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* RESULTADOS: MODO ANÚNCIO COMPLETO COM PRODUTO E LINK */}
+      {modo === 'anuncio' && (modeloUrgencia || modeloComunidade) && (
+        <div className="space-y-4 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <MessageSquare className="w-4 h-4 text-cyan-400" />
+                Modelos de Anúncio com Link
+              </h3>
+              {fonte && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border bg-cyan-500/10 text-cyan-300 border-cyan-500/20">
                   {fonte === 'deepseek' ? '✨ DeepSeek v4.1' : '⚡ Motor Fallback Local'}
                 </span>
               )}
@@ -306,152 +457,82 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* CARD 1: MODELO URGÊNCIA */}
-            <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 via-amber-500 to-yellow-500" />
-              
+            {/* CARD 1: URGÊNCIA */}
+            <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-xl">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="p-1 rounded-lg bg-rose-500/20 text-rose-400">
                       <Flame className="w-4 h-4" />
                     </span>
-                    <div>
-                      <h4 className="text-sm font-bold text-white">Opção 1: Alerta & Urgência</h4>
-                      <p className="text-[11px] text-slate-400">Gatilho de rapidez, cupom e estoque</p>
-                    </div>
+                    <h4 className="text-sm font-bold text-white">Opção 1: Alerta & Urgência</h4>
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleCopiar(modeloUrgencia, 'urgencia')}
-                    className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 text-xs font-semibold flex items-center gap-1 transition-all"
+                    onClick={() => handleCopiar(modeloUrgencia, 101)}
+                    className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 text-xs font-semibold flex items-center gap-1"
                   >
-                    {copiadoUrgencia ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400">Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copiar</span>
-                      </>
-                    )}
+                    {copiadoIdx === 101 ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiadoIdx === 101 ? 'Copiado!' : 'Copiar'}</span>
                   </button>
                 </div>
 
-                {/* Balão WhatsApp Prévia & Edição */}
-                <div className="space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-slate-500">
-                    Prévia Editável (Você pode ajustar qualquer detalhe antes de enviar):
-                  </span>
-                  <textarea
-                    value={modeloUrgencia}
-                    onChange={(e) => setModeloUrgencia(e.target.value)}
-                    rows={10}
-                    className="w-full bg-[#0d1418] border border-[#1f2c34] rounded-xl p-3.5 font-sans text-xs text-[#e9edef] leading-relaxed focus:outline-none focus:border-amber-400/50 resize-y selection:bg-[#00a884]/30"
-                  />
-                </div>
+                <textarea
+                  value={modeloUrgencia}
+                  onChange={(e) => setModeloUrgencia(e.target.value)}
+                  rows={8}
+                  className="w-full bg-[#0d1418] border border-[#1f2c34] rounded-xl p-3.5 text-xs text-[#e9edef] leading-relaxed focus:outline-none focus:border-amber-400/50 resize-y"
+                />
               </div>
 
-              <div className="pt-2">
-                <button
-                  type="button"
-                  disabled={disparandoUrgencia || !modeloUrgencia.trim()}
-                  onClick={() => handleDisparar(modeloUrgencia, 'urgencia')}
-                  className={`w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg ${
-                    disparandoUrgencia
-                      ? 'bg-slate-800 text-slate-400 cursor-wait'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white hover:shadow-emerald-600/30 active:scale-[0.99]'
-                  }`}
-                >
-                  {disparandoUrgencia ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Disparando para os grupos...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      🚀 Disparar Opção 1 para os Grupos
-                    </>
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                disabled={disparandoIdx === 101 || !modeloUrgencia.trim()}
+                onClick={() => handleDisparar(modeloUrgencia, 101)}
+                className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg"
+              >
+                {disparandoIdx === 101 ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                🚀 Disparar Opção 1 para os Grupos
+              </button>
             </div>
 
-            {/* CARD 2: MODELO COMUNIDADE */}
-            <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500" />
-
+            {/* CARD 2: COMUNIDADE */}
+            <div className="bg-slate-900/80 border border-white/10 rounded-2xl p-5 flex flex-col justify-between space-y-4 shadow-xl">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="p-1 rounded-lg bg-cyan-500/20 text-cyan-400">
                       <Zap className="w-4 h-4" />
                     </span>
-                    <div>
-                      <h4 className="text-sm font-bold text-white">Opção 2: Comunidade & Curadoria</h4>
-                      <p className="text-[11px] text-slate-400">Tom de garimpo manual e preço justo</p>
-                    </div>
+                    <h4 className="text-sm font-bold text-white">Opção 2: Comunidade & Curadoria</h4>
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleCopiar(modeloComunidade, 'comunidade')}
-                    className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 text-xs font-semibold flex items-center gap-1 transition-all"
+                    onClick={() => handleCopiar(modeloComunidade, 102)}
+                    className="px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 text-xs font-semibold flex items-center gap-1"
                   >
-                    {copiadoComunidade ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400">Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copiar</span>
-                      </>
-                    )}
+                    {copiadoIdx === 102 ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiadoIdx === 102 ? 'Copiado!' : 'Copiar'}</span>
                   </button>
                 </div>
 
-                {/* Balão WhatsApp Prévia & Edição */}
-                <div className="space-y-1">
-                  <span className="text-[10px] uppercase font-bold text-slate-500">
-                    Prévia Editável (Você pode ajustar qualquer detalhe antes de enviar):
-                  </span>
-                  <textarea
-                    value={modeloComunidade}
-                    onChange={(e) => setModeloComunidade(e.target.value)}
-                    rows={10}
-                    className="w-full bg-[#0d1418] border border-[#1f2c34] rounded-xl p-3.5 font-sans text-xs text-[#e9edef] leading-relaxed focus:outline-none focus:border-cyan-400/50 resize-y selection:bg-[#00a884]/30"
-                  />
-                </div>
+                <textarea
+                  value={modeloComunidade}
+                  onChange={(e) => setModeloComunidade(e.target.value)}
+                  rows={8}
+                  className="w-full bg-[#0d1418] border border-[#1f2c34] rounded-xl p-3.5 text-xs text-[#e9edef] leading-relaxed focus:outline-none focus:border-cyan-400/50 resize-y"
+                />
               </div>
 
-              <div className="pt-2">
-                <button
-                  type="button"
-                  disabled={disparandoComunidade || !modeloComunidade.trim()}
-                  onClick={() => handleDisparar(modeloComunidade, 'comunidade')}
-                  className={`w-full py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-lg ${
-                    disparandoComunidade
-                      ? 'bg-slate-800 text-slate-400 cursor-wait'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white hover:shadow-emerald-600/30 active:scale-[0.99]'
-                  }`}
-                >
-                  {disparandoComunidade ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      Disparando para os grupos...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      🚀 Disparar Opção 2 para os Grupos
-                    </>
-                  )}
-                </button>
-              </div>
+              <button
+                type="button"
+                disabled={disparandoIdx === 102 || !modeloComunidade.trim()}
+                onClick={() => handleDisparar(modeloComunidade, 102)}
+                className="w-full py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-lg"
+              >
+                {disparandoIdx === 102 ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                🚀 Disparar Opção 2 para os Grupos
+              </button>
             </div>
           </div>
         </div>
