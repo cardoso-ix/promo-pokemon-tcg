@@ -1239,6 +1239,65 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                   </button>
                 </div>
 
+                {/* Switch: Estúdio Vitrine 1:1 com Respiro */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                  <div>
+                    <span className="font-semibold text-slate-200 block flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                      Padronização Vitrine de Estúdio (Respiro 1:1)
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Centraliza a foto em canvas quadrado 1:1 com margem limpa (elimina fotos coladas nas bordas)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConfigs({ ...configs, padronizar_fotos_respiro: configs['padronizar_fotos_respiro'] === 'false' ? 'true' : 'false' })}
+                    className="cursor-pointer"
+                  >
+                    {configs['padronizar_fotos_respiro'] !== 'false' ? (
+                      <ToggleRight className="w-7 h-7 text-emerald-400" />
+                    ) : (
+                      <ToggleLeft className="w-7 h-7 text-slate-500" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Seletor de Nível de Respiro / Distância */}
+                {configs['padronizar_fotos_respiro'] !== 'false' && (
+                  <div className="p-2.5 rounded-xl bg-cyan-950/20 border border-cyan-500/20 space-y-1.5 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-cyan-300">Margem de Distância (Respiro):</span>
+                      <span className="text-[10px] text-cyan-400 font-mono font-bold">
+                        {configs['padding_foto_percentual'] || '12'}% das bordas
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                      {[
+                        { label: 'Compacto (8%)', valor: '8' },
+                        { label: 'Equilibrado (12%)', valor: '12' },
+                        { label: 'Afastado (18%)', valor: '18' }
+                      ].map((preset) => {
+                        const ativo = (configs['padding_foto_percentual'] || '12') === preset.valor;
+                        return (
+                          <button
+                            key={preset.valor}
+                            type="button"
+                            onClick={() => setConfigs({ ...configs, padding_foto_percentual: preset.valor })}
+                            className={`py-1.5 px-2 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                              ativo
+                                ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-sm'
+                                : 'bg-white/[0.02] border-white/10 text-slate-400 hover:text-white'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Grade de Delays e Tetos */}
                 <div className="grid grid-cols-2 gap-2.5 pt-1">
                   <div>

@@ -41,6 +41,7 @@ import {
   obterFotoCupomBuffer
 } from '../core/anuncio.js';
 import { notificarDisparadorOferta } from '../core/internal-sync.js';
+import { padronizarFotoEstudio } from '../core/image-studio.js';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr';
 
@@ -340,9 +341,21 @@ export class WhatsAppManager {
     if (!this.sock || this.state.status !== 'connected') {
       throw new Error('WhatsApp não está conectado no momento.');
     }
-    if (imageBuffer && imageBuffer.length > 0) {
+    let finalBuffer = imageBuffer;
+    if (finalBuffer && finalBuffer.length > 0) {
+      const padronizarAtivo = getConfig('padronizar_fotos_respiro', 'true') === 'true';
+      if (padronizarAtivo) {
+        try {
+          const paddingPercentual = parseInt(getConfig('padding_foto_percentual', '12'), 10) || 12;
+          const corFundo = getConfig('fundo_foto_cor', '#FFFFFF');
+          finalBuffer = await padronizarFotoEstudio(finalBuffer, {
+            paddingPercentual,
+            corFundo
+          });
+        } catch {}
+      }
       await this.sock.sendMessage(toChatId, {
-        image: imageBuffer,
+        image: finalBuffer,
         caption: text
       });
     } else {
@@ -909,6 +922,24 @@ export class WhatsAppManager {
             safeImageBuffer = bufferOficialCupom;
             console.log(`[Cupom WhatsApp] Anexando foto oficial "NOVO CUPOM" (${Math.round(bufferOficialCupom.length / 1024)} KB).`);
           }
+        }
+      }
+
+      // REGRA DE OURO DE ESTÚDIO:
+      // Se a padronização estiver ativa e houver foto de produto (não sendo comunicado de cupom puro),
+      // padroniza no canvas 1:1 com respiro proporcional de estúdio
+      const padronizarAtivo = getConfig('padronizar_fotos_respiro', 'true') === 'true';
+      if (padronizarAtivo && safeImageBuffer && safeImageBuffer.length > 0 && !isPublicacaoCupomPuro) {
+        try {
+          const paddingPercentual = parseInt(getConfig('padding_foto_percentual', '12'), 10) || 12;
+          const corFundo = getConfig('fundo_foto_cor', '#FFFFFF');
+          safeImageBuffer = await padronizarFotoEstudio(safeImageBuffer, {
+            paddingPercentual,
+            corFundo
+          });
+          console.log(`[Estúdio de Imagem] Foto padronizada com respiro de ${paddingPercentual}% em canvas 1:1.`);
+        } catch (errEstudio) {
+          console.warn('[Estúdio de Imagem] Falha ao aplicar enquadramento de estúdio, mantendo original:', errEstudio);
         }
       }
 
