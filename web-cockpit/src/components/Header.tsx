@@ -40,8 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 h-16 w-full bg-[#09101d]/90 backdrop-blur-xl border-b border-white/[0.08] px-4 sm:px-6 flex items-center justify-between transition-all">
-      {/* Brand / Logo */}
+    <header className="sticky top-0 z-50 h-16 w-full bg-[#09101d]/90 backdrop-blur-xl border-b border-white/[0.08] px-4 sm:px-6 lg:px-8 flex items-center transition-all">
+      <div className="max-w-[1680px] w-full mx-auto flex items-center justify-between">
       <div
         className="flex items-center gap-3 cursor-pointer group"
         onClick={() => onSelectModule('dashboard')}
@@ -183,6 +183,7 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <LogOut className="w-4 h-4" />
         </button>
+      </div>
       </div>
     </header>
   );
