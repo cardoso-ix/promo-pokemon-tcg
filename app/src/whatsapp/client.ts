@@ -928,24 +928,23 @@ export class WhatsAppManager {
     if (this.sock) {
       let safeImageBuffer: Buffer | null = imageBuffer;
 
-      // REGRA OFICIAL SOLICITADA PELO EDUARDO:
-      // Quando for anúncio/mensagem de cupom disponível (tela de cupom, comunicado ou cupom detectado),
-      // se não houver produto canônico individual (MLB), usa OBRIGATORIAMENTE a foto oficial amarela "NOVO CUPOM"!
+      let usouFotoOficialCupom = false;
       if (isCupom || isPublicacaoCupomPuro || isMsgCupomGeral) {
         if (!hasCanonicalProduct) {
           const bufferOficialCupom = obterFotoCupomBuffer();
           if (bufferOficialCupom) {
             safeImageBuffer = bufferOficialCupom;
+            usouFotoOficialCupom = true;
             console.log(`[Cupom WhatsApp] Anexando foto oficial amarela "NOVO CUPOM" (${Math.round(bufferOficialCupom.length / 1024)} KB).`);
           }
         }
       }
 
       // REGRA DE OURO DE ESTÚDIO:
-      // Se a padronização estiver ativa e houver foto de produto (não sendo comunicado de cupom puro ou banner oficial),
+      // Se a padronização estiver ativa e houver foto de produto (não sendo banner oficial de cupom ou comunicado puro),
       // padroniza no canvas 1:1 com respiro proporcional de estúdio
       const padronizarAtivo = getConfig('padronizar_fotos_respiro', 'true') === 'true';
-      if (padronizarAtivo && safeImageBuffer && safeImageBuffer.length > 0 && !isPublicacaoCupomPuro && !isMsgCupomGeral && !isCupom) {
+      if (padronizarAtivo && safeImageBuffer && safeImageBuffer.length > 0 && !usouFotoOficialCupom && !isPublicacaoCupomPuro) {
         try {
           const paddingPercentual = parseInt(getConfig('padding_foto_percentual', '12'), 10) || 12;
           const corFundo = getConfig('fundo_foto_cor', '#FFFFFF');
