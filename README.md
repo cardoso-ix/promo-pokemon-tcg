@@ -10,12 +10,12 @@ A plataforma opera **100% online na nuvem em VPS própria (HostGator) gerenciada
 
 Se você acabou de abrir este projeto em um novo computador ou notebook para continuar as melhorias:
 
-👉 **Consulte o manual rápido:** [GUIA_MIGRACAO_NOVO_PC.md](GUIA_MIGRACAO_NOVO_PC.md)
+👉 **Consulte o manual rápido:** [GUIA_MIGRACAO_NOVO_PC.md](GUIA_MIGRACAO_NOVO_PC.md) | **Auditoria Técnica:** [AUDITORIA_SISTEMA_OUTUBRO_2026.md](AUDITORIA_SISTEMA_OUTUBRO_2026.md)
 
 ### No Windows:
 1. Instale o **Node.js v20 LTS ou v22 LTS** ([nodejs.org](https://nodejs.org/)).
 2. Dê dois cliques no script **`setup-novo-pc.bat`**.  
-   *(Ele instala todas as dependências, cria o `.env`, compila o código e roda os 128 testes).*
+   *(Ele instala todas as dependências, cria o `.env`, compila o código e roda os 129 testes).*
 3. Para programar e testar melhorias com **Hot Reload**: dê dois cliques em **`iniciar-dev.bat`**.
 4. Para rodar a versão de produção compilada: dê dois cliques em **`iniciar-tudo.bat`**.
 5. Para encerrar os servidores: dê dois cliques em **`parar.bat`**.
