@@ -17,8 +17,8 @@
 | **Radar de Preços TCG (Engine)** | 🟢 Online | 242ms na busca | Base híbrida (SQLite + Catálogo Canônico com fotos HD) |
 | **Banco de Dados (SQLite WAL)** | 🟢 Otimizado | 1.244 registros | Índices cobrindo 100% das consultas frequentes |
 | **Coolify & Docker Engine** | 🟢 Healthy | Imagem atualizada | Volume NVMe persistente `/app/data` blindado |
-| **Estúdio IA de Redação (DeepSeek v4.1)** | 🟢 Ativo | Gateway OpenCode + Fallback 0ms | 2 Modelos (Urgência & Comunidade) + Disparo 1 clique |
-| **Testes Automatizados** | 🟢 100% Pass | 137 testes aprovados | Zero regressões ou falhas silenciosas |
+| **Estúdio IA de Chamadas Rápidas** | 🟢 Ativo | DeepSeek v4.1 + Fallback 0ms | Embelezador de frases com emojis sem links/arrobas |
+| **Testes Automatizados** | 🟢 100% Pass | 138 testes aprovados | Zero regressões ou falhas silenciosas |
 
 ---
 
@@ -45,11 +45,13 @@
    - Sentinel com envio via `sendDirectMessage` no WhatsApp do administrador com cooldown inteligente de 12 horas.
 4. ✅ **Correção Semântica no Extrator de Anúncios (Bug do 'POR: R$ 37'):**
    - Eliminação de linhas de preço com emojis (ex: `👉 POR: R$37`) como nome de produto, trava anti-preço no título e inclusão de termos oficiais TCG (`toploader`, `cristal`, `shield`, `sleeves`, `penny sleeve`).
-5. ✅ **Estúdio IA de Redação Rápida (DeepSeek v4.1 via OpenCode Gateway):**
-   - Mini editor no Cockpit para digitar qualquer rascunho livre e gerar 2 opções de copy (@pokemon_tcg_promo) com emojis temáticos, edição em tempo real e botão de disparo imediato para os grupos.
+5. ✅ **Estúdio IA de Chamadas Rápidas & Embelezador de Avisos (DeepSeek v4.1):**
+   - Mini editor no Cockpit focado no modo direto e leve: digite frases soltas como *"PROMO BOA PESSOAL 5 UNIDADES"* e receba na hora 3 chamadas embelezadas com emojis temáticos (🚨, ⚡, 🔥, 🏃‍♂️), sem links, sem arrobas e sem disclaimers pesados.
+   - Botão de cópia e disparo em 1 clique direto para os grupos do WhatsApp.
+   - Suporte opcional a Anúncio Completo com link quando necessário.
    - Motor com fallback local ultrarrápido de 0ms para tolerância total a falhas de rede.
 
 ---
 
 ## 4. ✅ Conclusão
-O sistema encontra-se em **perfeito estado de funcionamento**, 100% calibrado, com **137 testes automatizados aprovados**, zero erros em produção e total aderência às regras de negócio estipuladas.
+O sistema encontra-se em **perfeito estado de funcionamento**, 100% calibrado, com **138 testes automatizados aprovados**, zero erros em produção e total aderência às regras de negócio estipuladas.
