@@ -57,8 +57,12 @@ chmod +x *.sh
   - **🌅 Mensagem Diária de Abertura:** Templates profissionais com rotação automática diária e suporte a texto livre.
   - **📊 Google Planilhas Integrado:** Registra automaticamente cada oferta enviada nos grupos na planilha **"produtos tcg valores"** com Data/Hora, Nome do Produto, Preço Promocional (Por), Preço Original (De) e Link Afiliado via Webhook Google Apps Script.
 - **⚡ Gerador de Anúncios Universal:** Interface no painel para colar links do Mercado Livre ou lojas gerais, com parser OpenGraph resiliente, extração automática de foto HD, detecção De/Por, cupons, radar de precificação integrado, edição em tempo real da copy, cópia rápida para área de transferência e disparo automático com auto-destinos para todas as rotas ativas.
-- **🎟️ Foto Oficial de "NOVO CUPOM" Mercado Livre:** Tratamento visual inteligente para anúncios e alertas de cupons. Quando uma mensagem replicada for um comunicado de cupom sem foto de produto anexa, ou quando o usuário gerar um anúncio de cupom/vitrine, o sistema anexa e publica automaticamente a imagem oficial em alta definição amarela do Mercado Livre com o selo "NOVO CUPOM", tornando os alertas de cupons muito mais atrativos e profissionais.
+- **🎟️ Foto Oficial Amarela & Vitrine Obrigatória em Cupons Mercado Livre:** Tratamento visual e de afiliação inteligente para comunicados e listas de cupons:
+  - **Foto Amarela Oficial Incondicional:** Em qualquer comunicado de novos cupons ou lista promocional, o robô anexa obrigatoriamente a foto oficial amarela do Mercado Livre (`cupom-mercadolivre.png`), preservando a sua proporção nativa de banner sem cortes.
+  - **Vitrine Oficial Garantida:** Todos os links de cupons e campanhas gerais são convertidos estritamente para a vitrine oficial de ofertas do Eduardo (`https://mercadolivre.com/sec/2rM6RPm`), impedindo buscas falsas e links alheios de concorrentes.
+  - **Descarte de Tetos e Mínimos como Preço:** Condições de cupom (ex: *"limitado a R$ 100"*, *"compras acima de R$ 79"*, *"mínimo de R$ 50"*) são 100% filtradas e nunca viram título nem preço de produto.
 - **🖼️ Padronização Vitrine de Estúdio (Canvas 1:1 & Respiro Automático):** Processamento inteligente de imagem com motor gráfico `sharp`. Centraliza qualquer foto de produto em um canvas quadrado perfeito de 1080x1080 px com fundo branco de catálogo e margem de respiro proporcional (padding configurável de 8%, 12% ou 18%), eliminando o efeito de fotos sufocadas ou coladas nas bordas no WhatsApp e padronizando todas as ofertas com aspecto profissional de loja oficial.
+- **🖥️ Super Cockpit Pro Expandido (`max-w-[1680px]`):** Layout de alta resolução otimizado para monitores Full HD (1920x1080) e Ultra-Wide. O container principal foi expandido de 1280px (`max-w-7xl`) para 1680px (`max-w-[1680px]`), preenchendo a tela com harmonia e proporcionando o mesmo espaço amplo e generoso para todas as abas (Dashboard, Afiliados, Replicador, Radar, Finanças e Central de Ajustes).
 - **🛡️ Blindagem de Produtos Esgotados / Pausados no Mercado Livre:** Detecção inteligente de estoque esgotado ou anúncios pausados (`isAnuncioEsgotadoOuPausado`). Quando um anúncio esgota no Mercado Livre, a plataforma exibe carrosséis de produtos alternativos ou redireciona para vitrines (`/sec/`). O motor agora bloqueia a captura de preços desses carrosséis secundários (ex: R$ 8 de sleeves ou R$ 30 de fichários), preserva integralmente o preço original informado no anúncio postado e redireciona os botões de compra e "Ver no ML" para a busca ativa de produtos com estoque em tempo real ordenados por menor preço (`_OrderId_PRICE_ASC`).
 - **🔄 Botão de Sincronização Unificada:** Sincronização instantânea das métricas do Meta Ads (Graph API v20.0) e Mercado Livre Afiliados com recálculo em tempo real de ROAS, comissões do dia e lucro líquido.
 
@@ -137,7 +141,7 @@ chmod +x *.sh
 
 ---
 
-## 🧪 Cobertura de Testes Automatizados (102 Testes — 100% Verde)
+## 🧪 Cobertura de Testes Automatizados (129 Testes — 100% Verde)
 
 A plataforma conta com uma suíte de testes unitários e de integração abrangente em `app/test/`:
 
@@ -145,12 +149,13 @@ A plataforma conta com uma suíte de testes unitários e de integração abrange
 | :--- | :---: | :--- | :---: |
 | **Pipeline & Normalização** | 30 | Extração de preços De/Por, remoção de assinaturas concorrentes, formatação limpa e encurtamento `meli.la` | 🟢 Passou (100%) |
 | **Guardião TCG & Anti-Spam** | 18 | Filtro estrito de nicho (Pokémon TCG), cooldown de 30 min por produto e bloqueio de lixo | 🟢 Passou (100%) |
-| **Parser de Imagens & Mídia** | 12 | Baixa automática de fotos HD oficiais do Mercado Livre, fallback gracioso e integridade | 🟢 Passou (100%) |
-| **Gerador & Extrator de Anúncios** | 14 | Extração De/Por/Cupom em links Mercado Livre e Shopee, cópia e disparo em lote com auto-destinos | 🟢 Passou (100%) |
-| **Agendador Diário, Bom Dia & Métricas** | 10 | Disparo às 07:00, interpolação, rotação de 4 templates e contagem real de hoje via SQL indexado | 🟢 Passou (100%) |
+| **Parser de Imagens & Mídia** | 14 | Baixa automática de fotos HD oficiais do Mercado Livre, fallback gracioso e integridade | 🟢 Passou (100%) |
+| **Estúdio de Imagem 1:1 & Cupons** | 15 | Padronização de fotos com respiro proporcional via `sharp`, anexo da foto amarela de cupom e vitrine | 🟢 Passou (100%) |
+| **Gerador & Extrator de Anúncios** | 18 | Extração De/Por/Cupom em links Mercado Livre e Shopee, cópia e disparo em lote com auto-destinos | 🟢 Passou (100%) |
+| **Agendador Diário, Bom Dia & Métricas** | 16 | Disparo às 07:00, interpolação, rotação de 4 templates e contagem real de hoje via SQL indexado | 🟢 Passou (100%) |
 | **Google Planilhas Webhook** | 6 | Conexão resiliente, formatação de valores em BRL e envio assíncrono não-bloqueante | 🟢 Passou (100%) |
 | **Autenticação & Sessão HMAC** | 12 | Login seguro, tokens HMAC e reset diário atômico de comissões na virada de meia-noite | 🟢 Passou (100%) |
-| **Total Consolidado** | **102 testes** | **Zero falhas na esteira de automação** | 🟢 **100% VERDE** |
+| **Total Consolidado** | **129 testes** | **Zero falhas na esteira de automação** | 🟢 **100% VERDE** |
 
 Para executar todos os testes da raiz:
 ```bash
