@@ -355,7 +355,10 @@ export function initDatabase() {
 // Helpers para ler e gravar configs
 export function getConfig(chave: string, padrao: string = ''): string {
   const row = db.prepare('SELECT valor FROM configs WHERE chave = ?').get(chave) as { valor: string } | undefined;
-  return row ? row.valor : padrao;
+  if (!row || row.valor === undefined || row.valor === null || row.valor === '') {
+    return padrao;
+  }
+  return row.valor;
 }
 
 export function setConfig(chave: string, valor: string): void {
