@@ -285,6 +285,29 @@ export const api = {
     request<{ ok: boolean; totalEnviados?: number; message?: string; error?: string }>('/api/agendador/testar', {
       method: 'POST'
     }),
+  // --- ESTÚDIO IA DE REDAÇÃO RÁPIDA (DEEPSEEK V4.1) ---
+  redigirOfertaIA: (rascunho: string, link?: string) =>
+    request<{
+      ok: boolean;
+      modeloUrgencia: string;
+      modeloComunidade: string;
+      linkAfiliado: string;
+      fonte: 'deepseek' | 'fallback_local';
+      erro?: string;
+    }>('/api/ia/redigir-oferta', {
+      method: 'POST',
+      body: JSON.stringify({ rascunho, link })
+    }),
+  dispararOfertaIA: (texto: string) =>
+    request<{
+      ok: boolean;
+      enviados: number;
+      totalDestinos: number;
+      mensagem: string;
+    }>('/api/ia/disparar-oferta', {
+      method: 'POST',
+      body: JSON.stringify({ texto })
+    }),
   renewCookie: (cookie: string) =>
     request<{ ok: boolean; message: string; sessionExpired?: boolean; data?: MeliAffiliateOverview }>('/api/afiliados/cookie', {
       method: 'POST',

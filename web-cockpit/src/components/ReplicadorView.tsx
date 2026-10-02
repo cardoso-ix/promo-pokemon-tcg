@@ -33,6 +33,7 @@ import type {
 } from '../types/index.ts';
 import { api } from '../services/api.ts';
 import { useUnifiedStatus } from '../hooks/useUnifiedStatus.ts';
+import { EstudioIaView } from './EstudioIaView.tsx';
 
 export interface ModeloBomDia {
   id: string;
@@ -562,6 +563,17 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
             Gerador de Anúncios
           </button>
           <button
+            onClick={() => setSubTab('ia')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              subTab === 'ia'
+                ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 shadow-md font-bold'
+                : 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            ✨ Estúdio IA (DeepSeek)
+          </button>
+          <button
             onClick={() => setSubTab('conectar')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               subTab === 'conectar'
@@ -1047,6 +1059,12 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
           </div>
         </div>
       )}
+
+      {/* Sub-Aba: Estúdio IA (DeepSeek) */}
+      {subTab === 'ia' && (
+        <EstudioIaView onDispararSucesso={() => carregarDados()} />
+      )}
+
       {/* Sub-Aba: Conectar WhatsApp */}
       {subTab === 'conectar' && (
         <div className="glass-panel rounded-2xl p-8 border border-white/[0.08] max-w-xl mx-auto text-center space-y-5">

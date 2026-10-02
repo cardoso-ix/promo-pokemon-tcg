@@ -34,5 +34,8 @@ export const CONFIG = {
   dashboardSecret: process.env.DASHBOARD_SECRET || 'promo-secret-2026',
   disparadorUrl: process.env.DISPARADOR_URL || (process.env.NODE_ENV === 'production' ? 'http://bot-disparador:3333' : 'http://127.0.0.1:3333'),
   internalApiKey: process.env.INTERNAL_API_KEY || 'promo-internal-key-2026',
-  syncDisparadorAtivo: process.env.SYNC_DISPARADOR !== 'false'
+  syncDisparadorAtivo: process.env.SYNC_DISPARADOR !== 'false',
+  deepseekApiKey: process.env.DEEPSEEK_API_KEY || '',
+  deepseekBaseUrl: process.env.DEEPSEEK_BASE_URL || 'https://opencode.ai/zen/go/v1',
+  deepseekModel: process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash'
 };

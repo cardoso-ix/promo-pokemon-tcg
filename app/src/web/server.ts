@@ -56,6 +56,7 @@ import {
   registrarOfertaPlanilha,
   APPS_SCRIPT_TEMPLATE
 } from '../core/sheets.js';
+import { redigirOfertaComIA } from '../core/deepseek.js';
 import {
   verifyCredentials,
   createSessionToken,
@@ -1171,6 +1172,120 @@ export async function createServer() {
       const deletados = purgarRegistrosCorrompidosHistorico();
       const semeados = semearCatalogoCanonicoTCG();
       return { ok: true, deletados, semeados, mensagem: 'Base histórica recalibrada com sucesso com referências canônicas!' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  });
+
+  // API REST: Estúdio IA de Redação Rápida (DeepSeek v4.1 + Fallback Local)
+  app.post<{
+    Body: {
+      rascunho: string;
+      link?: string;
+    };
+  }>('/api/ia/redigir-oferta', async (req, reply) => {
+    const { rascunho, link } = req.body || {};
+    if (!rascunho || !rascunho.trim()) {
+      return reply.status(400).send({ ok: false, error: 'Digite uma frase ou rascunho para a IA formatar.' });
+    }
+
+    try {
+      let linkAfiliadoFinal = (link || '').trim();
+      if (!linkAfiliadoFinal) {
+        const urlMatch = rascunho.match(/https?:\/\/[^\s]+/i);
+        if (urlMatch) {
+          linkAfiliadoFinal = urlMatch[0];
+        }
+      }
+
+      if (linkAfiliadoFinal) {
+        const mattWord = getConfig('affiliate_matt_word', CONFIG.defaultMattWord);
+        const mattTool = getConfig('affiliate_matt_tool', CONFIG.defaultMattTool);
+        const meliCookie = getConfig('meli_cookie', '');
+        const meliTag = getConfig('meli_tag', mattWord);
+        const linkVitrineCurto = getConfig('link_vitrine_curto', 'https://mercadolivre.com/sec/2rM6RPm');
+
+        const proc = await processMessageText(
+          linkAfiliadoFinal,
+          'ia_studio@test',
+          mattWord,
+          mattTool,
+          '',
+          meliCookie,
+          meliTag,
+          linkVitrineCurto
+        );
+        const linksExtraidos = proc.novoTexto.match(/https?:\/\/[^\s]+/gi);
+        if (linksExtraidos && linksExtraidos.length > 0) {
+          linkAfiliadoFinal = linksExtraidos[0];
+        }
+      }
+
+      const resIA = await redigirOfertaComIA({
+        rascunho,
+        link: linkAfiliadoFinal
+      });
+
+      return resIA;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  });
+
+  app.post<{
+    Body: {
+      texto: string;
+    };
+  }>('/api/ia/disparar-oferta', async (req, reply) => {
+    const { texto } = req.body || {};
+    if (!texto || !texto.trim()) {
+      return reply.status(400).send({ ok: false, error: 'O texto da mensagem não pode estar vazio.' });
+    }
+
+    if (whatsAppManager.getState().status !== 'connected') {
+      return reply.status(503).send({ ok: false, error: 'WhatsApp desconectado. Conecte o bot para disparar.' });
+    }
+
+    try {
+      const destinos = obterDestinosAtivos();
+      if (destinos.length === 0) {
+        return reply.status(400).send({ ok: false, error: 'Nenhum grupo de destino ativo configurado nas Rotas.' });
+      }
+
+      let enviados = 0;
+      for (const destinoChatId of destinos) {
+        try {
+          const ok = await whatsAppManager.sendDirectMessage(destinoChatId, texto.trim());
+          if (ok) enviados++;
+        } catch (errEnv) {
+          console.warn(`[Disparo IA] Falha ao enviar para ${destinoChatId}:`, errEnv);
+        }
+      }
+
+      const log = insertLog({
+        origem_chat_id: 'painel_estudio_ia',
+        origem_nome: 'Estúdio IA de Redação (Painel)',
+        destino_chat_id: destinos.join(', '),
+        hash_conteudo: `hash_ia_${Date.now()}`,
+        texto_original: texto,
+        texto_publicado: texto,
+        tem_foto: false,
+        links_convertidos: 1,
+        status: enviados > 0 ? 'enviado' : 'erro',
+        motivo: 'disparo_estudio_ia'
+      });
+      if (log) {
+        broadcast('new_log', log);
+      }
+
+      return {
+        ok: true,
+        enviados,
+        totalDestinos: destinos.length,
+        mensagem: `Oferta enviada com sucesso para ${enviados} de ${destinos.length} grupos ativos!`
+      };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       return reply.status(500).send({ ok: false, error: msg });

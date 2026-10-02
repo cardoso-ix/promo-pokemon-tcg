@@ -56,7 +56,7 @@ export interface RadarBuscaResponse {
   erro?: string;
 }
 
-export type SubTabReplica = 'feed' | 'rotas' | 'gerador' | 'conectar' | 'config';
+export type SubTabReplica = 'feed' | 'rotas' | 'gerador' | 'ia' | 'conectar' | 'config';
 export type SubTabBot = 'visao-geral' | 'grupos' | 'leads' | 'campanhas' | 'meta-cloud' | 'anti-ban' | 'logs';
 
 export type WhatsAppConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr';
