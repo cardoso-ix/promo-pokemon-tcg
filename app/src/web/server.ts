@@ -267,6 +267,7 @@ export async function createServer() {
           lastChecked: new Date().toISOString(),
           message: 'Cookie recusado pelo Mercado Livre (sessão expirada)'
         };
+        await notificarAdminCookieExpirado();
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -277,6 +278,38 @@ export async function createServer() {
       };
     }
     return currentCookieStatus;
+  }
+
+  async function notificarAdminCookieExpirado(): Promise<void> {
+    try {
+      const COOLDOWN_ALERTA_MS = 12 * 60 * 60 * 1000; // 12 horas de cooldown
+      const ultimoAlertaStr = getConfig('ultimo_alerta_cookie_expirado', '0');
+      const ultimoAlerta = parseInt(ultimoAlertaStr, 10) || 0;
+      const agora = Date.now();
+
+      if (agora - ultimoAlerta < COOLDOWN_ALERTA_MS) {
+        return; // Alerta em cooldown
+      }
+
+      const adminNumeroConfig = getConfig('admin_whatsapp_numero', '').trim().replace(/\D/g, '');
+      const userPhone = whatsAppManager.getState().userPhone;
+      const numeroDestino = adminNumeroConfig || userPhone;
+
+      if (!numeroDestino || whatsAppManager.getState().status !== 'connected') {
+        return;
+      }
+
+      const toChatId = numeroDestino.includes('@') ? numeroDestino : `${numeroDestino}@s.whatsapp.net`;
+      const textoAlerta = `⚠️ *[ALERTA AUTOMÁTICO - PROMO POKÉMON TCG]* ⚡\n\nIdentificamos que o seu Cookie de Afiliado do Mercado Livre *EXPIROU* ou perdeu a validade.\n\n🛡️ *Fique tranquilo:* O robô continua funcionando normalmente e entregando todas as ofertas através da sua Vitrine Oficial!\n\nPorém, quando tiver um tempinho, acesse o painel para colar o novo cookie e reativar o encurtador *meli.la*:\n👉 http://108.174.145.77:3000\n\n_(Este aviso proativo é enviado no máximo 1 vez a cada 12 horas)_`;
+
+      const enviado = await whatsAppManager.sendDirectMessage(toChatId, textoAlerta);
+      if (enviado) {
+        setConfig('ultimo_alerta_cookie_expirado', agora.toString());
+        console.log(`[Sentinela Cookie] Alerta de cookie expirado enviado com sucesso para ${toChatId}.`);
+      }
+    } catch (errNotif) {
+      console.warn('[Sentinela Cookie] Falha ao enviar alerta de cookie no WhatsApp:', errNotif);
+    }
   }
 
   // Verificação inicial após boot do servidor

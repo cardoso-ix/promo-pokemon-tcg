@@ -347,6 +347,12 @@ export function initDatabase() {
     semearCatalogoCanonicoTCG();
     reprocessarChavesCanonicasHistorico();
     limparRegistrosPrecosInvalidos();
+    
+    // Purga automática inicial e agendamento a cada 24h para manter o SQLite leve (< 10 MB)
+    purgarLogsAntigos(90);
+    setInterval(() => {
+      purgarLogsAntigos(90);
+    }, 24 * 60 * 60 * 1000).unref();
   } catch (errHist: unknown) {
     console.warn('[Database Migration] Aviso ao calibrar histórico de produtos TCG:', errHist);
   }
@@ -1915,6 +1921,35 @@ export function limparRegistrosPrecosInvalidos(): number {
   } catch (err: unknown) {
     console.warn('[Database] Erro ao limpar registros de preços inválidos:', err);
     return 0;
+  }
+}
+
+/**
+ * Purga logs e registros antigos de duplicação com mais de X dias para manter o SQLite ultraleve
+ */
+export function purgarLogsAntigos(diasRetencao: number = 90): { logsDeletados: number; produtosDeletados: number } {
+  try {
+    const resLogs = db.prepare(`
+      DELETE FROM logs 
+      WHERE criado_em < datetime('now', '-' || ? || ' days')
+    `).run(diasRetencao);
+
+    const resProds = db.prepare(`
+      DELETE FROM produtos_replicados 
+      WHERE criado_em < datetime('now', '-' || ? || ' days')
+    `).run(diasRetencao);
+
+    const logsDeletados = resLogs.changes || 0;
+    const produtosDeletados = resProds.changes || 0;
+
+    if (logsDeletados > 0 || produtosDeletados > 0) {
+      console.log(`[Database Purge] Limpeza automática: ${logsDeletados} logs e ${produtosDeletados} produtos replicados antigos (> ${diasRetencao} dias) purgados.`);
+    }
+
+    return { logsDeletados, produtosDeletados };
+  } catch (err: unknown) {
+    console.warn('[Database Purge] Erro ao purgar registros antigos:', err);
+    return { logsDeletados: 0, produtosDeletados: 0 };
   }
 }
 
