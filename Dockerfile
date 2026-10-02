@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y python3 make g++ curl && rm -rf /var/li
 COPY app/package*.json ./
 
 # Instalar todas as dependências (compila better-sqlite3 nativamente)
-RUN npm ci
+RUN npm install
 
 # Copiar tsconfig, scripts e código fonte
 COPY app/tsconfig.json ./
