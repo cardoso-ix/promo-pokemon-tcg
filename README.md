@@ -15,7 +15,7 @@ Se você acabou de abrir este projeto em um novo computador ou notebook para con
 ### No Windows:
 1. Instale o **Node.js v20 LTS ou v22 LTS** ([nodejs.org](https://nodejs.org/)).
 2. Dê dois cliques no script **`setup-novo-pc.bat`**.  
-   *(Ele instala todas as dependências, cria o `.env`, compila o código e roda os 132 testes).*
+   *(Ele instala todas as dependências, cria o `.env`, compila o código e roda os 134 testes).*
 3. Para programar e testar melhorias com **Hot Reload**: dê dois cliques em **`iniciar-dev.bat`**.
 4. Para rodar a versão de produção compilada: dê dois cliques em **`iniciar-tudo.bat`**.
 5. Para encerrar os servidores: dê dois cliques em **`parar.bat`**.

@@ -25,6 +25,9 @@ function isLinhaClickbaitOuCabecalho(linha: string): boolean {
 
   const lower = l.toLowerCase();
 
+  // Rejeita incondicionalmente qualquer variação de linha de preço (mesmo decorada com emojis)
+  if (isLinhaDePreco(l)) return true;
+
   const termosEngajamento = [
     'gastar pouco', 'afim de', 'a fim de', 'olha esse', 'olha essa', 'olha isso',
     'olha o preco', 'olha o preço', 'quem avisa', 'achadinho', 'da uma olhada',
@@ -53,18 +56,35 @@ function isLinhaClickbaitOuCabecalho(linha: string): boolean {
 }
 
 /**
+ * Identifica se uma linha é estritamente uma indicação de preço (mesmo com emojis tipo 👉 POR: R$37)
+ */
+export function isLinhaDePreco(linha: string): boolean {
+  if (!linha) return false;
+  const l = linha.replace(/[\*_~]/g, '').trim();
+  // Remove todos os emojis e marcadores do início da linha
+  const limpo = l.replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\s~_\*—–\->:❌👉🏼👉✅🔥🛒📦🏷️💳💵💰⚠️‼️]+/u, '').trim();
+  
+  if (/^(?:de:?|por:?|apenas:?|valor:?|preço:?|preco:?)\s*R?\$?\s*\d+/i.test(limpo)) return true;
+  if (/^(?:de|por|apenas)\s+R?\$?\s*\d+/i.test(limpo)) return true;
+  if (/^R?\$?\s*\d+(?:[.,]\d+)*(?:\s*(?:cada|cd|unidade|unid|und|pix|reais|avista|à vista))?$/i.test(limpo)) return true;
+  if (/^\d+\s*x\s*(?:de)?\s*R?\$?\s*\d+/i.test(limpo)) return true;
+  return false;
+}
+
+/**
  * Calcula a pontuação semântica de uma linha para determinar se é o título do produto real
  */
 function pontuarLinhaProduto(linha: string): number {
   const l = (linha || '').replace(/[\*_~]/g, '').trim();
   if (l.length < 4) return -100;
+  if (isLinhaDePreco(l)) return -100;
   if (isLinhaClickbaitOuCabecalho(l)) return -100;
 
   const lower = l.toLowerCase();
   let score = 10;
 
-  // Multiplicador no início ou meio (ex: 2X, 3X, 4X, Combo, Kit, Pack)
-  if (/(?:^|\s|\b)(\d+\s*[xX])(?:\s|\b)/i.test(l) || lower.includes('combo') || lower.includes('kit') || lower.includes('pack')) {
+  // Multiplicador ou quantidade no início ou meio (ex: 25 Toploader, 2X, 3X, 4X, Combo, Kit, Pack)
+  if (/(?:^|\s|\b)(\d+\s*(?:toploaders?|cards?|cartas?|boosters?|pacotes?|sleeves?|unidades?|unids?|und?|[xX]))(?:\s|\b)/i.test(l) || lower.includes('combo') || lower.includes('kit') || lower.includes('pack')) {
     score += 45;
   }
 
@@ -72,8 +92,10 @@ function pontuarLinhaProduto(linha: string): number {
   const termosTCG = [
     'booster', 'copag', 'escuridao absoluta', 'escuridão absoluta', 'fichario', 'fichário',
     'pasta', 'blister', 'deck', 'box', 'evolucoes', 'evoluções', 'colecao', 'coleção',
-    'cartas', 'pokemon', 'pokémon', 'display', 'sleeves', 'shield', 'triple pack',
-    'quad pack', 'etb', 'elite trainer box', 'lata', 'tin', 'bundle', 'poster collection',
+    'cartas', 'pokemon', 'pokémon', 'display', 'sleeves', 'sleeve', 'toploader', 'toploaders',
+    'top loader', 'top loaders', 'cristal', 'shield', 'penny sleeve', 'perfect size', 'binder',
+    'deck box', 'playmat', 'acessorio', 'acessórios', 'triple pack', 'quad pack', 'etb',
+    'elite trainer box', 'lata', 'tin', 'bundle', 'poster collection',
     'destinos de paldea', 'chamas obsidiana', '151', 'origem perdida', 'cinzas do tempo',
     'tempestade prateada', 'coroa estelar', 'faiscas volumosas', 'faíscas volumosas',
     'forca temporal', 'força temporal', 'mascaras do crepusculo', 'máscaras do crepúsculo',
@@ -87,8 +109,8 @@ function pontuarLinhaProduto(linha: string): number {
     }
   }
 
-  // Marcadores visuais de produto (👉, 📦, 🃏, ✨)
-  if (/^[👉📦🃏✨🏷️]/u.test(l)) {
+  // Marcadores visuais de produto (👉, 📦, 🃏, ✨) apenas quando NÃO for preço
+  if (/^[👉📦🃏✨🏷️]/u.test(l) && !isLinhaDePreco(l)) {
     score += 15;
   }
 
@@ -183,7 +205,7 @@ export function extrairDadosOferta(
 
     // Se a linha for o link ou preço Por/De explícito ou cabeçalho clickbait descartável
     if (/^https?:/i.test(l) || l.startsWith('🔗') || l.startsWith('@')) continue;
-    if (isLinhaClickbaitOuCabecalho(l)) continue;
+    if (isLinhaClickbaitOuCabecalho(l) || isLinhaDePreco(l)) continue;
     if (/^(?:❌|~+)?\s*(?:de:?|por:?|apenas:?)\s*R?\$?\s*\d+/i.test(l)) continue;
     if (/^\(?\s*(?:apenas\s*)?R?\$?\s*\d+(?:[.,]\d+)*\s*(?:cada|cd|unidade)\)?$/i.test(l)) continue;
 
@@ -212,21 +234,26 @@ export function extrairDadosOferta(
     } else {
       produto = textoSemDecoracao || melhorLinha;
     }
+
+    // Trava de sanidade: Se o produto extraído for linha de preço, anula
+    if (isLinhaDePreco(produto) || /^(?:por|de|apenas)\s*[:\-–]?\s*R?\$?\s*\d+/i.test(produto.trim())) {
+      produto = '';
+    }
   }
 
-  // Fallback 1: Se houver linha destacada com 📦 que não seja clickbait
+  // Fallback 1: Se houver linha destacada com 📦 que não seja clickbait nem preço
   if (!produto) {
-    const linhaCaixa = linhas.find((l) => l.includes('📦') && !isLinhaClickbaitOuCabecalho(l));
+    const linhaCaixa = linhas.find((l) => l.includes('📦') && !isLinhaClickbaitOuCabecalho(l) && !isLinhaDePreco(l));
     if (linhaCaixa) {
       produto = linhaCaixa.replace(/📦/g, '').replace(/[\*_~]/g, '').trim();
     }
   }
 
-  // Fallback 2: Primeira linha substantiva que não seja clickbait
+  // Fallback 2: Primeira linha substantiva que não seja clickbait nem preço
   if (!produto) {
     for (const linha of linhas) {
       const l = linha.replace(/[\*_~]/g, '').trim();
-      if (l.length > 5 && !isLinhaClickbaitOuCabecalho(l) && !/^https?:/i.test(l) && !/R\$\s*[\d\.,]+/i.test(l) && !l.startsWith('🔗') && !l.startsWith('@')) {
+      if (l.length > 5 && !isLinhaClickbaitOuCabecalho(l) && !isLinhaDePreco(l) && !/^https?:/i.test(l) && !/R\$\s*[\d\.,]+/i.test(l) && !l.startsWith('🔗') && !l.startsWith('@')) {
         produto = l.replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\s*~_—–-]+/u, '').trim();
         break;
       }
