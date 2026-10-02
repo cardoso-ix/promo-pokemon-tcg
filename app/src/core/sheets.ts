@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { getConfig, inserirOfertaHistorico } from '../db/database.js';
-import { formatarTituloPorSlug, parseValorMoeda, extrairPrecoUnitario } from './anuncio.js';
+import { formatarTituloPorSlug, parseValorMoeda, extrairPrecoUnitario, detectarMensagemCupom } from './anuncio.js';
 
 export interface OfertaPlanilha {
   data: string;
@@ -32,13 +32,13 @@ function isLinhaClickbaitOuCabecalho(linha: string): boolean {
     'loucura', 'nao perca', 'não perca', 'super promocao', 'super promoção',
     'promocao', 'promoção', 'oferta', 'frete', 'aproveite', 'compre aqui',
     'loja verificada', 'loja oficial', 'visite a pagina', 'encontre todos os produtos',
-    'novo cupom', 'liberado', 'link aqui', 'oferta aqui', 'estoque limitado',
+    'novo cupom', 'novos cupons', 'cupom', 'cupons', 'liberado', 'link aqui', 'oferta aqui', 'estoque limitado',
     'promocao sujeita', 'promoção sujeita', 'vendido por', 'entregue por',
     'menor preco', 'menor preço', 'apenas hoje', 'so hoje', 'só hoje',
     'atencao', 'atenção', 'alerta'
   ];
 
-  if (termosEngajamento.some((t) => lower.includes(t))) {
+  if (termosEngajamento.some((t) => lower.includes(t)) || /\bcupo(?:m|ns)\b/i.test(l)) {
     return true;
   }
 
@@ -46,6 +46,8 @@ function isLinhaClickbaitOuCabecalho(linha: string): boolean {
   if (/^de:?|^por:?|^apenas:?|^https?:/i.test(l)) return true;
   if (/^R\$\s*[\d\.,]+/i.test(l)) return true;
   if (l.startsWith('🔗') || l.startsWith('@') || /^[\u{1F39F}\u{1F3AB}\u{1F3F7}]/u.test(l)) return true;
+  if (/^[📣🎟️🎫🏷️⚡]/u.test(l) && (lower.includes('cupom') || lower.includes('desconto') || lower.includes('promocao') || lower.includes('promoção') || lower.includes('promol') || lower.includes('regras') || lower.includes('limite') || lower.includes('mercado livre'))) return true;
+  if (/^(?:cupom|use\s+(?:o\s+)?cupom|c[oó]digo|desconto|m[ií]nimo|regra)/i.test(l)) return true;
 
   return false;
 }
@@ -283,24 +285,26 @@ export function extrairDadosOferta(
   }
 
   // Se não encontrou pelo prefixo De/Por, busca valores monetários no texto
-  // Ignora parcelas ("10x de R$...") e cupons ("cupom de R$...")
+  // Ignora parcelas ("10x de R$..."), cupons ("cupom de R$...") e condições ("limitado a R$...", "acima de R$...")
   if (!valorPor) {
     const allMatches = Array.from(texto.matchAll(/R\$\s*(\d+(?:[.,]\d+)*)(?!\d)/gi));
     const precosCandidatos: string[] = [];
 
     for (const m of allMatches) {
       const idx = m.index || 0;
-      const trechoAntes = texto.slice(Math.max(0, idx - 25), idx).toLowerCase();
+      const trechoAntes = texto.slice(Math.max(0, idx - 35), idx).toLowerCase();
       const trechoDepois = texto.slice(idx, idx + 25).toLowerCase();
 
       // Ignora se for parcela (ex: "10x de R$...", "10x R$...")
       const isParcela = /\d+\s*(?:x|vezes)\s*(?:de\s*)?$/i.test(trechoAntes);
       // Ignora se for cupom (ex: "cupom de R$...")
       const isCupom = /cupom\s*(?:de\s*)?$/i.test(trechoAntes);
+      // Ignora condições e regras de cupom (ex: "limitado a R$...", "acima de R$...", "mínimo de R$...", "desconto de R$...")
+      const isCondicaoCupom = /(?:acima\s+de|compras\s+acima\s+de|a\s+partir\s+de|limitado\s+a|desconto\s+de\s+at[eé]|desconto\s+de|m[ií]nimo(?:\s+de)?|m[aá]ximo(?:\s+de)?|teto\s+de|off\s+de|valor\s+m[ií]nimo\s+de)\s*$/i.test(trechoAntes);
       // Ignora se for percentual
       const isPorcento = /^R\$\s*\d+%/i.test(trechoDepois);
 
-      if (!isParcela && !isCupom && !isPorcento) {
+      if (!isParcela && !isCupom && !isCondicaoCupom && !isPorcento) {
         precosCandidatos.push(m[1].trim());
       }
     }
@@ -316,6 +320,21 @@ export function extrairDadosOferta(
         valorDe = '';
       }
     }
+  }
+
+  // 3.1 Blindagem de Cupons Puros / Comunicados:
+  // Se for mensagem de divulgação de cupom geral (sem porMatch explícito e sem produto TCG real),
+  // zera preços para evitar falsos positivos de teto de cupom ou mínimo de compras
+  const isCupomGeral = Boolean(
+    (detectarMensagemCupom(texto) || /\bcupons\b/i.test(texto)) &&
+    !porMatch &&
+    (!produto || produto === 'Colecionável Pokémon TCG' || produto.toLowerCase().includes('cupom') || isLinhaClickbaitOuCabecalho(produto))
+  );
+
+  if (isCupomGeral) {
+    valorPor = '';
+    valorDe = '';
+    produto = 'Cupons de Desconto Mercado Livre';
   }
 
   // 4. Validação e Consistência Numérica de Desconto:
@@ -345,7 +364,7 @@ export function extrairDadosOferta(
   return {
     data: agoraFormatado,
     produto,
-    valorPor: valorPor || 'Consultar',
+    valorPor: isCupomGeral ? '' : (valorPor || 'Consultar'),
     valorDe: valorDe || '',
     valorUnitario: precoUnitarioExtraido || undefined,
     link,

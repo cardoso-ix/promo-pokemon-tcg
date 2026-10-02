@@ -39,3 +39,46 @@ test('extrairDadosAnuncio deve definir FOTO_CUPOM_OFICIAL_URL para anúncios ou 
   assert.strictEqual(dados.imageUrl, FOTO_CUPOM_OFICIAL_URL);
   assert.ok(dados.textoGerado.includes('POKEMON20'));
 });
+
+test('Mensagem de cupons gerais não deve extrair preços de condições nem título falso', async () => {
+  const { extrairDadosOferta } = await import('../src/core/sheets.js');
+  const { formatarMensagemReplicada } = await import('../src/core/anuncio.js');
+
+  const textoConcorrente = `📣 NOVOS CUPONS MERCADO LIVRE!
+
+🎟️ PROMOL
+Desconto: R$ 30
+Mínimo: R$ 199
+
+🎟️ BRINCAR
+Desconto: 10% (limitado a R$ 100)
+Mínimo: R$ 79
+
+👉 https://meli.la/concorrente`;
+
+  const dados = extrairDadosOferta(textoConcorrente);
+
+  // Não pode extrair "NOVOS CUPONS" nem "PROMOL" como título de produto
+  assert.notStrictEqual(dados.produto, 'NOVOS CUPONS MERCADO LIVRE!');
+  assert.notStrictEqual(dados.produto, 'PROMOL');
+  assert.strictEqual(dados.produto, 'Cupons de Desconto Mercado Livre');
+
+  // Não pode extrair R$ 100, R$ 79 ou R$ 30 como preço de produto
+  assert.strictEqual(dados.valorPor, '', 'valorPor deve ser vazio para lista de cupons');
+  assert.strictEqual(dados.valorDe, '', 'valorDe deve ser vazio para lista de cupons');
+
+  // Na replicação, o link deve ser substituído pela vitrine oficial do usuário
+  const linkVitrine = 'https://mercadolivre.com/sec/2rM6RPm';
+  const textoHigienizado = textoConcorrente.replace(/https?:\/\/[^\s]+/gi, linkVitrine);
+  const formatado = formatarMensagemReplicada({
+    tipo: 'cupom',
+    titulo: dados.produto,
+    linkVitrineCurto: linkVitrine,
+    textoOriginalHigienizado: textoHigienizado
+  });
+
+  assert.ok(formatado.includes(linkVitrine), 'Deve conter a vitrine oficial do Eduardo');
+  assert.ok(!formatado.includes('https://meli.la/concorrente'), 'Não deve conter o link original do concorrente');
+  assert.ok(formatado.includes('@pokemon_tcg_promo'), 'Deve conter a assinatura da marca');
+});
+

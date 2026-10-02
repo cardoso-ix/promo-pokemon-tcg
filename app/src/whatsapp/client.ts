@@ -760,6 +760,12 @@ export class WhatsAppManager {
 
     const imageDownloadSuccess = Boolean(imageBuffer && imageBuffer.length > 0);
 
+    const isMsgCupomGeral = Boolean(
+      isCupom ||
+      detectarMensagemCupom(rawText) ||
+      /\bcupo(?:m|ns)\b/i.test(rawText)
+    );
+
     // Identificação de produto específico (ID canônico MLB real, ou preço válido e título de produto)
     const hasCanonicalProduct = Boolean(
       canonicalProductId &&
@@ -772,23 +778,26 @@ export class WhatsAppManager {
     const isTituloProduto = Boolean(
       dadosOferta.produto &&
       dadosOferta.produto !== 'Colecionável Pokémon TCG' &&
+      dadosOferta.produto !== 'Cupons de Desconto Mercado Livre' &&
       !dadosOferta.produto.toLowerCase().includes('cupom') &&
       !dadosOferta.produto.toLowerCase().includes('desconto')
     );
 
+    // Se for mensagem geral de cupom sem produto canônico individual (MLB), NUNCA é produto específico
     const hasProdutoEspecifico = Boolean(
       hasCanonicalProduct ||
-      (!isCupom && hasPrecoValido && isTituloProduto) ||
-      (Boolean(messageHasImage) && !isCupom) ||
-      (contemMercadoLivre && hasPrecoValido)
+      (!isMsgCupomGeral && (
+        (hasPrecoValido && isTituloProduto) ||
+        Boolean(messageHasImage) ||
+        (contemMercadoLivre && hasPrecoValido)
+      ))
     );
 
-    // REGRA DE OURO (NOVO CUPOM / COMUNICADO APENAS EM TEXTO):
-    // Se a publicação for de NOVO CUPOM PURO (sem produto específico) e a mensagem original do grupo monitorado NÃO continha imagem (só digitação),
-    // é OBRIGATÓRIO postar no mesmo formato: apenas digitação / sem imagem!
-    // Ofertas com produto específico real continuam podendo buscar a foto oficial do produto normalmente.
-    const isPublicacaoCupomPuro = Boolean(isCupom || /cupo(?:m|ns)/i.test(rawText)) && !hasProdutoEspecifico;
-    const buscarFotoMl = deveBuscarFotoExterna({
+    // Quando for cupom e não tiver produto canônico individual (MLB), é publicação de cupom puro
+    const isPublicacaoCupomPuro = Boolean(isMsgCupomGeral && !hasCanonicalProduct);
+
+    // Para comunicados de cupons puros, NUNCA busca foto externa de produtos do Mercado Livre
+    const buscarFotoMl = !isPublicacaoCupomPuro && deveBuscarFotoExterna({
       messageHasImage: Boolean(messageHasImage),
       imageDownloadSuccess,
       isCupom: Boolean(isCupom),
@@ -830,14 +839,21 @@ export class WhatsAppManager {
     let textoFinalPublicar = novoTexto;
 
     if (templateModo === 'padrao' && !isComunicadoSemLink) {
-      const tipoMensagem = determinarTipoMensagem({
-        texto: rawText,
-        hasProdutoEspecifico
-      });
+      const tipoMensagem = isPublicacaoCupomPuro
+        ? 'cupom'
+        : determinarTipoMensagem({
+            texto: rawText,
+            hasProdutoEspecifico
+          });
 
       const linkMatches = novoTexto.match(/https?:\/\/[^\s]+/gi);
       let linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
-      if (hasProdutoEspecifico && (linkAfiliadoFinal === linkVitrineCurto || linkAfiliadoFinal.includes('/social/')) && dadosOferta.produto && dadosOferta.produto !== 'Colecionável Pokémon TCG') {
+
+      if (isPublicacaoCupomPuro) {
+        // Para comunicados de cupons, o link DEVE ser incondicionalmente a vitrine oficial do Eduardo
+        linkAfiliadoFinal = linkVitrineCurto;
+        novoTexto = novoTexto.replace(/https?:\/\/[^\s]+/gi, linkVitrineCurto);
+      } else if (hasProdutoEspecifico && (linkAfiliadoFinal === linkVitrineCurto || linkAfiliadoFinal.includes('/social/')) && dadosOferta.produto && dadosOferta.produto !== 'Colecionável Pokémon TCG' && dadosOferta.produto !== 'Cupons de Desconto Mercado Livre') {
         const termoBusca = dadosOferta.produto.replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ').replace(/\s+/g, ' ').trim();
         const slugBusca = encodeURIComponent(termoBusca).replace(/%20/g, '-');
         linkAfiliadoFinal = `https://lista.mercadolivre.com.br/${slugBusca}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(mattWord)}&matt_tool=${encodeURIComponent(mattTool)}&forceInApp=true`;
@@ -912,24 +928,24 @@ export class WhatsAppManager {
     if (this.sock) {
       let safeImageBuffer: Buffer | null = imageBuffer;
 
-      // REGRA OFICIAL SOLICITADA:
+      // REGRA OFICIAL SOLICITADA PELO EDUARDO:
       // Quando for anúncio/mensagem de cupom disponível (tela de cupom, comunicado ou cupom detectado),
-      // se não houver foto específica de produto anexada pelo concorrente, usa OBRIGATORIAMENTE a foto oficial amarela "NOVO CUPOM"!
-      if (isCupom || isPublicacaoCupomPuro) {
-        if (!hasProdutoEspecifico || !safeImageBuffer) {
+      // se não houver produto canônico individual (MLB), usa OBRIGATORIAMENTE a foto oficial amarela "NOVO CUPOM"!
+      if (isCupom || isPublicacaoCupomPuro || isMsgCupomGeral) {
+        if (!hasCanonicalProduct) {
           const bufferOficialCupom = obterFotoCupomBuffer();
           if (bufferOficialCupom) {
             safeImageBuffer = bufferOficialCupom;
-            console.log(`[Cupom WhatsApp] Anexando foto oficial "NOVO CUPOM" (${Math.round(bufferOficialCupom.length / 1024)} KB).`);
+            console.log(`[Cupom WhatsApp] Anexando foto oficial amarela "NOVO CUPOM" (${Math.round(bufferOficialCupom.length / 1024)} KB).`);
           }
         }
       }
 
       // REGRA DE OURO DE ESTÚDIO:
-      // Se a padronização estiver ativa e houver foto de produto (não sendo comunicado de cupom puro),
+      // Se a padronização estiver ativa e houver foto de produto (não sendo comunicado de cupom puro ou banner oficial),
       // padroniza no canvas 1:1 com respiro proporcional de estúdio
       const padronizarAtivo = getConfig('padronizar_fotos_respiro', 'true') === 'true';
-      if (padronizarAtivo && safeImageBuffer && safeImageBuffer.length > 0 && !isPublicacaoCupomPuro) {
+      if (padronizarAtivo && safeImageBuffer && safeImageBuffer.length > 0 && !isPublicacaoCupomPuro && !isMsgCupomGeral && !isCupom) {
         try {
           const paddingPercentual = parseInt(getConfig('padding_foto_percentual', '12'), 10) || 12;
           const corFundo = getConfig('fundo_foto_cor', '#FFFFFF');

@@ -602,6 +602,12 @@ export async function createServer() {
       const slugParaFiltro = result.resolvedProductUrl ? result.resolvedProductUrl.split('/').pop() || '' : '';
       const isTCG = isProdutoTCG(text, dadosOferta.produto, slugParaFiltro);
 
+      const isMsgCupomGeral = Boolean(
+        isCupom ||
+        detectarMensagemCupom(text) ||
+        /\bcupo(?:m|ns)\b/i.test(text)
+      );
+
       const hasCanonicalProduct = Boolean(
         result.canonicalProductId &&
         !result.canonicalProductId.startsWith('CUPOM_')
@@ -613,23 +619,33 @@ export async function createServer() {
       const isTituloProduto = Boolean(
         dadosOferta.produto &&
         dadosOferta.produto !== 'Colecionável Pokémon TCG' &&
+        dadosOferta.produto !== 'Cupons de Desconto Mercado Livre' &&
         !dadosOferta.produto.toLowerCase().includes('cupom') &&
         !dadosOferta.produto.toLowerCase().includes('desconto')
       );
 
       const hasProdutoEspecifico = Boolean(
         hasCanonicalProduct ||
-        (!isCupom && hasPrecoValido && isTituloProduto) ||
-        (Boolean(imagePreviewUrl) && !isCupom)
+        (!isMsgCupomGeral && (
+          (hasPrecoValido && isTituloProduto) ||
+          Boolean(imagePreviewUrl)
+        ))
       );
 
-      const tipoDetectado = determinarTipoMensagem({
-        texto: text,
-        hasProdutoEspecifico
-      });
+      const isPublicacaoCupomPuro = Boolean(isMsgCupomGeral && !hasCanonicalProduct);
+
+      const tipoDetectado = isPublicacaoCupomPuro
+        ? 'cupom'
+        : determinarTipoMensagem({
+            texto: text,
+            hasProdutoEspecifico
+          });
 
       const linkMatches = result.novoTexto.match(/https?:\/\/[^\s]+/gi);
-      const linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
+      let linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
+      if (isPublicacaoCupomPuro) {
+        linkAfiliadoFinal = linkVitrineCurto;
+      }
       const parcelamentoExtraido = extrairParcelamento(text);
 
       const templateTexto = formatarMensagemReplicada({
