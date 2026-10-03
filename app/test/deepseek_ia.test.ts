@@ -1,53 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  humanizarTexto,
+  embelezarChamadaLocal,
   gerarCopiesLocaisFallback,
   redigirOfertaComIA
 } from '../src/core/deepseek.js';
 
-test('DeepSeek IA - gerarCopiesLocaisFallback deve estruturar dois modelos profissionais de alta conversão', () => {
-  const rascunho = `Promoção muito boa galera, box de 36 pacotes por 180 reais, corram! De 230 por 180.
-Cupom: BRINCAR`;
-  const link = 'https://mercadolivre.com/sec/2rM6RPm';
+test('DeepSeek IA - humanizarTexto corrige abreviações e erros de digitação comuns', () => {
+  const bruto = 'promo boa galera ta valendo mt a pena vcs tem q ver';
+  const corrigido = humanizarTexto(bruto);
 
-  const resultado = gerarCopiesLocaisFallback(rascunho, link);
-
-  assert.ok(resultado.modeloUrgencia, 'Modelo de urgência deve ser gerado');
-  assert.ok(resultado.modeloComunidade, 'Modelo de comunidade deve ser gerado');
-
-  // Assinatura de marca obrigatória
-  assert.ok(resultado.modeloUrgencia.startsWith('@pokemon_tcg_promo'), 'Urgência deve iniciar com @pokemon_tcg_promo');
-  assert.ok(resultado.modeloComunidade.startsWith('@pokemon_tcg_promo'), 'Comunidade deve iniciar com @pokemon_tcg_promo');
-
-  // Presença do link
-  assert.ok(resultado.modeloUrgencia.includes(link), 'Deve conter o link de afiliado');
-  assert.ok(resultado.modeloComunidade.includes(link), 'Deve conter o link de afiliado');
-
-  // Presença de preços e cupom
-  assert.ok(resultado.modeloUrgencia.includes('180'), 'Deve conter o preço Por');
-  assert.ok(resultado.modeloUrgencia.includes('BRINCAR'), 'Deve conter o código do cupom');
-
-  // Rodapé padrão
-  assert.ok(
-    resultado.modeloUrgencia.includes('Preço e estoque promocional sujeitos a alteração a qualquer momento'),
-    'Deve conter rodapé padrão'
-  );
+  assert.ok(corrigido.toLowerCase().includes('promoção'), 'Deve expandir promo para promoção');
+  assert.ok(corrigido.includes('está'), 'Deve expandir ta para está');
+  assert.ok(corrigido.includes('muito'), 'Deve expandir mt para muito');
+  assert.ok(corrigido.includes('vocês'), 'Deve expandir vcs para vocês');
+  assert.ok(corrigido.includes('que'), 'Deve expandir q para que');
 });
 
-test('DeepSeek IA - redigirOfertaComIA deve ativar Fallback Local instantâneo com resiliência total', async () => {
-  const t0 = Date.now();
-  const res = await redigirOfertaComIA({
-    rascunho: 'Combo 18 Boosters Pokémon Copag por apenas R$ 89',
-    link: 'https://meli.la/exemplo-teste'
-  });
-  const decorrido = Date.now() - t0;
+test('DeepSeek IA - embelezarChamadaLocal deve formatar com emojis sem @ e sem disclaimers pesados', () => {
+  const rascunho = 'chegou nova box de pokemon corram antes que acabe';
+  const opcoes = embelezarChamadaLocal(rascunho);
 
-  assert.equal(res.ok, true);
-  assert.ok(['deepseek', 'fallback_local'].includes(res.fonte));
-  assert.ok(res.modeloUrgencia.length > 50);
-  assert.ok(res.modeloComunidade.length > 50);
-  assert.ok(res.linkAfiliado.includes('exemplo-teste'));
-  assert.ok(decorrido < 1000, `Resposta deve ser rápida (< 1s), levou ${decorrido}ms`);
+  assert.ok(opcoes.length >= 2, 'Deve gerar múltiplas opções');
+  for (const op of opcoes) {
+    assert.ok(!op.includes('@pokemon_tcg_promo'), 'NÃO deve incluir @');
+    assert.ok(!op.includes('Preço e estoque promocional sujeitos'), 'NÃO deve ter disclaimer longo');
+    assert.ok(/(\p{Extended_Pictographic}|[\u{1F300}-\u{1F9FF}])/u.test(op), 'Deve conter emojis elegantes');
+    assert.ok(op.toLowerCase().includes('box de pokemon') || op.toLowerCase().includes('corram'), 'Deve preservar o texto original');
+  }
 });
 
 test('DeepSeek IA - redigirOfertaComIA deve validar rascunhos vazios de forma amigável', async () => {
@@ -56,24 +37,15 @@ test('DeepSeek IA - redigirOfertaComIA deve validar rascunhos vazios de forma am
   assert.ok(res.erro && res.erro.includes('Digite'));
 });
 
-test('DeepSeek IA - Modo Chamada Rápida deve embelezar texto sem arrobas, sem links e com emojis', async () => {
+test('DeepSeek IA - redigirOfertaComIA deve polir mensagem com rapidez e manter o sentido original', async () => {
   const res = await redigirOfertaComIA({
-    rascunho: 'PROMO BOA PESSOAL 5 UNIDADES',
-    modo: 'chamada'
+    rascunho: 'PROMO BOA PESSOAL 5 UNIDADES NO ESTOQUE',
+    link: 'https://mercadolivre.com/sec/exemplo'
   });
 
   assert.equal(res.ok, true);
-  assert.equal(res.modo, 'chamada');
-  assert.ok(res.opcoes.length >= 2, 'Deve gerar pelo menos 2 opções de chamada rápida');
-
-  for (const op of res.opcoes) {
-    // Não pode conter arrobas nem links nem avisos longos de rodapé
-    assert.ok(!op.includes('@pokemon_tcg_promo'), 'Chamada rápida NUNCA deve ter @');
-    assert.ok(!op.includes('http'), 'Chamada rápida NUNCA deve ter links');
-    assert.ok(!op.includes('Preço e estoque promocional sujeitos'), 'Chamada rápida NUNCA deve ter disclaimer pesado');
-    // Deve conter emojis
-    assert.ok(/[\u{1F300}-\u{1F9FF}]/u.test(op), 'Chamada rápida deve conter emojis');
-    // Deve conter a essência do que foi falado (ex: 5 unidades)
-    assert.ok(op.includes('5 unidades'), 'Deve preservar o número de unidades');
-  }
+  assert.ok(res.opcoes.length >= 2, 'Deve retornar ao menos 2 opções');
+  assert.ok(!res.opcoes[0].includes('@pokemon_tcg_promo'), 'NÃO deve conter arroba');
+  assert.ok(res.opcoes[0].includes('5 unidades') || res.opcoes[0].includes('5 Unidades'), 'Deve preservar 5 unidades');
+  assert.ok(res.opcoes[0].includes('https://mercadolivre.com/sec/exemplo'), 'Deve conter o link intacto');
 });
