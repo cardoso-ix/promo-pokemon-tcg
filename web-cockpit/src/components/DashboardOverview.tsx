@@ -441,33 +441,37 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header Enquadrado em Card Padrão com Sincronização Unificada */}
-      <div className="glass-panel rounded-2xl p-5 sm:p-6 border border-white/[0.08] bg-slate-900/60 shadow-xl backdrop-blur-xl flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <span className={`w-1.5 h-1.5 rounded-full ${isReplicaOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+      {/* Header Enquadrado em Card Padrão com Sincronização Unificada - Magic Patterns Signature */}
+      <div className="mp-card rounded-2xl p-5 sm:p-6 border border-white/[0.08] shadow-2xl backdrop-blur-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-40 bg-gradient-to-bl from-cyan-500/10 via-blue-500/5 to-transparent pointer-events-none rounded-tr-2xl" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-2.5 mb-2 flex-wrap">
+            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm shadow-emerald-500/10">
+              <span className="relative flex h-2 w-2">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isReplicaOnline ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${isReplicaOnline ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+              </span>
               {isReplicaOnline ? 'WhatsApp & Dashboard Online' : 'Dashboard Ativo'}
             </span>
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-xs text-slate-400 font-mono tracking-tight px-2.5 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.05]">
               {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </span>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-white tracking-tight">
-            Central de Comando <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Pokémon TCG</span>
+            Central de Comando <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">Pokémon TCG</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-2xl leading-relaxed">
-            Gestão unificada de afiliados Mercado Livre, tráfego pago Meta Ads, réplica de grupos VIP e atendimento inteligente com IA em tempo real.
+          <p className="text-xs sm:text-sm text-slate-300/80 mt-1.5 max-w-2xl leading-relaxed">
+            Gestão unificada de afiliados Mercado Livre, tráfego pago Meta Ads, réplica de grupos VIP e atendimento com IA em tempo real.
           </p>
         </div>
 
         {/* Botão Executivo de Sincronização Unificada Automática */}
-        <div className="flex items-center gap-2.5 self-start lg:self-center flex-wrap">
+        <div className="flex items-center gap-2.5 self-start lg:self-center flex-wrap relative z-10">
           <button
             onClick={handleSyncAllNow}
             disabled={syncingAll}
-            className="group flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 active:scale-95 disabled:opacity-50"
+            className="group flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 active:scale-95 disabled:opacity-50 border border-white/10"
           >
             <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
             <span>{syncingAll ? 'Sincronizando Tudo...' : 'Sincronizar Métricas'}</span>
@@ -475,58 +479,58 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
       </div>
 
-      {/* Grid de 5 KPIs Estratégicos */}
+      {/* Grid de 5 KPIs Estratégicos com Magic Patterns Design System */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* KPI 1: Ofertas Hoje */}
-        <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
+        <div className="mp-card mp-card-cyan rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Ofertas Replicadas</span>
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center text-cyan-400 border border-cyan-500/20 group-hover:scale-110 transition-transform">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300/80">Ofertas Replicadas</span>
+            <div className="w-8 h-8 rounded-xl bg-cyan-500/15 flex items-center justify-center text-cyan-400 border border-cyan-500/30 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-cyan-500/20 transition-all">
               <Zap className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-white tracking-tight">{totalHoje}</span>
+            <span className="text-3xl font-heading font-extrabold text-white tracking-tight mp-metric-value">{totalHoje}</span>
             <span className="text-xs font-medium text-emerald-400 flex items-center gap-0.5">
               <TrendingUp className="w-3 h-3" /> +100%
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Fila anti-flood ativa ({replica?.postsLastHour || 0}/40 posts na última hora)
+          <p className="text-xs text-slate-400 mt-1.5">
+            Fila anti-flood ativa ({replica?.postsLastHour || 0}/40 posts/h)
           </p>
-          <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
+          <div className="w-full bg-slate-900/80 rounded-full h-1.5 mt-3.5 overflow-hidden border border-white/5">
             <div
-              className="bg-gradient-to-r from-cyan-500 to-blue-500 h-1.5 rounded-full"
+              className="bg-gradient-to-r from-cyan-500 to-blue-500 h-1.5 rounded-full shadow-sm shadow-cyan-500/50"
               style={{ width: `${Math.min(100, ((replica?.postsLastHour || 0) / 40) * 100)}%` }}
             />
           </div>
         </div>
 
         {/* KPI 2: Tráfego Pago & Meta Ads */}
-        <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
+        <div className="mp-card mp-card-violet rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Tráfego Meta Ads</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center text-blue-400 border border-blue-500/20 group-hover:scale-110 transition-transform">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300/80">Tráfego Meta Ads</span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/15 flex items-center justify-center text-indigo-400 border border-indigo-500/30 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-indigo-500/20 transition-all">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-white tracking-tight">
+            <span className="text-3xl font-heading font-extrabold text-white tracking-tight mp-metric-value">
               R$ {gastoMetaAds.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-400 mt-1.5">
             {metaData?.data?.totalClicks || 0} cliques · {metaData?.data?.totalImpressions || 0} impressões
           </p>
-          <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full w-[85%]" />
+          <div className="w-full bg-slate-900/80 rounded-full h-1.5 mt-3.5 overflow-hidden border border-white/5">
+            <div className="bg-gradient-to-r from-indigo-500 to-violet-500 h-1.5 rounded-full w-[85%] shadow-sm shadow-indigo-500/50" />
           </div>
         </div>
 
         {/* KPI 3: Caixa Meta Ads (Saldo & Recargas) */}
-        <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
+        <div className="mp-card mp-card-emerald rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-medium uppercase tracking-wider flex items-center gap-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300/80 flex items-center gap-1.5">
               <span>Caixa Meta Ads</span>
             </span>
             <button
@@ -534,19 +538,19 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               onClick={handleSyncMetaNow}
               disabled={syncingMeta}
               title="Sincronizar saldo e gastos diretamente da Graph API Meta Ads"
-              className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-110 hover:bg-emerald-500/30 transition-all cursor-pointer disabled:opacity-50"
+              className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/30 group-hover:scale-110 hover:bg-emerald-500/30 transition-all cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${syncingMeta ? 'animate-spin' : ''}`} />
             </button>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-white tracking-tight">
+            <span className="text-3xl font-heading font-extrabold text-white tracking-tight mp-metric-value">
               R$ {(metaBalance?.currentBalance ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="mt-1 flex items-center justify-between gap-1 flex-wrap">
+          <div className="mt-1.5 flex items-center justify-between gap-1 flex-wrap">
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
                 metaBalance?.statusBadge === 'healthy'
                   ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                   : metaBalance?.statusBadge === 'warning'
@@ -569,64 +573,64 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 ? 'Saldo Baixo'
                 : 'Recarga Urgente'}
             </span>
-            <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-              Auto Graph API
+            <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1 font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+              Graph API
             </span>
           </div>
-          <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
+          <div className="w-full bg-slate-900/80 rounded-full h-1.5 mt-3.5 overflow-hidden border border-white/5">
             <div
-              className={`h-1.5 rounded-full transition-all duration-500 ${
+              className={`h-1.5 rounded-full transition-all duration-500 shadow-sm ${
                 metaBalance?.statusBadge === 'healthy'
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 w-full'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 w-full shadow-emerald-500/50'
                   : metaBalance?.statusBadge === 'warning'
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400 w-1/2'
-                  : 'bg-gradient-to-r from-red-500 to-rose-400 w-1/5'
+                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400 w-1/2 shadow-amber-500/50'
+                  : 'bg-gradient-to-r from-red-500 to-rose-400 w-1/5 shadow-red-500/50'
               }`}
             />
           </div>
         </div>
 
         {/* KPI 4: Blended ROAS & Performance */}
-        <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
+        <div className="mp-card mp-card-violet rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Blended ROAS Geral</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center text-purple-400 border border-purple-500/20 group-hover:scale-110 transition-transform">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300/80">Blended ROAS</span>
+            <div className="w-8 h-8 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400 border border-purple-500/30 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-purple-500/20 transition-all">
               <Sparkles className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-purple-400 tracking-tight">
+            <span className="text-3xl font-heading font-extrabold text-purple-400 tracking-tight mp-metric-value">
               {roasBlended.toFixed(2)}x
             </span>
-            <span className="text-xs text-emerald-400 font-medium">Retorno Operacional</span>
+            <span className="text-xs text-emerald-400 font-medium">Retorno</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Vendas / Investimento em tráfego pago
+          <p className="text-xs text-slate-400 mt-1.5">
+            Vendas / Investimento em tráfego
           </p>
-          <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full w-[75%]" />
+          <div className="w-full bg-slate-900/80 rounded-full h-1.5 mt-3.5 overflow-hidden border border-white/5">
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full w-[75%] shadow-sm shadow-purple-500/50" />
           </div>
         </div>
 
         {/* KPI 5: Faturamento & Regra 70% */}
-        <div className="glass-panel glass-panel-hover rounded-2xl p-5 border border-white/[0.08] relative overflow-hidden group">
+        <div className="mp-card mp-card-emerald rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-medium uppercase tracking-wider">Lucro Líquido Real</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300/80">Lucro Líquido Real</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/30 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-emerald-500/20 transition-all">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-emerald-400 tracking-tight">
+            <span className="text-3xl font-heading font-extrabold text-emerald-400 tracking-tight mp-metric-value">
               R$ {(lucroOperacaoReal > 0 ? lucroOperacaoReal : (balanco?.resultadoLiquido || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <p className="text-xs text-cyan-300 mt-1 font-medium">
+          <p className="text-xs text-cyan-300/90 mt-1.5 font-medium">
             Reinvestir: R$ {(reinvestir70 > 0 ? reinvestir70 : (balanco?.valorReinvestimentoCampanhas || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (70%)
           </p>
-          <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-1.5 rounded-full w-[70%]" />
+          <div className="w-full bg-slate-900/80 rounded-full h-1.5 mt-3.5 overflow-hidden border border-white/5">
+            <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-1.5 rounded-full w-[70%] shadow-sm shadow-emerald-500/50" />
           </div>
         </div>
       </div>

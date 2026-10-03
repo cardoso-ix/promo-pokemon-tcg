@@ -1,5 +1,12 @@
 {
   "mcpServers": {
+    "magic-patterns": {
+      "url": "https://mcp.magicpatterns.com/mcp",
+      "headers": {
+        "Authorization": "Bearer mp_live_C9awTZmDZZhACyvhCVBxN",
+        "x-mp-agent-name": "antigravity"
+      }
+    },
     "mercadolibre-mcp-server": {
       "url": "https://mcp.mercadolibre.com/mcp"
     },

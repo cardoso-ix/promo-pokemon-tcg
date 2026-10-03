@@ -56,7 +56,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#09101d]/95 backdrop-blur-2xl border-t border-white/[0.12] px-2 py-1.5 flex items-center justify-around shadow-[0_-10px_25px_rgba(0,0,0,0.5)]">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#080d19]/95 backdrop-blur-2xl border-t border-white/[0.10] px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around shadow-[0_-8px_32px_rgba(0,0,0,0.6)]">
       {tabs.map(t => {
         const Icon = t.icon;
         const isActive = activeModule === t.id;
@@ -66,13 +66,16 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             key={t.id}
             type="button"
             onClick={() => onSelectModule(t.id)}
-            className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-xl transition-all active:scale-95 cursor-pointer ${
+            className={`flex flex-col items-center justify-center flex-1 py-1 px-1 rounded-xl transition-all duration-200 active:scale-95 cursor-pointer relative ${
               isActive
-                ? `${t.bgActive} border font-bold shadow-sm`
+                ? `${t.bgActive} border font-bold shadow-md shadow-black/40`
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Icon className={`w-5 h-5 mb-0.5 ${isActive ? t.colorActive : 'text-slate-400'}`} />
+            {isActive && (
+              <span className="absolute -top-1 w-5 h-0.5 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 shadow-sm shadow-cyan-400/80" />
+            )}
+            <Icon className={`w-5 h-5 mb-0.5 transition-transform ${isActive ? `${t.colorActive} scale-110` : 'text-slate-400'}`} />
             <span className="text-[10px] tracking-tight leading-none whitespace-nowrap">
               {t.label}
             </span>
