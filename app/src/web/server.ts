@@ -56,7 +56,7 @@ import {
   registrarOfertaPlanilha,
   APPS_SCRIPT_TEMPLATE
 } from '../core/sheets.js';
-import { redigirOfertaComIA, corrigirTexto } from '../core/deepseek.js';
+import { redigirOfertaComIA, corrigirTexto, gerarAnuncioMetaComIA } from '../core/deepseek.js';
 import {
   verifyCredentials,
   createSessionToken,
@@ -1198,6 +1198,26 @@ export async function createServer() {
         textoCorrigido,
         houveAlteracao: textoOriginal !== textoCorrigido
       };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  });
+
+  // API REST: Gerador de Anúncios Profissionais para Meta Ads (Instagram/Facebook)
+  app.post<{
+    Body: {
+      tema?: string;
+      produtosDestaque?: string;
+    };
+  }>('/api/ia/gerar-anuncio-meta', async (req, reply) => {
+    const { tema, produtosDestaque } = req.body || {};
+    try {
+      const resMeta = await gerarAnuncioMetaComIA({
+        tema,
+        produtosDestaque
+      });
+      return resMeta;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       return reply.status(500).send({ ok: false, error: msg });

@@ -5,7 +5,9 @@ import {
   humanizarTexto,
   embelezarChamadaLocal,
   gerarCopiesLocaisFallback,
-  redigirOfertaComIA
+  redigirOfertaComIA,
+  gerarAnuncioMetaLocal,
+  gerarAnuncioMetaComIA
 } from '../src/core/deepseek.js';
 
 test('Corretor Ortográfico PT-BR - corrige acentuação, concordância e termos de e-commerce/TCG', () => {
@@ -91,5 +93,51 @@ test('DeepSeek IA - redigirOfertaComIA deve polir mensagem com rapidez e manter 
   assert.ok(!res.opcoes[0].includes('@pokemon_tcg_promo'), 'NÃO deve conter arroba');
   assert.ok(res.opcoes[0].includes('5 unidades') || res.opcoes[0].includes('5 Unidades'), 'Deve preservar 5 unidades');
   assert.ok(res.opcoes[0].includes('https://mercadolivre.com/sec/exemplo'), 'Deve conter o link intacto');
+});
+
+test('Meta Ads Copywriter - gerarAnuncioMetaLocal deve gerar 3 variações com quebra de objeção do grupo silencioso e frase para imagem', () => {
+  const variacoes = gerarAnuncioMetaLocal(
+    'Entrar no grupo VIP para pegar caixas de Pokémon no preço de tabela',
+    'ETB Escuridão Absoluta'
+  );
+
+  assert.equal(variacoes.length, 3, 'Deve gerar exatamente 3 variações');
+  const ids = variacoes.map(v => v.id);
+  assert.deepEqual(ids, ['amigo', 'urgencia', 'direto']);
+
+  for (const v of variacoes) {
+    // 1. Frase para imagem
+    assert.ok(v.fraseImagem.length > 5, 'Frase da imagem deve estar preenchida');
+
+    // 2. Texto principal deve ter quebra de objeção do grupo silencioso
+    assert.ok(
+      v.textoPrincipal.toLowerCase().includes('grupo silencioso') ||
+      v.textoPrincipal.toLowerCase().includes('grupo 100% silencioso'),
+      `Variação ${v.id} deve conter quebra de objeção do grupo silencioso`
+    );
+
+    // 3. Título deve ter menos de 40 caracteres
+    assert.ok(v.tituloAnuncio.length <= 40, `Título "${v.tituloAnuncio}" deve ter <= 40 caracteres`);
+
+    // 4. Descrição deve ter menos de 30 caracteres
+    assert.ok(v.descricao.length <= 30, `Descrição "${v.descricao}" deve ter <= 30 caracteres`);
+
+    // 5. CTA recomendada
+    assert.ok(v.ctaRecomendada.length > 0, 'Deve recomendar um botão CTA');
+
+    // 6. Deve customizar produtos em destaque quando fornecido
+    assert.ok(v.textoPrincipal.includes('ETB Escuridão Absoluta'), 'Deve citar os produtos em destaque');
+  }
+});
+
+test('Meta Ads Copywriter - gerarAnuncioMetaComIA deve retornar 3 variações de alta conversão', async () => {
+  const res = await gerarAnuncioMetaComIA({
+    tema: 'Evitar preço de cambista',
+    produtosDestaque: 'Booster Boxes e ETBs'
+  });
+
+  assert.equal(res.ok, true);
+  assert.equal(res.variacoes.length, 3);
+  assert.ok(res.variacoes[0].textoPrincipal.includes('grupo silencioso') || res.variacoes[0].textoPrincipal.includes('Grupo silencioso'));
 });
 

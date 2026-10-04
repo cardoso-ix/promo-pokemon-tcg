@@ -297,6 +297,25 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ texto })
     }),
+  gerarAnuncioMetaIA: (tema?: string, produtosDestaque?: string) =>
+    request<{
+      ok: boolean;
+      variacoes: Array<{
+        id: 'amigo' | 'urgencia' | 'direto';
+        tituloEstilo: string;
+        badge: string;
+        fraseImagem: string;
+        textoPrincipal: string;
+        tituloAnuncio: string;
+        descricao: string;
+        ctaRecomendada: string;
+      }>;
+      fonte: 'deepseek' | 'fallback_local';
+      erro?: string;
+    }>('/api/ia/gerar-anuncio-meta', {
+      method: 'POST',
+      body: JSON.stringify({ tema, produtosDestaque })
+    }),
   redigirOfertaIA: (rascunho: string, link?: string, modo?: 'chamada' | 'anuncio') =>
     request<{
       ok: boolean;

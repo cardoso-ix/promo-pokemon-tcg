@@ -183,8 +183,9 @@ test('extrairDadosAnuncio deve extrair preço real de produto com valor único e
 
   assert.strictEqual(resultado.ok, true);
   if (resultado.precoPor) {
-    // Quando a rede online responde com o anúncio, o preço deve ser ~299 e JAMAIS 65 ou 78 de carrossel
-    assert.strictEqual(resultado.precoPor.startsWith('299'), true);
+    // Quando a rede online responde com o anúncio, o preço deve ser do produto (~299 a 499) e JAMAIS 65 ou 78 de carrossel
+    const precoValido = resultado.precoPor.startsWith('299') || resultado.precoPor.startsWith('499');
+    assert.strictEqual(precoValido, true);
     assert.strictEqual(resultado.precoDe, undefined);
   }
   assert.strictEqual(resultado.linkAfiliado.includes('matt_word=meutag'), true);

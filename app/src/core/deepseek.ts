@@ -386,3 +386,203 @@ Retorne EXCLUSIVAMENTE um objeto JSON com 5 opções distintas no formato:
     fonte: 'fallback_local'
   };
 }
+
+export interface ItemAnuncioMeta {
+  id: 'amigo' | 'urgencia' | 'direto';
+  tituloEstilo: string;
+  badge: string;
+  fraseImagem: string;
+  textoPrincipal: string;
+  tituloAnuncio: string;
+  descricao: string;
+  ctaRecomendada: string;
+}
+
+export interface GerarAnuncioMetaRequest {
+  tema?: string;
+  produtosDestaque?: string;
+}
+
+export interface GerarAnuncioMetaResponse {
+  ok: boolean;
+  variacoes: ItemAnuncioMeta[];
+  fonte: 'deepseek' | 'fallback_local';
+  erro?: string;
+}
+
+/**
+ * Fallback Local: Gera 3 variações de anúncios de alta conversão para Meta Ads (0ms)
+ * Com quebra de objeção do grupo silencioso, combate ao ágio e frase para imagem.
+ */
+export function gerarAnuncioMetaLocal(
+  tema?: string,
+  produtosDestaque?: string
+): ItemAnuncioMeta[] {
+  const produtosLimpos = (produtosDestaque || '').trim();
+  const temaLimpo = (tema || '').trim();
+
+  const produtosTexto = produtosLimpos
+    ? `(${produtosLimpos})`
+    : 'Booster Boxes, ETBs, Tripacks e Bundles';
+
+  return [
+    {
+      id: 'amigo',
+      tituloEstilo: '☕ Amigo Colecionador (UGC & Conexão Real)',
+      badge: 'Menor Custo por Lead',
+      fraseImagem: 'ENTRE NO NOSSO GRUPO VIP • E VENHA ECONOMIZAR EM POKÉMON TCG',
+      textoPrincipal: `Quem coleciona Pokémon sabe a raiva que dá ver produto esgotando em minutos pra depois aparecer pelo dobro do preço na internet. 😅
+
+Eu também compro, abro meus pacotes e acompanho os lançamentos. Como já passo boa parte do meu dia olhando os estoques do Mercado Livre e lojas oficiais, criei um grupo no WhatsApp para compartilhar onde tá valendo a pena comprar no preço justo de tabela.
+
+🔒 Grupo silencioso (apenas admins postam ofertas reais)
+📦 Reposição de ${produtosTexto}
+🏷️ Cupons testados no carrinho e links 100% seguros
+
+Toque em "Saiba Mais" e venha economizar com a gente! 🃏✨`,
+      tituloAnuncio: 'Acesse o Grupo de Promoções TCG',
+      descricao: 'Preço de tabela & Sem spam',
+      ctaRecomendada: 'Saiba mais'
+    },
+    {
+      id: 'urgencia',
+      tituloEstilo: '🚨 Radar de Estoque & Urgência (Reposições)',
+      badge: 'Maior Taxa de Clique',
+      fraseImagem: 'RADAR DE OFERTAS POKÉMON • CAIXAS LACRADAS PELO MENOR PREÇO',
+      textoPrincipal: `Cansado de pagar preço abusivo de revenda em Pokémon TCG? 🎯
+
+Nosso radar monitora reposições em tempo real no Mercado Livre e Amazon para você garantir ${produtosTexto} antes que os estoques esgotem.
+
+🔒 Grupo 100% silencioso (zero conversa fiada, só ofertas)
+⚡ Alertas instantâneos de drops oficiais e reposições
+🎟️ Cupons exclusivos testados no carrinho antes de postar
+
+👉 Toque em "Saiba Mais" e entre no Grupo VIP antes do próximo drop! 🚀`,
+      tituloAnuncio: 'Radar VIP de Ofertas Pokémon TCG',
+      descricao: 'Alertas em tempo real',
+      ctaRecomendada: 'Obter Acesso'
+    },
+    {
+      id: 'direto',
+      tituloEstilo: '⚡ Direto & Objetivo (Preço Justo)',
+      badge: 'Alta Conversão Mobile',
+      fraseImagem: 'PARE DE PAGAR ÁGIO • AS MELHORES OFERTAS DE POKÉMON TCG',
+      textoPrincipal: `Alguém já comparou os preços por você. 🃏🔥
+
+Garimpamos as melhores ofertas de Pokémon TCG para você não perder tempo nem dinheiro caçando na internet.
+
+• Preço justo de tabela em produtos disputados ${produtosLimpos ? `(${produtosLimpos})` : ''}
+• Links de Lojas Oficiais e MercadoLíderes Platinum
+🔒 Grupo silencioso: apenas administradores postam
+
+Clique no botão abaixo e participe gratuitamente do nosso grupo VIP! 📲`,
+      tituloAnuncio: 'Grupo VIP de Ofertas e Cupons TCG',
+      descricao: 'Acesso imediato e gratuito',
+      ctaRecomendada: 'Saiba mais'
+    }
+  ];
+}
+
+/**
+ * Motor Principal de Anúncios Meta Ads: Gera copies completas prontas para tráfego pago
+ */
+export async function gerarAnuncioMetaComIA(
+  input: GerarAnuncioMetaRequest
+): Promise<GerarAnuncioMetaResponse> {
+  const tema = (input.tema || '').trim();
+  const produtos = (input.produtosDestaque || '').trim();
+
+  const apiKey = getConfig('deepseek_api_key', CONFIG.deepseekApiKey || '').trim();
+  const baseUrl = getConfig('deepseek_base_url', CONFIG.deepseekBaseUrl || 'https://opencode.ai/zen/go/v1').trim();
+  const model = getConfig('deepseek_model', CONFIG.deepseekModel || 'deepseek-v4-flash').trim();
+
+  if (!apiKey) {
+    return {
+      ok: true,
+      variacoes: gerarAnuncioMetaLocal(tema, produtos),
+      fonte: 'fallback_local'
+    };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+  const promptSistema = `Você é um Copywriter especialista em anúncios do Meta Ads (Instagram e Facebook) focado em atrair colecionadores de Pokémon TCG para grupos VIP de WhatsApp.
+Sua missão é gerar EXATAMENTE 3 variações de anúncios de alta conversão:
+1. "amigo" (tom de amigo colecionador, UGC, natural, 1ª pessoa)
+2. "urgencia" (alerta de radar, reposições de estoque, velocidade)
+3. "direto" (curto, quebra de objeções, focado em preço justo e praticidade)
+
+REGRAS MANDATÓRIAS DE TRÁFEGO PAGO NO META:
+- O texto principal (Primary Text) DEVE incluir a linha de quebra de objeção do grupo silencioso: "🔒 Grupo silencioso (apenas administradores postam)".
+- DEVE citar combate a preço de cambista / revenda abusiva e garantia de preço de tabela em lojas oficiais (Mercado Livre / Amazon).
+- O título (Headline) DEVE ser magnético e ter menos de 40 caracteres.
+- A descrição DEVE ter menos de 30 caracteres.
+- DEVE sugerir uma Frase de Impacto para colocar no centro da Imagem/Arte (Banner).
+- Retorne EXCLUSIVAMENTE um objeto JSON com array "variacoes" contendo os 3 objetos:
+{
+  "variacoes": [
+    {
+      "id": "amigo",
+      "tituloEstilo": "☕ Amigo Colecionador (UGC & Conexão Real)",
+      "badge": "Menor Custo por Lead",
+      "fraseImagem": "...",
+      "textoPrincipal": "...",
+      "tituloAnuncio": "...",
+      "descricao": "...",
+      "ctaRecomendada": "Saiba mais"
+    },
+    ...
+  ]
+}`;
+
+  try {
+    const urlEndpoint = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
+    const response = await fetch(urlEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: promptSistema },
+          {
+            role: 'user',
+            content: `Crie anúncios Meta Ads para o tema: ${tema || 'Entrar no grupo VIP para pegar caixas de Pokémon no preço de tabela'}.${produtos ? ` Produtos em destaque: ${produtos}.` : ''}`
+          }
+        ],
+        temperature: 0.6,
+        response_format: { type: 'json_object' }
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      const data = (await response.json()) as any;
+      const contentStr = data.choices?.[0]?.message?.content || '';
+      const jsonMatch = contentStr.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(parsed.variacoes) && parsed.variacoes.length === 3) {
+          return {
+            ok: true,
+            variacoes: parsed.variacoes,
+            fonte: 'deepseek'
+          };
+        }
+      }
+    }
+  } catch {
+    clearTimeout(timeoutId);
+  }
+
+  return {
+    ok: true,
+    variacoes: gerarAnuncioMetaLocal(tema, produtos),
+    fonte: 'fallback_local'
+  };
+}
