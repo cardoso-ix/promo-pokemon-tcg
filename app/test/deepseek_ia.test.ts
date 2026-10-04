@@ -1,11 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  corrigirTexto,
   humanizarTexto,
   embelezarChamadaLocal,
   gerarCopiesLocaisFallback,
   redigirOfertaComIA
 } from '../src/core/deepseek.js';
+
+test('Corretor Ortográfico PT-BR - corrige acentuação, concordância e termos de e-commerce/TCG', () => {
+  // Teste exato do caso relatado pelo usuário
+  const casoUsuario = '4 unidades disponiveis';
+  assert.equal(corrigirTexto(casoUsuario), '4 unidades disponíveis');
+
+  // Teste de termos de e-commerce e abreviações
+  const fraseComplexa = 'fala pessoal chegou reposicao de booster box corram pq ta acabando rapido...';
+  const corrigida = corrigirTexto(fraseComplexa);
+  assert.ok(corrigida.includes('reposição'), 'Deve corrigir reposicao para reposição');
+  assert.ok(corrigida.includes('porque'), 'Deve expandir pq para porque');
+  assert.ok(corrigida.includes('está'), 'Deve expandir ta para está');
+  assert.ok(corrigida.includes('rápido'), 'Deve acentuar rapido para rápido');
+
+  // Teste de termos próprios canônicos
+  assert.ok(corrigirTexto('novo pacote pokemon tcg').includes('Pokémon TCG'));
+  assert.ok(corrigirTexto('otimo preco na promocao').includes('Ótimo preço na promoção'));
+});
 
 test('DeepSeek IA - humanizarTexto corrige abreviações e erros de digitação comuns', () => {
   const bruto = 'promo boa galera ta valendo mt a pena vcs tem q ver';
@@ -42,6 +61,16 @@ test('DeepSeek IA - embelezarChamadaLocal deve formatar 5 opções com emojis e 
     for (const proibida of frasesEfeitoProibidas) {
       assert.ok(!op.toLowerCase().includes(proibida), `NÃO deve conter frase de efeito: "${proibida}"`);
     }
+  }
+});
+
+test('DeepSeek IA - embelezarChamadaLocal deve acentuar e corrigir ortografia nas 5 opções geradas', () => {
+  const rascunho = '4 unidades disponiveis';
+  const opcoes = embelezarChamadaLocal(rascunho);
+
+  assert.equal(opcoes.length, 5);
+  for (const op of opcoes) {
+    assert.ok(op.includes('4 unidades disponíveis'), `Opção "${op}" deve conter "4 unidades disponíveis" acentuado`);
   }
 });
 

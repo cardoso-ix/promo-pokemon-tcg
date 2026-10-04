@@ -19,10 +19,190 @@ export interface GerarCopiesIAResponse {
 }
 
 /**
+ * Dicionário Ortográfico PT-BR e Regras de Normalização Especializadas em E-commerce e TCG
+ */
+export const DICIONARIO_ORTOGRAFICO: [RegExp, string][] = [
+  // Abreviações populares e vícios de digitação
+  [/\bpromo\b/gi, 'promoção'],
+  [/\bpromocao\b/gi, 'promoção'],
+  [/\bpromocoes\b/gi, 'promoções'],
+  [/\bta\b/gi, 'está'],
+  [/\btamem\b/gi, 'também'],
+  [/\btbm\b/gi, 'também'],
+  [/\btb\b/gi, 'também'],
+  [/\bvc\b/gi, 'você'],
+  [/\bvcs\b/gi, 'vocês'],
+  [/\bpq\b/gi, 'porque'],
+  [/\bpra\b/gi, 'para'],
+  [/\bpro\b/gi, 'para o'],
+  [/\bpras\b/gi, 'para as'],
+  [/\bpros\b/gi, 'para os'],
+  [/\bmt\b/gi, 'muito'],
+  [/\bmto\b/gi, 'muito'],
+  [/\bunid\b/gi, 'unidades'],
+  [/\bunids\b/gi, 'unidades'],
+  [/\bpct\b/gi, 'pacotes'],
+  [/\bpcts\b/gi, 'pacotes'],
+  [/\bvlw\b/gi, 'aproveitem'],
+  [/\bblz\b/gi, 'beleza'],
+  [/\btd\b/gi, 'tudo'],
+  [/\bq\b/gi, 'que'],
+  [/\bngm\b/gi, 'ninguém'],
+  [/\bmsg\b/gi, 'mensagem'],
+  [/\bmsgs\b/gi, 'mensagens'],
+  [/\bwpp\b/gi, 'WhatsApp'],
+  [/\bzap\b/gi, 'WhatsApp'],
+  [/\bwhats\b/gi, 'WhatsApp'],
+  [/\bwhatsapp\b/gi, 'WhatsApp'],
+
+  // Acentuações e ortografia PT-BR essenciais
+  [/\bdisponiveis\b/gi, 'disponíveis'],
+  [/\bdisponivel\b/gi, 'disponível'],
+  [/\bindisponiveis\b/gi, 'indisponíveis'],
+  [/\bindisponivel\b/gi, 'indisponível'],
+  [/\bpreco\b/gi, 'preço'],
+  [/\bprecos\b/gi, 'preços'],
+  [/\botimo\b/gi, 'ótimo'],
+  [/\botima\b/gi, 'ótima'],
+  [/\botimos\b/gi, 'ótimos'],
+  [/\botimas\b/gi, 'ótimas'],
+  [/\bimperdivel\b/gi, 'imperdível'],
+  [/\bimperdiveis\b/gi, 'imperdíveis'],
+  [/\bincrivel\b/gi, 'incrível'],
+  [/\bincriveis\b/gi, 'incríveis'],
+  [/\bedicao\b/gi, 'edição'],
+  [/\bedicoes\b/gi, 'edições'],
+  [/\bcolecao\b/gi, 'coleção'],
+  [/\bcolecoes\b/gi, 'coleções'],
+  [/\blancamento\b/gi, 'lançamento'],
+  [/\blancamentos\b/gi, 'lançamentos'],
+  [/\breposicao\b/gi, 'reposição'],
+  [/\breposicoes\b/gi, 'reposições'],
+  [/\bgratis\b/gi, 'grátis'],
+  [/\brapido\b/gi, 'rápido'],
+  [/\brapida\b/gi, 'rápida'],
+  [/\brapidos\b/gi, 'rápidos'],
+  [/\brapidas\b/gi, 'rápidas'],
+  [/\bfacil\b/gi, 'fácil'],
+  [/\bfaceis\b/gi, 'fáceis'],
+  [/\bdificil\b/gi, 'difícil'],
+  [/\bdificeis\b/gi, 'difíceis'],
+  [/\bja\b/gi, 'já'],
+  [/\bso\b/gi, 'só'],
+  [/\bate\b/gi, 'até'],
+  [/\btambem\b/gi, 'também'],
+  [/\bvoce\b/gi, 'você'],
+  [/\bvoces\b/gi, 'vocês'],
+  [/\bnao\b/gi, 'não'],
+  [/\bentao\b/gi, 'então'],
+  [/\bcartao\b/gi, 'cartão'],
+  [/\bcartoes\b/gi, 'cartões'],
+  [/\batencao\b/gi, 'atenção'],
+  [/\bultimo\b/gi, 'último'],
+  [/\bultima\b/gi, 'última'],
+  [/\bultimos\b/gi, 'últimos'],
+  [/\bultimas\b/gi, 'últimas'],
+  [/\bunico\b/gi, 'único'],
+  [/\bunica\b/gi, 'única'],
+  [/\bunicos\b/gi, 'únicos'],
+  [/\bunicas\b/gi, 'únicas'],
+  [/\bnumero\b/gi, 'número'],
+  [/\bnumeros\b/gi, 'números'],
+  [/\bvalido\b/gi, 'válido'],
+  [/\bvalida\b/gi, 'válida'],
+  [/\bvalidos\b/gi, 'válidos'],
+  [/\bvalidas\b/gi, 'válidas'],
+  [/\binvalido\b/gi, 'inválido'],
+  [/\binvalida\b/gi, 'inválida'],
+  [/\bbeneficio\b/gi, 'benefício'],
+  [/\bbeneficios\b/gi, 'benefícios'],
+  [/\bfichario\b/gi, 'fichário'],
+  [/\bficharios\b/gi, 'fichários'],
+  [/\bpagina\b/gi, 'página'],
+  [/\bpaginas\b/gi, 'páginas'],
+  [/\bduvida\b/gi, 'dúvida'],
+  [/\bduvidas\b/gi, 'dúvidas'],
+  [/\bcomentario\b/gi, 'comentário'],
+  [/\bcomentarios\b/gi, 'comentários'],
+  [/\bpublicacao\b/gi, 'publicação'],
+  [/\bpublicacoes\b/gi, 'publicações'],
+  [/\bnoticia\b/gi, 'notícia'],
+  [/\bnoticias\b/gi, 'notícias'],
+  [/\bvisao\b/gi, 'visão'],
+  [/\bopcao\b/gi, 'opção'],
+  [/\bopcoes\b/gi, 'opções'],
+  [/\bversao\b/gi, 'versão'],
+  [/\bversoes\b/gi, 'versões'],
+  [/\bhistorico\b/gi, 'histórico'],
+  [/\bautomatico\b/gi, 'automático'],
+  [/\bautomatica\b/gi, 'automática'],
+  [/\balguem\b/gi, 'alguém'],
+  [/\bninguem\b/gi, 'ninguém'],
+  [/\bparabens\b/gi, 'parabéns'],
+  [/\bconteudo\b/gi, 'conteúdo'],
+  [/\bmaximo\b/gi, 'máximo'],
+  [/\bminimo\b/gi, 'mínimo'],
+  [/\bpratico\b/gi, 'prático'],
+  [/\bpratica\b/gi, 'prática'],
+  [/\bavariado\b/gi, 'avariado'],
+  [/\blacrado\b/gi, 'lacrado'],
+  [/\blacrada\b/gi, 'lacrada'],
+  [/\boriginal\b/gi, 'original'],
+  [/\boriginais\b/gi, 'originais'],
+
+  // Pokémon & TCG termos canônicos
+  [/\bpokemon\b/gi, 'Pokémon'],
+  [/\bpokémon\b/gi, 'Pokémon'],
+  [/\btcg\b/gi, 'TCG'],
+  [/\betb\b/gi, 'ETB'],
+  [/\betbs\b/gi, 'ETBs'],
+  [/\bbooster\b/gi, 'booster'],
+  [/\bboosters\b/gi, 'boosters'],
+  [/\bblister\b/gi, 'blister'],
+  [/\bblisters\b/gi, 'blisters'],
+  [/\btripack\b/gi, 'tripack'],
+  [/\btripacks\b/gi, 'tripacks'],
+  [/\bsleeve\b/gi, 'sleeve'],
+  [/\bsleeves\b/gi, 'sleeves']
+];
+
+export function preserveCase(match: string, target: string): string {
+  if (match === match.toUpperCase()) return target.toUpperCase();
+  if (['Pokémon', 'WhatsApp', 'TCG', 'ETB', 'ETBs'].includes(target)) {
+    return target;
+  }
+  if (/[A-Z]/.test(target.slice(1))) return target;
+  if (match.charAt(0) === match.charAt(0).toUpperCase()) {
+    return target.charAt(0).toUpperCase() + target.slice(1).toLowerCase();
+  }
+  return target.toLowerCase();
+}
+
+/**
+ * Corretor ortográfico e gramatical nativo de alto desempenho (0ms)
+ * Corrige acentuação, ortografia, pontuação e termos de e-commerce e TCG.
+ */
+export function corrigirTexto(bruto: string): string {
+  let texto = (bruto || '').trim();
+  if (!texto) return '';
+
+  for (const [regex, substituicao] of DICIONARIO_ORTOGRAFICO) {
+    texto = texto.replace(regex, (match) => preserveCase(match, substituicao));
+  }
+
+  // Ajusta pontuação solta e espaçamento duplicado
+  texto = texto.replace(/\s+([.,!?:;])/g, '$1');
+  texto = texto.replace(/\s{2,}/g, ' ');
+
+  // Garante que a primeira letra da frase seja maiúscula
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/**
  * Normaliza e humaniza frases brutas ou com erros de digitação
  */
 export function humanizarTexto(bruto: string): string {
-  let texto = bruto.trim();
+  let texto = (bruto || '').trim();
   if (!texto) return '';
 
   // Se tudo estiver em caixa alta, converter primeiro para minúsculas
@@ -30,35 +210,7 @@ export function humanizarTexto(bruto: string): string {
     texto = texto.toLowerCase();
   }
 
-  // Substitui abreviações populares de internet e vícios de digitação
-  texto = texto
-    .replace(/\bpromo\b/gi, 'promoção')
-    .replace(/\bpromocao\b/gi, 'promoção')
-    .replace(/\bpromocoes\b/gi, 'promoções')
-    .replace(/\bta\b/gi, 'está')
-    .replace(/\btamem\b/gi, 'também')
-    .replace(/\btbm\b/gi, 'também')
-    .replace(/\btb\b/gi, 'também')
-    .replace(/\bvc\b/gi, 'você')
-    .replace(/\bvcs\b/gi, 'vocês')
-    .replace(/\bpq\b/gi, 'porque')
-    .replace(/\bpra\b/gi, 'para')
-    .replace(/\bpro\b/gi, 'para o')
-    .replace(/\bmt\b/gi, 'muito')
-    .replace(/\bmto\b/gi, 'muito')
-    .replace(/\bunid\b/gi, 'unidades')
-    .replace(/\bpct\b/gi, 'pacotes')
-    .replace(/\bpcts\b/gi, 'pacotes')
-    .replace(/\bvlw\b/gi, 'aproveitem')
-    .replace(/\bblz\b/gi, 'beleza')
-    .replace(/\btd\b/gi, 'tudo')
-    .replace(/\bq\b/gi, 'que');
-
-  // Ajusta pontuação solta no fim
-  texto = texto.replace(/\s+([.,!?:;])/g, '$1');
-
-  // Garante que a primeira letra da frase seja maiúscula
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
+  return corrigirTexto(texto);
 }
 
 /**

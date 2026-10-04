@@ -285,7 +285,18 @@ export const api = {
     request<{ ok: boolean; totalEnviados?: number; message?: string; error?: string }>('/api/agendador/testar', {
       method: 'POST'
     }),
-  // --- ESTÚDIO IA DE REDAÇÃO RÁPIDA (DEEPSEEK V4.1) ---
+  // --- ESTÚDIO IA DE REDAÇÃO RÁPIDA (DEEPSEEK V4.1) & CORRETOR ORTOGRÁFICO ---
+  corrigirTextoIA: (texto: string) =>
+    request<{
+      ok: boolean;
+      textoOriginal?: string;
+      textoCorrigido?: string;
+      houveAlteracao?: boolean;
+      error?: string;
+    }>('/api/ia/corrigir-texto', {
+      method: 'POST',
+      body: JSON.stringify({ texto })
+    }),
   redigirOfertaIA: (rascunho: string, link?: string, modo?: 'chamada' | 'anuncio') =>
     request<{
       ok: boolean;

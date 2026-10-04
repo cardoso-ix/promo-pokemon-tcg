@@ -56,7 +56,7 @@ import {
   registrarOfertaPlanilha,
   APPS_SCRIPT_TEMPLATE
 } from '../core/sheets.js';
-import { redigirOfertaComIA } from '../core/deepseek.js';
+import { redigirOfertaComIA, corrigirTexto } from '../core/deepseek.js';
 import {
   verifyCredentials,
   createSessionToken,
@@ -1172,6 +1172,32 @@ export async function createServer() {
       const deletados = purgarRegistrosCorrompidosHistorico();
       const semeados = semearCatalogoCanonicoTCG();
       return { ok: true, deletados, semeados, mensagem: 'Base histórica recalibrada com sucesso com referências canônicas!' };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  });
+
+  // API REST: Corretor de Frase e Ortografia PT-BR (0ms)
+  app.post<{
+    Body: {
+      texto: string;
+    };
+  }>('/api/ia/corrigir-texto', async (req, reply) => {
+    const { texto } = req.body || {};
+    if (!texto || !texto.trim()) {
+      return reply.status(400).send({ ok: false, error: 'Digite uma frase para corrigir.' });
+    }
+
+    try {
+      const textoOriginal = texto.trim();
+      const textoCorrigido = corrigirTexto(textoOriginal);
+      return {
+        ok: true,
+        textoOriginal,
+        textoCorrigido,
+        houveAlteracao: textoOriginal !== textoCorrigido
+      };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       return reply.status(500).send({ ok: false, error: msg });

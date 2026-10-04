@@ -12,9 +12,163 @@ import {
   MessageSquare,
   Link2,
   Trash2,
-  Smartphone
+  Smartphone,
+  SpellCheck
 } from 'lucide-react';
 import { api } from '../services/api.ts';
+
+const DICIONARIO_CLIENTE: [RegExp, string][] = [
+  [/\bpromo\b/gi, 'promoção'],
+  [/\bpromocao\b/gi, 'promoção'],
+  [/\bpromocoes\b/gi, 'promoções'],
+  [/\bta\b/gi, 'está'],
+  [/\btamem\b/gi, 'também'],
+  [/\btbm\b/gi, 'também'],
+  [/\btb\b/gi, 'também'],
+  [/\bvc\b/gi, 'você'],
+  [/\bvcs\b/gi, 'vocês'],
+  [/\bpq\b/gi, 'porque'],
+  [/\bpra\b/gi, 'para'],
+  [/\bpro\b/gi, 'para o'],
+  [/\bpras\b/gi, 'para as'],
+  [/\bpros\b/gi, 'para os'],
+  [/\bmt\b/gi, 'muito'],
+  [/\bmto\b/gi, 'muito'],
+  [/\bunid\b/gi, 'unidades'],
+  [/\bunids\b/gi, 'unidades'],
+  [/\bpct\b/gi, 'pacotes'],
+  [/\bpcts\b/gi, 'pacotes'],
+  [/\bvlw\b/gi, 'aproveitem'],
+  [/\bblz\b/gi, 'beleza'],
+  [/\btd\b/gi, 'tudo'],
+  [/\bq\b/gi, 'que'],
+  [/\bngm\b/gi, 'ninguém'],
+  [/\bmsg\b/gi, 'mensagem'],
+  [/\bmsgs\b/gi, 'mensagens'],
+  [/\bwpp\b/gi, 'WhatsApp'],
+  [/\bzap\b/gi, 'WhatsApp'],
+  [/\bwhats\b/gi, 'WhatsApp'],
+  [/\bwhatsapp\b/gi, 'WhatsApp'],
+  [/\bdisponiveis\b/gi, 'disponíveis'],
+  [/\bdisponivel\b/gi, 'disponível'],
+  [/\bindisponiveis\b/gi, 'indisponíveis'],
+  [/\bindisponivel\b/gi, 'indisponível'],
+  [/\bpreco\b/gi, 'preço'],
+  [/\bprecos\b/gi, 'preços'],
+  [/\botimo\b/gi, 'ótimo'],
+  [/\botima\b/gi, 'ótima'],
+  [/\botimos\b/gi, 'ótimos'],
+  [/\botimas\b/gi, 'ótimas'],
+  [/\bimperdivel\b/gi, 'imperdível'],
+  [/\bimperdiveis\b/gi, 'imperdíveis'],
+  [/\bincrivel\b/gi, 'incrível'],
+  [/\bincriveis\b/gi, 'incríveis'],
+  [/\bedicao\b/gi, 'edição'],
+  [/\bedicoes\b/gi, 'edições'],
+  [/\bcolecao\b/gi, 'coleção'],
+  [/\bcolecoes\b/gi, 'coleções'],
+  [/\blancamento\b/gi, 'lançamento'],
+  [/\blancamentos\b/gi, 'lançamentos'],
+  [/\breposicao\b/gi, 'reposição'],
+  [/\breposicoes\b/gi, 'reposições'],
+  [/\bgratis\b/gi, 'grátis'],
+  [/\brapido\b/gi, 'rápido'],
+  [/\brapida\b/gi, 'rápida'],
+  [/\brapidos\b/gi, 'rápidos'],
+  [/\brapidas\b/gi, 'rápidas'],
+  [/\bfacil\b/gi, 'fácil'],
+  [/\bfaceis\b/gi, 'fáceis'],
+  [/\bdificil\b/gi, 'difícil'],
+  [/\bdificeis\b/gi, 'difíceis'],
+  [/\bja\b/gi, 'já'],
+  [/\bso\b/gi, 'só'],
+  [/\bate\b/gi, 'até'],
+  [/\btambem\b/gi, 'também'],
+  [/\bvoce\b/gi, 'você'],
+  [/\bvoces\b/gi, 'vocês'],
+  [/\bnao\b/gi, 'não'],
+  [/\bentao\b/gi, 'então'],
+  [/\bcartao\b/gi, 'cartão'],
+  [/\bcartoes\b/gi, 'cartões'],
+  [/\batencao\b/gi, 'atenção'],
+  [/\bultimo\b/gi, 'último'],
+  [/\bultima\b/gi, 'última'],
+  [/\bultimos\b/gi, 'últimos'],
+  [/\bultimas\b/gi, 'últimas'],
+  [/\bunico\b/gi, 'único'],
+  [/\bunica\b/gi, 'única'],
+  [/\bunicos\b/gi, 'únicos'],
+  [/\bunicas\b/gi, 'únicas'],
+  [/\bnumero\b/gi, 'número'],
+  [/\bnumeros\b/gi, 'números'],
+  [/\bvalido\b/gi, 'válido'],
+  [/\bvalida\b/gi, 'válida'],
+  [/\bvalidos\b/gi, 'válidos'],
+  [/\bvalidas\b/gi, 'válidas'],
+  [/\binvalido\b/gi, 'inválido'],
+  [/\binvalida\b/gi, 'inválida'],
+  [/\bbeneficio\b/gi, 'benefício'],
+  [/\bbeneficios\b/gi, 'benefícios'],
+  [/\bfichario\b/gi, 'fichário'],
+  [/\bficharios\b/gi, 'fichários'],
+  [/\bpagina\b/gi, 'página'],
+  [/\bpaginas\b/gi, 'páginas'],
+  [/\bduvida\b/gi, 'dúvida'],
+  [/\bduvidas\b/gi, 'dúvidas'],
+  [/\bcomentario\b/gi, 'comentário'],
+  [/\bcomentarios\b/gi, 'comentários'],
+  [/\bpublicacao\b/gi, 'publicação'],
+  [/\bpublicacoes\b/gi, 'publicações'],
+  [/\bnoticia\b/gi, 'notícia'],
+  [/\bnoticias\b/gi, 'notícias'],
+  [/\bvisao\b/gi, 'visão'],
+  [/\bopcao\b/gi, 'opção'],
+  [/\bopcoes\b/gi, 'opções'],
+  [/\bversao\b/gi, 'versão'],
+  [/\bversoes\b/gi, 'versões'],
+  [/\bhistorico\b/gi, 'histórico'],
+  [/\bautomatico\b/gi, 'automático'],
+  [/\bautomatica\b/gi, 'automática'],
+  [/\balguem\b/gi, 'alguém'],
+  [/\bninguem\b/gi, 'ninguém'],
+  [/\bparabens\b/gi, 'parabéns'],
+  [/\bconteudo\b/gi, 'conteúdo'],
+  [/\bmaximo\b/gi, 'máximo'],
+  [/\bminimo\b/gi, 'mínimo'],
+  [/\bpratico\b/gi, 'prático'],
+  [/\bpratica\b/gi, 'prática'],
+  [/\bpokemon\b/gi, 'Pokémon'],
+  [/\bpokémon\b/gi, 'Pokémon'],
+  [/\btcg\b/gi, 'TCG'],
+  [/\betb\b/gi, 'ETB'],
+  [/\betbs\b/gi, 'ETBs']
+];
+
+function preservarCaixaTexto(match: string, target: string): string {
+  if (match === match.toUpperCase()) return target.toUpperCase();
+  if (['Pokémon', 'WhatsApp', 'TCG', 'ETB', 'ETBs'].includes(target)) {
+    return target;
+  }
+  if (/[A-Z]/.test(target.slice(1))) return target;
+  if (match.charAt(0) === match.charAt(0).toUpperCase()) {
+    return target.charAt(0).toUpperCase() + target.slice(1).toLowerCase();
+  }
+  return target.toLowerCase();
+}
+
+function corrigirTextoCliente(bruto: string): string {
+  let texto = (bruto || '').trim();
+  if (!texto) return '';
+
+  for (const [regex, substituicao] of DICIONARIO_CLIENTE) {
+    texto = texto.replace(regex, (match) => preservarCaixaTexto(match, substituicao));
+  }
+
+  texto = texto.replace(/\s+([.,!?:;])/g, '$1');
+  texto = texto.replace(/\s{2,}/g, ' ');
+
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
 
 interface EstudioIaViewProps {
   onDispararSucesso?: (enviados: number) => void;
@@ -35,6 +189,8 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
   const [copiadoIdx, setCopiadoIdx] = useState<number | null>(null);
   const [disparandoIdx, setDisparandoIdx] = useState<number | null>(null);
   const [sucessoDisparo, setSucessoDisparo] = useState<string | null>(null);
+  const [corrigindo, setCorrigindo] = useState(false);
+  const [avisoCorrecao, setAvisoCorrecao] = useState<string | null>(null);
 
   // Exemplos rápidos e práticos para testar em 1 toque (mobile-friendly)
   const exemplosRapidos = [
@@ -43,6 +199,40 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
     'Galera baixou muito o preco corre',
     'Chegou reposicao poucas unidades no estoque'
   ];
+
+  const handleCorrigirFrase = async () => {
+    const textoAtual = rascunho.trim();
+    if (!textoAtual) return;
+
+    setCorrigindo(true);
+    setAvisoCorrecao(null);
+    setErro(null);
+
+    try {
+      const resp = await api.corrigirTextoIA(textoAtual);
+      const textoFinal = resp && resp.ok && resp.textoCorrigido
+        ? resp.textoCorrigido
+        : corrigirTextoCliente(textoAtual);
+
+      if (textoFinal !== textoAtual) {
+        setRascunho(textoFinal);
+        setAvisoCorrecao('✨ Frase e ortografia corrigidas com sucesso!');
+      } else {
+        setAvisoCorrecao('✓ A frase já está com ortografia e pontuação corretas!');
+      }
+    } catch {
+      const textoFinal = corrigirTextoCliente(textoAtual);
+      if (textoFinal !== textoAtual) {
+        setRascunho(textoFinal);
+        setAvisoCorrecao('✨ Frase e ortografia corrigidas com sucesso!');
+      } else {
+        setAvisoCorrecao('✓ A frase já está com ortografia e pontuação corretas!');
+      }
+    } finally {
+      setCorrigindo(false);
+      setTimeout(() => setAvisoCorrecao(null), 4000);
+    }
+  };
 
   const handleGerar = async () => {
     if (!rascunho.trim()) {
@@ -71,8 +261,9 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
       } else {
         setErro(resp?.erro || 'Não foi possível melhorar a mensagem. Tente novamente.');
       }
-    } catch (err: any) {
-      setErro(err?.message || 'Erro de conexão ao processar o texto com a IA.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErro(msg || 'Erro de conexão ao processar o texto com a IA.');
     } finally {
       setLoading(false);
     }
@@ -105,8 +296,9 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
       } else {
         setErro(resp?.mensagem || 'Falha ao disparar para os grupos. Verifique se o WhatsApp está conectado.');
       }
-    } catch (err: any) {
-      setErro(err?.message || 'Erro ao disparar para o WhatsApp.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setErro(msg || 'Erro ao disparar para o WhatsApp.');
     } finally {
       setDisparandoIdx(null);
     }
@@ -157,9 +349,27 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
               <Wand2 className="w-4 h-4 text-amber-400" />
               O que você quer falar no grupo?
             </label>
-            <span className="text-[11px] text-slate-400">
-              {rascunho.length} caracteres
-            </span>
+            <div className="flex items-center gap-3">
+              {rascunho.trim() && (
+                <button
+                  type="button"
+                  disabled={corrigindo || !rascunho.trim()}
+                  onClick={handleCorrigirFrase}
+                  className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer"
+                  title="Corrigir ortografia, acentuação e pontuação no texto acima"
+                >
+                  {corrigindo ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <SpellCheck className="w-3.5 h-3.5" />
+                  )}
+                  <span>Corrigir Frase</span>
+                </button>
+              )}
+              <span className="text-[11px] text-slate-400">
+                {rascunho.length} caracteres
+              </span>
+            </div>
           </div>
 
           <textarea
@@ -262,30 +472,68 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
           </div>
         )}
 
-        {/* Botão de Geração / Polimento */}
-        <div className="pt-2 flex justify-end">
-          <button
-            type="button"
-            disabled={loading || !rascunho.trim()}
-            onClick={handleGerar}
-            className={`w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${
-              loading || !rascunho.trim()
-                ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
-                : 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 hover:shadow-amber-500/20 active:scale-[0.98]'
-            }`}
-          >
-            {loading ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                Melhorando digitação e emojis...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                Melhorar Mensagem com IA
-              </>
-            )}
-          </button>
+        {/* Barra de Ações: Corretor de Frase & Gerador de 5 Opções */}
+        <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {avisoCorrecao ? (
+            <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>{avisoCorrecao}</span>
+            </div>
+          ) : (
+            <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Corretor com acentuação e termos de Pokémon TCG integrados.</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={corrigindo || !rascunho.trim()}
+              onClick={handleCorrigirFrase}
+              className={`flex-1 sm:flex-none px-4 py-3 rounded-xl font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all border cursor-pointer ${
+                corrigindo || !rascunho.trim()
+                  ? 'bg-slate-900/60 text-slate-500 border-white/5 cursor-not-allowed'
+                  : 'bg-white/[0.06] hover:bg-white/[0.12] text-amber-300 border-amber-500/30 hover:border-amber-500/60 active:scale-[0.98] shadow-sm'
+              }`}
+              title="Aplica correções ortográficas e acentuação no campo de texto"
+            >
+              {corrigindo ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-amber-400" />
+                  <span>Corrigindo...</span>
+                </>
+              ) : (
+                <>
+                  <SpellCheck className="w-4 h-4 text-amber-400" />
+                  <span>Corrigir Frase</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              disabled={loading || !rascunho.trim()}
+              onClick={handleGerar}
+              className={`flex-1 sm:flex-none px-6 py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
+                loading || !rascunho.trim()
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-white/5'
+                  : 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 hover:shadow-amber-500/20 active:scale-[0.98]'
+              }`}
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Gerando 5 Opções...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Melhorar com IA</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
