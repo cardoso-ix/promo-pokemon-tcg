@@ -72,11 +72,15 @@ chmod +x *.sh
 - **🖥️ Super Cockpit Pro Expandido (`max-w-[1680px]`):** Layout de alta resolução otimizado para monitores Full HD (1920x1080) e Ultra-Wide. O container principal foi expandido de 1280px (`max-w-7xl`) para 1680px (`max-w-[1680px]`), preenchendo a tela com harmonia e proporcionando o mesmo espaço amplo e generoso para todas as abas (Dashboard, Afiliados, Replicador, Radar, Finanças e Central de Ajustes).
 - **🛡️ Blindagem de Produtos Esgotados / Pausados no Mercado Livre:** Detecção inteligente de estoque esgotado ou anúncios pausados (`isAnuncioEsgotadoOuPausado`). Quando um anúncio esgota no Mercado Livre, a plataforma exibe carrosséis de produtos alternativos ou redireciona para vitrines (`/sec/`). O motor agora bloqueia a captura de preços desses carrosséis secundários (ex: R$ 8 de sleeves ou R$ 30 de fichários), preserva integralmente o preço original informado no anúncio postado e redireciona os botões de compra e "Ver no ML" para a busca ativa de produtos com estoque em tempo real ordenados por menor preço (`_OrderId_PRICE_ASC`).
 - **✨ Estúdio IA de Polimento & Redação (DeepSeek v4.1 + OpenCode Gateway + Fallback 0ms):**
-  - **Polimento e Correção de Digitação:** O operador digita qualquer frase, recado ou aviso do seu jeito (mesmo com abreviações como *ta*, *vc*, *pq*, *promo* ou erros de digitação rápida). A IA corrige ortografia, pontuação e sintaxe mantendo 100% o sentido original.
-  - **Inserção Inteligente de Emojis:** Posiciona emojis harmônicos de alto impacto (🔥, 🚀, 📦, ⚡, 🎯, ✨) para tornar a leitura fluida e atraente no WhatsApp sem exageros.
-  - **Geração Multimodelo Instantânea:** Apresenta opções variadas prontas para uso (Equilibrada, Destaque & Energia e Direta), permitindo ajustes manuais em tempo real na caixa de edição de cada card.
-  - **Disparo Direto & 1-Toque Mobile:** Balão com visual nativo do WhatsApp, botão de cópia instantânea e botão verde de envio direto para todos os grupos ativos do WhatsApp, 100% responsivo para uso no celular.
-  - **Arquitetura Resiliente com Fallback Local de 0ms:** Mecanismo local de higienização de digitação que garante opções prontas instantaneamente mesmo se a API externa demorar ou estiver indisponível.
+  - **Fidelidade Total ao Texto Digitado (Sem Frases de Efeito):** O operador digita qualquer frase, recado ou aviso rápido (ex: *CORRE PARA APROVEITAR*). O motor higieniza a pontuação e gramática preservando estritamente as palavras originais, sem inventar bordões ou frases promocionais artificiais.
+  - **5 Opções Padronizadas com Emojis Temáticos:** Gera automaticamente 5 variações com conjuntos de emojis profissionais prontos para WhatsApp:
+    1. 🚨 *Alerta & Velocidade* (`🚨 ... ⚡`)
+    2. 🔥 *Fogo & Estoque* (`🔥 ... 📦`)
+    3. 🎯 *Mira & Destaque* (`🎯 ... ✨`)
+    4. 🛒 *Carrinho & Ação* (`🛒 ... 🚀`)
+    5. ⚡ *Raio Dinâmico* (`⚡ ... 🔥✨`)
+  - **Disparo Direto & 1-Toque Mobile:** Cada uma das 5 opções conta com balão WhatsApp editável, botão de cópia instantânea e botão de envio em 1 toque para todos os grupos ativos.
+  - **Arquitetura Resiliente com Fallback Local de 0ms:** Mecanismo local determinístico de 0ms que garante as 5 opções padronizadas instantaneamente mesmo em caso de oscilação na API externa.
 - **🔄 Botão de Sincronização Unificada:** Sincronização instantânea das métricas do Meta Ads (Graph API v20.0) e Mercado Livre Afiliados com recálculo em tempo real de ROAS, comissões do dia e lucro líquido.
 
 ---

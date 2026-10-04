@@ -18,16 +18,30 @@ test('DeepSeek IA - humanizarTexto corrige abreviações e erros de digitação 
   assert.ok(corrigido.includes('que'), 'Deve expandir q para que');
 });
 
-test('DeepSeek IA - embelezarChamadaLocal deve formatar com emojis sem @ e sem disclaimers pesados', () => {
-  const rascunho = 'chegou nova box de pokemon corram antes que acabe';
+test('DeepSeek IA - embelezarChamadaLocal deve formatar 5 opções com emojis e SEM frases de efeito', () => {
+  const rascunho = 'CORRE PARA APROVEITAR';
   const opcoes = embelezarChamadaLocal(rascunho);
 
-  assert.ok(opcoes.length >= 2, 'Deve gerar múltiplas opções');
+  assert.equal(opcoes.length, 5, 'Deve gerar exatamente 5 opções padronizadas');
+  
+  const frasesEfeitoProibidas = [
+    'aproveitem enquanto',
+    'atenção:',
+    'atenção, pessoal',
+    'vale muito a pena',
+    'oportunidade top',
+    'corram pra garantir'
+  ];
+
   for (const op of opcoes) {
     assert.ok(!op.includes('@pokemon_tcg_promo'), 'NÃO deve incluir @');
     assert.ok(!op.includes('Preço e estoque promocional sujeitos'), 'NÃO deve ter disclaimer longo');
-    assert.ok(/(\p{Extended_Pictographic}|[\u{1F300}-\u{1F9FF}])/u.test(op), 'Deve conter emojis elegantes');
-    assert.ok(op.toLowerCase().includes('box de pokemon') || op.toLowerCase().includes('corram'), 'Deve preservar o texto original');
+    assert.ok(/(\p{Extended_Pictographic}|[\u{1F300}-\u{1F9FF}])/u.test(op), 'Deve conter emojis');
+    assert.ok(op.toLowerCase().includes('corre para aproveitar'), 'Deve preservar o texto original adaptado');
+    
+    for (const proibida of frasesEfeitoProibidas) {
+      assert.ok(!op.toLowerCase().includes(proibida), `NÃO deve conter frase de efeito: "${proibida}"`);
+    }
   }
 });
 
@@ -37,15 +51,16 @@ test('DeepSeek IA - redigirOfertaComIA deve validar rascunhos vazios de forma am
   assert.ok(res.erro && res.erro.includes('Digite'));
 });
 
-test('DeepSeek IA - redigirOfertaComIA deve polir mensagem com rapidez e manter o sentido original', async () => {
+test('DeepSeek IA - redigirOfertaComIA deve polir mensagem com rapidez e manter o sentido original em 5 opções', async () => {
   const res = await redigirOfertaComIA({
     rascunho: 'PROMO BOA PESSOAL 5 UNIDADES NO ESTOQUE',
     link: 'https://mercadolivre.com/sec/exemplo'
   });
 
   assert.equal(res.ok, true);
-  assert.ok(res.opcoes.length >= 2, 'Deve retornar ao menos 2 opções');
+  assert.equal(res.opcoes.length, 5, 'Deve retornar 5 opções padronizadas');
   assert.ok(!res.opcoes[0].includes('@pokemon_tcg_promo'), 'NÃO deve conter arroba');
   assert.ok(res.opcoes[0].includes('5 unidades') || res.opcoes[0].includes('5 Unidades'), 'Deve preservar 5 unidades');
   assert.ok(res.opcoes[0].includes('https://mercadolivre.com/sec/exemplo'), 'Deve conter o link intacto');
 });
+

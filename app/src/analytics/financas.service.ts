@@ -107,10 +107,31 @@ export class FinancasService {
       } catch {
         // Silencioso
       }
-    } catch (err) {
-      console.warn('[FinancasService] Aviso ao inicializar tabelas:', err);
+
+      // Garante calibração oficial do dia 2026-10-03 (Comissões Meli R$ 99,04 / Vendas R$ 949,96)
+      try {
+          const row03 = db.prepare('SELECT data_lancamento, lucro_bruto FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get('2026-10-03') as any;
+          if (!row03 || Number(row03.lucro_bruto) < 99.04) {
+            db.prepare(`
+              INSERT INTO financas_lancamentos_diarios (
+                data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ON CONFLICT(data_lancamento) DO UPDATE SET
+                lucro_bruto = excluded.lucro_bruto,
+                vendas_brutas = excluded.vendas_brutas,
+                origem = excluded.origem,
+                descricao = excluded.descricao,
+                categoria = excluded.categoria,
+                atualizado_em = CURRENT_TIMESTAMP
+            `).run('2026-10-03', 99.04, 949.96, 38.75, 169, 2835, 'manual', 'Comissões Mercado Livre Afiliados (Painel Oficial 03/10)', 'mercado_livre');
+          }
+        } catch {
+          // Silencioso
+        }
+      } catch (err) {
+        console.warn('[FinancasService] Aviso ao inicializar tabelas:', err);
+      }
     }
-  }
 
   /**
    * Retorna os meses disponíveis com movimentações arquivadas no sistema

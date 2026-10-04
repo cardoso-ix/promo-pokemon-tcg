@@ -4,8 +4,6 @@ import {
   Send,
   Copy,
   Check,
-  Zap,
-  Flame,
   ExternalLink,
   RefreshCw,
   AlertCircle,
@@ -324,19 +322,31 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
                 className="bg-slate-900/80 border border-white/10 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-lg relative overflow-hidden"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
+                  <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
                     {idx === 0 ? (
-                      <Flame className="w-3.5 h-3.5 text-rose-400" />
+                      <span className="text-sm">🚨</span>
                     ) : idx === 1 ? (
-                      <Zap className="w-3.5 h-3.5 text-yellow-400" />
+                      <span className="text-sm">🔥</span>
+                    ) : idx === 2 ? (
+                      <span className="text-sm">🎯</span>
+                    ) : idx === 3 ? (
+                      <span className="text-sm">🛒</span>
+                    ) : idx === 4 ? (
+                      <span className="text-sm">⚡</span>
                     ) : (
                       <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                     )}
                     {idx === 0
-                      ? 'Opção 1 • Fluida & Equilibrada'
+                      ? 'Opção 1 • Alerta & Velocidade'
                       : idx === 1
-                      ? 'Opção 2 • Destaque & Energia'
-                      : `Opção ${idx + 1} • Direta`}
+                      ? 'Opção 2 • Fogo & Estoque'
+                      : idx === 2
+                      ? 'Opção 3 • Mira & Destaque'
+                      : idx === 3
+                      ? 'Opção 4 • Carrinho & Ação'
+                      : idx === 4
+                      ? 'Opção 5 • Raio Dinâmico'
+                      : `Opção ${idx + 1}`}
                   </span>
 
                   <button

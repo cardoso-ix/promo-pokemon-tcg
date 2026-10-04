@@ -63,21 +63,29 @@ export function humanizarTexto(bruto: string): string {
 
 /**
  * Fallback Local: Polimento e embelezamento rápido da mensagem (0ms)
+ * Gera 5 opções padronizadas sem frases de efeito inventadas, adaptando estritamente
+ * o texto do usuário com combinações estratégicas de emojis.
  */
 export function embelezarChamadaLocal(rascunho: string, link?: string): string[] {
   const limpo = humanizarTexto(rascunho);
   const linkStr = link?.trim() ? `\n\n🔗 ${link.trim()}` : '';
 
-  // Opção 1: Profissional, bem pontuada e com emojis de destaque
-  const op1 = `🔥 *${limpo}* ✨${linkStr}`;
+  // Opção 1: Alerta & Velocidade (🚨 ... ⚡)
+  const op1 = `🚨 *${limpo}* ⚡${linkStr}`;
 
-  // Opção 2: Enérgica e convidativa
-  const op2 = `🚀 *Aproveitem:* ${limpo}! ⚡${linkStr}`;
+  // Opção 2: Fogo & Estoque (🔥 ... 📦)
+  const op2 = `🔥 *${limpo}* 📦${linkStr}`;
 
-  // Opção 3: Direta e destacada
-  const op3 = `📦 *Atenção:* ${limpo} 🎯${linkStr}`;
+  // Opção 3: Mira & Brilho (🎯 ... ✨)
+  const op3 = `🎯 *${limpo}* ✨${linkStr}`;
 
-  return [op1, op2, op3];
+  // Opção 4: Carrinho & Foguete (🛒 ... 🚀)
+  const op4 = `🛒 *${limpo}* 🚀${linkStr}`;
+
+  // Opção 5: Raio & Fogo Dinâmico (⚡ ... 🔥✨)
+  const op5 = `⚡ *${limpo}* 🔥✨${linkStr}`;
+
+  return [op1, op2, op3, op4, op5];
 }
 
 /**
@@ -139,27 +147,29 @@ export async function redigirOfertaComIA(
   const timeoutId = setTimeout(() => controller.abort(), 4000);
 
   const promptSistema = `Você é um assistente especialista em comunicação e redação de mensagens para WhatsApp.
-O usuário vai enviar uma mensagem digitada por ele (que pode conter abreviações, digitação informal ou pequenos erros).
+O usuário vai enviar uma mensagem digitada por ele (que pode conter abreviações, digitação informal ou caixa alta).
 
 SUA ÚNICA MISSÃO É:
-1. Melhorar a digitação (corrigir gramática, acentuação, pontuação e concordância).
-2. Inserir emojis de bom gosto e bem posicionados (ex: ⚡, 📦, 🔥, 🃏, ✨, 🎯, 🚀, 🛒, 👀).
-3. Deixar a escrita mais profissional, fluida e atraente para o WhatsApp.
-4. Preservar 100% o sentido, a ideia central e o recado que o usuário escreveu.
+1. Padronizar e gerar EXATAMENTE 5 OPÇÕES da mensagem digitada pelo usuário.
+2. Adaptar o texto corrigindo apenas gramática, acentuação e pontuação, mantendo 100% as palavras e o sentido exato do que ele escreveu.
+3. INCLUIR APENAS EMOJIS estratégicos e profissionais do WhatsApp (ex: 🚨, 🔥, ⚡, 🎯, 🛒, 📦, 🚀, ✨).
+4. Usar formatação em negrito (*texto*) para dar destaque à mensagem.
 
-REGRAS RÍGIDAS:
-- NÃO invente informações, preços ou produtos que não foram mencionados.
-- NÃO adicione arrobas (@) nem nomes de canais ou assinaturas (como @pokemon_tcg_promo).
-- NÃO adicione disclaimers longos ou avisos de rodapé (como "Preço sujeito a alteração").
-- Mantenha o recado objetivo e natural.
-${linkAfiliado ? `- Inclua o link fornecido intacto no final da mensagem: ${linkAfiliado}` : '- Se houver algum link dentro do texto do usuário, mantenha-o intacto.'}
+REGRA CRÍTICA MANDATÓRIA (PROIBIÇÃO ABSOLUTA):
+- NUNCA adicione frases de efeito, ganchos ou bordões que o usuário NÃO escreveu (PROIBIDO adicionar frases como "Aproveitem enquanto ainda tem estoque", "Atenção pessoal", "Vale muito a pena conferir", "Oportunidade top pra vocês", "Corram pra garantir", etc.).
+- NÃO invente nenhuma palavra ou chamada extra. Apenas formate e adapte O QUE O USUÁRIO DIGITOU com emojis.
+- NÃO adicione arrobas (@) nem nomes de canais ou assinaturas.
+- NÃO adicione avisos de rodapé longos ou disclaimers.
+${linkAfiliado ? `- Inclua o link fornecido intacto no final da mensagem precedido por 🔗: ${linkAfiliado}` : '- Se houver algum link dentro do texto do usuário, mantenha-o intacto.'}
 
-Retorne EXCLUSIVAMENTE um objeto JSON no formato:
+Retorne EXCLUSIVAMENTE um objeto JSON com 5 opções distintas no formato:
 {
   "opcoes": [
-    "Opção 1 polida e profissional com emojis...",
-    "Opção 2 com destaque em negrito e tom dinâmico...",
-    "Opção 3 direta e envolvente..."
+    "🚨 *Texto adaptado do usuário!* ⚡",
+    "🔥 *Texto adaptado do usuário!* 📦",
+    "🎯 *Texto adaptado do usuário!* ✨",
+    "🛒 *Texto adaptado do usuário!* 🚀",
+    "⚡ *Texto adaptado do usuário!* 🔥✨"
   ]
 }`;
 
