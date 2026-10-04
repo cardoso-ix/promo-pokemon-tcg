@@ -766,11 +766,11 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
               <Megaphone className="w-4 h-4" />
             </span>
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Configurar Campanha & Gatilhos do Anúncio
+              Anúncios de Captação para o WhatsApp
             </h3>
           </div>
           <span className="text-[11px] text-slate-400">
-            Padrão Oficial Meta Ads (Instagram Feed, Stories & Reels)
+            Focado em convidar colecionadores para o seu grupo gratuito (Instagram e Facebook)
           </span>
         </div>
 
@@ -778,13 +778,13 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
               <Target className="w-3.5 h-3.5 text-cyan-400" />
-              Tema ou Proposta do Anúncio:
+              Motivo do Convite (Opcional):
             </label>
             <input
               type="text"
               value={temaMeta}
               onChange={(e) => setTemaMeta(e.target.value)}
-              placeholder="Ex: Entrar no grupo VIP para pegar caixas de Pokémon no preço de tabela"
+              placeholder="Ex: Entrar no grupo gratuito para comprar caixas de Pokémon no preço normal"
               className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 transition-all"
             />
           </div>
@@ -792,13 +792,13 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-amber-400" />
-              Produtos em Destaque (Opcional):
+              Itens que o Grupo Avisa (Opcional):
             </label>
             <input
               type="text"
               value={produtosMeta}
               onChange={(e) => setProdutosMeta(e.target.value)}
-              placeholder="Ex: ETB Escuridão Absoluta, Booster Bundle, Fichário 30 Anos"
+              placeholder="Ex: Booster Box, ETBs, Latas, Fichários e Coleções"
               className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/30 transition-all"
             />
           </div>
@@ -806,12 +806,12 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
 
         {/* Pílulas de Temas de 1 Toque */}
         <div className="space-y-1.5 pt-1">
-          <span className="text-[11px] text-slate-400 font-semibold">Gatilhos rápidos recomendados:</span>
+          <span className="text-[11px] text-slate-400 font-semibold">Exemplos fáceis para clicar e testar:</span>
           <div className="flex flex-wrap gap-2">
             {[
-              'Entrar no grupo VIP para pegar caixas de Pokémon no preço de tabela',
-              'Pare de pagar preço abusivo de cambista em caixas e boosters',
-              'Radar de reposições oficiais com cupons no Mercado Livre e Amazon'
+              'Entrar no grupo gratuito para comprar caixas de Pokémon no preço normal de loja',
+              'Chega de pagar caro na internet em caixas e pacotes de Pokémon',
+              'Aviso no WhatsApp quando tiver promoção e cupom no Mercado Livre'
             ].map((sug, idx) => (
               <button
                 key={idx}
@@ -846,12 +846,12 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
             {loadingMeta ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Gerando 3 Criativos Profissionais...</span>
+                <span>Gerando Modelos para WhatsApp...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                <span>Gerar Criativos para Meta Ads</span>
+                <span>Gerar Anúncios de Captação para WhatsApp</span>
               </>
             )}
           </button>
@@ -865,7 +865,7 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                 <Target className="w-4 h-4 text-cyan-400" />
-                Criativos de Anúncio ({variacoesMeta.length} Opções)
+                Anúncios Prontos para Convidar Pessoas ({variacoesMeta.length} Opções)
               </h3>
               {fonteMeta && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border bg-cyan-500/10 text-cyan-300 border-cyan-500/20">
@@ -874,7 +874,7 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
               )}
             </div>
             <span className="text-xs text-slate-400 hidden sm:inline">
-              Copie cada campo direto para o Gerenciador de Anúncios
+              Copie cada campo direto para o seu anúncio no Meta Ads
             </span>
           </div>
 

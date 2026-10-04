@@ -85,10 +85,10 @@ chmod +x *.sh
   - **Arquitetura Resiliente com Fallback Local de 0ms:** Mecanismo local determinístico de 0ms que garante as 5 opções padronizadas instantaneamente mesmo em caso de oscilação na API externa.
   - **🎯 Criador de Anúncios Meta Ads (Tráfego Pago & Captação de Grupos):**
     - **Sub-Aba Dedicada no Estúdio IA:** Alternador entre `[ 💬 Chamadas WhatsApp ]` e `[ 🎯 Criador de Anúncios Meta Ads ]` com interface de alta conversão.
-    - **3 Variações Estratégicas de Anúncio:**
-      1. 🤝 *Amigo / UGC (Conexão & Comunidade):* Tom descontraído de colecionador para colecionador, com o menor custo por lead (CPL).
-      2. 🚨 *Urgência / Alerta (Radar de Estoque & Reposições):* Foco no gatilho de escassez e compras antes dos revendedores (scalpers).
-      3. 🎯 *Direto / Preço Justo (Menor CPL & Foco em Economia):* Focado em quem não quer pagar ágio em coleções e expansões disputadas.
+    - **3 Variações de Captação com Linguagem Simples (Zero Termos Difíceis):**
+      1. ☕ *Convite Simples & Amigo:* Conversa leve de colecionador para colecionador, convidando para o grupo gratuito de promoções.
+      2. 🚨 *Alerta de Estoque & Promoção:* Focado em receber avisos rápidos no WhatsApp assim que o preço baixar antes de acabar.
+      3. ⚡ *Preço de Loja (Sem Pagar Caro):* Foco direto em economizar, sem termos complicados como ágio ou leilão.
     - **Campos Prontos para Gerenciador de Anúncios do Meta:**
       - **Frase para Imagem/Banner:** Copy curta de impacto com alto contraste para ser inserida na arte gráfica do anúncio.
       - **Texto Principal (Primary Text):** Copy completa com quebra de objeção obrigatória do grupo silencioso (*"🔒 Grupo silencioso: apenas administradores postam ofertas e novidades"*).

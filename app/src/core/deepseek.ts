@@ -411,8 +411,8 @@ export interface GerarAnuncioMetaResponse {
 }
 
 /**
- * Fallback Local: Gera 3 variações de anúncios de alta conversão para Meta Ads (0ms)
- * Com quebra de objeção do grupo silencioso, combate ao ágio e frase para imagem.
+ * Fallback Local: Gera 3 variações de anúncios de captação de leads para Meta Ads (0ms)
+ * Com linguagem simples, zero palavras difíceis, quebra de objeção do grupo silencioso e frase para imagem.
  */
 export function gerarAnuncioMetaLocal(
   tema?: string,
@@ -422,62 +422,62 @@ export function gerarAnuncioMetaLocal(
   const temaLimpo = (tema || '').trim();
 
   const produtosTexto = produtosLimpos
-    ? `(${produtosLimpos})`
-    : 'Booster Boxes, ETBs, Tripacks e Bundles';
+    ? produtosLimpos
+    : 'caixas, boosters, latas e cartas';
 
   return [
     {
       id: 'amigo',
-      tituloEstilo: '☕ Amigo Colecionador (UGC & Conexão Real)',
-      badge: 'Menor Custo por Lead',
-      fraseImagem: 'ENTRE NO NOSSO GRUPO VIP • E VENHA ECONOMIZAR EM POKÉMON TCG',
-      textoPrincipal: `Quem coleciona Pokémon sabe a raiva que dá ver produto esgotando em minutos pra depois aparecer pelo dobro do preço na internet. 😅
+      tituloEstilo: '☕ Convite Simples & Amigo',
+      badge: 'Mais Leve e Natural',
+      fraseImagem: 'GRUPO NO WHATSAPP • PROMOÇÕES DE POKÉMON TCG',
+      textoPrincipal: `Quem coleciona Pokémon sabe como é chato ver um produto esgotar rápido e depois ver gente cobrando o dobro do preço na internet. 😅
 
-Eu também compro, abro meus pacotes e acompanho os lançamentos. Como já passo boa parte do meu dia olhando os estoques do Mercado Livre e lojas oficiais, criei um grupo no WhatsApp para compartilhar onde tá valendo a pena comprar no preço justo de tabela.
+Eu também coleciono, abro pacotes e acompanho os lançamentos. Como fico de olho nos estoques do Mercado Livre e das lojas oficiais o dia todo, criei um grupo gratuito no WhatsApp para avisar onde tem produto no preço normal de loja.
 
-🔒 Grupo silencioso (apenas admins postam ofertas reais)
-📦 Reposição de ${produtosTexto}
-🏷️ Cupons testados no carrinho e links 100% seguros
+🔒 Grupo silencioso: só os administradores mandam mensagens. Zero bagunça e zero conversa fiada.
+📦 Avisos de ${produtosTexto}
+🏷️ Cupons de desconto e links de lojas confiáveis
 
-Toque em "Saiba Mais" e venha economizar com a gente! 🃏✨`,
-      tituloAnuncio: 'Acesse o Grupo de Promoções TCG',
-      descricao: 'Preço de tabela & Sem spam',
+👉 Toque no botão abaixo e entre no grupo para não perder as próximas promoções! 🃏✨`,
+      tituloAnuncio: 'Entre no Grupo de Promoções TCG',
+      descricao: 'Grupo grátis & Sem conversas',
       ctaRecomendada: 'Saiba mais'
     },
     {
       id: 'urgencia',
-      tituloEstilo: '🚨 Radar de Estoque & Urgência (Reposições)',
-      badge: 'Maior Taxa de Clique',
-      fraseImagem: 'RADAR DE OFERTAS POKÉMON • CAIXAS LACRADAS PELO MENOR PREÇO',
-      textoPrincipal: `Cansado de pagar preço abusivo de revenda em Pokémon TCG? 🎯
+      tituloEstilo: '🚨 Alerta de Estoque & Promoção',
+      badge: 'Avisos no WhatsApp',
+      fraseImagem: 'AVISO NO WHATSAPP • QUANDO O PREÇO CAIR',
+      textoPrincipal: `Cansado de pagar caro demais em Pokémon TCG? 🎯
 
-Nosso radar monitora reposições em tempo real no Mercado Livre e Amazon para você garantir ${produtosTexto} antes que os estoques esgotem.
+A gente monitora os estoques e promoções nas lojas oficiais para você conseguir comprar ${produtosTexto} antes que acabe tudo.
 
-🔒 Grupo 100% silencioso (zero conversa fiada, só ofertas)
-⚡ Alertas instantâneos de drops oficiais e reposições
-🎟️ Cupons exclusivos testados no carrinho antes de postar
+🔒 Grupo 100% silencioso: só mandamos promoções reais. Sem conversas e sem spam.
+⚡ Aviso rápido no seu WhatsApp assim que o preço baixar
+🎟️ Cupons de desconto testados antes de enviar
 
-👉 Toque em "Saiba Mais" e entre no Grupo VIP antes do próximo drop! 🚀`,
-      tituloAnuncio: 'Radar VIP de Ofertas Pokémon TCG',
-      descricao: 'Alertas em tempo real',
-      ctaRecomendada: 'Obter Acesso'
+👉 Toque em "Saiba Mais" e entre agora no grupo gratuito! 📲✨`,
+      tituloAnuncio: 'Alerta de Preço Baixo Pokémon TCG',
+      descricao: 'Avisos rápidos no WhatsApp',
+      ctaRecomendada: 'Saiba mais'
     },
     {
       id: 'direto',
-      tituloEstilo: '⚡ Direto & Objetivo (Preço Justo)',
-      badge: 'Alta Conversão Mobile',
-      fraseImagem: 'PARE DE PAGAR ÁGIO • AS MELHORES OFERTAS DE POKÉMON TCG',
-      textoPrincipal: `Alguém já comparou os preços por você. 🃏🔥
+      tituloEstilo: '⚡ Preço de Loja (Sem Pagar Caro)',
+      badge: 'Direto ao Ponto',
+      fraseImagem: 'CHEGA DE PAGAR CARO • OFERTAS DE POKÉMON TCG',
+      textoPrincipal: `Você não precisa mais perder tempo caçando promoções de Pokémon pela internet. 🃏🔥
 
-Garimpamos as melhores ofertas de Pokémon TCG para você não perder tempo nem dinheiro caçando na internet.
+A gente encontra as melhores ofertas do dia e avisa você direto no WhatsApp:
 
-• Preço justo de tabela em produtos disputados ${produtosLimpos ? `(${produtosLimpos})` : ''}
-• Links de Lojas Oficiais e MercadoLíderes Platinum
-🔒 Grupo silencioso: apenas administradores postam
+• Preço justo de loja em produtos lacrados ${produtosLimpos ? `(${produtosLimpos})` : ''}
+• Links seguros direto de lojas oficiais e vendedores confiáveis
+🔒 Grupo silencioso: só os administradores postam, sem mensagens chatas
 
-Clique no botão abaixo e participe gratuitamente do nosso grupo VIP! 📲`,
-      tituloAnuncio: 'Grupo VIP de Ofertas e Cupons TCG',
-      descricao: 'Acesso imediato e gratuito',
+👉 Toque no botão e venha economizar no nosso grupo grátis! 📲`,
+      tituloAnuncio: 'Grupo de Ofertas de Pokémon TCG',
+      descricao: '100% gratuito e silencioso',
       ctaRecomendada: 'Saiba mais'
     }
   ];
@@ -507,25 +507,33 @@ export async function gerarAnuncioMetaComIA(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-  const promptSistema = `Você é um Copywriter especialista em anúncios do Meta Ads (Instagram e Facebook) focado em atrair colecionadores de Pokémon TCG para grupos VIP de WhatsApp.
-Sua missão é gerar EXATAMENTE 3 variações de anúncios de alta conversão:
-1. "amigo" (tom de amigo colecionador, UGC, natural, 1ª pessoa)
-2. "urgencia" (alerta de radar, reposições de estoque, velocidade)
-3. "direto" (curto, quebra de objeções, focado em preço justo e praticidade)
+  const promptSistema = `Você é um especialista em redação de anúncios para Instagram e Facebook (Meta Ads).
+Seu objetivo é EXCLUSIVAMENTE A CAPTAÇÃO DE LEADS (convidar e atrair colecionadores, jogadores e pais para ENTRAR NO GRUPO GRATUITO DE WHATSAPP onde são enviadas promoções de Pokémon TCG).
 
-REGRAS MANDATÓRIAS DE TRÁFEGO PAGO NO META:
-- O texto principal (Primary Text) DEVE incluir a linha de quebra de objeção do grupo silencioso: "🔒 Grupo silencioso (apenas administradores postam)".
-- DEVE citar combate a preço de cambista / revenda abusiva e garantia de preço de tabela em lojas oficiais (Mercado Livre / Amazon).
-- O título (Headline) DEVE ser magnético e ter menos de 40 caracteres.
+REGRA MANDATÓRIA DE LINGUAGEM (PALAVRAS SIMPLES E NATURAIS):
+- USE UMA LINGUAGEM FÁCIL, POPULAR E DIRETA. Não use palavras difíceis ou termos técnicos (PROIBIDO usar palavras como: "ágio", "drops", "scalpers", "leilão", "CPL", "arbitragem", "escutei", "demanda reprimida").
+- Em vez de "ágio", diga "pagar caro" ou "pagar o dobro do preço".
+- Em vez de "drops", diga "quando o produto voltar para a loja" ou "novas caixas nas lojas".
+- O objetivo é fazer a pessoa clicar no anúncio para entrar no grupo gratuito de WhatsApp.
+
+Sua missão é gerar EXATAMENTE 3 variações de anúncios de alta conversão:
+1. "amigo" (tom de conversa simples de colecionador para colecionador, convidando pro grupo)
+2. "urgencia" (focado em receber avisos rápidos no WhatsApp quando tiver promoção antes de acabar)
+3. "direto" (focado em economizar e não pagar caro, direto ao ponto)
+
+REGRAS TÉCNICAS MANDATÓRIAS DO META ADS:
+- O texto principal DEVE incluir a linha de quebra de objeção do grupo silencioso com palavras simples: "🔒 Grupo silencioso: só os administradores mandam mensagens. Zero bagunça e zero conversa fiada."
+- O texto principal DEVE convidar a pessoa a tocar no botão para entrar no grupo grátis do WhatsApp.
+- O título (Headline) DEVE ser curto, direto e ter menos de 40 caracteres.
 - A descrição DEVE ter menos de 30 caracteres.
-- DEVE sugerir uma Frase de Impacto para colocar no centro da Imagem/Arte (Banner).
+- DEVE sugerir uma Frase de Impacto simples para a imagem/banner.
 - Retorne EXCLUSIVAMENTE um objeto JSON com array "variacoes" contendo os 3 objetos:
 {
   "variacoes": [
     {
       "id": "amigo",
-      "tituloEstilo": "☕ Amigo Colecionador (UGC & Conexão Real)",
-      "badge": "Menor Custo por Lead",
+      "tituloEstilo": "☕ Convite Simples & Amigo",
+      "badge": "Mais Leve e Natural",
       "fraseImagem": "...",
       "textoPrincipal": "...",
       "tituloAnuncio": "...",
@@ -550,10 +558,10 @@ REGRAS MANDATÓRIAS DE TRÁFEGO PAGO NO META:
           { role: 'system', content: promptSistema },
           {
             role: 'user',
-            content: `Crie anúncios Meta Ads para o tema: ${tema || 'Entrar no grupo VIP para pegar caixas de Pokémon no preço de tabela'}.${produtos ? ` Produtos em destaque: ${produtos}.` : ''}`
+            content: `Crie anúncios focados em CAPTAÇÃO PARA GRUPO GRATUITO DE WHATSAPP com linguagem simples e clara. Tema: ${tema || 'Entrar no grupo gratuito de ofertas para não pagar caro em Pokémon'}.${produtos ? ` Produtos em destaque: ${produtos}.` : ''}`
           }
         ],
-        temperature: 0.6,
+        temperature: 0.5,
         response_format: { type: 'json_object' }
       }),
       signal: controller.signal
