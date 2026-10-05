@@ -13,11 +13,7 @@ import {
   Link2,
   Trash2,
   Smartphone,
-  SpellCheck,
-  Megaphone,
-  Target,
-  Layers,
-  Image as ImageIcon
+  SpellCheck
 } from 'lucide-react';
 import { api } from '../services/api.ts';
 
@@ -196,26 +192,6 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
   const [corrigindo, setCorrigindo] = useState(false);
   const [avisoCorrecao, setAvisoCorrecao] = useState<string | null>(null);
 
-  // Sub-Aba ativa: 'chamadas' ou 'meta_ads'
-  const [subAba, setSubAba] = useState<'chamadas' | 'meta_ads'>('chamadas');
-
-  // Estados específicos para Anúncios Meta Ads
-  const [temaMeta, setTemaMeta] = useState('');
-  const [produtosMeta, setProdutosMeta] = useState('');
-  const [loadingMeta, setLoadingMeta] = useState(false);
-  const [variacoesMeta, setVariacoesMeta] = useState<Array<{
-    id: 'amigo' | 'urgencia' | 'direto';
-    tituloEstilo: string;
-    badge: string;
-    fraseImagem: string;
-    textoPrincipal: string;
-    tituloAnuncio: string;
-    descricao: string;
-    ctaRecomendada: string;
-  }>>([]);
-  const [fonteMeta, setFonteMeta] = useState<'deepseek' | 'fallback_local' | null>(null);
-  const [copiadoCampo, setCopiadoCampo] = useState<string | null>(null);
-
   // Exemplos rápidos e práticos para testar em 1 toque (mobile-friendly)
   const exemplosRapidos = [
     'PROMO BOA PESSOAL 5 UNIDADES',
@@ -223,38 +199,6 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
     'Galera baixou muito o preco corre',
     'Chegou reposicao poucas unidades no estoque'
   ];
-
-  const handleCopiarCampo = async (texto: string, campoId: string) => {
-    try {
-      await navigator.clipboard.writeText(texto);
-      setCopiadoCampo(campoId);
-      setTimeout(() => setCopiadoCampo(null), 2000);
-    } catch {
-      // fallback
-    }
-  };
-
-  const handleGerarMetaAds = async () => {
-    setLoadingMeta(true);
-    setErro(null);
-    try {
-      const resp = await api.gerarAnuncioMetaIA(
-        temaMeta.trim() || undefined,
-        produtosMeta.trim() || undefined
-      );
-      if (resp && resp.ok && resp.variacoes) {
-        setVariacoesMeta(resp.variacoes);
-        setFonteMeta(resp.fonte || 'deepseek');
-      } else {
-        setErro(resp?.erro || 'Erro ao gerar anúncios para o Meta Ads.');
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setErro(msg || 'Erro ao conectar ao motor de anúncios.');
-    } finally {
-      setLoadingMeta(false);
-    }
-  };
 
   const handleCorrigirFrase = async () => {
     const textoAtual = rascunho.trim();
@@ -397,47 +341,8 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
         </div>
       </div>
 
-      {/* Navegação entre Sub-Abas do Estúdio IA */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-3">
-        <button
-          type="button"
-          onClick={() => setSubAba('chamadas')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
-            subAba === 'chamadas'
-              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-          }`}
-        >
-          <MessageSquare className="w-4 h-4 text-amber-400" />
-          <span>Chamadas WhatsApp (5 Opções)</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setSubAba('meta_ads');
-            if (variacoesMeta.length === 0) {
-              handleGerarMetaAds();
-            }
-          }}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${
-            subAba === 'meta_ads'
-              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-          }`}
-        >
-          <Target className="w-4 h-4 text-cyan-400" />
-          <span>Criador de Anúncios Meta Ads</span>
-          <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-cyan-500/30 text-cyan-200 border border-cyan-400/30">
-            Novo
-          </span>
-        </button>
-      </div>
-
-      {subAba === 'chamadas' && (
-        <>
-          {/* Caixa de Entrada Principal */}
-          <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
+      {/* Caixa de Entrada Principal */}
+      <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
@@ -752,248 +657,7 @@ export const EstudioIaView: React.FC<EstudioIaViewProps> = ({ onDispararSucesso 
           </div>
         </div>
       )}
-    </>
-  )}
-
-  {/* SUB-ABA 2: CRIADOR DE ANÚNCIOS META ADS */}
-  {subAba === 'meta_ads' && (
-    <div className="space-y-6">
-      {/* Caixa de Configuração do Anúncio */}
-      <div className="bg-slate-900/60 border border-white/10 rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-cyan-500/20 text-cyan-400">
-              <Megaphone className="w-4 h-4" />
-            </span>
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-              Anúncios de Captação para o WhatsApp
-            </h3>
-          </div>
-          <span className="text-[11px] text-slate-400">
-            Focado em convidar colecionadores para o seu grupo gratuito (Instagram e Facebook)
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-              <Target className="w-3.5 h-3.5 text-cyan-400" />
-              Motivo do Convite (Opcional):
-            </label>
-            <input
-              type="text"
-              value={temaMeta}
-              onChange={(e) => setTemaMeta(e.target.value)}
-              placeholder="Ex: Entrar no grupo gratuito para comprar caixas de Pokémon no preço normal"
-              className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400/60 focus:ring-1 focus:ring-cyan-400/30 transition-all"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-amber-400" />
-              Itens que o Grupo Avisa (Opcional):
-            </label>
-            <input
-              type="text"
-              value={produtosMeta}
-              onChange={(e) => setProdutosMeta(e.target.value)}
-              placeholder="Ex: Booster Box, ETBs, Latas, Fichários e Coleções"
-              className="w-full bg-slate-950/80 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/30 transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Pílulas de Temas de 1 Toque */}
-        <div className="space-y-1.5 pt-1">
-          <span className="text-[11px] text-slate-400 font-semibold">Exemplos fáceis para clicar e testar:</span>
-          <div className="flex flex-wrap gap-2">
-            {[
-              'Entrar no grupo gratuito para comprar caixas de Pokémon no preço normal de loja',
-              'Chega de pagar caro na internet em caixas e pacotes de Pokémon',
-              'Aviso no WhatsApp quando tiver promoção e cupom no Mercado Livre'
-            ].map((sug, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => {
-                  setTemaMeta(sug);
-                }}
-                className="text-xs px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/[0.06] transition-all cursor-pointer"
-              >
-                "{sug}"
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Feedback de Erro ou Sucesso */}
-        {erro && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-            <span>{erro}</span>
-          </div>
-        )}
-
-        {/* Botão de Disparo da Geração */}
-        <div className="pt-2 flex justify-end">
-          <button
-            type="button"
-            disabled={loadingMeta}
-            onClick={handleGerarMetaAds}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white transition-all shadow-lg hover:shadow-cyan-500/20 active:scale-[0.98] cursor-pointer"
-          >
-            {loadingMeta ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Gerando Modelos para WhatsApp...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>Gerar Anúncios de Captação para WhatsApp</span>
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Variações Geradas (3 Cards Completos com Cópia por Campo) */}
-      {variacoesMeta.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Target className="w-4 h-4 text-cyan-400" />
-                Anúncios Prontos para Convidar Pessoas ({variacoesMeta.length} Opções)
-              </h3>
-              {fonteMeta && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border bg-cyan-500/10 text-cyan-300 border-cyan-500/20">
-                  {fonteMeta === 'deepseek' ? '✨ DeepSeek IA' : '⚡ Motor Otimizado 0ms'}
-                </span>
-              )}
-            </div>
-            <span className="text-xs text-slate-400 hidden sm:inline">
-              Copie cada campo direto para o seu anúncio no Meta Ads
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {variacoesMeta.map((variacao, idx) => {
-              const campoFrase = `${variacao.id}_frase`;
-              const campoTexto = `${variacao.id}_texto`;
-              const campoTitulo = `${variacao.id}_titulo`;
-
-              return (
-                <div
-                  key={variacao.id}
-                  className="bg-slate-900/70 border border-white/10 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 shadow-xl hover:border-cyan-500/40 transition-all"
-                >
-                  {/* Topo do Card com Badge */}
-                  <div className="border-b border-white/10 pb-3 flex items-center justify-between gap-2">
-                    <div className="space-y-0.5">
-                      <h4 className="text-sm font-bold text-white leading-tight">
-                        {variacao.tituloEstilo}
-                      </h4>
-                      <span className="inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
-                        {variacao.badge}
-                      </span>
-                    </div>
-                    <span className="text-xs font-mono font-bold text-slate-500">
-                      #{idx + 1}
-                    </span>
-                  </div>
-
-                  {/* 1. Frase de Impacto para a Imagem/Arte */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1">
-                        <ImageIcon className="w-3.5 h-3.5" />
-                        Frase para Imagem/Banner:
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => handleCopiarCampo(variacao.fraseImagem, campoFrase)}
-                        className="text-[11px] font-semibold text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
-                      >
-                        {copiadoCampo === campoFrase ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiadoCampo === campoFrase ? 'Copiado!' : 'Copiar'}</span>
-                      </button>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-950 border border-amber-500/30 text-amber-300 font-extrabold text-xs text-center leading-snug">
-                      {variacao.fraseImagem}
-                    </div>
-                  </div>
-
-                  {/* 2. Texto Principal (Primary Text) */}
-                  <div className="space-y-1.5 flex-1">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
-                        Texto Principal (Copy):
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => handleCopiarCampo(variacao.textoPrincipal, campoTexto)}
-                        className="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer"
-                      >
-                        {copiadoCampo === campoTexto ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiadoCampo === campoTexto ? 'Copiado!' : 'Copiar Copy'}</span>
-                      </button>
-                    </div>
-                    <textarea
-                      readOnly
-                      value={variacao.textoPrincipal}
-                      rows={9}
-                      className="w-full bg-[#0d1418] border border-[#1f2c34] rounded-xl p-3 text-xs text-[#e9edef] leading-relaxed focus:outline-none resize-none selection:bg-cyan-500/30"
-                    />
-                  </div>
-
-                  {/* 3. Título do Anúncio (Headline) */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wide">
-                        Título (Headline Meta):
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => handleCopiarCampo(variacao.tituloAnuncio, campoTitulo)}
-                        className="text-[11px] font-semibold text-slate-400 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
-                      >
-                        {copiadoCampo === campoTitulo ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copiadoCampo === campoTitulo ? 'Copiado!' : 'Copiar'}</span>
-                      </button>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-950 border border-white/10 text-white font-bold text-xs flex items-center justify-between">
-                      <span>{variacao.tituloAnuncio}</span>
-                      <span className="text-[10px] text-slate-500 font-normal">
-                        {variacao.tituloAnuncio.length}/40
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 4. CTA & Descrição */}
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] text-slate-500 block">Botão CTA Recomendado:</span>
-                      <span className="font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                        {variacao.ctaRecomendada}
-                      </span>
-                    </div>
-                    <div className="text-right space-y-0.5">
-                      <span className="text-[10px] text-slate-500 block">Descrição:</span>
-                      <span className="text-slate-300 text-[11px]">
-                        {variacao.descricao}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  )}
     </div>
   );
 };
+
