@@ -153,6 +153,46 @@ test('extrairCupom extrai código de cupom com precisão e suporta negrito/itál
   assert.strictEqual(extrairCupom('Sem cupom nenhum neste post'), null);
 });
 
+test('extrairCupom deve extrair múltiplos cupons acumulativos na mesma linha ou em linhas separadas', () => {
+  // Caso real da foto do usuário: Cupom:MELIUZKIDS+MELIMAXITOYS
+  const casoFoto = `❌ ~De R$167,99~
+😱 Por R$122 no pix 🔥
+
+🎟️ Cupom:MELIUZKIDS+MELIMAXITOYS
+
+🔗 https://meli.la/2SLRn3b`;
+  assert.strictEqual(extrairCupom(casoFoto), 'MELIUZKIDS + MELIMAXITOYS');
+
+  // Formatos variados com +, e, &, /
+  assert.strictEqual(extrairCupom('Cupom: MELIUZKIDS + MELIMAXITOYS'), 'MELIUZKIDS + MELIMAXITOYS');
+  assert.strictEqual(extrairCupom('Cupons: MELIUZKIDS e MELIMAXITOYS'), 'MELIUZKIDS + MELIMAXITOYS');
+  assert.strictEqual(extrairCupom('🎟️ MELIUZKIDS+MELIMAXITOYS'), 'MELIUZKIDS + MELIMAXITOYS');
+  assert.strictEqual(extrairCupom('Cupom: *MELIUZKIDS* + *MELIMAXITOYS*'), 'MELIUZKIDS + MELIMAXITOYS');
+  assert.strictEqual(extrairCupom('Use os cupons: POKE10 + POKE20 + POKE30'), 'POKE10 + POKE20 + POKE30');
+
+  // Cupons em linhas separadas
+  const casoLinhasSeparadas = `🔥 OFERTA POKÉMON
+🎟️ Cupom 1: MELIUZKIDS
+🎟️ Cupom 2: MELIMAXITOYS
+🛒 https://meli.la/exemplo`;
+  assert.strictEqual(extrairCupom(casoLinhasSeparadas), 'MELIUZKIDS + MELIMAXITOYS');
+});
+
+test('formatarMensagemReplicada deve formatar múltiplos cupons com plural e destaque', () => {
+  const formatado = formatarMensagemReplicada({
+    tipo: 'oferta',
+    titulo: 'Box Pokémon TCG 30 Anos',
+    precoDe: 'R$ 167,99',
+    precoPor: 'R$ 122,00',
+    cupom: 'MELIUZKIDS + MELIMAXITOYS',
+    linkAfiliado: 'https://mercadolivre.com/sec/exemplo'
+  });
+
+  assert.ok(formatado.includes('🎟️ Cupons: *MELIUZKIDS + MELIMAXITOYS*'), 'Deve conter Cupons no plural e ambos os códigos');
+  assert.ok(formatado.includes('❌ ~De: R$ 167,99~'));
+  assert.ok(formatado.includes('🔥 *Por apenas: R$ 122,00*'));
+});
+
 test('extrairCupom extrai condição descritiva quando não há código alfanumérico explícito', () => {
   const desc1 = extrairCupom('comprando 4 + usando o cupom de 10% no app');
   assert.ok(desc1);

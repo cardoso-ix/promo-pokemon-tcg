@@ -570,7 +570,46 @@ export function detectarMensagemCupom(texto: string): boolean {
 }
 
 /**
- * Extrai o código ou condição do cupom mencionado no texto da oferta com alta precisão e resiliência
+ * Sanitiza e valida código individual de cupom
+ */
+function sanitizarCodigoCupom(bruto: string, blacklist: Set<string>): string | null {
+  if (!bruto) return null;
+  const code = bruto.trim().replace(/[\*_~\[\]\(\)\"\':]/g, '').toUpperCase();
+  if (
+    !blacklist.has(code) &&
+    !/^\d+$/.test(code) &&
+    code.length >= 3 &&
+    code.length <= 30 &&
+    !/^(?:COM|SEM|TEM|CUPOM|CUPONS)$/i.test(code) &&
+    /^[A-Z0-9_\-]+$/.test(code)
+  ) {
+    return code;
+  }
+  return null;
+}
+
+/**
+ * Fatia trecho procurando múltiplos cupons combinados (ex: MELIUZKIDS+MELIMAXITOYS, MELIUZKIDS e MELIMAXITOYS)
+ */
+function extrairCuponsMultiplosDeTrecho(trecho: string, blacklist: Set<string>): string[] {
+  if (!trecho) return [];
+  const pedacos = trecho.split(/\s*(?:\+|&|\/|\s+e\s+)\s*/i);
+  if (pedacos.length > 1) {
+    const validos: string[] = [];
+    for (const p of pedacos) {
+      const cod = sanitizarCodigoCupom(p, blacklist);
+      if (cod) validos.push(cod);
+    }
+    if (validos.length >= 2) {
+      return [...new Set(validos)];
+    }
+  }
+  return [];
+}
+
+/**
+ * Extrai o código ou condição do cupom mencionado no texto da oferta com alta precisão e resiliência.
+ * Suporta tanto cupons individuais quanto múltiplos cupons acumulativos (ex: Cupom:MELIUZKIDS+MELIMAXITOYS).
  */
 export function extrairCupom(texto: string): string | null {
   if (!texto) return null;
@@ -586,43 +625,66 @@ export function extrairCupom(texto: string): string | null {
     'TREINADORES', 'RESGATEM', 'ACESSE', 'ACESSEM', 'CONFIRA', 'CONFIRAM', 'LINK', 'LINKS'
   ]);
 
-  // A) Expressões regulares para encontrar CÓDIGO de cupom alfanumérico
-  const regexesCodigo = [
-    // cupom (com possíveis adjetivos/local: ativo, válido, exclusivo, liberado, no app, de 10% off, etc.)
-    // seguido de separadores como colons, asteriscos, espaços ou hífens e o código
-    /cupo(?:m|ns)(?:\s+(?:ativo|v[aá]lido|exclusivo|liberado|especial|novo|do\s+app|no\s+app|no\s+carrinho|direto\s+no\s+app|na\s+p[aá]gina|no\s+an[uú]ncio|de\s+[^\n:]+))?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
-    // (use | usando | com | aplique | aplicar | ative | ativar | insira | inserir | coloque | colocar | digite | digitar | resgate | resgatar) [o] (cupom|código|cod) [:] [*]CODE[*]
-    /(?:use|usando|com|aplique|aplicar|ative|ativar|insira|inserir|coloque|colocar|digite|digitar|resgate|resgatar)\s+(?:o\s+)?(?:cupo(?:m|ns)|c[oó]digo|cod)[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
-    // (código | cod) [:] CODE
-    /(?:c[oó]digo|cod)[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
-    // cupom [de] 10% [off] [:] CODE
-    /cupo(?:m|ns)(?:\s+de)?\s+\d+%\s*(?:off)?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/i,
-    // cupom [CODE] ou cupom (CODE) ou cupom "CODE"
-    /cupo(?:m|ns)[\s:]+[\[\("]([a-z0-9_\-]{3,25})[\]\)"]/i,
-    // cupom CODE destacado (ex: Cupom MELIKIDS, Cupom 20OFF)
-    /cupo(?:m|ns)\s+([A-Z0-9_\-]{3,25})/,
-    // Emojis de cupom (🎟️, 🎫, 🏷️) seguidos de código diretamente ou após 'cupom/código' (ex: 🎟️ MELIUZKIDS)
-    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?)\s*(?:(?:cupo(?:m|ns)|c[oó]digo|cod)[:\s\*_~=\-]*)?([a-z0-9_\-]{3,25})/iu,
-    // Linha com especificação de % OFF seguida de quebra de linha e código isolado (ex: 🎟️ 20% OFF acima de R$ 49...\nQUEIMADEESTOQUE24)
-    /(?:\d+%\s*off[^\n]*\n+)\s*([a-z0-9_\-]{3,25})/i,
-    // Linha isolada contendo código após emoji de cupom e descrição
-    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?[^\n]*\n+)\s*([a-z0-9_\-]{3,25})/iu
+  // A1) Expressões regulares para encontrar MÚLTIPLOS CÓDIGOS de cupom juntos na mesma expressão
+  // Ex: Cupom:MELIUZKIDS+MELIMAXITOYS, Cupom: MELIUZKIDS + MELIMAXITOYS, Cupons: MELIUZKIDS e MELIMAXITOYS
+  const regexesMultiplos = [
+    /cupo(?:m|ns)(?:\s+(?:ativo|v[aá]lido|exclusivo|liberado|especial|novo|do\s+app|no\s+app|no\s+carrinho|direto\s+no\s+app|na\s+p[aá]gina|no\s+an[uú]ncio|de\s+[^\n:]+))?[:\s\*_~=\-]+([a-z0-9_\s+&/*-]{5,60})/i,
+    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?)\s*(?:(?:cupo(?:m|ns)|c[oó]digo|cod)[:\s\*_~=\-]*)?([a-z0-9_\s+&/*-]{5,60})/iu
   ];
 
-  for (const regex of regexesCodigo) {
+  for (const regex of regexesMultiplos) {
     const match = texto.match(regex);
     if (match && match[1]) {
-      const code = match[1].trim().replace(/[\*_~\[\]\(\)\"\']/g, '').toUpperCase();
-      // Não pode estar na blacklist, não pode ser apenas números, deve ter pelo menos 3 caracteres e não ser termo genérico
-      if (
-        !blacklist.has(code) &&
-        !/^\d+$/.test(code) &&
-        code.length >= 3 &&
-        !/^(?:COM|SEM|TEM|CUPOM)$/i.test(code)
-      ) {
-        return code;
+      const multiplos = extrairCuponsMultiplosDeTrecho(match[1], blacklist);
+      if (multiplos.length >= 2) {
+        return multiplos.join(' + ');
       }
     }
+  }
+
+  // A2) Expressões regulares para encontrar CÓDIGO de cupom alfanumérico individual
+  const regexesCodigo = [
+    // cupom (com possíveis adjetivos/local/números: cupom 1, cupom 2, ativo, válido, exclusivo, liberado, no app, de 10% off, etc.)
+    // seguido de separadores como colons, asteriscos, espaços ou hífens e o código
+    /cupo(?:m|ns)(?:\s+(?:[#\d]+|ativo|v[aá]lido|exclusivo|liberado|especial|novo|do\s+app|no\s+app|no\s+carrinho|direto\s+no\s+app|na\s+p[aá]gina|no\s+an[uú]ncio|de\s+[^\n:]+))?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/gi,
+    // (use | usando | com | aplique | aplicar | ative | ativar | insira | inserir | coloque | colocar | digite | digitar | resgate | resgatar) [o] (cupom|código|cod) [:] [*]CODE[*]
+    /(?:use|usando|com|aplique|aplicar|ative|ativar|insira|inserir|coloque|colocar|digite|digitar|resgate|resgatar)\s+(?:o\s+)?(?:cupo(?:m|ns)|c[oó]digo|cod)(?:\s+[#\d]+)?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/gi,
+    // (código | cod) [:] CODE
+    /(?:c[oó]digo|cod)(?:\s+[#\d]+)?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/gi,
+    // cupom [de] 10% [off] [:] CODE
+    /cupo(?:m|ns)(?:\s+de)?\s+\d+%\s*(?:off)?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/gi,
+    // cupom [CODE] ou cupom (CODE) ou cupom "CODE"
+    /cupo(?:m|ns)[\s:]+[\[\("]([a-z0-9_\-]{3,25})[\]\)"]/gi,
+    // cupom CODE destacado (ex: Cupom MELIKIDS, Cupom 20OFF)
+    /cupo(?:m|ns)\s+([A-Z0-9_\-]{3,25})/g,
+    // Emojis de cupom (🎟️, 🎫, 🏷️) seguidos de código diretamente ou após 'cupom/código' (ex: 🎟️ MELIUZKIDS)
+    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?)\s*(?:(?:cupo(?:m|ns)|c[oó]digo|cod)(?:\s+[#\d]+)?[:\s\*_~=\-]*)?([a-z0-9_\-]{3,25})/giu,
+    // Linha com especificação de % OFF seguida de quebra de linha e código isolado (ex: 🎟️ 20% OFF acima de R$ 49...\nQUEIMADEESTOQUE24)
+    /(?:\d+%\s*off[^\n]*\n+)\s*([a-z0-9_\-]{3,25})/gi,
+    // Linha isolada contendo código após emoji de cupom e descrição
+    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?[^\n]*\n+)\s*([a-z0-9_\-]{3,25})/giu
+  ];
+
+  const codigosColetados: string[] = [];
+
+  for (const regex of regexesCodigo) {
+    regex.lastIndex = 0;
+    const matches = Array.from(texto.matchAll(regex));
+    for (const match of matches) {
+      if (match[1]) {
+        const cod = sanitizarCodigoCupom(match[1], blacklist);
+        if (cod && !codigosColetados.includes(cod)) {
+          codigosColetados.push(cod);
+        }
+      }
+    }
+  }
+
+  // Se coletou múltiplos cupons distintos em linhas ou trechos diferentes
+  if (codigosColetados.length >= 2) {
+    return codigosColetados.join(' + ');
+  } else if (codigosColetados.length === 1) {
+    return codigosColetados[0];
   }
 
   // B) Fallback inteligente: se não há código textual, mas o post avisa sobre cupom no app ou no anúncio
@@ -821,13 +883,15 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
     const codCupom = (cupom || 'CUPOM NO APP').trim().toUpperCase();
     const vitrine = (linkVitrineCurto || linkAfiliado || '').trim();
+    const isMultiplos = codCupom.includes('+');
+    const labelCupom = isMultiplos ? 'Cupons' : 'Cupom';
 
     const linhas: string[] = [
       '@pokemon_tcg_promo',
       '',
-      '🎟️ *NOVO CUPOM DO MERCADO LIVRE LIBERADO!* 🎟️',
+      isMultiplos ? '🎟️ *NOVOS CUPONS DO MERCADO LIVRE LIBERADOS!* 🎟️' : '🎟️ *NOVO CUPOM DO MERCADO LIVRE LIBERADO!* 🎟️',
       '',
-      `🏷️ Cupom: *${codCupom}*`
+      `🏷️ ${labelCupom}: *${codCupom}*`
     ];
 
     if (detalhesCupom && detalhesCupom.trim()) {
@@ -878,7 +942,9 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
   if (cupom && cupom.trim()) {
     const limpo = cupom.trim();
     if (!/^(?:com\s+cupom(?:\s+no\s+app)?|cupom(?:\s+de\s+desconto)?|sem\s+cupom)$/i.test(limpo)) {
-      if (/^[a-z0-9_\-]+$/i.test(limpo)) {
+      if (limpo.includes('+')) {
+        linhaCupom = `🎟️ Cupons: *${limpo}*`;
+      } else if (/^[a-z0-9_\-]+$/i.test(limpo)) {
         linhaCupom = `🎟️ Cupom: *${limpo.toUpperCase()}*`;
       } else {
         linhaCupom = `🎟️ Cupom: *${limpo}*`;
