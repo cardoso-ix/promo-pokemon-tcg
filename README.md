@@ -90,21 +90,7 @@ chmod +x *.sh
     - 🚀 **Meta Ads (CSV):** Colunas `phone,country` no padrão oficial para subida direta no Gerenciador de Anúncios (Públicos > Criar público personalizado > Lista de clientes).
     - 📊 **Excel Completo (CSV):** Arquivo formatado com BOM UTF-8 e separador `;` para abertura nativa no Microsoft Excel com telefone visual, lista de grupos de origem e status de administrador.
   - **Estratégia de Escala (Lookalike 1%):** Guia passo a passo integrado para criar Público Semelhante de 1% no Brasil a partir dos contatos de TCG, impactando mais de 1,7 milhão de colecionadores qualificados.
-  - **Arquitetura Resiliente com Fallback Local de 0ms:** Mecanismo local determinístico de 0ms que garante as 5 opções padronizadas instantaneamente mesmo em caso de oscilação na API externa.
-  - **🎯 Criador de Anúncios Meta Ads (Tráfego Pago & Captação de Grupos):**
-    - **Sub-Aba Dedicada no Estúdio IA:** Alternador entre `[ 💬 Chamadas WhatsApp ]` e `[ 🎯 Criador de Anúncios Meta Ads ]` com interface de alta conversão.
-    - **3 Variações de Captação com Linguagem Simples (Zero Termos Difíceis):**
-      1. ☕ *Convite Simples & Amigo:* Conversa leve de colecionador para colecionador, convidando para o grupo gratuito de promoções.
-      2. 🚨 *Alerta de Estoque & Promoção:* Focado em receber avisos rápidos no WhatsApp assim que o preço baixar antes de acabar.
-      3. ⚡ *Preço de Loja (Sem Pagar Caro):* Foco direto em economizar, sem termos complicados como ágio ou leilão.
-    - **Campos Prontos para Gerenciador de Anúncios do Meta:**
-      - **Frase para Imagem/Banner:** Copy curta de impacto com alto contraste para ser inserida na arte gráfica do anúncio.
-      - **Texto Principal (Primary Text):** Copy completa com quebra de objeção obrigatória do grupo silencioso (*"🔒 Grupo silencioso: apenas administradores postam ofertas e novidades"*).
-      - **Título (Headline < 40 caracteres):** Título chamativo validado dentro dos limites do leilão do Facebook/Instagram.
-      - **Descrição (< 30 caracteres):** Texto complementar ultra-curto respeitando a restrição de caracteres do Meta Ads.
-      - **CTA Recomendada:** Sugestão do melhor botão de ação (*"Saiba Mais"* ou *"Obter Acesso"*).
-    - **Cópia em 1 Clique por Campo:** Botões dedicados para copiar individualmente a frase da imagem, o texto principal ou o título sem precisar selecionar manualmente.
-    - **Motor Híbrido 0ms + DeepSeek v4.1:** Funciona 100% offline/local em 0ms com templates de alta conversão, e se conecta à inteligência artificial do DeepSeek quando configurado.
+  - **Arquitetura Resiliente com Fallback Local de 0ms:** Mecanismo local determinístico de 0ms que garante as 5 opções padronizadas instantaneamente mesmo em caso de oscilação na API externa com motor híbrido DeepSeek v4.1.
 - **🔄 Botão de Sincronização Unificada:** Sincronização instantânea das métricas do Meta Ads (Graph API v20.0) e Mercado Livre Afiliados com recálculo em tempo real de ROAS, comissões do dia e lucro líquido.
 
 ---
