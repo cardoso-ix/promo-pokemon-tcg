@@ -83,6 +83,13 @@ chmod +x *.sh
     4. 🛒 *Carrinho & Ação* (`🛒 ... 🚀`)
     5. ⚡ *Raio Dinâmico* (`⚡ ... 🔥✨`)
   - **Disparo Direto & 1-Toque Mobile:** Cada uma das 5 opções conta com balão WhatsApp editável, botão de cópia instantânea e botão de envio em 1 toque para todos os grupos ativos.
+- **👥 Extrator Inteligente de Leads do WhatsApp para Meta Ads (Público Personalizado & Lookalike 1%):**
+  - **Extração em 1 Clique:** Escaneia todos os grupos ou grupos selecionados no WhatsApp via Baileys com contagem de membros em tempo real.
+  - **Deduplicação Inteligente & Normalização E.164:** Contatos presentes em múltiplos grupos são unificados em um único registro, formatados com DDI 55 + DDD + Telefone e limpos de ruídos.
+  - **Formatos de Exportação Prontos:**
+    - 🚀 **Meta Ads (CSV):** Colunas `phone,country` no padrão oficial para subida direta no Gerenciador de Anúncios (Públicos > Criar público personalizado > Lista de clientes).
+    - 📊 **Excel Completo (CSV):** Arquivo formatado com BOM UTF-8 e separador `;` para abertura nativa no Microsoft Excel com telefone visual, lista de grupos de origem e status de administrador.
+  - **Estratégia de Escala (Lookalike 1%):** Guia passo a passo integrado para criar Público Semelhante de 1% no Brasil a partir dos contatos de TCG, impactando mais de 1,7 milhão de colecionadores qualificados.
   - **Arquitetura Resiliente com Fallback Local de 0ms:** Mecanismo local determinístico de 0ms que garante as 5 opções padronizadas instantaneamente mesmo em caso de oscilação na API externa.
   - **🎯 Criador de Anúncios Meta Ads (Tráfego Pago & Captação de Grupos):**
     - **Sub-Aba Dedicada no Estúdio IA:** Alternador entre `[ 💬 Chamadas WhatsApp ]` e `[ 🎯 Criador de Anúncios Meta Ads ]` com interface de alta conversão.

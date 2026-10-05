@@ -19,6 +19,7 @@ import {
   insertLog,
   getPostsLastHour,
   updateChatCache,
+  getCachedChats,
   getChatName,
   registrarProdutoReplicado,
   consultarCooldownProduto,
@@ -42,6 +43,11 @@ import {
 } from '../core/anuncio.js';
 import { notificarDisparadorOferta } from '../core/internal-sync.js';
 import { padronizarFotoEstudio } from '../core/image-studio.js';
+import {
+  processarLeadsGrupos,
+  type ResultadoProcessamentoLeads,
+  type GrupoComParticipantes
+} from '../core/leads-exporter.js';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr';
 
@@ -315,6 +321,75 @@ export class WhatsAppManager {
     } catch (err: any) {
       console.warn('Aviso de sincronização de grupos:', err?.message || err);
     }
+  }
+
+  /**
+   * Obtém lista de grupos participantes com contagem de membros em tempo real.
+   */
+  public async obterGruposComDetalhes(): Promise<{
+    id: string;
+    nome: string;
+    total_membros: number;
+    is_announce?: boolean;
+  }[]> {
+    if (this.sock && this.state.status === 'connected') {
+      try {
+        const groups = await this.sock.groupFetchAllParticipating();
+        const lista: { id: string; nome: string; total_membros: number; is_announce?: boolean }[] = [];
+        for (const [id, meta] of Object.entries(groups)) {
+          const nome = meta.subject || 'Grupo Sem Nome';
+          const total = Array.isArray(meta.participants) ? meta.participants.length : 0;
+          updateChatCache(id, nome, true);
+          lista.push({
+            id,
+            nome,
+            total_membros: total,
+            is_announce: Boolean((meta as any).announce)
+          });
+        }
+        return lista.sort((a, b) => b.total_membros - a.total_membros);
+      } catch (e: any) {
+        console.warn('[WhatsApp] Erro ao buscar grupos via Baileys:', e?.message || e);
+      }
+    }
+    // Fallback gracioso para chats_cache no SQLite
+    const cached = getCachedChats().filter((c: any) => c.is_group);
+    return cached.map((c: any) => ({
+      id: c.chat_id,
+      nome: c.nome,
+      total_membros: 0
+    }));
+  }
+
+  /**
+   * Extrai e deduplica contatos de grupos selecionados ou de todos os grupos do WhatsApp.
+   */
+  public async extrairLeadsGrupos(groupIds?: string[]): Promise<ResultadoProcessamentoLeads> {
+    if (!this.sock || this.state.status !== 'connected') {
+      throw new Error('WhatsApp não está conectado. Conecte pelo QR Code antes de exportar contatos.');
+    }
+
+    const groups = await this.sock.groupFetchAllParticipating();
+    const gruposParaProcessar: GrupoComParticipantes[] = [];
+    const targetSet = Array.isArray(groupIds) && groupIds.length > 0 ? new Set(groupIds) : null;
+
+    for (const [id, meta] of Object.entries(groups)) {
+      if (targetSet && !targetSet.has(id)) {
+        continue;
+      }
+      gruposParaProcessar.push({
+        id,
+        name: meta.subject || 'Grupo Sem Nome',
+        participants: (meta.participants || []).map(p => ({
+          id: p.id,
+          admin: p.admin as any,
+          phoneNumber: (p as any).phoneNumber
+        }))
+      });
+    }
+
+    const botPhone = this.state.userPhone || (this.sock.user?.id ? this.sock.user.id.split('@')[0].split(':')[0] : null);
+    return processarLeadsGrupos(gruposParaProcessar, botPhone);
   }
 
   public async logout(): Promise<void> {

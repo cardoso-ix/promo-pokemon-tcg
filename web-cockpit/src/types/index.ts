@@ -56,8 +56,31 @@ export interface RadarBuscaResponse {
   erro?: string;
 }
 
-export type SubTabReplica = 'feed' | 'rotas' | 'gerador' | 'ia' | 'conectar' | 'config';
+export type SubTabReplica = 'feed' | 'rotas' | 'leads' | 'gerador' | 'ia' | 'conectar' | 'config';
 export type SubTabBot = 'visao-geral' | 'grupos' | 'leads' | 'campanhas' | 'meta-cloud' | 'anti-ban' | 'logs';
+
+export interface WhatsAppGroupItem {
+  id: string;
+  nome: string;
+  total_membros: number;
+  is_announce?: boolean;
+}
+
+export interface WhatsAppContactItem {
+  phone: string;
+  formattedPhone: string;
+  country: string;
+  groups: string[];
+  isAdmin: boolean;
+}
+
+export interface WhatsAppContactsStats {
+  totalGrupos: number;
+  totalMembrosBrutos: number;
+  totalUnicos: number;
+  totalDuplicadosRemovidos: number;
+  taxaAproveitamento: number;
+}
 
 export type WhatsAppConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'qr';
 

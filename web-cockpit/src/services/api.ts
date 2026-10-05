@@ -16,7 +16,10 @@ import type {
   RadarBuscaFiltros,
   RadarItem,
   RadarBuscaResponse,
-  RelatorioMensalExecutivo
+  RelatorioMensalExecutivo,
+  WhatsAppGroupItem,
+  WhatsAppContactItem,
+  WhatsAppContactsStats
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro e resiliência
@@ -521,6 +524,64 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(dados)
     }),
+
+  // --- EXTRAÇÃO DE LEADS DO WHATSAPP PARA META ADS ---
+  getWhatsAppGroups: () =>
+    request<{
+      ok: boolean;
+      connected: boolean;
+      userPhone: string | null;
+      total: number;
+      groups: WhatsAppGroupItem[];
+    }>('/api/whatsapp/groups'),
+
+  previewWhatsAppContacts: (groupIds?: string[]) =>
+    request<{
+      ok: boolean;
+      stats: WhatsAppContactsStats;
+      preview: WhatsAppContactItem[];
+    }>('/api/whatsapp/contacts/preview', {
+      method: 'POST',
+      body: JSON.stringify({ groupIds })
+    }),
+
+  exportWhatsAppContacts: async (groupIds?: string[], format: 'meta' | 'excel' = 'meta') => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    if (typeof window !== 'undefined') {
+      try {
+        const localToken = localStorage.getItem('promo_token');
+        if (localToken) {
+          headers['Authorization'] = `Bearer ${localToken}`;
+        }
+      } catch {}
+    }
+    const response = await fetch('/api/whatsapp/contacts/export', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ groupIds, format })
+    });
+    if (!response.ok) {
+      const errJson = await response.json().catch(() => null);
+      throw new Error(errJson?.error || `Falha na exportação: HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const hoje = new Date().toISOString().slice(0, 10);
+    const filename = format === 'excel'
+      ? `leads_whatsapp_pokemon_tcg_${hoje}.csv`
+      : `meta_leads_pokemon_tcg_${hoje}.csv`;
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    return true;
+  },
 
   // --- LOGOUT UNIFICADO ---
   logout: async () => {

@@ -77,6 +77,7 @@ import {
   type ResultadoRadarItem
 } from '../core/radar.js';
 import { purgarRegistrosCorrompidosHistorico, semearCatalogoCanonicoTCG } from '../db/database.js';
+import { gerarCsvMetaAds, gerarCsvExcelCompleto } from '../core/leads-exporter.js';
 
 import fs from 'node:fs';
 
@@ -506,6 +507,72 @@ export async function createServer() {
     }));
     broadcast('chats_updated', chats);
     return { ok: true, total: chats.length, chats };
+  });
+
+  // API REST: Listar grupos participantes com contagem de membros em tempo real
+  app.get('/api/whatsapp/groups', async () => {
+    const state = whatsAppManager.getState();
+    const connected = state.status === 'connected';
+    const groups = await whatsAppManager.obterGruposComDetalhes();
+    return {
+      ok: true,
+      connected,
+      userPhone: state.userPhone,
+      total: groups.length,
+      groups
+    };
+  });
+
+  // API REST: Pré-visualizar extração e deduplicação de contatos dos grupos
+  app.post<{ Body: { groupIds?: string[] } }>('/api/whatsapp/contacts/preview', async (req, reply) => {
+    const state = whatsAppManager.getState();
+    if (state.status !== 'connected') {
+      return reply.status(400).send({
+        ok: false,
+        error: 'WhatsApp não está conectado. Escaneie o QR Code no dashboard primeiro.'
+      });
+    }
+    try {
+      const { groupIds } = req.body || {};
+      const resultado = await whatsAppManager.extrairLeadsGrupos(groupIds);
+      return {
+        ok: true,
+        stats: resultado.stats,
+        preview: resultado.contatos.slice(0, 100)
+      };
+    } catch (err: any) {
+      return reply.status(500).send({ ok: false, error: err?.message || 'Falha ao processar contatos dos grupos.' });
+    }
+  });
+
+  // API REST: Exportar contatos deduplicados em CSV (Formato Meta Ads ou Excel Completo)
+  app.post<{ Body: { groupIds?: string[]; format?: 'meta' | 'excel' } }>('/api/whatsapp/contacts/export', async (req, reply) => {
+    const state = whatsAppManager.getState();
+    if (state.status !== 'connected') {
+      return reply.status(400).send({
+        ok: false,
+        error: 'WhatsApp não está conectado. Escaneie o QR Code no dashboard primeiro.'
+      });
+    }
+    try {
+      const { groupIds, format = 'meta' } = req.body || {};
+      const resultado = await whatsAppManager.extrairLeadsGrupos(groupIds);
+      const hoje = new Date().toISOString().slice(0, 10);
+
+      if (format === 'excel') {
+        const csvExcel = gerarCsvExcelCompleto(resultado.contatos);
+        reply.header('Content-Type', 'text/csv; charset=utf-8');
+        reply.header('Content-Disposition', `attachment; filename="leads_whatsapp_pokemon_tcg_${hoje}.csv"`);
+        return reply.send(csvExcel);
+      } else {
+        const csvMeta = gerarCsvMetaAds(resultado.contatos);
+        reply.header('Content-Type', 'text/csv; charset=utf-8');
+        reply.header('Content-Disposition', `attachment; filename="meta_leads_pokemon_tcg_${hoje}.csv"`);
+        return reply.send(csvMeta);
+      }
+    } catch (err: any) {
+      return reply.status(500).send({ ok: false, error: err?.message || 'Falha ao gerar arquivo de exportação.' });
+    }
   });
 
   // API REST: Logs recentes com normalização DTO de campos

@@ -23,7 +23,8 @@ import {
   Clock,
   Sliders,
   TrendingDown,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Users
 } from 'lucide-react';
 import type {
   OfertaLog,
@@ -34,6 +35,7 @@ import type {
 import { api } from '../services/api.ts';
 import { useUnifiedStatus } from '../hooks/useUnifiedStatus.ts';
 import { EstudioIaView } from './EstudioIaView.tsx';
+import { ExtratorLeadsMetaView } from './ExtratorLeadsMetaView.tsx';
 
 export interface ModeloBomDia {
   id: string;
@@ -553,6 +555,20 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
             Rotas ({rotas.length})
           </button>
           <button
+            onClick={() => setSubTab('leads')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              subTab === 'leads'
+                ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 shadow-md font-bold'
+                : 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Leads Meta Ads</span>
+            <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.2 rounded-full border border-emerald-500/30">
+              NOVO
+            </span>
+          </button>
+          <button
             onClick={() => setSubTab('gerador')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               subTab === 'gerador'
@@ -1058,6 +1074,11 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
             )}
           </div>
         </div>
+      )}
+
+      {/* Sub-Aba: Extrator de Leads para Meta Ads */}
+      {subTab === 'leads' && (
+        <ExtratorLeadsMetaView onOpenQrModal={() => setSubTab('conectar')} />
       )}
 
       {/* Sub-Aba: Estúdio IA (DeepSeek) */}
