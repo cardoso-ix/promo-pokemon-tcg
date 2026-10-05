@@ -9,6 +9,7 @@ import { MeliAfiliadosView } from './components/MeliAfiliadosView.tsx';
 import { RadarPrecosView } from './components/RadarPrecosView.tsx';
 import { CookieModal } from './components/CookieModal.tsx';
 import { QrModal } from './components/QrModal.tsx';
+import { ExtratorLeadsMetaView } from './components/ExtratorLeadsMetaView.tsx';
 import { useUnifiedStatus } from './hooks/useUnifiedStatus.ts';
 import { api } from './services/api.ts';
 
@@ -88,6 +89,10 @@ export const App: React.FC = () => {
         {activeModule === 'radar' && <RadarPrecosView />}
 
         {activeModule === 'financas' && <FinancasView />}
+
+        {activeModule === 'leads' && (
+          <ExtratorLeadsMetaView onOpenQrModal={() => setReplicaQrOpen(true)} />
+        )}
       </main>
 
       {/* Modais Globais de Ação Rápida */}

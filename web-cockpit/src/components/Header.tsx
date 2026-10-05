@@ -8,7 +8,8 @@ import {
   ShieldCheck,
   AlertTriangle,
   ShoppingBag,
-  Search
+  Search,
+  Users
 } from 'lucide-react';
 import type { ActiveModule } from '../types/index.ts';
 import { useUnifiedStatus } from '../hooks/useUnifiedStatus.ts';
@@ -129,6 +130,21 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <DollarSign className="w-3.5 h-3.5 text-emerald-300" />
           <span>Finanças Meta</span>
+        </button>
+
+        <button
+          onClick={() => onSelectModule('leads')}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
+            activeModule === 'leads'
+              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/25 border border-cyan-400/30'
+              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5 text-cyan-300" />
+          <span>Leads Meta</span>
+          <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.2 rounded-full border border-emerald-500/30">
+            NOVO
+          </span>
         </button>
       </nav>
 

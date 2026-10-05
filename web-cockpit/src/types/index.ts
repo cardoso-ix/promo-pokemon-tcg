@@ -1,4 +1,4 @@
-export type ActiveModule = 'dashboard' | 'afiliados' | 'replica' | 'financas' | 'radar';
+export type ActiveModule = 'dashboard' | 'afiliados' | 'replica' | 'financas' | 'radar' | 'leads';
 
 export interface RadarBuscaFiltros {
   apenasOficiaisOuPlatinum?: boolean;

@@ -21,7 +21,8 @@ import {
   AlertCircle,
   Scale,
   Coins,
-  Percent
+  Percent,
+  Users
 } from 'lucide-react';
 import {
   AreaChart,
@@ -43,7 +44,8 @@ import type {
   MetaInsightsOverview,
   MeliOrdersOverview,
   MeliAffiliateOverview,
-  MetaAdBalanceInfo
+  MetaAdBalanceInfo,
+  ActiveModule
 } from '../types/index.ts';
 import { api } from '../services/api.ts';
 
@@ -51,7 +53,7 @@ interface DashboardOverviewProps {
   status: UnifiedStatus | null;
   recentLogs: OfertaLog[];
   balanco: BalancoFinanceiro | null;
-  onNavigate: (module: 'replica' | 'financas' | 'afiliados' | 'dashboard') => void;
+  onNavigate: (module: ActiveModule) => void;
   onOpenReplicaQr: () => void;
   onRefreshGlobal?: () => Promise<void>;
 }
@@ -477,6 +479,36 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <span>{syncingAll ? 'Sincronizando Tudo...' : 'Sincronizar Métricas'}</span>
           </button>
         </div>
+      </div>
+
+      {/* Banner de Destaque: Extrator de Leads do WhatsApp para Meta Ads */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-950/70 via-blue-950/50 to-slate-900/90 border border-cyan-500/30 p-4 sm:p-5 shadow-2xl backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-cyan-500/50 transition-all">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/30 border border-cyan-500/40 flex items-center justify-center text-cyan-300 shrink-0 shadow-lg shadow-cyan-500/10 group-hover:scale-105 transition-transform">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-sm sm:text-base font-black text-white tracking-tight">
+                Extrator de Contatos do WhatsApp para Meta Ads
+              </h3>
+              <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-wider">
+                Novo Recurso
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
+              Exporte todos os membros dos seus grupos em uma planilha única, com deduplicação automática e no padrão oficial do Meta Ads (<code className="text-cyan-300 font-mono text-[11px]">phone,country</code>) para subir no Gerenciador de Anúncios e ativar o <strong className="text-amber-300">Lookalike 1%</strong> com R$ 30,00/dia.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => onNavigate('leads')}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 transition-all shrink-0 active:scale-95"
+        >
+          <span>Abrir Extrator de Leads</span>
+          <ArrowUpRight className="w-4 h-4 text-slate-950 stroke-[3]" />
+        </button>
       </div>
 
       {/* Grid de 5 KPIs Estratégicos com Magic Patterns Design System */}
