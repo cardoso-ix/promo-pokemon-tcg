@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual do Garimpeiro Profissional — Pokémon TCG & Mercado Livre</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&family=Fira+Code:wght@400;600&display=swap');
+
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --border: #1f2937;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent: #3b82f6;
+      --gold: #f59e0b;
+      --emerald: #10b981;
+      --rose: #ef4444;
+      --purple: #8b5cf6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    header {
+      border-bottom: 2px solid #374151;
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Outfit', sans-serif;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge-header {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .meta-info {
+      text-align: right;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #93c5fd;
+      margin: 25px 0 15px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-left: 4px solid var(--accent);
+      padding-left: 10px;
+    }
+
+    /* TABELAS */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 25px;
+      background: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #1f2937;
+      color: #e5e7eb;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .badge-insane { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .badge-excel { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .badge-fair { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-expensive { background: rgba(156, 163, 175, 0.2); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.4); }
+
+    .price-value {
+      font-family: 'Fira Code', monospace;
+      font-weight: 600;
+    }
+
+    /* CARDS */
+    .grid-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .card h4 {
+      font-size: 14px;
+      color: #fff;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .card p, .card ul {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .card ul {
+      padding-left: 18px;
+      margin-top: 5px;
+    }
+
+    .step-box {
+      background: #1e293b;
+      border-left: 4px solid var(--emerald);
+      padding: 14px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+
+    .step-box strong {
+      color: #6ee7b7;
+    }
+
+    .formula-banner {
+      background: linear-gradient(90deg, #1e3a8a 0%, #1e1b4b 100%);
+      border: 1px solid #3b82f6;
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .formula-banner h3 {
+      font-size: 15px;
+      color: #93c5fd;
+      margin-bottom: 6px;
+    }
+
+    .formula-banner code {
+      font-family: 'Fira Code', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: #fbbf24;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 4px 12px;
+      border-radius: 4px;
+    }
+
+    /* ESTILOS DE IMPRESSÃO (CTRL+P) */
+    @media print {
+      body {
+        background-color: #fff !important;
+        color: #111827 !important;
+        padding: 0 !important;
+        font-size: 11px !important;
+      }
+
+      .container {
+        max-width: 100% !important;
+      }
+
+      header {
+        border-bottom: 2px solid #111827 !important;
+        margin-bottom: 15px !important;
+        padding-bottom: 10px !important;
+      }
+
+      h1 {
+        font-size: 20px !important;
+        color: #111827 !important;
+      }
+
+      .badge-header {
+        background: #e5e7eb !important;
+        color: #111827 !important;
+        border: 1px solid #9ca3af !important;
+      }
+
+      .section-title {
+        font-size: 14px !important;
+        color: #1e3a8a !important;
+        border-left: 4px solid #1e3a8a !important;
+        margin: 15px 0 10px 0 !important;
+      }
+
+      table {
+        background: #fff !important;
+        border: 1px solid #d1d5db !important;
+        font-size: 10.5px !important;
+        margin-bottom: 15px !important;
+      }
+
+      th {
+        background: #f3f4f6 !important;
+        color: #111827 !important;
+        border-bottom: 2px solid #9ca3af !important;
+        padding: 6px 8px !important;
+      }
+
+      td {
+        border-bottom: 1px solid #e5e7eb !important;
+        padding: 6px 8px !important;
+        color: #111827 !important;
+      }
+
+      .badge-insane { background: #fee2e2 !important; color: #991b1b !important; border: 1px solid #f87171 !important; }
+      .badge-excel { background: #d1fae5 !important; color: #065f46 !important; border: 1px solid #34d399 !important; }
+      .badge-fair { background: #fef3c7 !important; color: #92400e !important; border: 1px solid #fbbf24 !important; }
+      .badge-expensive { background: #f3f4f6 !important; color: #4b5563 !important; border: 1px solid #9ca3af !important; }
+
+      .card {
+        background: #f9fafb !important;
+        border: 1px solid #d1d5db !important;
+        padding: 10px !important;
+      }
+
+      .card h4 {
+        color: #111827 !important;
+        font-size: 12px !important;
+      }
+
+      .card p, .card ul {
+        color: #374151 !important;
+        font-size: 10px !important;
+      }
+
+      .step-box {
+        background: #f0fdf4 !important;
+        border-left: 4px solid #059669 !important;
+        border: 1px solid #a7f3d0 !important;
+        color: #064e3b !important;
+        padding: 8px !important;
+        font-size: 10.5px !important;
+      }
+
+      .step-box strong {
+        color: #065f46 !important;
+      }
+
+      .formula-banner {
+        background: #eff6ff !important;
+        border: 1px solid #93c5fd !important;
+        padding: 10px !important;
+        margin-bottom: 15px !important;
+      }
+
+      .formula-banner h3 {
+        color: #1e40af !important;
+        font-size: 12px !important;
+      }
+
+      .formula-banner code {
+        color: #1e3a8a !important;
+        background: #dbeafe !important;
+        font-size: 14px !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .page-break {
+        page-break-before: always;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <div class="no-print" style="margin-bottom: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+      <button onclick="window.print()" style="background: #3b82f6; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(59,130,246,0.3);">
+        🖨️ IMPRIMIR / SALVAR COMO PDF (A4)
+      </button>
+    </div>
+
+    <header>
+      <div>
+        <div class="badge-header">Manual Operacional de Campo — 2026</div>
+        <h1>🎯 GUIA COMPLETO DO GARIMPEIRO TCG</h1>
+        <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">Valores de Referência, Filtros Secretos, Rotinas e Horários no Mercado Livre</p>
+      </div>
+      <div class="meta-info">
+        <p><strong>Comunidade:</strong> Promo Pokémon TCG</p>
+        <p><strong>Meta:</strong> Maximizar Comissões e Retenção</p>
+        <p><strong>Formato:</strong> A4 Guia de Bolso</p>
+      </div>
+    </header>
+
+    <!-- FÓRMULA DE OURO -->
+    <div class="formula-banner">
+      <h3>A FÓRMULA DE OURO DO COLECIONADOR (PPB)</h3>
+      <code>PREÇO POR BOOSTER = PREÇO FINAL (C/ CUPOM) ÷ QTD DE BOOSTERS</code>
+      <p style="font-size: 12px; color: #bfdbfe; margin-top: 6px;">Colecionador experiente não avalia o valor da caixa fechada; ele sempre calcula o custo unitário por pacote de cartas.</p>
+    </div>
+
+    <!-- TABELA 1: VALORES VIÁVEIS POR PRODUTO -->
+    <div class="section-title">📊 1. TABELA DE PREÇOS VIÁVEIS (QUANTO PAGAR POR CADA PRODUTO)</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Produto / Categoria</th>
+          <th>Qtd Boosters</th>
+          <th>Preço de Tabela (MSRP)</th>
+          <th>🔥 OFERTA REAL (POSTAR)</th>
+          <th>🚨 ERRO DE PREÇO (URGENTE)</th>
+          <th>❌ TETO (NÃO POSTAR)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Booster Box Regular</strong><br><span style="color:var(--text-muted); font-size:11px;">(Escarlate e Violeta, Máscaras, Força Temp.)</span></td>
+          <td>36 boosters</td>
+          <td>R$ 410 a R$ 432</td>
+          <td><span class="badge badge-excel">R$ 310 a R$ 360</span><br><span style="font-size:11px; color:#10b981;">(R$ 8,60 a R$ 10/booster)</span></td>
+          <td><span class="badge badge-insane">&lt; R$ 300,00</span><br><span style="font-size:11px; color:#ef4444;">(&lt; R$ 8,30/booster)</span></td>
+          <td>&gt; R$ 440,00<br><span style="font-size:11px; color:var(--text-muted);">(Ágio de cambista)</span></td>
+        </tr>
+        <tr>
+          <td><strong>ETB / Treinador Avançado Especial</strong><br><span style="color:var(--text-muted); font-size:11px;">(30 Anos, 151, Destinos Paldea, Prismáticos)</span></td>
+          <td>20 boosters</td>
+          <td>R$ 369 a R$ 399</td>
+          <td><span class="badge badge-excel">R$ 275 a R$ 325</span><br><span style="font-size:11px; color:#10b981;">(R$ 13,75 a R$ 16/booster)</span></td>
+          <td><span class="badge badge-insane">&lt; R$ 260,00</span><br><span style="font-size:11px; color:#ef4444;">(&lt; R$ 13,00/booster)</span></td>
+          <td>&gt; R$ 430,00<br><span style="font-size:11px; color:var(--text-muted);">(Especulação)</span></td>
+        </tr>
+        <tr>
+          <td><strong>ETB / Treinador Avançado Regular</strong><br><span style="color:var(--text-muted); font-size:11px;">(Coleções padrão com 6 a 10 boosters)</span></td>
+          <td>6 a 10 boosters</td>
+          <td>R$ 249 a R$ 269</td>
+          <td><span class="badge badge-excel">R$ 180 a R$ 215</span><br><span style="font-size:11px; color:#10b981;">(R$ 18 a R$ 21/booster)</span></td>
+          <td><span class="badge badge-insane">&lt; R$ 170,00</span><br><span style="font-size:11px; color:#ef4444;">(Liquidação)</span></td>
+          <td>&gt; R$ 280,00<br><span style="font-size:11px; color:var(--text-muted);">(Fora de preço)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Blister Quádruplo (Quadpack)</strong><br><span style="color:var(--text-muted); font-size:11px;">(4 boosters + 1 carta promo/moeda)</span></td>
+          <td>4 boosters</td>
+          <td>R$ 49,90 a R$ 54,90</td>
+          <td><span class="badge badge-excel">R$ 34,90 a R$ 42,90</span><br><span style="font-size:11px; color:#10b981;">(R$ 8,70 a R$ 10,70/booster)</span></td>
+          <td><span class="badge badge-insane">&lt; R$ 33,00</span><br><span style="font-size:11px; color:#ef4444;">(&lt; R$ 8,25/booster)</span></td>
+          <td>&gt; R$ 56,00<br><span style="font-size:11px; color:var(--text-muted);">(Preço de banca)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Blister Triplo (Tripack)</strong><br><span style="color:var(--text-muted); font-size:11px;">(3 boosters + 1 carta promo)</span></td>
+          <td>3 boosters</td>
+          <td>R$ 38,90 a R$ 42,90</td>
+          <td><span class="badge badge-excel">R$ 26,90 a R$ 32,90</span><br><span style="font-size:11px; color:#10b981;">(R$ 9,00 a R$ 10,90/booster)</span></td>
+          <td><span class="badge badge-insane">&lt; R$ 25,00</span><br><span style="font-size:11px; color:#ef4444;">(&lt; R$ 8,30/booster)</span></td>
+          <td>&gt; R$ 45,00<br><span style="font-size:11px; color:var(--text-muted);">(Sem margem)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Latas Colecionáveis (Tins)</strong><br><span style="color:var(--text-muted); font-size:11px;">(4 a 5 boosters + 1 carta ex metálica)</span></td>
+          <td>4 a 5 boosters</td>
+          <td>R$ 99,90 a R$ 119,90</td>
+          <td><span class="badge badge-excel">R$ 69,90 a R$ 85,90</span><br><span style="font-size:11px; color:#10b981;">(Excelente presente/coleção)</span></td>
+          <td><span class="badge badge-insane">&lt; R$ 65,00</span><br><span style="font-size:11px; color:#ef4444;">(Esgota rápido)</span></td>
+          <td>&gt; R$ 125,00<br><span style="font-size:11px; color:var(--text-muted);">(Sem interesse)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Caixas Especiais / Coleção Premium</strong><br><span style="color:var(--text-muted); font-size:11px;">(Charizard ex, Greninja ex, Meowscarada ex)</span></td>
+          <td>6 a 8 boosters</td>
+          <td>R$ 199,90 a R$ 239,90</td>
+          <td><span class="badge badge-excel">R$ 149,90 a R$ 179,90</span><br><span style="font-size:11px; color:#10b981;">(Alta comissão: R$ 20 a 28)</span></td>
+          <td><span class="badge badge-insane">&lt; R$ 139,00</span><br><span style="font-size:11px; color:#ef4444;">(Ponta de estoque)</span></td>
+          <td>&gt; R$ 255,00<br><span style="font-size:11px; color:var(--text-muted);">(Inflacionado)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Fichário Álbum 360/480 Cartas</strong><br><span style="color:var(--text-muted); font-size:11px;">(Pasta zíper/elástico MundoGG, Kalvetix)</span></td>
+          <td>Acessório</td>
+          <td>R$ 55,00 a R$ 69,00</td>
+          <td><span class="badge badge-excel">R$ 32,00 a R$ 42,00</span><br><span style="font-size:11px; color:#10b981;">(Produto de entrada ideal)</span></td>
+          <td><span class="badge badge-insane">&lt; R$ 29,90</span><br><span style="font-size:11px; color:#ef4444;">(Vende dezenas)</span></td>
+          <td>&gt; R$ 75,00<br><span style="font-size:11px; color:var(--text-muted);">(Genérico caro)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ROTINA DE HORÁRIOS -->
+    <div class="section-title">⏰ 2. A ROTINA DIÁRIA DO GARIMPEIRO (HORÁRIOS DE CAÇA)</div>
+    <div class="grid-cards">
+      <div class="card" style="border-top: 3px solid #60a5fa;">
+        <h4>🌅 TURNO 1: 07:30 às 08:00</h4>
+        <p><strong>Abertura de Estoque (Full)</strong></p>
+        <ul>
+          <li>Checagem da Mensagem de Abertura no grupo (07:00).</li>
+          <li>Varredura no ML com filtro <code>Full</code> + <code>Mais Recentes</code>.</li>
+          <li>Os centros de distribuição atualizam devoluções e cancelamentos de compras da noite anterior.</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid #f59e0b;">
+        <h4>☀️ TURNO 2: 12:00 às 12:30</h4>
+        <p><strong>Pausa de Almoço & Cupons</strong></p>
+        <ul>
+          <li>Horário em que o Mercado Livre costuma liberar cupons relâmpago de almoço (ex: <code>GEEK10</code>, <code>APP15</code>).</li>
+          <li>Verificar a aba de Cupons no aplicativo do ML.</li>
+          <li>Pico de visualização dos membros no grupo (almoço).</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid #8b5cf6;">
+        <h4>🌙 TURNO 3: 22:30 às 23:15</h4>
+        <p><strong>Virada da Noite & Cupons Relâmpago</strong></p>
+        <ul>
+          <li>O Mercado Livre frequentemente lança cupons às 23:00 com validade curta até meia-noite.</li>
+          <li>Excelente para pegar aquela Booster Box com cupom e frete grátis antes de dormir.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PROCEDIMENTO PASSO A PASSO -->
+    <div class="section-title">🔍 3. O PROCEDIMENTO EXATO DE GARIMPO (FILTROS & ANÁLISE)</div>
+
+    <div class="step-box">
+      <strong>PASSO 1: Busca Pré-Filtrada no Mercado Livre</strong><br>
+      Digite termos de produtos de alto ticket: <code>Pokemon TCG Booster Box Copag</code> ou <code>Pokemon TCG Treinador Avancado</code>.<br>
+      <strong>Filtros obrigatórios na coluna da esquerda:</strong>
+      <ol style="margin-left: 20px; margin-top: 4px;">
+        <li>Marque a caixinha <strong>Full</strong> (obrigatório: garante entrega de 24h a 48h e frete grátis fácil).</li>
+        <li>Marque <strong>Condição: Novo</strong> (elimina cartas soltas e itens usados).</li>
+        <li>Marque <strong>Lojas Oficiais ou MercadoLíder Platinum</strong> (evita produtos violados ou amadores).</li>
+        <li>Ordene por <strong>"Mais Recentes"</strong> para ver quem acabou de subir anúncio com preço promocional.</li>
+      </ol>
+    </div>
+
+    <div class="step-box">
+      <strong>PASSO 2: O Teste de Validação Matemática (PPB)</strong><br>
+      Antes de disparar, faça a conta no celular: pegue o preço total e divida pela quantidade de boosters.<br>
+      • Se for uma Booster Box de 36 boosters saindo por R$ 349 ➔ <code>349 ÷ 36 = R$ 9,69 por booster</code>. <strong>(APROVADO: Está na faixa Excelente!)</strong><br>
+      • Se for um Blister Triplo saindo por R$ 29,90 ➔ <code>29,90 ÷ 3 = R$ 9,96 por booster</code>. <strong>(APROVADO!)</strong>
+    </div>
+
+    <div class="step-box">
+      <strong>PASSO 3: O Teste do Cupom no Carrinho</strong><br>
+      Nunca anuncie um cupom sem testar: adicione o item ao seu carrinho no app do Mercado Livre, insira o código do cupom e veja se o desconto entra de verdade na tela final de pagamento.
+    </div>
+
+    <div class="step-box">
+      <strong>PASSO 4: Disparo em 15 Segundos no Cockpit</strong><br>
+      Abra o <strong>Super Cockpit</strong> (<code>:3000</code>) ➔ <strong>Replicador de Ofertas</strong> ➔ <strong>Gerador de Anúncios Universal</strong>.<br>
+      Cole a URL do Mercado Livre. O sistema faz tudo: puxa a imagem em <strong>2X HD</strong>, calcula o parcelamento sem juros, encurta para o seu link oficial <code>meli.la</code> com a tag <code>caed1312314</code> e formata a copy.<br>
+      Se houver cupom, adicione: <em>"🔥 USE O CUPOM [NOME] NO CARRINHO!"</em> e clique em <strong>Disparar para Rotas Ativas</strong>.
+    </div>
+
+    <!-- REGRAS DE OURO -->
+    <div class="section-title">🛡️ 4. AS 5 REGRAS DE OURO DO ADMINISTRADOR</div>
+    <table style="font-size: 12px;">
+      <thead>
+        <tr>
+          <th style="width: 25%;">Regra</th>
+          <th>Diretriz Prática</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. A Regra dos 70/30 de Ticket</strong></td>
+          <td><strong>70% das ofertas</strong> devem ser produtos de alto ticket (Booster Boxes e ETBs de R$ 200 a R$ 450) que dão comissões de R$ 25 a R$ 58 por venda. Deixe apenas <strong>30%</strong> para produtos de entrada (blisters avulsos de R$ 30 a R$ 50).</td>
+        </tr>
+        <tr>
+          <td><strong>2. Jamais Poste Ágio</strong></td>
+          <td>Se uma caixa esgotou e só tem vendedor cobrando R$ 550 numa caixa que vale R$ 400, <strong>NÃO POSTE</strong>. O colecionador sabe o preço justo; postar ágio queima a autoridade do seu grupo.</td>
+        </tr>
+        <tr>
+          <td><strong>3. Atribuição de 24 Horas</strong></td>
+          <td>Lembre-se: quando um membro clica no seu link de Pokémon TCG, o cookie fica ativo por 24 horas. Tudo o que ele comprar no ML (mesmo fralda, eletrodoméstico ou ferramenta) gera comissão para você. <strong>Incentive cliques!</strong></td>
+        </tr>
+        <tr>
+          <td><strong>4. Poucas e Boas (Anti-Spam)</strong></td>
+          <td>É muito melhor enviar de 4 a 8 ofertas selecionadas a dedo por dia do que disparar 50 produtos genéricos. Qualidade retém os 310 membros.</td>
+        </tr>
+        <tr>
+          <td><strong>5. Alerta de Reposição</strong></td>
+          <td>Quando coleções disputadas (como <em>Celebrações 30 Anos</em> ou <em>151</em>) voltarem ao estoque no preço de tabela, anuncie como <strong>"REPOSIÇÃO OFICIAL NO PREÇO JUSTO"</strong>. O senso de escassez dispara as vendas em minutos.</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+
+</body>
+</html>

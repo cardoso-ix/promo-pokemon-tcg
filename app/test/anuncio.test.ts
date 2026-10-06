@@ -19,7 +19,7 @@ test('formatarTituloPorSlug deve formatar slugs de forma limpa e com palavras-ch
   assert.strictEqual(titulo.includes('Mega Zygarde'), true);
 });
 
-test('gerarCopyPromocional deve iniciar direto pelo nome do item e NÃO conter SUPER PROMOÇÃO', () => {
+test('gerarCopyPromocional deve iniciar com @pokemon_tcg_promo e NÃO conter SUPER PROMOÇÃO', () => {
   const copy = gerarCopyPromocional({
     titulo: 'Pokémon Booster Box 36 Pacotes',
     linkAfiliado: 'https://mercadolivre.com/sec/2rM6RPm',
@@ -29,8 +29,8 @@ test('gerarCopyPromocional deve iniciar direto pelo nome do item e NÃO conter S
 
   // Não pode conter a linha de super promoção
   assert.strictEqual(copy.includes('SUPER PROMOÇÃO'), false);
-  // Primeira linha deve ser o título do item
-  assert.strictEqual(copy.startsWith('📦 *Pokémon Booster Box 36 Pacotes*'), true);
+  // Primeira linha deve ser @pokemon_tcg_promo seguido do título do item
+  assert.strictEqual(copy.startsWith('@pokemon_tcg_promo\n\n📦 *Pokémon Booster Box 36 Pacotes*'), true);
   assert.strictEqual(copy.includes('❌ ~De: R$ 299,00~'), true);
   assert.strictEqual(copy.includes('👉 *Por apenas: R$ 249,00*'), true);
 });
@@ -45,7 +45,7 @@ test('gerarCopyPromocional deve incluir cupom e valor com cupom quando informado
     valorComCupom: '224,10'
   });
 
-  assert.strictEqual(copy.startsWith('📦 *Pokémon Booster Box 36 Pacotes*'), true);
+  assert.strictEqual(copy.startsWith('@pokemon_tcg_promo\n\n📦 *Pokémon Booster Box 36 Pacotes*'), true);
   assert.strictEqual(copy.includes('❌ ~De: R$ 299,00~'), true);
   assert.strictEqual(copy.includes('👉 *Por apenas: R$ 249,00*'), true);
   assert.strictEqual(copy.includes('🔥 *Com cupom: R$ 224,10*'), true);
@@ -116,8 +116,7 @@ test('extrairDadosAnuncio deve extrair dados de links do Mercado Livre e preench
   // Preço atual auto-extraído da publicação ao vivo
   assert.strictEqual(Boolean(resultado.precoPor), true);
   // Copy inicia direto pelo item
-  assert.strictEqual(resultado.textoGerado.includes('SUPER PROMOÇÃO'), false);
-  assert.strictEqual(resultado.textoGerado.startsWith('📦 *'), true);
+  assert.strictEqual(resultado.textoGerado.startsWith('@pokemon_tcg_promo\n\n📦 *'), true);
 });
 
 test('extrairDetalhesPrecoECupom NÃO deve extrair parcelamento quando houver juros e NÃO deve aceitar Com cupom genérico', () => {

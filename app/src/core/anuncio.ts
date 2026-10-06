@@ -374,7 +374,10 @@ export function gerarCopyPromocional(params: {
 }): string {
   const { titulo, linkAfiliado, cupom, precoDe, precoPor, valorComCupom } = params;
 
-  const linhas: string[] = [];
+  const linhas: string[] = [
+    '@pokemon_tcg_promo',
+    ''
+  ];
 
   // 1. Nome do produto (com bandeira se houver)
   const flagMatch = (titulo || '').match(/^([\u{1F1E6}-\u{1F1FF}]{2})\s*(.*)$/u);

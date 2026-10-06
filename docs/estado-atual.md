@@ -59,6 +59,23 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 - **Miniaturas HD no Feed ao Vivo:** Renderização nativa da foto real do produto no card de atividade do WhatsApp no Cockpit, com suporte a visualização ampliada ao clicar e badge `2X HD`.
 - **Rota Multi-Grupo Oficial:** Monitoramento simultâneo de todos os 9 grupos de TCG para não perder nenhuma oferta enviada em tempo real.
 
+### 4.2. Estratégia de Tráfego Pago & Meta Ads (Outubro/2026)
+- **Extrator Nativo de Contatos WhatsApp:** Ferramenta integrada ao Cockpit para extrair e higienizar contatos de todos os grupos de Pokémon TCG para exportação compatível com o Meta Ads (padrão SHA-256 internacional).
+- **Lista de Clientes Qualificada:** Base de 4.278 membros reais e ativos de grupos de Pokémon TCG carregada como Custom Audience no Meta Ads (`act_248381968679040`).
+- **Lookalike 1% Brasil:** Cluster algorítmico do 1% mais semelhante no Brasil (~1,7 milhão de pessoas) gerado a partir da base dos 4.278 membros para tração de alta afinidade e retenção.
+- **Estrutura Dual-Campaign (R$ 50,00/dia):**
+  - **Campanha Lookalike 1% (Nova - 05/10/2026):** R$ 30,00/dia alocados em conjunto exclusivo mobile (Feeds, Stories, Reels) com otimização para evento `LEAD`.
+  - **Campanha Base Aberta (29/09/2026):** R$ 20,00/dia mantidos para sustentação do pixel e descoberta contínua.
+- **Métrica Marco Zero (Baseline):**
+  - **Data e Hora de Início:** 05/10/2026 às 19:44 (Horário de Brasília)
+  - **Membros Iniciais no Grupo:** **310 membros** (registrado na tabela `configs` do SQLite).
+  - **Meta de Crescimento Líquido:** Monitorar entradas reais subtraindo eventuais saídas a partir dessa marca.
+- **Manual do Garimpeiro TCG:**
+  - Criado o guia completo de garimpo e cálculo de preço por booster em [`docs/GUIA_GARIMPO_MERCADO_LIVRE_TCG.md`](./GUIA_GARIMPO_MERCADO_LIVRE_TCG.md).
+
+
+
+
 ---
 
 ## 5. Preparação para Novo Computador

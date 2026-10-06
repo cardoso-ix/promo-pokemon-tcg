@@ -857,9 +857,13 @@ export async function createServer() {
 
   // Handler compartilhado para publicação e disparo de anúncio com auto-destinos inteligentes
   async function handlePublicarAnuncio(body: any, reply: any) {
-    const texto = (body?.texto || body?.mensagem || '').trim();
+    let texto = (body?.texto || body?.mensagem || '').trim();
     if (!texto) {
       return reply.status(400).send({ ok: false, error: 'O texto do anúncio não pode estar vazio.' });
+    }
+
+    if (!texto.startsWith('@')) {
+      texto = `@pokemon_tcg_promo\n\n${texto}`;
     }
 
     const imageUrl = (body?.imageUrl || body?.fotoUrl || '').trim();
