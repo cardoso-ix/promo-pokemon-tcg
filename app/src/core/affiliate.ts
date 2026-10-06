@@ -661,6 +661,9 @@ export function isAmazonUrl(url: string): boolean {
     return (
       host.includes('amazon.com.br') ||
       host.includes('amazon.com') ||
+      host.includes('link.amazon') ||
+      host.endsWith('.amazon') ||
+      host.includes('amzlinks.in') ||
       host.includes('amzn.to') ||
       host.includes('a.co')
     );
@@ -670,14 +673,20 @@ export function isAmazonUrl(url: string): boolean {
 }
 
 /**
- * Verifica se a URL é um link encurtado oficial da Amazon (amzn.to, a.co)
+ * Verifica se a URL é um link encurtado oficial da Amazon (amzn.to, a.co, link.amazon, amzlinks.in)
  */
 export function isAmazonShortUrl(url: string): boolean {
   if (!url || typeof url !== 'string') return false;
   try {
     const parsed = new URL(url);
     const host = parsed.hostname.toLowerCase();
-    return host.includes('amzn.to') || host.includes('a.co');
+    return (
+      host.includes('link.amazon') ||
+      host.endsWith('.amazon') ||
+      host.includes('amzlinks.in') ||
+      host.includes('amzn.to') ||
+      host.includes('a.co')
+    );
   } catch {
     return false;
   }

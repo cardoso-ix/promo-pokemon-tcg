@@ -439,8 +439,10 @@ export function gerarCopyPromocional(params: {
     linhas.push('');
   }
 
-  // 4. Link direto apenas
-  linhas.push(`👉 ${linkAfiliado.trim()}`);
+  // 4. Link direto apenas (usa 🔗 para links curtos oficiais da Amazon conforme padrão)
+  const isLinkCurtoAmz = isAmazonShortUrl(linkAfiliado);
+  const prefixoLink = isLinkCurtoAmz ? '🔗' : '👉';
+  linhas.push(`${prefixoLink} ${linkAfiliado.trim()}`);
   linhas.push('');
 
   // 5. Rodapé legal

@@ -16,13 +16,17 @@ test('Amazon Affiliate - Detecção de URLs da Amazon', () => {
   assert.equal(isAmazonUrl('https://amazon.com.br/gp/product/B0DFZ49J38'), true);
   assert.equal(isAmazonUrl('https://amzn.to/3Txxxx'), true);
   assert.equal(isAmazonUrl('https://a.co/d/xxxxxx'), true);
+  assert.equal(isAmazonUrl('https://link.amazon/B0gbDXhDr'), true);
+  assert.equal(isAmazonUrl('https://amzlinks.in/B0gbDXhDr'), true);
   assert.equal(isAmazonUrl('https://mercadolivre.com.br/p/MLB123'), false);
   assert.equal(isAmazonUrl('https://shopee.com.br/item'), false);
 });
 
-test('Amazon Affiliate - Identificação de Links Encurtados (amzn.to e a.co)', () => {
+test('Amazon Affiliate - Identificação de Links Encurtados (amzn.to, a.co e link.amazon)', () => {
   assert.equal(isAmazonShortUrl('https://amzn.to/3Vj4xX'), true);
   assert.equal(isAmazonShortUrl('https://a.co/d/abc1234'), true);
+  assert.equal(isAmazonShortUrl('https://link.amazon/B0gbDXhDr'), true);
+  assert.equal(isAmazonShortUrl('https://amzlinks.in/B0gbDXhDr'), true);
   assert.equal(isAmazonShortUrl('https://www.amazon.com.br/dp/B0DFZ49J38'), false);
   assert.equal(isAmazonShortUrl('https://mercadolivre.com.br'), false);
 });
@@ -141,4 +145,27 @@ test('Amazon Affiliate - Extração Completa no Gerador de Anúncios com link da
   assert.ok(resultado.linkAfiliado.includes('tag=tcgpokepromo-20') || resultado.linkAfiliado.includes('tinyurl.com'), 'Link deve ser encurtado ou conter tag');
   assert.ok(resultado.imageUrl !== null, 'Imagem não pode ser nula');
   assert.ok(resultado.imageUrl!.includes('media-amazon.com') || resultado.imageUrl!.includes('mlstatic.com'), 'Imagem deve ser oficial ou fallback TCG');
+});
+
+test('Amazon Affiliate - Gerador de Anúncios PRESERVA link link.amazon e formata com 🔗', async () => {
+  const { extrairDadosAnuncio } = await import('../src/core/anuncio.js');
+
+  const linkCurtoApp = 'https://link.amazon/B0gbDXhDr';
+  const resultado = await extrairDadosAnuncio(
+    {
+      url: linkCurtoApp,
+      titulo: 'Blister Triplo 30 Anos com Adesivo',
+      precoPor: '99,99'
+    },
+    {
+      mattWord: 'tcgpokepromo-20',
+      mattTool: '12345678',
+      amazonTag: 'tcgpokepromo-20'
+    }
+  );
+
+  assert.equal(resultado.ok, true);
+  assert.equal(resultado.linkAfiliado, linkCurtoApp, 'Deve preservar exatamente https://link.amazon/B0gbDXhDr');
+  assert.ok(resultado.textoGerado.includes('🔗 https://link.amazon/B0gbDXhDr'), 'Deve conter o prefixo 🔗 com o link exato');
+  assert.ok(!resultado.textoGerado.includes('amazon.com.br/dp/'), 'NÃO deve expandir para o link longo');
 });
