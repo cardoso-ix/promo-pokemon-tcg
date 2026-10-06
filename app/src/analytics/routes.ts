@@ -126,6 +126,29 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
     }
   );
 
+  // Auditoria Profunda de Campanhas e Anúncios de Hoje
+  app.get(
+    '/api/integrations/meta/audit',
+    async (
+      req: FastifyRequest<{
+        Querystring: { date?: string };
+      }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { date } = req.query || {};
+        const audit = await metaAdsService.auditCampaignsDetailed(date);
+        return {
+          ok: true,
+          data: audit
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.status(500).send({ ok: false, error: msg });
+      }
+    }
+  );
+
   // Atualização ou Recarga de Saldo de Caixa Meta Ads
   app.post(
     '/api/integrations/meta/balance',

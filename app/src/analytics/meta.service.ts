@@ -536,6 +536,51 @@ export class MetaAdsIntegrationService {
 
     return this.getAdAccountBalance();
   }
+
+  /**
+   * Auditoria detalhada das campanhas e anúncios de hoje via Graph API
+   */
+  async auditCampaignsDetailed(dateStr?: string): Promise<any> {
+    const targetDate = dateStr || new Date().toISOString().split('T')[0];
+    const token = await this.getValidAccessToken();
+    const actId = this.formatAccountId();
+
+    // 1. Buscar status e orçamentos das campanhas
+    const campFields = ['id', 'name', 'status', 'effective_status', 'objective', 'daily_budget', 'lifetime_budget', 'budget_remaining'].join(',');
+    const campRes = await fetch(`${GRAPH_API_BASE}/${actId}/campaigns?fields=${campFields}&limit=50`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const campJson = (await campRes.json()) as any;
+    const campaignsList = campJson.data || [];
+
+    // 2. Buscar insights de hoje por campanha
+    const timeRange = JSON.stringify({ since: targetDate, until: targetDate });
+    const insFields = ['campaign_id', 'campaign_name', 'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'actions', 'cost_per_action_type'].join(',');
+    const insRes = await fetch(`${GRAPH_API_BASE}/${actId}/insights?level=campaign&fields=${insFields}&time_range=${encodeURIComponent(timeRange)}&limit=50`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const insJson = (await insRes.json()) as any;
+    const insightsCampaigns = insJson.data || [];
+
+    // 3. Buscar insights de hoje por anúncio (criativos)
+    const adFields = ['campaign_name', 'adset_name', 'ad_id', 'ad_name', 'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'actions', 'cost_per_action_type'].join(',');
+    const adRes = await fetch(`${GRAPH_API_BASE}/${actId}/insights?level=ad&fields=${adFields}&time_range=${encodeURIComponent(timeRange)}&limit=50`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const adJson = (await adRes.json()) as any;
+    const insightsAds = adJson.data || [];
+
+    // 4. Saldo e conta
+    const balanceInfo = await this.getAdAccountBalance();
+
+    return {
+      date: targetDate,
+      balance: balanceInfo,
+      campaignsList,
+      insightsCampaigns,
+      insightsAds
+    };
+  }
 }
 
 export interface MetaAdAccountBalanceInfo {
