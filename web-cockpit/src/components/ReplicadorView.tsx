@@ -1210,6 +1210,26 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                     Inserido nas mensagens de abertura e no rodapé das ofertas recomendadas.
                   </span>
                 </div>
+
+                <div className="pt-2 border-t border-white/[0.06]">
+                  <label className="block text-amber-300 font-semibold mb-1 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                      Tag Amazon Associados (Store ID / Tracking):
+                    </span>
+                    <span className="text-[10px] text-amber-400 font-mono">amazon_tag</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: tcgpokepromo-20"
+                    value={configs['amazon_tag'] || ''}
+                    onChange={e => setConfigs({ ...configs, amazon_tag: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.04] border border-amber-500/30 text-white focus:outline-none focus:border-amber-500/60 font-mono"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Tag oficial de afiliados da Amazon (ex: tcgpokepromo-20). Injetada automaticamente nas URLs da Amazon.
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1243,8 +1263,8 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                 {/* Switch: Somente Mercado Livre */}
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                   <div>
-                    <span className="font-semibold text-slate-200 block">Somente Mercado Livre</span>
-                    <span className="text-[10px] text-slate-400">Ignora ofertas de outras lojas fora do Meli</span>
+                    <span className="font-semibold text-slate-200 block">Filtro Mercado Livre / Marketplaces</span>
+                    <span className="text-[10px] text-slate-400">Restringe a postagem para e-commerces autorizados</span>
                   </div>
                   <button
                     type="button"
@@ -1253,6 +1273,28 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
                   >
                     {configs['somente_mercadolivre'] !== 'false' ? (
                       <ToggleRight className="w-7 h-7 text-emerald-400" />
+                    ) : (
+                      <ToggleLeft className="w-7 h-7 text-slate-500" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Switch: Replicar Ofertas da Amazon */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-500/[0.03] border border-amber-500/20">
+                  <div>
+                    <span className="font-semibold text-amber-300 block flex items-center gap-1.5">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] bg-amber-500/20 text-amber-300 font-bold border border-amber-500/40">AMAZON</span>
+                      Replicar Ofertas da Amazon
+                    </span>
+                    <span className="text-[10px] text-slate-400">Intercepta links da Amazon, injeta sua tag e posta foto HD</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConfigs({ ...configs, replicar_amazon: configs['replicar_amazon'] === 'false' ? 'true' : 'false' })}
+                    className="cursor-pointer"
+                  >
+                    {configs['replicar_amazon'] !== 'false' ? (
+                      <ToggleRight className="w-7 h-7 text-amber-400" />
                     ) : (
                       <ToggleLeft className="w-7 h-7 text-slate-500" />
                     )}

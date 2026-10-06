@@ -7,6 +7,7 @@ export interface ConversionResult {
   linksConvertidos: number;
   hashConteudo: string;
   contemMercadoLivre: boolean;
+  contemAmazon?: boolean;
   productImageUrl?: string;
   resolvedProductUrl?: string;
   canonicalProductId?: string;
@@ -293,16 +294,32 @@ export async function expandUrl(
 
   // Se temos o HTML da página direta do anúncio (e NÃO era vitrine social), extrai a foto oficial
   if (lastHtml && !wasSocial && !productImageUrl && !currentUrl.includes('/social/')) {
-    const ogMatch = lastHtml.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
-    const ogClean = ogMatch && ogMatch[1] ? ogMatch[1].replace(/\{sanitized_title\}/gi, '').trim() : '';
-    if (ogClean && isImagemValidaProdutoMl(ogClean)) {
-      productImageUrl = normalizarFotoMl(ogClean);
+    if (isAmazonUrl(currentUrl)) {
+      const ogMatch = lastHtml.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+      const ogClean = ogMatch && ogMatch[1] ? ogMatch[1].trim() : '';
+      if (ogClean && isImagemValidaProdutoAmazon(ogClean)) {
+        productImageUrl = normalizarFotoAmazon(ogClean);
+      } else {
+        const amzImgs = lastHtml.match(/https?:\/\/(?:m\.media-amazon\.com|images-amazon\.com)\/images\/I\/[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi);
+        if (amzImgs && amzImgs.length > 0) {
+          const validImgs = amzImgs.filter(isImagemValidaProdutoAmazon);
+          if (validImgs.length > 0) {
+            productImageUrl = normalizarFotoAmazon(validImgs[0]);
+          }
+        }
+      }
     } else {
-      const mlImgs = lastHtml.match(/https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi);
-      if (mlImgs && mlImgs.length > 0) {
-        const validImgs = mlImgs.filter(isImagemValidaProdutoMl);
-        if (validImgs.length > 0) {
-          productImageUrl = normalizarFotoMl(validImgs[0]);
+      const ogMatch = lastHtml.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+      const ogClean = ogMatch && ogMatch[1] ? ogMatch[1].replace(/\{sanitized_title\}/gi, '').trim() : '';
+      if (ogClean && isImagemValidaProdutoMl(ogClean)) {
+        productImageUrl = normalizarFotoMl(ogClean);
+      } else {
+        const mlImgs = lastHtml.match(/https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi);
+        if (mlImgs && mlImgs.length > 0) {
+          const validImgs = mlImgs.filter(isImagemValidaProdutoMl);
+          if (validImgs.length > 0) {
+            productImageUrl = normalizarFotoMl(validImgs[0]);
+          }
         }
       }
     }
@@ -495,10 +512,17 @@ export async function downloadProductImage(
   cookie = '',
   hintImageUrl = ''
 ): Promise<Buffer | null> {
-  let targetImageUrl = hintImageUrl ? normalizarFotoMl(hintImageUrl) : '';
-  if (targetImageUrl && !isImagemValidaProdutoMl(targetImageUrl)) {
-    console.warn(`[Download Foto] Imagem descartada por ser banner ou não pertencer a produto: ${targetImageUrl}`);
-    targetImageUrl = '';
+  const isAmazon = isAmazonUrl(productUrl) || (hintImageUrl && (isAmazonUrl(hintImageUrl) || hintImageUrl.includes('media-amazon.com')));
+  let targetImageUrl = '';
+  if (hintImageUrl) {
+    targetImageUrl = isAmazon ? normalizarFotoAmazon(hintImageUrl) : normalizarFotoMl(hintImageUrl);
+  }
+  if (targetImageUrl) {
+    const isValida = isAmazon ? isImagemValidaProdutoAmazon(targetImageUrl) : isImagemValidaProdutoMl(targetImageUrl);
+    if (!isValida) {
+      console.warn(`[Download Foto] Imagem descartada por ser banner ou não pertencer a produto: ${targetImageUrl}`);
+      targetImageUrl = '';
+    }
   }
 
   if (!targetImageUrl && productUrl && !productUrl.includes('/social/')) {
@@ -599,6 +623,98 @@ export function isMercadoLivreUrl(url: string): boolean {
 }
 
 /**
+ * Verifica se a URL pertence ao ecossistema da Amazon
+ */
+export function isAmazonUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return (
+      host.includes('amazon.com.br') ||
+      host.includes('amazon.com') ||
+      host.includes('amzn.to') ||
+      host.includes('a.co')
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extrai o código único ASIN (10 caracteres) de produtos da Amazon
+ */
+export function extractAmazonAsin(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const match = url.match(/(?:\/dp\/|\/gp\/product\/|\/d\/|\/ASIN\/|\/product\/)([A-Z0-9]{10})(?:[/?#]|$)/i);
+  if (match && match[1]) {
+    return match[1].toUpperCase();
+  }
+  return null;
+}
+
+/**
+ * Transforma uma URL da Amazon injetando a tag de afiliado do usuário e limpando concorrentes
+ */
+export function buildAmazonAffiliateUrl(rawUrl: string, amazonTag = 'tcgpokepromo-20'): string {
+  const cleanTag = (amazonTag || 'tcgpokepromo-20').trim();
+  const asin = extractAmazonAsin(rawUrl);
+  if (asin) {
+    return `https://www.amazon.com.br/dp/${asin}?tag=${encodeURIComponent(cleanTag)}`;
+  }
+  try {
+    const u = new URL(rawUrl);
+    u.searchParams.delete('tag');
+    u.searchParams.delete('linkCode');
+    u.searchParams.delete('ascsubtag');
+    u.searchParams.delete('ref');
+    u.searchParams.delete('ref_');
+    u.searchParams.delete('camp');
+    u.searchParams.delete('creative');
+    u.searchParams.set('tag', cleanTag);
+    return u.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
+/**
+ * Valida se a URL é de uma imagem oficial de produto da Amazon
+ */
+export function isImagemValidaProdutoAmazon(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  const u = url.toLowerCase().trim();
+  if (!u.includes('media-amazon.com') && !u.includes('images-amazon.com')) {
+    return false;
+  }
+  if (
+    u.includes('/g/') ||
+    u.includes('logo') ||
+    u.includes('transparent') ||
+    u.includes('sprite') ||
+    u.includes('pixel') ||
+    u.includes('loading') ||
+    u.includes('icon')
+  ) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Normaliza fotos da Amazon para alta resolução (1500px)
+ */
+export function normalizarFotoAmazon(url: string): string {
+  let u = String(url || '').trim();
+  if (u.startsWith('//')) u = 'https:' + u;
+  if (!/^https?:\/\//i.test(u)) return '';
+  if (/media-amazon\.com\/images\/I\//i.test(u) || /images-amazon\.com\/images\/I\//i.test(u)) {
+    u = u.replace(/\._[A-Z0-9,_-]+\.(jpg|jpeg|png|webp)/i, '._AC_SL1500_.$1');
+  }
+  return u;
+}
+
+/**
  * Normaliza quebras de linha e remove assinaturas de concorrentes
  */
 export function cleanSpamLines(text: string, phrasesToRemove: string[]): string {
@@ -642,7 +758,9 @@ export async function processMessageText(
   meliCookie = '',
   meliTag = '',
   shortSocialUrl = '',
-  textHintExtra = ''
+  textHintExtra = '',
+  amazonTag = 'tcgpokepromo-20',
+  replicarAmazon = true
 ): Promise<ConversionResult> {
   const phrases = frasesRemoverRaw.split('\n');
   const cleanedText = cleanSpamLines(rawText, phrases);
@@ -651,6 +769,7 @@ export async function processMessageText(
   let novoTexto = cleanedText;
   let linksConvertidos = 0;
   let contemMercadoLivre = false;
+  let contemAmazon = false;
   let productImageUrl: string | undefined;
   let resolvedProductUrl: string | undefined;
 
@@ -665,6 +784,25 @@ export async function processMessageText(
     }
 
     let resolvedUrl = rawUrl;
+
+    // Suporte a links da Amazon
+    if (isAmazonUrl(rawUrl)) {
+      contemAmazon = true;
+      if (replicarAmazon) {
+        const expansion = await expandUrl(rawUrl, cleanedText);
+        resolvedUrl = expansion.resolvedUrl;
+        resolvedProductUrl = resolvedUrl;
+        if (expansion.productImageUrl) {
+          productImageUrl = expansion.productImageUrl;
+        }
+
+        const affiliateUrl = buildAmazonAffiliateUrl(resolvedUrl, amazonTag);
+        novoTexto = novoTexto.replace(rawUrlWithPunct, affiliateUrl + trailingPunctuation);
+        linksConvertidos++;
+      }
+      continue;
+    }
+
     if (isMercadoLivreUrl(rawUrl)) {
       contemMercadoLivre = true;
       const combinedHint = textHintExtra ? `${cleanedText} ${textHintExtra}` : cleanedText;
@@ -707,6 +845,7 @@ export async function processMessageText(
     linksConvertidos,
     hashConteudo,
     contemMercadoLivre,
+    contemAmazon,
     productImageUrl,
     resolvedProductUrl,
     canonicalProductId

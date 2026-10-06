@@ -19,7 +19,8 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 
 | Módulo | Tecnologia | Ambiente / Status | Descrição |
 | :--- | :--- | :--- | :--- |
-| **Replicador de Ofertas** | TypeScript + Baileys + Fastify | 🟢 **Online 24/7 (Tema Água 💧)** | Monitora grupos, intercepta concorrentes, encurta para `meli.la` e replica com foto 2X HD. |
+| **Replicador de Ofertas** | TypeScript + Baileys + Fastify | 🟢 **Online 24/7 (Tema Água 💧)** | Monitora grupos, intercepta concorrentes (Mercado Livre e Amazon), injeta afiliados e replica com foto 2X HD. |
+| **Amazon Associados** | Motor Canônico ASIN + Injeção de Tag | 🟢 **Ativo (Store ID: tcgpokepromo-20)** | Intercepta `amzn.to` e `amazon.com.br`, injeta tag oficial limpa, raspa foto HD e replica no nicho TCG. |
 | **Encurtador de Afiliados** | API Oficial Mercado Livre | 🟢 **Ativo (Sentinel 45m)** | Monitorado pelo Cookie Sentinel em tempo real, encurtador oficial `https://meli.la/xxxxxx`. |
 | **Meli Afiliados (7 Visões)** | API Interna de Afiliados + SQLite | 🟢 **Ativo (Sincronização 24/7)** | Ingestão automática com 7 abas: Produtos vendidos, Audiências, Vendas perdidas, Data, Vendas, Categorias e Tags. |
 | **Super Cockpit Unificado (React 19)** | React 19 + Tailwind v4 + Recharts | 🟢 **Online (Header Glass Panel)** | Design em padrão de cartões enquadrados, botão de sincronização unificada automática e navegação direta. |
@@ -28,7 +29,7 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 | **Caixa & Recargas Meta Ads** | Graph API v20.0 + SQLite Híbrido | 🟢 **Ativo (Tempo Real)** | Exibição do saldo de caixa para anúncios no Cockpit, badges de status, recargas manuais e limites de alerta. |
 | **Google Planilhas ("produtos tcg valores")** | Webhook Apps Script + Dual-Write Local | 🟢 **Ativo (Sincronização Contínua)** | Registra automaticamente cada oferta enviada nos grupos com Data/Hora, Nome do Produto, Preço e Link. |
 | **Mensagem Diária de Abertura (07:00 AM)** | Scheduler Nativo (Fuso de Brasília) | 🟢 **Ativo (Anti-Duplicidade)** | Dispara automaticamente mensagem calorosa todas as manhãs às 07:00 AM com rotação entre 4 modelos. |
-| **Gerador de Anúncios Universal** | Fastify + Scraper ML & Shopee + OpenGraph | 🟢 **Ativo (Replicador)** | Suporta links do Mercado Livre, Shopee e lojas gerais com fallback anti-bot, edição de copy, cópia rápida e disparo para rotas ativas. |
+| **Gerador de Anúncios Universal** | Fastify + Scraper ML, Amazon & Shopee | 🟢 **Ativo (Replicador)** | Suporta links do Mercado Livre, Amazon e Shopee com foto HD, edição de copy, cópia rápida e disparo para rotas ativas. |
 
 ---
 
@@ -49,11 +50,17 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 
 ## 4. Cobertura de Testes Automatizados
 
-- **Total de Testes:** **109 testes unitários e de integração** (100% aprovados, 0 falhas).
-  - `app` (Replicador): **109 testes aprovados** (Guardião TCG expandido, parcelamento sem juros higienizado, fotos 2X HD, vitrine social e deduplicação inteligente).
+- **Total de Testes:** **156 testes unitários e de integração** (100% aprovados, 0 falhas).
+  - `app` (Replicador, Guardião TCG, Radar, Meta Ads e Amazon Associados): **156 testes aprovados** (Guardião TCG expandido, parcelamento sem juros higienizado, fotos 2X HD, vitrine social, extrator de leads Meta e motor canônico Amazon).
 - Executável com um único comando na raiz do projeto: `npm test`.
 
-### 4.1. Melhorias Recentes de Performance e Radar TCG (Opção 1)
+### 4.1. Suporte Multi-Marketplace: Amazon Associados (Outubro/2026)
+- **Motor Canônico ASIN:** Detecção de `amazon.com.br`, `amazon.com`, `amzn.to` e `a.co`, extração do código do produto (ASIN) e montagem de URLs canônicas ultrarrápidas (`https://www.amazon.com.br/dp/ASIN?tag=tcgpokepromo-20`).
+- **Limpeza de Parâmetros Concorrentes:** Higienização total de tags alheias (`tag`, `linkCode`, `ref_`, `creative`) garantindo atribuição limpa das comissões.
+- **Download de Fotos HD:** Captura automática de imagens em alta resolução dos servidores oficiais da Amazon (`m.media-amazon.com`).
+- **Cockpit Integrado:** Configuração da tag no painel e toggle individual para ativar/desativar a replicação da Amazon em tempo real.
+
+### 4.2. Melhorias Recentes de Performance e Radar TCG (Opção 1)
 - **Guardião TCG Expandido:** Mais de 35 novos termos e Pokémons icônicos mapeados (Greninja, Sylveon, Umbreon, Rayquaza, Mew, Coleção 30 Anos, Celebrações, etc.), eliminando falsos descartes por `fora_nicho_tcg`.
 - **Higienização de Parcelamento:** Cálculo unitário preciso de parcelas sem placeholders brutos do ML (`{o} {price_total} {en}`) e remoção de "sem juros" duplicado.
 - **Miniaturas HD no Feed ao Vivo:** Renderização nativa da foto real do produto no card de atividade do WhatsApp no Cockpit, com suporte a visualização ampliada ao clicar e badge `2X HD`.

@@ -274,7 +274,9 @@ export function initDatabase() {
     meta_ad_balance_mode: 'hybrid',
     meta_ad_alert_threshold: '50.00',
     meta_ad_balance_last_sync: '',
-    meta_ad_balance_api_cached: '0.00'
+    meta_ad_balance_api_cached: '0.00',
+    amazon_tag: 'tcgpokepromo-20',
+    replicar_amazon: 'true'
   };
 
   const insertConfig = db.prepare(`

@@ -1,7 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expandUrl, normalizarFotoMl, shortenToMeli, buildAffiliateUrl, isImagemValidaProdutoMl } from './affiliate.js';
+import {
+  expandUrl,
+  normalizarFotoMl,
+  shortenToMeli,
+  buildAffiliateUrl,
+  isImagemValidaProdutoMl,
+  isAmazonUrl,
+  buildAmazonAffiliateUrl,
+  normalizarFotoAmazon
+} from './affiliate.js';
 import { isAnuncioEsgotadoOuPausado, sanearPrecoHistoricoTCG } from './pricing.js';
 
 export const FOTO_CUPOM_OFICIAL_URL = '/assets/cupom-mercadolivre.png';
@@ -1019,6 +1028,7 @@ export async function extrairDadosAnuncio(
     meliCookie?: string;
     meliTag?: string;
     linkVitrineCurto?: string;
+    amazonTag?: string;
   }
 ): Promise<AnuncioResult> {
   const rawUrl = (input.url || '').trim();
@@ -1035,7 +1045,7 @@ export async function extrairDadosAnuncio(
   }
 
   try {
-    // 1. Expandir a URL (trata meli.la, sec/, s.shopee.com.br e redirecionadores)
+    // 1. Expandir a URL (trata meli.la, sec/, amzn.to, s.shopee.com.br e redirecionadores)
     const { resolvedUrl, productImageUrl, rawHtml } = await expandUrl(
       rawUrl,
       'Pokemon TCG',
@@ -1049,17 +1059,21 @@ export async function extrairDadosAnuncio(
     let htmlConteudo = rawHtml || '';
 
     const isMeli = /mercadolivre\.com|meli\.la/i.test(targetUrl) || /mercadolivre\.com|meli\.la/i.test(rawUrl);
+    const isAmazon = isAmazonUrl(targetUrl) || isAmazonUrl(rawUrl);
     const isShopee = /shopee\.com|s\.shopee\.com/i.test(targetUrl) || /shopee\.com|s\.shopee\.com/i.test(rawUrl);
 
     // 2. Extrair slug e título inicial
     let slug = '';
     const meliSlugMatch = targetUrl.match(/mercadolivre\.com\.br\/([^\s"'<>]+?)\/(?:p\/|up\/|MLB-)/i);
     const shopeeSlugMatch = targetUrl.match(/shopee\.com\.br\/([^\/\?#]+?)-i\.\d+\.\d+/i);
+    const amazonSlugMatch = targetUrl.match(/amazon\.com\.br\/([^\/\?#]+?)\/(?:dp|gp\/product)\//i);
 
     if (meliSlugMatch) {
       slug = meliSlugMatch[1];
     } else if (shopeeSlugMatch) {
       slug = shopeeSlugMatch[1];
+    } else if (amazonSlugMatch) {
+      slug = amazonSlugMatch[1];
     } else {
       try {
         const u = new URL(targetUrl);
@@ -1077,7 +1091,7 @@ export async function extrairDadosAnuncio(
     // 3. Obter a foto oficial e inspecionar HTML se necessário
     let imageUrl: string | null = null;
     if (productImageUrl) {
-      imageUrl = isMeli ? normalizarFotoMl(productImageUrl) : productImageUrl;
+      imageUrl = isMeli ? normalizarFotoMl(productImageUrl) : (isAmazon ? normalizarFotoAmazon(productImageUrl) : productImageUrl);
     }
 
     let isPaginaNaoEncontrada = false;
@@ -1212,6 +1226,8 @@ export async function extrairDadosAnuncio(
           }
         }
       }
+    } else if (isAmazon) {
+      linkAfiliadoFinal = buildAmazonAffiliateUrl(targetUrl, config.amazonTag || 'tcgpokepromo-20');
     } else {
       // Shopee ou outros e-commerces mantém o link informado (já com tag de afiliado se fornecido)
       linkAfiliadoFinal = rawUrl;
@@ -1220,6 +1236,15 @@ export async function extrairDadosAnuncio(
     // 5. Preços e Cupons Finais (Prioriza SEMPRE o valor digitado/postado na mensagem)
     const rawPrecoDe = (input.precoDe || '').trim() || detalhes.precoDe || undefined;
     let precoPorFinal = (input.precoPor || '').trim() || detalhes.precoPor || undefined;
+
+    // Se for Amazon e não tiver preço digitado, tenta extrair do HTML
+    if (isAmazon && htmlConteudo && !precoPorFinal) {
+      const priceMatch = htmlConteudo.match(/class=["'][^"']*a-price-whole[^"']*["']>([^<]+)<\/span>/i) ||
+                         htmlConteudo.match(/class=["'][^"']*a-offscreen[^"']*["']>\s*R\$\s*([^<]+)<\/span>/i);
+      if (priceMatch && priceMatch[1]) {
+        precoPorFinal = priceMatch[1].replace(/[^\d,.]/g, '').trim();
+      }
+    }
 
     // REGRA DE OURO: SE O PRODUTO ACABOU ESTOQUE, PRESERVA RIGOROSAMENTE O VALOR DO ANÚNCIO POSTADO!
     if (isEsgotado) {

@@ -619,19 +619,22 @@ export class WhatsAppManager {
       return;
     }
 
-    // 4. Converter texto e links com suporte a meli.la e cookies
+    // 4. Converter texto e links com suporte a meli.la, cookies e Amazon
     const mattWord = getConfig('affiliate_matt_word', 'caed1312314');
     const mattTool = getConfig('affiliate_matt_tool', '96097202');
     const meliCookie = getConfig('meli_cookie', '');
     const meliTag = getConfig('meli_tag', mattWord);
     const frasesRemover = getConfig('frases_remover', '');
     const linkVitrineCurto = getConfig('link_vitrine_curto', 'https://mercadolivre.com/sec/2rM6RPm');
+    const amazonTag = getConfig('amazon_tag', 'tcgpokepromo-20');
+    const replicarAmazon = getConfig('replicar_amazon', 'true') === 'true';
 
     let {
       novoTexto,
       linksConvertidos,
       hashConteudo,
       contemMercadoLivre,
+      contemAmazon,
       productImageUrl,
       resolvedProductUrl,
       canonicalProductId
@@ -644,7 +647,9 @@ export class WhatsAppManager {
       meliCookie,
       meliTag,
       linkVitrineCurto,
-      linkPreviewTitle || ''
+      linkPreviewTitle || '',
+      amazonTag,
+      replicarAmazon
     );
 
     // Identificação de conteúdo especial:
@@ -652,8 +657,10 @@ export class WhatsAppManager {
     const cupomExtraido = extrairCupom(rawText) || '';
     const isCupom = Boolean(cupomExtraido || detectarMensagemCupom(rawText) || /\bcupo(?:m|ns)\b/i.test(rawText));
 
-    // B) Links de Marketplaces concorrentes (Amazon, Shopee, Magalu, AliExpress, etc.)
-    const contemMarketplaceConcorrente = /(?:amazon\.com|amzn\.to|shopee\.com|shope\.ee|magazineluiza\.com|aliexpress\.com)/i.test(rawText);
+    // B) Links de Marketplaces concorrentes (Se Amazon estiver ativa, ela é permitida e não entra como concorrente rejeitado)
+    const contemMarketplaceConcorrente = replicarAmazon
+      ? /(?:shopee\.com|shope\.ee|magazineluiza\.com|aliexpress\.com)/i.test(rawText)
+      : /(?:amazon\.com|amzn\.to|shopee\.com|shope\.ee|magazineluiza\.com|aliexpress\.com)/i.test(rawText);
 
     // C) Digitação avulsa / Comunicado informativo sem link de marketplace
     const replicarComunicados = getConfig('replicar_comunicados_texto', 'false') === 'true';
@@ -688,8 +695,9 @@ export class WhatsAppManager {
         return;
       }
 
-      if (!contemMercadoLivre && !isComunicadoSemLink) {
-        console.log(`[Filtro Mercado Livre] Mensagem ignorada: não contém links válidos do Mercado Livre.`);
+      const temLinkValido = contemMercadoLivre || (replicarAmazon && contemAmazon);
+      if (!temLinkValido && !isComunicadoSemLink) {
+        console.log(`[Filtro Marketplaces] Mensagem ignorada: não contém links válidos do Mercado Livre ou Amazon.`);
         const log = insertLog({
           origem_chat_id: remoteJid,
           origem_nome: origemNome,
@@ -880,9 +888,9 @@ export class WhatsAppManager {
       hasProdutoEspecifico
     });
 
-    // B) Se NÃO veio foto anexada no WhatsApp (ou falhou o download), mas temos anúncio do Mercado Livre:
-    // Baixa a imagem oficial do anúncio em alta resolução diretamente do Mercado Livre (se permitido)
-    if (buscarFotoMl && (!imageBuffer || imageBuffer.length === 0) && (contemMercadoLivre || productImageUrl)) {
+    // B) Se NÃO veio foto anexada no WhatsApp (ou falhou o download), mas temos anúncio do Mercado Livre ou Amazon:
+    // Baixa a imagem oficial do anúncio em alta resolução (se permitido)
+    if (buscarFotoMl && (!imageBuffer || imageBuffer.length === 0) && (contemMercadoLivre || contemAmazon || productImageUrl)) {
       if (productImageUrl || resolvedProductUrl) {
         try {
           imageBuffer = await downloadProductImage(
@@ -891,10 +899,10 @@ export class WhatsAppManager {
             productImageUrl || ''
           );
           if (imageBuffer && imageBuffer.length > 0) {
-            console.log(`[Imagem ML] Foto oficial do anúncio baixada com sucesso (${Math.round(imageBuffer.length / 1024)} KB).`);
+            console.log(`[Imagem Marketplace] Foto oficial do anúncio baixada com sucesso (${Math.round(imageBuffer.length / 1024)} KB).`);
           }
         } catch (err) {
-          console.warn('[Imagem ML] Falha ao obter foto do anúncio do Mercado Livre:', err);
+          console.warn('[Imagem Marketplace] Falha ao obter foto do anúncio oficial:', err);
         }
       }
     }
@@ -1114,7 +1122,7 @@ export class WhatsAppManager {
     // 14. Inserir Log Atômico com Status Real
     const statusFinal: 'enviado' | 'erro' = enviosSucesso > 0 ? 'enviado' : 'erro';
     const motivoFinal = enviosSucesso > 0
-      ? (contemMercadoLivre ? 'copia_com_afiliado' : 'copia_sem_afiliado')
+      ? (contemAmazon ? 'copia_com_afiliado_amazon' : contemMercadoLivre ? 'copia_com_afiliado' : 'copia_sem_afiliado')
       : 'falha_envio_whatsapp';
 
     const log = insertLog({
