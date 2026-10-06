@@ -187,7 +187,7 @@ export function extrairDadosOferta(
 
   // 1. Extração do Link
   let link = '';
-  const urlMatch = texto.match(/https?:\/\/(?:meli\.la\/[^\s]+|mercadolivre\.com(?:\.br)?\/[^\s]+)/i);
+  const urlMatch = texto.match(/https?:\/\/(?:meli\.la\/[^\s]+|mercadolivre\.com(?:\.br)?\/[^\s]+|amazon\.com(?:\.br)?\/[^\s]+|amzn\.to\/[^\s]+|a\.co\/[^\s]+|link\.amazon\/[^\s]+|amzlinks\.in\/[^\s]+)/i);
   if (urlMatch) {
     link = urlMatch[0].replace(/[;,.:!?)\]*~"'_]+$/, '');
   } else if (resolvedUrl) {

@@ -995,7 +995,8 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
     linhas.push('');
     linhas.push('⚡ *Corre antes que acabe o estoque!*');
-    linhas.push(`🛒 ${link}`);
+    const isAmzUrgencia = isAmazonUrl(link);
+    linhas.push(isAmzUrgencia ? `🔗 ${link}` : `🛒 ${link}`);
     linhas.push('');
     linhas.push(AVISO_LEGAL_RODAPE);
     return linhas.join('\n');
@@ -1016,7 +1017,8 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
   if (linhaCupom) linhas.push(linhaCupom);
 
   linhas.push('');
-  linhas.push(`🛒 ${link}`);
+  const isAmzRegular = isAmazonUrl(link);
+  linhas.push(isAmzRegular ? `🔗 ${link}` : `🛒 ${link}`);
   linhas.push('');
   linhas.push(AVISO_LEGAL_RODAPE);
 

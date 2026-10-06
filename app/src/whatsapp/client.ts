@@ -26,7 +26,7 @@ import {
   inserirOfertaHistorico,
   db
 } from '../db/database.js';
-import { processMessageText, downloadProductImage } from '../core/affiliate.js';
+import { processMessageText, downloadProductImage, isAmazonUrl, buildAmazonAffiliateUrl } from '../core/affiliate.js';
 import { extrairDadosOferta, registrarOfertaPlanilha } from '../core/sheets.js';
 import {
   isProdutoTCG,
@@ -940,6 +940,12 @@ export class WhatsAppManager {
         const termoBusca = dadosOferta.produto.replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ').replace(/\s+/g, ' ').trim();
         const slugBusca = encodeURIComponent(termoBusca).replace(/%20/g, '-');
         linkAfiliadoFinal = `https://lista.mercadolivre.com.br/${slugBusca}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(mattWord)}&matt_tool=${encodeURIComponent(mattTool)}&forceInApp=true`;
+      } else if (contemAmazon || isAmazonUrl(linkAfiliadoFinal)) {
+        if (resolvedProductUrl && isAmazonUrl(resolvedProductUrl)) {
+          linkAfiliadoFinal = resolvedProductUrl;
+        } else {
+          linkAfiliadoFinal = buildAmazonAffiliateUrl(linkAfiliadoFinal, amazonTag);
+        }
       }
       const parcelamentoExtraido = extrairParcelamento(rawText);
 

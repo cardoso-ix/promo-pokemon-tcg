@@ -169,3 +169,44 @@ test('Amazon Affiliate - Gerador de Anúncios PRESERVA link link.amazon e format
   assert.ok(resultado.textoGerado.includes('🔗 https://link.amazon/B0gbDXhDr'), 'Deve conter o prefixo 🔗 com o link exato');
   assert.ok(!resultado.textoGerado.includes('amazon.com.br/dp/'), 'NÃO deve expandir para o link longo');
 });
+
+test('Amazon Affiliate - Replicador CONVERTE link.amazon de concorrente para a tag do usuário e remove tag alheia', async () => {
+  const rawMsg = `🚨 Blister Triplo 30 Anos com Adesivo! 🇧🇷 🔥
+👉 R$99,99
+🔗 https://link.amazon/B0gbDXhDr`;
+
+  const res = await processMessageText(
+    rawMsg,
+    'grupo_concorrente@g.us',
+    'caed1312314',
+    '96097202',
+    '',
+    '',
+    '',
+    '',
+    '',
+    'tcgpokepromo-20',
+    true
+  );
+
+  assert.equal(res.contemAmazon, true);
+  assert.equal(res.linksConvertidos, 1);
+  assert.ok(res.novoTexto.includes('tag=tcgpokepromo-20'), 'Deve conter incondicionalmente a tag do usuário tcgpokepromo-20');
+  assert.ok(!res.novoTexto.includes('maurodonizett-20'), 'Tag do concorrente deve ser completamente eliminada');
+  assert.ok(!res.novoTexto.includes('tinyurl.com'), 'NUNCA deve enviar link para TinyURL');
+  assert.ok(res.novoTexto.includes('B0HDZYTNFD'), 'Deve extrair o ASIN B0HDZYTNFD do produto na Amazon');
+});
+
+test('Amazon Affiliate - formatarMensagemReplicada inclui 🔗 para links da Amazon', async () => {
+  const { formatarMensagemReplicada } = await import('../src/core/anuncio.js');
+
+  const copy = formatarMensagemReplicada({
+    tipo: 'regular',
+    titulo: 'Blister Triplo 30 Anos Pokémon',
+    precoPor: 'R$ 99,99',
+    linkAfiliado: 'https://www.amazon.com.br/dp/B0HDZYTNFD?tag=tcgpokepromo-20'
+  });
+
+  assert.ok(copy.includes('🔗 https://www.amazon.com.br/dp/B0HDZYTNFD?tag=tcgpokepromo-20'), 'Deve formatar link da Amazon com 🔗');
+  assert.ok(!copy.includes('🛒 https://www.amazon.com.br'), 'Não deve usar 🛒 para link da Amazon');
+});

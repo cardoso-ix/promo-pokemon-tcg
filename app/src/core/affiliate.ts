@@ -231,7 +231,14 @@ export async function expandUrl(
       const timeout = setTimeout(() => controller.abort(), 10000);
 
       const isAmazon = isAmazonUrl(currentUrl);
-      const headers: Record<string, string> = isAmazon
+      const isAmzShortService = currentUrl.includes('link.amazon') || currentUrl.includes('amzlinks.in');
+      const headers: Record<string, string> = isAmzShortService
+        ? {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9'
+          }
+        : isAmazon
         ? {
             'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -257,6 +264,20 @@ export async function expandUrl(
         count++;
       } else {
         lastHtml = await res.text();
+        // Se for página intermediária do amzlinks.in com HTML de redirecionamento, extrai a URL real de destino
+        if (currentUrl.includes('amzlinks.in') || lastHtml.includes('btn_url=')) {
+          const btnUrlMatch = lastHtml.match(/btn_url=([^&"'>\s]+)/i);
+          if (btnUrlMatch) {
+            try {
+              const decoded = decodeURIComponent(btnUrlMatch[1]);
+              if (isAmazonUrl(decoded)) {
+                currentUrl = decoded;
+                count++;
+                continue;
+              }
+            } catch {}
+          }
+        }
         break;
       }
     } catch {
@@ -700,6 +721,11 @@ export async function shortenUrlQuick(longUrl: string): Promise<string | null> {
   const clean = String(longUrl || '').trim();
   if (!clean || !clean.startsWith('http')) return null;
 
+  // NUNCA utilizar TinyURL para links da Amazon: TinyURL intercepta via VigLink e rouba comissão de afiliados
+  if (isAmazonUrl(clean)) {
+    return null;
+  }
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3500);
@@ -749,11 +775,14 @@ export function buildAmazonAffiliateUrl(rawUrl: string, amazonTag = 'tcgpokeprom
     const u = new URL(rawUrl);
     u.searchParams.delete('tag');
     u.searchParams.delete('linkCode');
+    u.searchParams.delete('linkId');
     u.searchParams.delete('ascsubtag');
     u.searchParams.delete('ref');
     u.searchParams.delete('ref_');
     u.searchParams.delete('camp');
     u.searchParams.delete('creative');
+    u.searchParams.delete('btn_ref');
+    u.searchParams.delete('btn_url');
     u.searchParams.set('tag', cleanTag);
     return u.toString();
   } catch {
@@ -882,18 +911,13 @@ export async function processMessageText(
       if (replicarAmazon) {
         const expansion = await expandUrl(rawUrl, cleanedText);
         resolvedUrl = expansion.resolvedUrl;
-        resolvedProductUrl = resolvedUrl;
         if (expansion.productImageUrl) {
           productImageUrl = expansion.productImageUrl;
         }
 
         const affiliateUrl = buildAmazonAffiliateUrl(resolvedUrl, amazonTag);
-        let finalAmazonLink = affiliateUrl;
-        const shortAmz = await shortenUrlQuick(affiliateUrl);
-        if (shortAmz) {
-          finalAmazonLink = shortAmz;
-        }
-        novoTexto = novoTexto.replace(rawUrlWithPunct, finalAmazonLink + trailingPunctuation);
+        resolvedProductUrl = affiliateUrl;
+        novoTexto = novoTexto.replace(rawUrlWithPunct, affiliateUrl + trailingPunctuation);
         linksConvertidos++;
       }
       continue;
