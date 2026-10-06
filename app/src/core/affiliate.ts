@@ -677,7 +677,7 @@ export function isMercadoLivreUrl(url: string): boolean {
 export function isAmazonUrl(url: string): boolean {
   if (!url || typeof url !== 'string') return false;
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
     const host = parsed.hostname.toLowerCase();
     return (
       host.includes('amazon.com.br') ||
@@ -686,7 +686,11 @@ export function isAmazonUrl(url: string): boolean {
       host.endsWith('.amazon') ||
       host.includes('amzlinks.in') ||
       host.includes('amzn.to') ||
-      host.includes('a.co')
+      host.includes('a.co') ||
+      host.includes('amazn.pro') ||
+      host.includes('amazn.') ||
+      host.includes('amzn.') ||
+      host === 'amazn.pro'
     );
   } catch {
     return false;
@@ -694,23 +698,76 @@ export function isAmazonUrl(url: string): boolean {
 }
 
 /**
- * Verifica se a URL é um link encurtado oficial da Amazon (amzn.to, a.co, link.amazon, amzlinks.in)
+ * Verifica se a URL é um link encurtado oficial da Amazon (amzn.to, a.co, link.amazon, amzlinks.in, amazn.pro)
  */
 export function isAmazonShortUrl(url: string): boolean {
   if (!url || typeof url !== 'string') return false;
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
     const host = parsed.hostname.toLowerCase();
     return (
       host.includes('link.amazon') ||
       host.endsWith('.amazon') ||
       host.includes('amzlinks.in') ||
       host.includes('amzn.to') ||
-      host.includes('a.co')
+      host.includes('a.co') ||
+      host.includes('amazn.pro') ||
+      host.includes('amazn.') ||
+      host.includes('amzn.') ||
+      host === 'amazn.pro'
     );
   } catch {
     return false;
   }
+}
+
+/**
+ * Encurta uma URL de afiliado da Amazon utilizando serviço de redirecionamento limpo
+ * sem anúncios e sem intermediários maliciosos (mantém 100% a comissão na tag do usuário).
+ */
+export async function encurtarLinkAmazon(targetUrl: string): Promise<string> {
+  const clean = String(targetUrl || '').trim();
+  if (!clean || !clean.startsWith('http')) return clean;
+
+  // Provedor 1: spoo.me (resposta ultrarrápida em ~400ms, redirect direto 301/302 sem ads)
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch('https://spoo.me', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: `url=${encodeURIComponent(clean)}`,
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const data = (await res.json()) as any;
+      if (data?.short_url && typeof data.short_url === 'string' && data.short_url.startsWith('http')) {
+        return data.short_url.replace('http://', 'https://');
+      }
+    }
+  } catch {}
+
+  // Provedor 2: ulvis.net (fallback resiliente de redirecionamento 301)
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(`https://ulvis.net/api.php?url=${encodeURIComponent(clean)}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const text = (await res.text()).trim();
+      if (text.startsWith('http')) {
+        return text;
+      }
+    }
+  } catch {}
+
+  return clean;
 }
 
 /**
@@ -916,8 +973,9 @@ export async function processMessageText(
         }
 
         const affiliateUrl = buildAmazonAffiliateUrl(resolvedUrl, amazonTag);
-        resolvedProductUrl = affiliateUrl;
-        novoTexto = novoTexto.replace(rawUrlWithPunct, affiliateUrl + trailingPunctuation);
+        const shortAmazonLink = await encurtarLinkAmazon(affiliateUrl);
+        resolvedProductUrl = shortAmazonLink;
+        novoTexto = novoTexto.replace(rawUrlWithPunct, shortAmazonLink + trailingPunctuation);
         linksConvertidos++;
       }
       continue;

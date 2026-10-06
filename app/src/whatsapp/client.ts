@@ -26,7 +26,7 @@ import {
   inserirOfertaHistorico,
   db
 } from '../db/database.js';
-import { processMessageText, downloadProductImage, isAmazonUrl, buildAmazonAffiliateUrl } from '../core/affiliate.js';
+import { processMessageText, downloadProductImage, isAmazonUrl, buildAmazonAffiliateUrl, encurtarLinkAmazon } from '../core/affiliate.js';
 import { extrairDadosOferta, registrarOfertaPlanilha } from '../core/sheets.js';
 import {
   isProdutoTCG,
@@ -941,10 +941,11 @@ export class WhatsAppManager {
         const slugBusca = encodeURIComponent(termoBusca).replace(/%20/g, '-');
         linkAfiliadoFinal = `https://lista.mercadolivre.com.br/${slugBusca}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(mattWord)}&matt_tool=${encodeURIComponent(mattTool)}&forceInApp=true`;
       } else if (contemAmazon || isAmazonUrl(linkAfiliadoFinal)) {
-        if (resolvedProductUrl && isAmazonUrl(resolvedProductUrl)) {
+        if (resolvedProductUrl) {
           linkAfiliadoFinal = resolvedProductUrl;
         } else {
-          linkAfiliadoFinal = buildAmazonAffiliateUrl(linkAfiliadoFinal, amazonTag);
+          const aff = buildAmazonAffiliateUrl(linkAfiliadoFinal, amazonTag);
+          linkAfiliadoFinal = await encurtarLinkAmazon(aff);
         }
       }
       const parcelamentoExtraido = extrairParcelamento(rawText);

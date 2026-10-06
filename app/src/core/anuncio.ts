@@ -11,6 +11,7 @@ import {
   isAmazonShortUrl,
   shortenUrlQuick,
   buildAmazonAffiliateUrl,
+  encurtarLinkAmazon,
   normalizarFotoAmazon,
   isImagemValidaProdutoAmazon
 } from './affiliate.js';
@@ -995,7 +996,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
     linhas.push('');
     linhas.push('⚡ *Corre antes que acabe o estoque!*');
-    const isAmzUrgencia = isAmazonUrl(link);
+    const isAmzUrgencia = isAmazonUrl(link) || /spoo\.me|ulvis\.net|is\.gd|amazn\./i.test(link);
     linhas.push(isAmzUrgencia ? `🔗 ${link}` : `🛒 ${link}`);
     linhas.push('');
     linhas.push(AVISO_LEGAL_RODAPE);
@@ -1017,7 +1018,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
   if (linhaCupom) linhas.push(linhaCupom);
 
   linhas.push('');
-  const isAmzRegular = isAmazonUrl(link);
+  const isAmzRegular = isAmazonUrl(link) || /spoo\.me|ulvis\.net|is\.gd|amazn\./i.test(link);
   linhas.push(isAmzRegular ? `🔗 ${link}` : `🛒 ${link}`);
   linhas.push('');
   linhas.push(AVISO_LEGAL_RODAPE);
@@ -1269,7 +1270,7 @@ export async function extrairDadosAnuncio(
         linkAfiliadoFinal = rawUrl;
       } else {
         const affiliateLong = buildAmazonAffiliateUrl(targetUrl, config.amazonTag || 'tcgpokepromo-20');
-        const shortAmz = await shortenUrlQuick(affiliateLong);
+        const shortAmz = await encurtarLinkAmazon(affiliateLong);
         linkAfiliadoFinal = shortAmz || affiliateLong;
       }
     } else {
