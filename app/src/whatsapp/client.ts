@@ -966,7 +966,21 @@ export class WhatsAppManager {
     }
 
     // 10. Testar Deduplicação Prévia de Hash no Banco dentro da janela de cooldown
-    const destinoIds = rotasCorrespondentes.flatMap((r) => r.destinos).filter((d) => d && d !== remoteJid);
+    let destinoIds = rotasCorrespondentes.flatMap((r) => r.destinos).filter((d) => d && d !== remoteJid);
+
+    // REGRA DE CURADORIA DE OFERTAS DA AMAZON:
+    // Se a mensagem for oferta da Amazon, ela NUNCA deve ir automaticamente para grupos oficiais.
+    // Ela é enviada EXCLUSIVAMENTE para o grupo TESTE para validação prévia humana.
+    if (contemAmazon) {
+      const rotaTeste = rotas.find((r) => r.nome.toLowerCase().includes('teste'));
+      const destinosTeste = rotaTeste && rotaTeste.destinos && rotaTeste.destinos.length > 0
+        ? rotaTeste.destinos
+        : [getConfig('grupo_teste_id', '120363429483901666@g.us')];
+
+      destinoIds = destinosTeste.filter((d) => d && d !== remoteJid);
+      console.log(`[Curadoria Amazon] Oferta da Amazon redirecionada exclusivamente para o grupo de TESTE: ${destinoIds.join(', ')}`);
+    }
+
     const destinoChatId = destinoIds.join(', ');
 
     const cooldownMinutos = parseInt(getConfig('cooldown_duplicidade_minutos', '30'), 10) || 30;
@@ -1129,7 +1143,7 @@ export class WhatsAppManager {
     // 14. Inserir Log Atômico com Status Real
     const statusFinal: 'enviado' | 'erro' = enviosSucesso > 0 ? 'enviado' : 'erro';
     const motivoFinal = enviosSucesso > 0
-      ? (contemAmazon ? 'copia_com_afiliado_amazon' : contemMercadoLivre ? 'copia_com_afiliado' : 'copia_sem_afiliado')
+      ? (contemAmazon ? 'copia_amazon_grupo_teste' : contemMercadoLivre ? 'copia_com_afiliado' : 'copia_sem_afiliado')
       : 'falha_envio_whatsapp';
 
     const log = insertLog({
