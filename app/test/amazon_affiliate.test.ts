@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   isAmazonUrl,
+  isAmazonShortUrl,
   extractAmazonAsin,
   buildAmazonAffiliateUrl,
   isImagemValidaProdutoAmazon,
   normalizarFotoAmazon,
+  shortenUrlQuick,
   processMessageText
 } from '../src/core/affiliate.js';
 
@@ -16,6 +18,13 @@ test('Amazon Affiliate - Detecção de URLs da Amazon', () => {
   assert.equal(isAmazonUrl('https://a.co/d/xxxxxx'), true);
   assert.equal(isAmazonUrl('https://mercadolivre.com.br/p/MLB123'), false);
   assert.equal(isAmazonUrl('https://shopee.com.br/item'), false);
+});
+
+test('Amazon Affiliate - Identificação de Links Encurtados (amzn.to e a.co)', () => {
+  assert.equal(isAmazonShortUrl('https://amzn.to/3Vj4xX'), true);
+  assert.equal(isAmazonShortUrl('https://a.co/d/abc1234'), true);
+  assert.equal(isAmazonShortUrl('https://www.amazon.com.br/dp/B0DFZ49J38'), false);
+  assert.equal(isAmazonShortUrl('https://mercadolivre.com.br'), false);
 });
 
 test('Amazon Affiliate - Extração de ASIN (Amazon Standard Identification Number)', () => {
@@ -76,7 +85,7 @@ Aproveitem antes que acabe!`;
 
   assert.equal(res.contemAmazon, true);
   assert.equal(res.linksConvertidos, 1);
-  assert.ok(res.novoTexto.includes('https://www.amazon.com.br/dp/B0DFZ49J38?tag=tcgpokepromo-20'));
+  assert.ok(res.novoTexto.includes('tag=tcgpokepromo-20') || res.novoTexto.includes('tinyurl.com'));
   assert.ok(!res.novoTexto.includes('concorrente-20'));
 });
 
@@ -86,6 +95,29 @@ test('Amazon Affiliate - Normalização de Fotos com Overlays e Crops complexos 
   assert.equal(isImagemValidaProdutoAmazon(fotoComCropOverlay), true);
   const normalizada = normalizarFotoAmazon(fotoComCropOverlay);
   assert.equal(normalizada, 'https://m.media-amazon.com/images/I/71Dkykaam9L._AC_SL1500_.jpg');
+});
+
+test('Amazon Affiliate - Gerador de Anúncios PRESERVA link encurtado oficial amzn.to colado pelo usuário', async () => {
+  const { extrairDadosAnuncio } = await import('../src/core/anuncio.js');
+
+  const linkCurtoOficial = 'https://amzn.to/3Vj4xX9';
+  const resultado = await extrairDadosAnuncio(
+    {
+      url: linkCurtoOficial,
+      titulo: 'Pokémon TCG Blister Triplo Oficial',
+      precoPor: '99,99'
+    },
+    {
+      mattWord: 'tcgpokepromo-20',
+      mattTool: '12345678',
+      amazonTag: 'tcgpokepromo-20'
+    }
+  );
+
+  assert.equal(resultado.ok, true);
+  assert.equal(resultado.linkAfiliado, linkCurtoOficial, 'Deve preservar rigorosamente o link amzn.to digitado pelo usuário');
+  assert.ok(resultado.textoGerado.includes(linkCurtoOficial), 'A copy promocional gerada deve conter o link amzn.to encurtado');
+  assert.ok(!resultado.textoGerado.includes('amazon.com.br/dp/'), 'A copy NÃO deve expandir para o link longo da Amazon');
 });
 
 test('Amazon Affiliate - Extração Completa no Gerador de Anúncios com link da Amazon', async () => {
@@ -106,7 +138,7 @@ test('Amazon Affiliate - Extração Completa no Gerador de Anúncios com link da
   assert.equal(resultado.ok, true);
   assert.ok(resultado.titulo.length > 5, 'Título deve ser extraído e formatado');
   assert.ok(!resultado.titulo.includes('Amazon.com.br'), 'Título não deve conter marca da Amazon no final');
-  assert.ok(resultado.linkAfiliado.includes('tag=tcgpokepromo-20'), 'Link deve conter a tag do afiliado');
+  assert.ok(resultado.linkAfiliado.includes('tag=tcgpokepromo-20') || resultado.linkAfiliado.includes('tinyurl.com'), 'Link deve ser encurtado ou conter tag');
   assert.ok(resultado.imageUrl !== null, 'Imagem não pode ser nula');
   assert.ok(resultado.imageUrl!.includes('media-amazon.com') || resultado.imageUrl!.includes('mlstatic.com'), 'Imagem deve ser oficial ou fallback TCG');
 });

@@ -670,6 +670,52 @@ export function isAmazonUrl(url: string): boolean {
 }
 
 /**
+ * Verifica se a URL é um link encurtado oficial da Amazon (amzn.to, a.co)
+ */
+export function isAmazonShortUrl(url: string): boolean {
+  if (!url || typeof url !== 'string') return false;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return host.includes('amzn.to') || host.includes('a.co');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Encurta uma URL longa de forma ultra rápida com timeout resiliente de 3.5s
+ * Utiliza o TinyURL (gratuito, público e sem necessidade de chave de API)
+ */
+export async function shortenUrlQuick(longUrl: string): Promise<string | null> {
+  const clean = String(longUrl || '').trim();
+  if (!clean || !clean.startsWith('http')) return null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3500);
+
+    const apiEndpoint = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(clean)}`;
+    const res = await fetch(apiEndpoint, {
+      method: 'GET',
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    if (res.ok) {
+      const short = (await res.text()).trim();
+      if (short.startsWith('http')) {
+        return short;
+      }
+    }
+  } catch {
+    // Falha silenciosa com fallback gracioso para o link longo
+  }
+
+  return null;
+}
+
+/**
  * Extrai o código único ASIN (10 caracteres) de produtos da Amazon
  */
 export function extractAmazonAsin(url: string): string | null {
@@ -833,7 +879,12 @@ export async function processMessageText(
         }
 
         const affiliateUrl = buildAmazonAffiliateUrl(resolvedUrl, amazonTag);
-        novoTexto = novoTexto.replace(rawUrlWithPunct, affiliateUrl + trailingPunctuation);
+        let finalAmazonLink = affiliateUrl;
+        const shortAmz = await shortenUrlQuick(affiliateUrl);
+        if (shortAmz) {
+          finalAmazonLink = shortAmz;
+        }
+        novoTexto = novoTexto.replace(rawUrlWithPunct, finalAmazonLink + trailingPunctuation);
         linksConvertidos++;
       }
       continue;

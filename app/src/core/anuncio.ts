@@ -8,6 +8,8 @@ import {
   buildAffiliateUrl,
   isImagemValidaProdutoMl,
   isAmazonUrl,
+  isAmazonShortUrl,
+  shortenUrlQuick,
   buildAmazonAffiliateUrl,
   normalizarFotoAmazon,
   isImagemValidaProdutoAmazon
@@ -1258,7 +1260,14 @@ export async function extrairDadosAnuncio(
         }
       }
     } else if (isAmazon) {
-      linkAfiliadoFinal = buildAmazonAffiliateUrl(targetUrl, config.amazonTag || 'tcgpokepromo-20');
+      if (isAmazonShortUrl(rawUrl)) {
+        // Preserva fielmente o link encurtado oficial informado pelo usuário (ex: amzn.to ou a.co)
+        linkAfiliadoFinal = rawUrl;
+      } else {
+        const affiliateLong = buildAmazonAffiliateUrl(targetUrl, config.amazonTag || 'tcgpokepromo-20');
+        const shortAmz = await shortenUrlQuick(affiliateLong);
+        linkAfiliadoFinal = shortAmz || affiliateLong;
+      }
     } else {
       // Shopee ou outros e-commerces mantém o link informado (já com tag de afiliado se fornecido)
       linkAfiliadoFinal = rawUrl;
