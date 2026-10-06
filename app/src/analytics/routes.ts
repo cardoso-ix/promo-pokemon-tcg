@@ -6,6 +6,7 @@ import { analyticsService } from './analytics.service.js';
 import { getMetaInsightsStats, getMeliOrdersStats, getConfig } from '../db/database.js';
 import { getBrazilToday, getBrazilDaysAgo } from '../utils/date.js';
 import { financasService } from './financas.service.js';
+import { processarImportacaoAmazon, lancamentoRapidoAmazon, listarRelatoriosAmazon } from './amazon-financas.service.js';
 
 export async function registerAnalyticsRoutes(app: FastifyInstance) {
   // ==========================================
@@ -828,4 +829,94 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   };
   app.post('/api/financas/despesas', handleSaveDespesa);
   app.post('/api/bot/financas/despesas', handleSaveDespesa);
+
+  // ==========================================
+  // ROTAS DE FINANÇAS - AMAZON ASSOCIATES
+  // ==========================================
+
+  // 1. Importação de Relatório CSV / TSV da Amazon Associates
+  const handleImportAmazonRelatorio = async (
+    req: FastifyRequest<{
+      Body: {
+        nomeArquivo?: string;
+        conteudo?: string;
+      };
+    }>,
+    reply: FastifyReply
+  ) => {
+    try {
+      const nomeArquivo = req.body?.nomeArquivo || 'relatorio_amazon.csv';
+      const conteudo = req.body?.conteudo || '';
+
+      if (!conteudo || conteudo.trim().length === 0) {
+        return reply.status(400).send({ ok: false, error: 'Conteúdo do relatório CSV da Amazon está vazio.' });
+      }
+
+      const resultado = processarImportacaoAmazon(nomeArquivo, conteudo);
+      if (!resultado.ok) {
+        return reply.status(422).send({
+          ok: false,
+          error: 'Não foi possível extrair dados válidos do arquivo. Verifique se o relatório contém colunas de Data, Comissões e Vendas.'
+        });
+      }
+
+      return {
+        ok: true,
+        message: `Relatório importado com sucesso! ${resultado.diasAfetados} dias consolidados no DRE.`,
+        dados: resultado
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  };
+  app.post('/api/financas/amazon/importar-relatorio', handleImportAmazonRelatorio);
+  app.post('/api/bot/financas/amazon/importar-relatorio', handleImportAmazonRelatorio);
+
+  // 2. Lançamento rápido de comissões diárias da Amazon
+  const handleLancamentoRapidoAmazon = async (
+    req: FastifyRequest<{
+      Body: {
+        data: string;
+        comissao: number;
+        vendas?: number;
+        itens?: number;
+        descricao?: string;
+      };
+    }>,
+    reply: FastifyReply
+  ) => {
+    try {
+      const { data, comissao, vendas, itens, descricao } = req.body || {};
+      if (!data || comissao === undefined) {
+        return reply.status(400).send({ ok: false, error: 'Data e valor da Comissão são obrigatórios.' });
+      }
+
+      const sucesso = lancamentoRapidoAmazon({
+        data,
+        comissao: Number(comissao),
+        vendas: vendas !== undefined ? Number(vendas) : undefined,
+        itens: itens !== undefined ? Number(itens) : undefined,
+        descricao
+      });
+
+      return {
+        ok: sucesso,
+        message: sucesso ? 'Lançamento da Amazon salvo com sucesso no DRE!' : 'Erro ao persistir lançamento.'
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  };
+  app.post('/api/financas/amazon/lancamento-rapido', handleLancamentoRapidoAmazon);
+  app.post('/api/bot/financas/amazon/lancamento-rapido', handleLancamentoRapidoAmazon);
+
+  // 3. Listagem de relatórios importados da Amazon
+  const handleListarRelatoriosAmazon = async () => {
+    const relatorios = listarRelatoriosAmazon();
+    return { ok: true, relatorios };
+  };
+  app.get('/api/financas/amazon/relatorios', handleListarRelatoriosAmazon);
+  app.get('/api/bot/financas/amazon/relatorios', handleListarRelatoriosAmazon);
 }

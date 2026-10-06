@@ -11,6 +11,9 @@ export interface BalancoItem {
   gastoCampanhas: number;
   lucroBruto: number;
   vendasBrutas: number;
+  comissaoAmazon?: number;
+  vendasAmazon?: number;
+  itensAmazon?: number;
   saldoDia: number;
   blendedRoas: number;
   cliquesMeta: number;
@@ -22,9 +25,12 @@ export interface BalancoItem {
 
 export interface BalancoMensalResult {
   mesReferencia: string;
-  totalLucroBruto: number; // Comissões confirmadas Meli
+  totalLucroBruto: number; // Comissões confirmadas Meli + Amazon
+  totalComissaoAmazon?: number;
+  totalVendasAmazon?: number;
+  totalItensAmazon?: number;
   totalGastoCampanhas: number; // Investimento Meta Ads
-  totalVendasBrutas: number; // Faturamento enviado ao Meli
+  totalVendasBrutas: number; // Faturamento enviado ao Meli + Amazon
   resultadoLiquido: number; // Lucro operacional
   valorReinvestimentoCampanhas: number; // 70%
   valorLucroDisponivel: number; // 30%
@@ -83,9 +89,22 @@ export class FinancasService {
           origem TEXT DEFAULT 'auto',
           descricao TEXT,
           categoria TEXT,
+          comissao_amazon REAL DEFAULT 0.0,
+          vendas_amazon REAL DEFAULT 0.0,
+          itens_amazon INTEGER DEFAULT 0,
           atualizado_em DATETIME DEFAULT CURRENT_TIMESTAMP
         );
       `);
+
+      try {
+        db.prepare('ALTER TABLE financas_lancamentos_diarios ADD COLUMN comissao_amazon REAL DEFAULT 0.0').run();
+      } catch {}
+      try {
+        db.prepare('ALTER TABLE financas_lancamentos_diarios ADD COLUMN vendas_amazon REAL DEFAULT 0.0').run();
+      } catch {}
+      try {
+        db.prepare('ALTER TABLE financas_lancamentos_diarios ADD COLUMN itens_amazon INTEGER DEFAULT 0').run();
+      } catch {}
 
       // Garante bootstrap do dia 2026-09-27 caso ainda não esteja preenchido
       try {
@@ -268,10 +287,16 @@ export class FinancasService {
         origem: string | null;
         descricao: string | null;
         categoria: string | null;
+        comissao_amazon?: number;
+        vendas_amazon?: number;
+        itens_amazon?: number;
       }
 
       const lancamentosSalvos = db.prepare(`
-        SELECT data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+        SELECT data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria,
+               COALESCE(comissao_amazon, 0) as comissao_amazon,
+               COALESCE(vendas_amazon, 0) as vendas_amazon,
+               COALESCE(itens_amazon, 0) as itens_amazon
         FROM financas_lancamentos_diarios
         WHERE data_lancamento LIKE ?
       `).all(`${mesRef}-%`) as LancamentoSalvoRow[];
@@ -283,6 +308,9 @@ export class FinancasService {
         const comissaoLiveHoje = isHoje ? (affiliate?.commissionsToday || 0) : 0;
         // O dia de hoje é dinâmico: se a API ao vivo do ML trouxer comissões superiores, prioriza o fluxo vivo
         const apiTemMaisRecente = isHoje && comissaoLiveHoje > Number(l.lucro_bruto);
+        const comissaoAmazon = Number(l.comissao_amazon) || 0;
+        const vendasAmazon = Number(l.vendas_amazon) || 0;
+        const itensAmazon = Number(l.itens_amazon) || 0;
 
         if (!mapaDias[dia]) {
           mapaDias[dia] = {
@@ -290,6 +318,9 @@ export class FinancasService {
             gastoCampanhas: Number(l.gasto_campanhas) || 0,
             lucroBruto: Number(l.lucro_bruto) || 0,
             vendasBrutas: Number(l.vendas_brutas) || (Number(l.lucro_bruto) ? Number(l.lucro_bruto) * 10 : 0),
+            comissaoAmazon,
+            vendasAmazon,
+            itensAmazon,
             saldoDia: (Number(l.lucro_bruto) || 0) - (Number(l.gasto_campanhas) || 0),
             blendedRoas: 0,
             cliquesMeta: Number(l.cliques_meta) || 0,
@@ -299,6 +330,18 @@ export class FinancasService {
             origem: apiTemMaisRecente ? 'auto' : origemTipo
           };
         } else {
+          // Se houver dados da Amazon persistidos, incorpora
+          if (comissaoAmazon > 0) {
+            mapaDias[dia].comissaoAmazon = comissaoAmazon;
+            mapaDias[dia].vendasAmazon = vendasAmazon;
+            mapaDias[dia].itensAmazon = itensAmazon;
+            // Se o lucro bruto acumulado do dia estiver menor que a soma de comissões, ajusta
+            if (Number(l.lucro_bruto) > mapaDias[dia].lucroBruto) {
+              mapaDias[dia].lucroBruto = Number(l.lucro_bruto);
+              mapaDias[dia].vendasBrutas = Number(l.vendas_brutas);
+            }
+          }
+
           // Se for manual e não houver dados ao vivo mais recentes da API, sobrepõe com os dados persistidos
           if ((l.origem === 'manual' && !apiTemMaisRecente) || mapaDias[dia].lucroBruto === 0) {
             if (l.lucro_bruto !== undefined && (l.origem === 'manual' || Number(l.lucro_bruto) > 0)) {
@@ -414,6 +457,10 @@ export class FinancasService {
       item.blendedRoas = item.gastoCampanhas > 0 && item.vendasBrutas > 0 ? Number((item.vendasBrutas / item.gastoCampanhas).toFixed(2)) : 0;
     }
 
+    const totalComissaoAmazon = Number(listaItens.reduce((acc, i) => acc + (i.comissaoAmazon || 0), 0).toFixed(2));
+    const totalVendasAmazon = Number(listaItens.reduce((acc, i) => acc + (i.vendasAmazon || 0), 0).toFixed(2));
+    const totalItensAmazon = listaItens.reduce((acc, i) => acc + (i.itensAmazon || 0), 0);
+
     const resultadoLiquido = Math.max(0, totalLucroBruto - totalGastoCampanhas);
     const valorReinvestimentoCampanhas = Number((resultadoLiquido * 0.70).toFixed(2));
     const valorLucroDisponivel = Number((resultadoLiquido * 0.30).toFixed(2));
@@ -425,6 +472,9 @@ export class FinancasService {
     return {
       mesReferencia: mesRef,
       totalLucroBruto: Number(totalLucroBruto.toFixed(2)),
+      totalComissaoAmazon,
+      totalVendasAmazon,
+      totalItensAmazon,
       totalGastoCampanhas: Number(totalGastoCampanhas.toFixed(2)),
       totalVendasBrutas: Number(totalVendasBrutas.toFixed(2)),
       resultadoLiquido: Number(resultadoLiquido.toFixed(2)),

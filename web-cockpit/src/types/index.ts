@@ -186,6 +186,10 @@ export interface BalancoFinanceiro {
   mesReferencia: string;
   totalGastoCampanhas: number;
   totalLucroBruto: number;
+  totalComissaoAmazon?: number;
+  totalVendasAmazon?: number;
+  totalItensAmazon?: number;
+  totalVendasBrutas?: number;
   resultadoLiquido: number;
   status: 'lucro' | 'prejuizo' | 'neutro';
   percentualReinvestimento: number;
@@ -212,10 +216,26 @@ export interface LancamentoDiario {
   lucroBruto?: number;
   vendasBrutas?: number;
   vendas_brutas?: number;
+  comissaoAmazon?: number;
+  vendasAmazon?: number;
+  itensAmazon?: number;
   saldoDia?: number;
   cliquesMeta?: number;
   impressoesMeta?: number;
   blendedRoas?: number;
+  origem?: string;
+}
+
+export interface AmazonRelatorioItem {
+  id: number;
+  nome_arquivo: string;
+  periodo_inicio?: string;
+  periodo_fim?: string;
+  itens_enviados: number;
+  receita_gerada: number;
+  comissoes_geradas: number;
+  linhas_processadas: number;
+  criado_em: string;
 }
 
 export interface FaturaDespesaPdf {

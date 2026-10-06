@@ -19,7 +19,8 @@ import type {
   RelatorioMensalExecutivo,
   WhatsAppGroupItem,
   WhatsAppContactItem,
-  WhatsAppContactsStats
+  WhatsAppContactsStats,
+  AmazonRelatorioItem
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro e resiliência
@@ -463,6 +464,26 @@ export const api = {
     request<{ ok: boolean; uploads: UploadPlanilhaFinancas[] }>(`/api/financas/uploads?mes=${encodeURIComponent(mes)}`).then(r => r.uploads || []),
   deleteUploadPlanilha: (id: number) =>
     request<{ ok: boolean; message: string }>(`/api/financas/upload/${id}`, { method: 'DELETE' }),
+
+  // --- AMAZON ASSOCIATES: IMPORTAÇÃO E FINANÇAS ---
+  importarRelatorioAmazon: (nomeArquivo: string, conteudo: string) =>
+    request<{ ok: boolean; message: string; dados: any }>('/api/financas/amazon/importar-relatorio', {
+      method: 'POST',
+      body: JSON.stringify({ nomeArquivo, conteudo })
+    }),
+  lancamentoRapidoAmazon: (dados: {
+    data: string;
+    comissao: number;
+    vendas?: number;
+    itens?: number;
+    descricao?: string;
+  }) =>
+    request<{ ok: boolean; message: string }>('/api/financas/amazon/lancamento-rapido', {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    }),
+  getRelatoriosAmazon: () =>
+    request<{ ok: boolean; relatorios: AmazonRelatorioItem[] }>('/api/financas/amazon/relatorios').then(r => r.relatorios || []),
   uploadPlanilhaSemanal: async (formData: FormData) => {
     const res = await fetch('/api/financas/upload', {
       method: 'POST',

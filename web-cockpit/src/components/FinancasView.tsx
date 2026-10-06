@@ -18,7 +18,10 @@ import {
   Check,
   Share2,
   ArrowUpRight,
-  Clock
+  Clock,
+  Upload,
+  ShoppingBag,
+  FileUp
 } from 'lucide-react';
 import {
   BarChart,
@@ -33,7 +36,8 @@ import type {
   BalancoFinanceiro,
   LancamentoDiario,
   MetaAdBalanceInfo,
-  RelatorioMensalExecutivo
+  RelatorioMensalExecutivo,
+  AmazonRelatorioItem
 } from '../types/index.ts';
 import { api } from '../services/api.ts';
 import { copiarParaClipboard } from '../utils/clipboard.ts';
@@ -72,12 +76,89 @@ export const FinancasView: React.FC = () => {
   const [novaDescricao, setNovaDescricao] = useState('');
   const [novaCategoria, setNovaCategoria] = useState('mercado_livre');
 
+  // Modal Amazon Associates (Importação de Extrato & Lançamento Rápido)
+  const [showModalAmazon, setShowModalAmazon] = useState(false);
+  const [arquivoAmazon, setArquivoAmazon] = useState<File | null>(null);
+  const [importandoAmazon, setImportandoAmazon] = useState(false);
+  const [relatoriosAmazon, setRelatoriosAmazon] = useState<AmazonRelatorioItem[]>([]);
+  const [abaAmazon, setAbaAmazon] = useState<'upload' | 'manual' | 'historico'>('upload');
+  const [amazonManualData, setAmazonManualData] = useState(new Date().toISOString().split('T')[0]);
+  const [amazonManualComissao, setAmazonManualComissao] = useState('');
+  const [amazonManualVendas, setAmazonManualVendas] = useState('');
+  const [amazonManualItens, setAmazonManualItens] = useState('1');
+  const [amazonManualDesc, setAmazonManualDesc] = useState('');
+
   // Mensagens de Feedback
   const [feedback, setFeedback] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
 
   const mostrarFeedback = (tipo: 'sucesso' | 'erro', texto: string) => {
     setFeedback({ tipo, texto });
     setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const carregarRelatoriosAmazon = async () => {
+    try {
+      const lista = await api.getRelatoriosAmazon();
+      setRelatoriosAmazon(lista);
+    } catch {
+      setRelatoriosAmazon([]);
+    }
+  };
+
+  const handleUploadCsvAmazon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!arquivoAmazon) {
+      return mostrarFeedback('erro', 'Por favor, selecione um arquivo de relatório da Amazon (CSV).');
+    }
+    setImportandoAmazon(true);
+    try {
+      const conteudo = await arquivoAmazon.text();
+      const res = await api.importarRelatorioAmazon(arquivoAmazon.name, conteudo);
+      if (res.ok) {
+        mostrarFeedback('sucesso', res.message || 'Relatório Amazon importado e consolidado com sucesso no DRE!');
+        setArquivoAmazon(null);
+        carregarBalancoELancamentos(mesAtivo);
+        carregarRelatoriosAmazon();
+        setShowModalAmazon(false);
+      } else {
+        mostrarFeedback('erro', 'Falha ao processar arquivo da Amazon.');
+      }
+    } catch (err: unknown) {
+      mostrarFeedback('erro', err instanceof Error ? err.message : 'Erro ao processar relatório');
+    } finally {
+      setImportandoAmazon(false);
+    }
+  };
+
+  const handleLancamentoRapidoAmazon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const comissao = parseFloat(amazonManualComissao.replace(',', '.')) || 0;
+    const vendas = amazonManualVendas ? parseFloat(amazonManualVendas.replace(',', '.')) : (comissao * 10);
+    const itens = parseInt(amazonManualItens, 10) || 1;
+
+    if (comissao <= 0) {
+      return mostrarFeedback('erro', 'Informe um valor válido de comissão da Amazon.');
+    }
+
+    try {
+      const res = await api.lancamentoRapidoAmazon({
+        data: amazonManualData,
+        comissao,
+        vendas,
+        itens,
+        descricao: amazonManualDesc || 'Lançamento Rápido Amazon Associates'
+      });
+      if (res.ok) {
+        mostrarFeedback('sucesso', 'Comissão da Amazon lançada com sucesso no DRE!');
+        setAmazonManualComissao('');
+        setAmazonManualVendas('');
+        setAmazonManualDesc('');
+        carregarBalancoELancamentos(mesAtivo);
+        setShowModalAmazon(false);
+      }
+    } catch (err: unknown) {
+      mostrarFeedback('erro', err instanceof Error ? err.message : 'Falha ao lançar comissão');
+    }
   };
 
   const carregarMetaBalance = async () => {
@@ -123,6 +204,7 @@ export const FinancasView: React.FC = () => {
   useEffect(() => {
     carregarMeses();
     carregarMetaBalance();
+    carregarRelatoriosAmazon();
   }, []);
 
   useEffect(() => {
@@ -241,9 +323,22 @@ export const FinancasView: React.FC = () => {
 
   // Recálculo Reativo dos KPIs do DRE para o Período Filtrado
   const kpisDRE = React.useMemo(() => {
+    const comissaoAmazon = lancamentosFiltrados.reduce((acc, l) => acc + (Number(l.comissaoAmazon) || 0), 0);
+    const vendasAmazon = lancamentosFiltrados.reduce((acc, l) => acc + (Number(l.vendasAmazon) || 0), 0);
+    const itensAmazon = lancamentosFiltrados.reduce((acc, l) => acc + (Number(l.itensAmazon) || 0), 0);
+
     if (periodoFiltro === 'mes' && balanco) {
+      const comissaoAmazonMes = balanco.totalComissaoAmazon ?? comissaoAmazon;
+      const vendasAmazonMes = balanco.totalVendasAmazon ?? vendasAmazon;
+      const itensAmazonMes = balanco.totalItensAmazon ?? itensAmazon;
+      const comissaoMeliMes = Math.max(0, (balanco.totalLucroBruto || 0) - comissaoAmazonMes);
+
       return {
         lucroBruto: balanco.totalLucroBruto || 0,
+        comissaoMeli: comissaoMeliMes,
+        comissaoAmazon: comissaoAmazonMes,
+        vendasAmazon: vendasAmazonMes,
+        itensAmazon: itensAmazonMes,
         gastoCampanhas: balanco.totalGastoCampanhas || 0,
         resultadoLiquido: balanco.resultadoLiquido || 0,
         reinvestimento: balanco.valorReinvestimentoCampanhas || 0,
@@ -256,6 +351,7 @@ export const FinancasView: React.FC = () => {
 
     const lucroBruto = lancamentosFiltrados.reduce((acc, l) => acc + (Number(l.lucroBruto ?? l.lucro_bruto) || 0), 0);
     const gastoCampanhas = lancamentosFiltrados.reduce((acc, l) => acc + (Number(l.gastoCampanhas ?? l.gasto_campanhas) || 0), 0);
+    const comissaoMeli = Math.max(0, lucroBruto - comissaoAmazon);
     const resultadoLiquido = lucroBruto - gastoCampanhas;
     const reinvestimento = resultadoLiquido > 0 ? resultadoLiquido * 0.7 : 0;
     const lucroDisponivel = resultadoLiquido > 0 ? resultadoLiquido * 0.3 : 0;
@@ -265,6 +361,10 @@ export const FinancasView: React.FC = () => {
 
     return {
       lucroBruto,
+      comissaoMeli,
+      comissaoAmazon,
+      vendasAmazon,
+      itensAmazon,
       gastoCampanhas,
       resultadoLiquido,
       reinvestimento,
@@ -278,10 +378,15 @@ export const FinancasView: React.FC = () => {
   // Dados para o Gráfico Comparativo Recharts Reativo
   const chartData = [
     {
-      nome: 'Lucro ML',
-      valor: kpisDRE.lucroBruto,
+      nome: 'Comissão Meli',
+      valor: kpisDRE.comissaoMeli,
       fill: '#10b981'
     },
+    ...(kpisDRE.comissaoAmazon > 0 ? [{
+      nome: 'Comissão Amazon',
+      valor: kpisDRE.comissaoAmazon,
+      fill: '#f59e0b'
+    }] : []),
     {
       nome: 'Meta Ads',
       valor: kpisDRE.gastoCampanhas,
@@ -373,6 +478,23 @@ export const FinancasView: React.FC = () => {
             <span>Novo Ajuste</span>
           </button>
 
+          <button
+            onClick={() => {
+              carregarRelatoriosAmazon();
+              setShowModalAmazon(true);
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 text-xs font-bold border border-amber-500/30 transition-all active:scale-95 cursor-pointer shadow-md shadow-amber-500/10"
+            title="Importar extrato CSV de ganhos e comissões da Amazon Associates"
+          >
+            <Upload className="w-3.5 h-3.5 text-amber-400" />
+            <span>Extrato Amazon</span>
+            {kpisDRE.comissaoAmazon > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-500/30 text-amber-200 text-[10px] font-mono">
+                R$ {formatarMoeda(kpisDRE.comissaoAmazon)}
+              </span>
+            )}
+          </button>
+
         </div>
       </div>
 
@@ -459,23 +581,19 @@ export const FinancasView: React.FC = () => {
       <div className="space-y-6">
           {/* Grid de KPIs do DRE Mensal */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {/* Card 1: Lucro Bruto / Comissões Mercado Livre */}
+            {/* Card 1: Lucro Bruto / Comissões Multicanal */}
             <div className="glass-panel rounded-2xl p-5 border border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 to-transparent">
               <span className="text-[11px] text-emerald-400 uppercase tracking-wider font-bold">
-                Lucro Bruto (Mercado Livre)
+                Lucro Bruto (Comissões)
               </span>
               <div className="text-2xl font-heading font-extrabold text-white mt-1">
                 R$ {formatarMoeda(kpisDRE.lucroBruto)}
               </div>
-              <span className="text-[11px] text-slate-400 mt-1 inline-block">
-                {periodoFiltro === 'dia'
-                  ? `Filtro: Dia ${diaSelecionado}`
-                  : periodoFiltro === 'semana'
-                  ? 'Filtro: Últimos 7 dias (Semana)'
-                  : periodoFiltro === 'todos'
-                  ? 'Total acumulado geral'
-                  : `Total acumulado no mês ${mesAtivo}`}
-              </span>
+              <div className="flex items-center gap-2 mt-1 text-[11px] font-mono">
+                <span className="text-emerald-400">ML: R$ {formatarMoeda(kpisDRE.comissaoMeli)}</span>
+                <span className="text-slate-600">|</span>
+                <span className="text-amber-400">Amazon: R$ {formatarMoeda(kpisDRE.comissaoAmazon)}</span>
+              </div>
             </div>
 
             {/* Card 2: Investimento Total em Campanhas Meta Ads */}
@@ -648,7 +766,7 @@ export const FinancasView: React.FC = () => {
                     <th className="py-2.5 px-3">Data</th>
                     <th className="py-2.5 px-3 text-right">Gasto Meta Ads</th>
                     <th className="py-2.5 px-3 text-right">Cliques / Impr.</th>
-                    <th className="py-2.5 px-3 text-right">Comissões Meli</th>
+                    <th className="py-2.5 px-3 text-right">Comissões (ML / Amazon)</th>
                     <th className="py-2.5 px-3 text-right">Vendas Geradas</th>
                     <th className="py-2.5 px-3 text-right">Saldo Líquido</th>
                     <th className="py-2.5 px-3 text-right">Blended ROAS</th>
@@ -684,6 +802,7 @@ export const FinancasView: React.FC = () => {
                       const gasto = Number(l.gastoCampanhas ?? l.gasto_campanhas) || 0;
                       const lucro = Number(l.lucroBruto ?? l.lucro_bruto) || 0;
                       const vendas = Number(l.vendasBrutas ?? l.vendas_brutas) || (lucro > 0 ? lucro * 10 : 0);
+                      const comissaoAmz = Number(l.comissaoAmazon) || 0;
                       const saldo = typeof l.saldoDia === 'number' ? l.saldoDia : lucro - gasto;
                       const cliques = Number(l.cliquesMeta || 0);
                       const impressoes = Number(l.impressoesMeta || 0);
@@ -694,7 +813,14 @@ export const FinancasView: React.FC = () => {
                       return (
                         <tr key={l.id || idx} className="hover:bg-white/[0.02]">
                           <td className="py-2.5 px-3 font-mono font-medium text-slate-300">
-                            {dataLanc}
+                            <div className="flex items-center gap-1.5">
+                              <span>{dataLanc}</span>
+                              {comissaoAmz > 0 && (
+                                <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[9px] font-sans font-bold border border-amber-500/30">
+                                  Amazon
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-2.5 px-3 text-right font-mono text-red-400">
                             {gasto > 0 ? `R$ ${formatarMoeda(gasto)}` : <span className="text-slate-600">—</span>}
@@ -706,8 +832,19 @@ export const FinancasView: React.FC = () => {
                               <span className="text-slate-600">—</span>
                             )}
                           </td>
-                          <td className="py-2.5 px-3 text-right font-mono text-emerald-400 font-semibold">
-                            {lucro > 0 ? `R$ ${formatarMoeda(lucro)}` : <span className="text-slate-600">—</span>}
+                          <td className="py-2.5 px-3 text-right font-mono font-semibold">
+                            {lucro > 0 ? (
+                              <div className="flex flex-col items-end">
+                                <span className="text-emerald-400">R$ {formatarMoeda(lucro)}</span>
+                                {comissaoAmz > 0 && (
+                                  <span className="text-[10px] text-amber-400 font-normal">
+                                    Amazon: R$ {formatarMoeda(comissaoAmz)}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-600">—</span>
+                            )}
                           </td>
                           <td className="py-2.5 px-3 text-right font-mono text-cyan-300">
                             {vendas > 0 ? `R$ ${formatarMoeda(vendas)}` : <span className="text-slate-600">—</span>}
@@ -1229,6 +1366,315 @@ export const FinancasView: React.FC = () => {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {/* MODAL: EXTRATO & GESTÃO FINANCEIRA AMAZON ASSOCIATES */}
+      {showModalAmazon && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md">
+          <div className="glass-panel rounded-3xl p-6 border border-amber-500/30 max-w-2xl w-full space-y-5 shadow-2xl bg-[#090e1c]/95 text-white max-h-[92vh] overflow-y-auto">
+            {/* Header do Modal */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                  <ShoppingBag className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-heading font-bold text-white flex items-center gap-2">
+                    Extrato & Métricas Amazon Associates
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono">
+                      tag: tcgpokepromo-20
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Importe o extrato oficial de comissões para consolidar lucros brutos com Mercado Livre no DRE.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowModalAmazon(false)}
+                className="text-slate-400 hover:text-white p-1 text-sm rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Abas do Modal */}
+            <div className="flex items-center gap-2 p-1 rounded-xl bg-white/[0.04] border border-white/10 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setAbaAmazon('upload')}
+                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  abaAmazon === 'upload'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <FileUp className="w-3.5 h-3.5" />
+                <span>Importar CSV Amazon</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAbaAmazon('manual')}
+                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  abaAmazon === 'manual'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Lançamento Rápido</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAbaAmazon('historico')}
+                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  abaAmazon === 'historico'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Histórico ({relatoriosAmazon.length})</span>
+              </button>
+            </div>
+
+            {/* ABA 1: UPLOAD DO ARQUIVO CSV */}
+            {abaAmazon === 'upload' && (
+              <form onSubmit={handleUploadCsvAmazon} className="space-y-4">
+                {/* Passo a Passo Rápido */}
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                  <span className="text-xs font-bold text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    Como Exportar o Extrato na Amazon Associates:
+                  </span>
+                  <ol className="text-xs text-slate-300 space-y-1 list-decimal list-inside leading-relaxed">
+                    <li>
+                      Acesse{' '}
+                      <a
+                        href="https://associados.amazon.com.br/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-amber-400 underline font-semibold hover:text-amber-300 inline-flex items-center gap-0.5"
+                      >
+                        associados.amazon.com.br
+                        <ArrowUpRight className="w-3 h-3 inline" />
+                      </a>{' '}
+                      e faça login na sua conta.
+                    </li>
+                    <li>No menu superior, vá em <strong>Relatórios ➔ Taxas de Ganhos / Comissões</strong>.</li>
+                    <li>Selecione o período desejado (ex: <em>Este Mês</em> ou <em>Últimos 30 Dias</em>).</li>
+                    <li>Clique no botão <strong>Download Relatório (CSV)</strong> no canto direito e envie abaixo.</li>
+                  </ol>
+                </div>
+
+                {/* Dropzone de Arquivo */}
+                <div className="border-2 border-dashed border-amber-500/30 hover:border-amber-500/60 rounded-2xl p-6 text-center transition-all bg-white/[0.02]">
+                  <input
+                    type="file"
+                    id="csvAmazonInput"
+                    accept=".csv,.tsv,.txt"
+                    onChange={e => {
+                      if (e.target.files && e.target.files[0]) {
+                        setArquivoAmazon(e.target.files[0]);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <label htmlFor="csvAmazonInput" className="cursor-pointer flex flex-col items-center gap-2">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-300 flex items-center justify-center">
+                      <Upload className="w-6 h-6" />
+                    </div>
+                    {arquivoAmazon ? (
+                      <div>
+                        <p className="text-sm font-bold text-emerald-300">{arquivoAmazon.name}</p>
+                        <p className="text-xs text-slate-400">
+                          {(arquivoAmazon.size / 1024).toFixed(1)} KB • Pronto para processamento
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-sm font-semibold text-slate-200">
+                          Clique aqui para selecionar seu relatório CSV da Amazon
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Suporta arquivos .CSV e .TSV oficiais (PT-BR ou EN-US)
+                        </p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                  <span className="text-[11px] text-slate-400">
+                    O DRE consolidará automaticamente as comissões dia a dia.
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowModalAmazon(false)}
+                      className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/10 text-slate-300 text-xs font-semibold cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!arquivoAmazon || importandoAmazon}
+                      className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-amber-500/20 cursor-pointer flex items-center gap-1.5"
+                    >
+                      {importandoAmazon ? (
+                        <span>Processando Extrato...</span>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Processar & Consolidar no DRE</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+
+            {/* ABA 2: LANÇAMENTO RÁPIDO DIÁRIO */}
+            {abaAmazon === 'manual' && (
+              <form onSubmit={handleLancamentoRapidoAmazon} className="space-y-4">
+                <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 text-xs text-slate-300">
+                  Lance rapidamente comissões de um dia específico sem precisar baixar o arquivo CSV completo.
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Data</label>
+                    <input
+                      type="date"
+                      value={amazonManualData}
+                      onChange={e => setAmazonManualData(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white text-xs focus:outline-none focus:border-amber-500 font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-amber-400 mb-1">
+                      Comissão Gerada (R$)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 45,90"
+                      value={amazonManualComissao}
+                      onChange={e => setAmazonManualComissao(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-amber-500/30 text-amber-300 font-mono text-xs focus:outline-none focus:border-amber-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-cyan-400 mb-1">
+                      Vendas Totais Enviadas (R$) <span className="text-slate-500">(Opcional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 459,00"
+                      value={amazonManualVendas}
+                      onChange={e => setAmazonManualVendas(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-cyan-500/30 text-cyan-300 font-mono text-xs focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Itens Enviados
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={amazonManualItens}
+                      onChange={e => setAmazonManualItens(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Descrição do Lançamento
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Vendas de Pokémon TCG Copag na Amazon"
+                    value={amazonManualDesc}
+                    onChange={e => setAmazonManualDesc(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-white/[0.05] border border-white/10 text-white text-xs focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowModalAmazon(false)}
+                    className="px-4 py-2 rounded-xl bg-white/[0.05] hover:bg-white/10 text-slate-300 text-xs font-semibold cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
+                  >
+                    Salvar Comissão Amazon
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* ABA 3: HISTÓRICO DE IMPORTAÇÕES */}
+            {abaAmazon === 'historico' && (
+              <div className="space-y-3">
+                {relatoriosAmazon.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500 text-xs">
+                    Nenhum relatório CSV da Amazon importado ainda.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-white/10 max-h-64 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="text-[10px] uppercase text-slate-400 bg-white/[0.02] border-b border-white/10">
+                        <tr>
+                          <th className="py-2 px-3">Arquivo</th>
+                          <th className="py-2 px-3">Período</th>
+                          <th className="py-2 px-3 text-right">Itens</th>
+                          <th className="py-2 px-3 text-right">Vendas</th>
+                          <th className="py-2 px-3 text-right">Comissões</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/[0.03]">
+                        {relatoriosAmazon.map(r => (
+                          <tr key={r.id} className="hover:bg-white/[0.02]">
+                            <td className="py-2 px-3 font-medium text-slate-300 truncate max-w-[150px]">
+                              {r.nome_arquivo}
+                            </td>
+                            <td className="py-2 px-3 font-mono text-[11px] text-slate-400">
+                              {r.periodo_inicio || '—'} a {r.periodo_fim || '—'}
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-slate-300">
+                              {r.itens_enviados}
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-cyan-300">
+                              R$ {formatarMoeda(r.receita_gerada)}
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-amber-400 font-bold">
+                              R$ {formatarMoeda(r.comissoes_geradas)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </div>
