@@ -24,7 +24,8 @@ import {
   Sliders,
   TrendingDown,
   FileSpreadsheet,
-  Users
+  Users,
+  Route
 } from 'lucide-react';
 import type {
   OfertaLog,
@@ -169,6 +170,7 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
   const [gerando, setGerando] = useState(false);
   const [disparando, setDisparando] = useState(false);
   const [copiado, setCopiado] = useState(false);
+  const [rotaDestinoSelecionada, setRotaDestinoSelecionada] = useState<string>('todas');
 
   // Estados do Radar de Precificação no Gerador de Anúncios
   const [radarBenchmark, setRadarBenchmark] = useState<BenchmarkPrecoProduto | null>(null);
@@ -415,10 +417,23 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
 
   const handleDispararAnuncio = async () => {
     if (!geradorPreview.trim()) return alert('Gere o anúncio primeiro!');
-    if (!confirm('Deseja realmente disparar este anúncio para todas as rotas ativas do WhatsApp?')) return;
+
+    const rotaEscolhida = rotaDestinoSelecionada === 'todas'
+      ? null
+      : rotas.find(r => String(r.id) === rotaDestinoSelecionada);
+
+    const nomeDestino = rotaEscolhida
+      ? `a rota "${rotaEscolhida.nome || `Rota #${rotaEscolhida.id}`}"`
+      : 'todas as rotas ativas';
+
+    if (!confirm(`Deseja realmente disparar este anúncio para ${nomeDestino} do WhatsApp?`)) return;
     setDisparando(true);
     try {
-      const res = await api.dispararAnuncio(geradorPreview, geradorFoto || undefined);
+      const destinos = rotaEscolhida
+        ? (rotaEscolhida.destinos && rotaEscolhida.destinos.length > 0 ? rotaEscolhida.destinos : [rotaEscolhida.destino_id].filter(Boolean) as string[])
+        : undefined;
+
+      const res = await api.dispararAnuncio(geradorPreview, geradorFoto || undefined, destinos);
       alert(res.message || `Anúncio disparado com sucesso para ${res.enviados} grupo(s)!`);
       setGeradorLink('');
       setGeradorDe('');
@@ -1063,14 +1078,84 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
             </div>
 
             {geradorPreview && (
-              <button
-                onClick={handleDispararAnuncio}
-                disabled={disparando}
-                className="w-full py-2.5 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 disabled:opacity-50"
-              >
-                {disparando ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                <span>{disparando ? 'Disparando para as rotas ativas...' : 'Disparar Imediatamente para Grupos de Destino'}</span>
-              </button>
+              <div className="space-y-3">
+                {/* Seletor Rápido de Rota de Disparo */}
+                <div className="p-3 rounded-xl bg-slate-900/80 border border-white/10 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-300 flex items-center gap-1.5">
+                      <Route className="w-4 h-4 text-cyan-400" />
+                      Disparar para qual Rota?
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium">
+                      {rotaDestinoSelecionada === 'todas'
+                        ? 'Todas as rotas ativas receberão'
+                        : `Alvo: ${rotas.find(r => String(r.id) === rotaDestinoSelecionada)?.nome || 'Rota'}`}
+                    </span>
+                  </div>
+
+                  {/* Chips de Seleção Rápida */}
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setRotaDestinoSelecionada('todas')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                        rotaDestinoSelecionada === 'todas'
+                          ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20 font-bold'
+                          : 'bg-slate-800 text-slate-300 hover:bg-slate-700/80 hover:text-white border border-white/5'
+                      }`}
+                    >
+                      <span>🚀</span>
+                      <span>Todas as Rotas Ativas</span>
+                    </button>
+
+                    {rotas.map(r => {
+                      const isSelected = rotaDestinoSelecionada === String(r.id);
+                      const qtdDestinos = r.destinos?.length || (r.destino_id ? 1 : 0);
+                      const isTeste = (r.nome || '').toLowerCase().includes('teste');
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => setRotaDestinoSelecionada(String(r.id))}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700/80 hover:text-white border border-white/5'
+                          }`}
+                        >
+                          <span>{isTeste ? '🧪' : '📢'}</span>
+                          <span>{r.nome || `Rota #${r.id}`}</span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
+                            isSelected ? 'bg-slate-950/20 text-slate-950 font-bold' : 'bg-slate-700 text-slate-300'
+                          }`}>
+                            {qtdDestinos} {qtdDestinos === 1 ? 'grupo' : 'grupos'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Botão de Disparo Dinâmico */}
+                <button
+                  onClick={handleDispararAnuncio}
+                  disabled={disparando}
+                  className={`w-full py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 cursor-pointer ${
+                    rotaDestinoSelecionada === 'todas'
+                      ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/25'
+                      : 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-cyan-500/25'
+                  }`}
+                >
+                  {disparando ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  <span>
+                    {disparando
+                      ? 'Disparando anúncio...'
+                      : rotaDestinoSelecionada === 'todas'
+                      ? 'Disparar para Todas as Rotas Ativas'
+                      : `Disparar para: ${rotas.find(r => String(r.id) === rotaDestinoSelecionada)?.nome || 'Rota Selecionada'}`}
+                  </span>
+                </button>
+              </div>
             )}
           </div>
         </div>
