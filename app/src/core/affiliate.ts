@@ -230,7 +230,14 @@ export async function expandUrl(
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
 
-      const headers: Record<string, string> = { ...BROWSER_HEADERS };
+      const isAmazon = isAmazonUrl(currentUrl);
+      const headers: Record<string, string> = isAmazon
+        ? {
+            'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9'
+          }
+        : { ...BROWSER_HEADERS };
       if (cookie) headers['cookie'] = cookie;
 
       const res = await fetch(currentUrl, {
@@ -530,11 +537,17 @@ export async function downloadProductImage(
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 12000); // 12s resiliente para resposta do ML
 
-      const headers: Record<string, string> = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'pt-BR,pt;q=0.9'
-      };
+      const headers: Record<string, string> = isAmazon
+        ? {
+            'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9'
+          }
+        : {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9'
+          };
       if (cookie) headers['cookie'] = cookie;
 
       const res = await fetch(productUrl, {
@@ -544,16 +557,31 @@ export async function downloadProductImage(
       clearTimeout(timeout);
 
       const html = await res.text();
-      const ogMatch = html.match(/<meta[^>]+(?:property|name)=["']og:image["'][^>]+content=["']([^"']+)["']/i);
+      const ogMatch = html.match(/<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]+content=["']([^"']+)["']/i);
       const ogClean = ogMatch && ogMatch[1] ? ogMatch[1].replace(/\{sanitized_title\}/gi, '').trim() : '';
-      if (ogClean && isImagemValidaProdutoMl(ogClean)) {
-        targetImageUrl = normalizarFotoMl(ogClean);
+
+      if (isAmazon) {
+        if (ogClean && isImagemValidaProdutoAmazon(ogClean)) {
+          targetImageUrl = normalizarFotoAmazon(ogClean);
+        } else {
+          const amzImgs = html.match(/https?:\/\/(?:m\.media-amazon\.com|images-amazon\.com)\/images\/I\/[A-Za-z0-9_-]+/gi);
+          if (amzImgs && amzImgs.length > 0) {
+            const validImgs = amzImgs.filter(isImagemValidaProdutoAmazon);
+            if (validImgs.length > 0) {
+              targetImageUrl = normalizarFotoAmazon(validImgs[0]);
+            }
+          }
+        }
       } else {
-        const mlImgs = html.match(/https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi);
-        if (mlImgs && mlImgs.length > 0) {
-          const validImgs = mlImgs.filter(isImagemValidaProdutoMl);
-          if (validImgs.length > 0) {
-            targetImageUrl = normalizarFotoMl(validImgs[0]);
+        if (ogClean && isImagemValidaProdutoMl(ogClean)) {
+          targetImageUrl = normalizarFotoMl(ogClean);
+        } else {
+          const mlImgs = html.match(/https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/gi);
+          if (mlImgs && mlImgs.length > 0) {
+            const validImgs = mlImgs.filter(isImagemValidaProdutoMl);
+            if (validImgs.length > 0) {
+              targetImageUrl = normalizarFotoMl(validImgs[0]);
+            }
           }
         }
       }
@@ -687,6 +715,9 @@ export function isImagemValidaProdutoAmazon(url: string): boolean {
   if (!u.includes('media-amazon.com') && !u.includes('images-amazon.com')) {
     return false;
   }
+  if (!u.includes('/images/i/')) {
+    return false;
+  }
   if (
     u.includes('/g/') ||
     u.includes('logo') ||
@@ -702,15 +733,20 @@ export function isImagemValidaProdutoAmazon(url: string): boolean {
 }
 
 /**
- * Normaliza fotos da Amazon para alta resolução (1500px)
+ * Normaliza fotos da Amazon para alta resolução (1500px) limpa,
+ * extraindo o ID canônico do produto em /images/I/{imageId} e removendo quaisquer overlays ou sufixos de crop.
  */
 export function normalizarFotoAmazon(url: string): string {
   let u = String(url || '').trim();
   if (u.startsWith('//')) u = 'https:' + u;
   if (!/^https?:\/\//i.test(u)) return '';
-  if (/media-amazon\.com\/images\/I\//i.test(u) || /images-amazon\.com\/images\/I\//i.test(u)) {
-    u = u.replace(/\._[A-Z0-9,_-]+\.(jpg|jpeg|png|webp)/i, '._AC_SL1500_.$1');
+
+  const matchId = u.match(/(?:media-amazon\.com|images-amazon\.com)\/images\/I\/([A-Za-z0-9_-]+)/i);
+  if (matchId && matchId[1]) {
+    const imageId = matchId[1];
+    return `https://m.media-amazon.com/images/I/${imageId}._AC_SL1500_.jpg`;
   }
+
   return u;
 }
 

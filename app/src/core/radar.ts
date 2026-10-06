@@ -1,4 +1,4 @@
-import { buildAffiliateUrl, normalizarFotoMl } from './affiliate.js';
+import { buildAffiliateUrl, normalizarFotoMl, normalizarFotoAmazon, isAmazonUrl } from './affiliate.js';
 import { extrairDadosAnuncio, formatarTituloPorSlug } from './anuncio.js';
 import {
   isAnuncioEsgotadoOuPausado,
@@ -438,7 +438,7 @@ export function resolverImagemProdutoTCG(titulo: string, imagemExistente?: strin
   if (imagemExistente && imagemExistente.trim()) {
     const limpo = imagemExistente.trim();
     if (limpo.startsWith('http')) {
-      return normalizarFotoMl(limpo) || limpo;
+      return isAmazonUrl(limpo) ? (normalizarFotoAmazon(limpo) || limpo) : (normalizarFotoMl(limpo) || limpo);
     }
   }
 

@@ -9,9 +9,11 @@ import {
   isImagemValidaProdutoMl,
   isAmazonUrl,
   buildAmazonAffiliateUrl,
-  normalizarFotoAmazon
+  normalizarFotoAmazon,
+  isImagemValidaProdutoAmazon
 } from './affiliate.js';
 import { isAnuncioEsgotadoOuPausado, sanearPrecoHistoricoTCG } from './pricing.js';
+import { resolverImagemProdutoTCG } from './radar.js';
 
 export const FOTO_CUPOM_OFICIAL_URL = '/assets/cupom-mercadolivre.png';
 
@@ -1098,12 +1100,18 @@ export async function extrairDadosAnuncio(
     if ((!htmlConteudo || !imageUrl) && targetUrl && !targetUrl.includes('/social/')) {
       try {
         const res = await fetch(targetUrl, {
-          headers: {
-            'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'pt-BR,pt;q=0.9'
-          }
+          headers: isAmazon
+            ? {
+                'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'pt-BR,pt;q=0.9'
+              }
+            : {
+                'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'pt-BR,pt;q=0.9'
+              }
         });
         if (res.ok) {
           const body = await res.text();
@@ -1134,11 +1142,12 @@ export async function extrairDadosAnuncio(
         titulo = detalhes.titulo;
       } else if (htmlConteudo) {
         const ogTitle = htmlConteudo.match(
-          /<meta[^>]+(?:property|name)=["']og:title["'][^>]+content=["']([^"']+)["']/i
+          /<meta[^>]+(?:property|name)=["'](?:og:title|twitter:title)["'][^>]+content=["']([^"']+)["']/i
         );
         if (ogTitle && ogTitle[1]) {
           const parsedTitle = ogTitle[1]
             .replace(/\s*\|\s*(?:Mercado\s*Livre|Shopee\s*Brasil|Shopee|Amazon).*$/i, '')
+            .replace(/\s*:\s*Amazon\.com\.br(?::.*)?$/i, '')
             .replace(/^Compre\s+/i, '')
             .trim();
           if (parsedTitle.length > 5 && !/mercado\s*li[bv]re|minhas listas|recomenda[çc][õo]es|vitrine|perfil/i.test(parsedTitle)) {
@@ -1149,6 +1158,7 @@ export async function extrairDadosAnuncio(
           if (rawTitle && rawTitle[1]) {
             const parsedTitle = rawTitle[1]
               .replace(/\s*\|\s*(?:Mercado\s*Livre|Shopee\s*Brasil|Shopee|Amazon).*$/i, '')
+              .replace(/\s*:\s*Amazon\.com\.br(?::.*)?$/i, '')
               .trim();
             if (parsedTitle.length > 5 && !/mercado\s*li[bv]re|login|acesso/i.test(parsedTitle)) {
               titulo = parsedTitle;
@@ -1169,6 +1179,10 @@ export async function extrairDadosAnuncio(
           if (isImagemValidaProdutoMl(rawImgUrl)) {
             imageUrl = normalizarFotoMl(rawImgUrl);
           }
+        } else if (isAmazon) {
+          if (isImagemValidaProdutoAmazon(rawImgUrl)) {
+            imageUrl = normalizarFotoAmazon(rawImgUrl);
+          }
         } else if (/^https?:\/\//i.test(rawImgUrl)) {
           imageUrl = rawImgUrl;
         }
@@ -1185,6 +1199,23 @@ export async function extrairDadosAnuncio(
           }
         }
       }
+
+      if (!imageUrl && isAmazon) {
+        const amzImgs = htmlConteudo.match(
+          /https?:\/\/(?:m\.media-amazon\.com|images-amazon\.com)\/images\/I\/[A-Za-z0-9_-]+/gi
+        );
+        if (amzImgs && amzImgs.length > 0) {
+          const validImgs = amzImgs.filter(isImagemValidaProdutoAmazon);
+          if (validImgs.length > 0) {
+            imageUrl = normalizarFotoAmazon(validImgs[0]);
+          }
+        }
+      }
+    }
+
+    // Fallback de catálogo TCG: se nenhuma foto oficial da página pôde ser extraída, resolve pela linha do produto
+    if (!imageUrl && titulo && !titulo.toLowerCase().includes('cupom')) {
+      imageUrl = resolverImagemProdutoTCG(titulo);
     }
 
     // 4. Determinar o Link de Afiliado Final:

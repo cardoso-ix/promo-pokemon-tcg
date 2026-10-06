@@ -79,3 +79,34 @@ Aproveitem antes que acabe!`;
   assert.ok(res.novoTexto.includes('https://www.amazon.com.br/dp/B0DFZ49J38?tag=tcgpokepromo-20'));
   assert.ok(!res.novoTexto.includes('concorrente-20'));
 });
+
+test('Amazon Affiliate - Normalização de Fotos com Overlays e Crops complexos da Amazon', () => {
+  const fotoComCropOverlay = 'https://m.media-amazon.com/images/I/71Dkykaam9L.jpg_BO30,255,255,255_UF750,750_SR1910,1000,0,C_ZJPHNwYW4gZm9yZWdyb3VuZD0iIzBGMTExMSIgZm9udD0iQW1hem9uRW1iZXIgNjYiPjQsNTwvc3Bhbj4=,60,875,420,420,0,0_PIRIOFOURANDHALF-medium-V2,TopLeft,190,885_ZJPHNwYW4gZm9yZWdyb3VuZD0iIzU2NTk1OSIgZm9udD0iQW1hem9uRW1iZXIgNjYiPigxMik8L3NwYW4+,650,875,420,420,0,0_QL100_.jpg';
+  
+  assert.equal(isImagemValidaProdutoAmazon(fotoComCropOverlay), true);
+  const normalizada = normalizarFotoAmazon(fotoComCropOverlay);
+  assert.equal(normalizada, 'https://m.media-amazon.com/images/I/71Dkykaam9L._AC_SL1500_.jpg');
+});
+
+test('Amazon Affiliate - Extração Completa no Gerador de Anúncios com link da Amazon', async () => {
+  const { extrairDadosAnuncio } = await import('../src/core/anuncio.js');
+
+  const resultado = await extrairDadosAnuncio(
+    {
+      url: 'https://www.amazon.com.br/dp/B0H77XPPH2',
+      precoPor: '149,90'
+    },
+    {
+      mattWord: 'tcgpokepromo-20',
+      mattTool: '12345678',
+      amazonTag: 'tcgpokepromo-20'
+    }
+  );
+
+  assert.equal(resultado.ok, true);
+  assert.ok(resultado.titulo.length > 5, 'Título deve ser extraído e formatado');
+  assert.ok(!resultado.titulo.includes('Amazon.com.br'), 'Título não deve conter marca da Amazon no final');
+  assert.ok(resultado.linkAfiliado.includes('tag=tcgpokepromo-20'), 'Link deve conter a tag do afiliado');
+  assert.ok(resultado.imageUrl !== null, 'Imagem não pode ser nula');
+  assert.ok(resultado.imageUrl!.includes('media-amazon.com') || resultado.imageUrl!.includes('mlstatic.com'), 'Imagem deve ser oficial ou fallback TCG');
+});
