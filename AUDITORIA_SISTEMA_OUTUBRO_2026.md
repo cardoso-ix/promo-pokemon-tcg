@@ -19,7 +19,7 @@
 | **Coolify & Docker Engine** | 🟢 Healthy | Imagem atualizada | Volume NVMe persistente `/app/data` blindado |
 | **Estúdio IA de Chamadas Rápidas** | 🟢 Ativo | DeepSeek v4.1 + Fallback 0ms | Embelezador de frases com emojis sem links/arrobas |
 | **Testes Automatizados** | 🟢 100% Pass | 172 testes aprovados | Zero regressões ou falhas silenciosas |
-| **Comissões Hoje (07/10)** | 🟢 Calibrado | R$ 133,00 comissão | Faturamento R$ 1.330,00 / Meta spend R$ 42,01 |
+| **Comissões Hoje (07/10)** | 🟢 Calibrado Oficial | R$ 143,91 ganho total | ML R$ 131,81 + Vendedor R$ 12,10 (Vendas R$ 2.354,32) |
 | **Comunidade WhatsApp** | 🟢 Em Expansão | 326 membros ativos | 11 novos membros hoje via Lookalike (CAC R$ 3,82) |
 | **Filtro Anti-Concorrentes** | 🟢 Blindado | Magalu 100% bloqueado | Amazon exclusiva p/ teste; Mercado Livre oficial |
 

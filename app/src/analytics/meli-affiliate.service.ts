@@ -258,7 +258,7 @@ export class MeliAffiliateService {
         }
 
         try {
-          const salesRes = await fetch(`${MELI_AFFILIATE_BASE}/dashboard/sales/general?_t=${Date.now()}&limit=50`, { headers });
+          const salesRes = await fetch(`${MELI_AFFILIATE_BASE}/dashboard/sales/general?_t=${Date.now()}&limit=100`, { headers });
           if (salesRes.ok) {
             const salesData = (await salesRes.json()) as any;
             if (Array.isArray(salesData.item_list)) {
@@ -318,6 +318,17 @@ export class MeliAffiliateService {
     let totalSalesToday = isCacheFromToday ? (cached?.totalSalesToday || 0) : 0;
     let clicksToday = isCacheFromToday ? (cached?.clicksToday || 0) : 0;
 
+    // 0. Consulta prévia ao lançamento financeiro diário consolidado oficial no SQLite
+    let comissaoLancamento = 0;
+    let vendasLancamento = 0;
+    try {
+      const rowLanc = db.prepare('SELECT lucro_bruto, vendas_brutas FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get(todayIso) as any;
+      if (rowLanc && Number(rowLanc.lucro_bruto) > 0) {
+        comissaoLancamento = Number(rowLanc.lucro_bruto);
+        vendasLancamento = Number(rowLanc.vendas_brutas) || (comissaoLancamento * 10);
+      }
+    } catch {}
+
     // 1. Tenta pegar do detalhe diário oficial do Meli
     for (const d of dailyData) {
       const itemDateIso = normalizeDateToIsoDay(d.date);
@@ -335,35 +346,32 @@ export class MeliAffiliateService {
       const comissaoSomada = salesHoje.reduce((acc, s) => acc + s.commissionValue, 0);
       const pedidosSomados = salesHoje.reduce((acc, s) => acc + s.saleUnits, 0);
       const vendasBrutasSomadas = salesHoje.reduce((acc, s) => acc + s.saleValue, 0);
-      if (commissionsToday === 0 || comissaoSomada > commissionsToday) {
+      if (comissaoSomada > commissionsToday) {
         commissionsToday = Number(comissaoSomada.toFixed(2));
       }
-      if (ordersToday === 0 || pedidosSomados > ordersToday) {
+      if (pedidosSomados > ordersToday) {
         ordersToday = pedidosSomados;
       }
-      totalSalesToday = Number(vendasBrutasSomadas.toFixed(2));
+      if (vendasBrutasSomadas > totalSalesToday) {
+        totalSalesToday = Number(vendasBrutasSomadas.toFixed(2));
+      }
     }
 
-    // 3. Se a sessão estiver expirada ou não retornou dados de hoje, preserva dados reais salvos anteriormente para a data de hoje
-    if (commissionsToday === 0 && cached && cached.commissionsToday > 0 && isCacheFromToday) {
-      commissionsToday = cached.commissionsToday;
-      ordersToday = cached.ordersToday;
+    // 3. O lançamento oficial consolidado prevalece sobre somas parciais de vendas truncadas
+    // (O painel oficial do Mercado Livre inclui comissões de parceria de vendedores e ordens com delay na listagem de sales)
+    if (comissaoLancamento > commissionsToday) {
+      commissionsToday = comissaoLancamento;
+      if (vendasLancamento > totalSalesToday) {
+        totalSalesToday = vendasLancamento;
+      }
     }
+
+    // 4. Preserva dados do cache do dia se superiores ou já consolidados
     if (isCacheFromToday && cached) {
-      if (cached.totalSalesToday && totalSalesToday === 0) totalSalesToday = cached.totalSalesToday;
-      if (cached.clicksToday && clicksToday === 0) clicksToday = cached.clicksToday;
-    }
-
-    // 4. Fallback resiliente: se a API do ML não trouxe dados ou o cookie expirou, consulta financas_lancamentos_diarios
-    if (commissionsToday === 0) {
-      try {
-        const rowLanc = db.prepare('SELECT lucro_bruto, vendas_brutas FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get(todayIso) as any;
-        if (rowLanc && Number(rowLanc.lucro_bruto) > 0) {
-          commissionsToday = Number(rowLanc.lucro_bruto);
-          if (totalSalesToday === 0) totalSalesToday = Number(rowLanc.vendas_brutas) || (commissionsToday * 10);
-          if (ordersToday === 0) ordersToday = Math.max(1, Math.round(commissionsToday / 12));
-        }
-      } catch {}
+      if (cached.commissionsToday > commissionsToday) commissionsToday = cached.commissionsToday;
+      if (cached.ordersToday > ordersToday) ordersToday = cached.ordersToday;
+      if (cached.totalSalesToday && cached.totalSalesToday > totalSalesToday) totalSalesToday = cached.totalSalesToday;
+      if (cached.clicksToday && cached.clicksToday > clicksToday) clicksToday = cached.clicksToday;
     }
 
     // 3. Montagem da Tabela de "Produtos Vendidos" (Replicando o painel oficial do Mercado Livre)
