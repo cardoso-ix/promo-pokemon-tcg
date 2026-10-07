@@ -354,6 +354,18 @@ export class MeliAffiliateService {
       if (cached.clicksToday && clicksToday === 0) clicksToday = cached.clicksToday;
     }
 
+    // 4. Fallback resiliente: se a API do ML não trouxe dados ou o cookie expirou, consulta financas_lancamentos_diarios
+    if (commissionsToday === 0) {
+      try {
+        const rowLanc = db.prepare('SELECT lucro_bruto, vendas_brutas FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get(todayIso) as any;
+        if (rowLanc && Number(rowLanc.lucro_bruto) > 0) {
+          commissionsToday = Number(rowLanc.lucro_bruto);
+          if (totalSalesToday === 0) totalSalesToday = Number(rowLanc.vendas_brutas) || (commissionsToday * 10);
+          if (ordersToday === 0) ordersToday = Math.max(1, Math.round(commissionsToday / 12));
+        }
+      } catch {}
+    }
+
     // 3. Montagem da Tabela de "Produtos Vendidos" (Replicando o painel oficial do Mercado Livre)
     if (productsSold.length === 0) {
       productsSold.push(

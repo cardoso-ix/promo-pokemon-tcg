@@ -722,6 +722,29 @@ export function isAmazonShortUrl(url: string): boolean {
 }
 
 /**
+ * Detecta de forma estrita qualquer link, domínio ou menção textual à Magazine Luiza / Magalu
+ */
+export function isMagazineLuiza(input: string): boolean {
+  if (!input || typeof input !== 'string') return false;
+
+  // Normalização Unicode: remove acentos e converte para minúsculas
+  const semAcento = input
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  // 1. Domínios e links da Magazine Luiza (completos e encurtadores)
+  const dominiosMagalu = /(?:magazineluiza\.com(?:\.br)?|magalu\.me|maga\.lu|magazinevoce\.com\.br|parceiromagalu\.com\.br)/i;
+  if (dominiosMagalu.test(semAcento)) return true;
+
+  // 2. Menções textuais à marca Magazine Luiza / Magalu (inclui cupons como MAGALU20, etc.)
+  const termosMagalu = /(?:\bmagazine\s*luiza\b|\bmagalu\w*|\bmagazine\s*voce\b|\bparceiro\s*magalu\b|\bapp\s*magalu\b)/i;
+  if (termosMagalu.test(semAcento)) return true;
+
+  return false;
+}
+
+/**
  * Encurta uma URL de afiliado da Amazon utilizando serviço de redirecionamento limpo
  * sem anúncios e sem intermediários maliciosos (mantém 100% a comissão na tag do usuário).
  */

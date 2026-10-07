@@ -26,7 +26,7 @@ import {
   inserirOfertaHistorico,
   db
 } from '../db/database.js';
-import { processMessageText, downloadProductImage, isAmazonUrl, buildAmazonAffiliateUrl, encurtarLinkAmazon } from '../core/affiliate.js';
+import { processMessageText, downloadProductImage, isAmazonUrl, buildAmazonAffiliateUrl, encurtarLinkAmazon, isMagazineLuiza } from '../core/affiliate.js';
 import { extrairDadosOferta, registrarOfertaPlanilha } from '../core/sheets.js';
 import {
   isProdutoTCG,
@@ -555,6 +555,28 @@ export class WhatsAppManager {
     }
 
     const origemNome = getChatName(remoteJid);
+
+    // REGRA DE OURO: Bloqueio Total e Irrestrito de Magazine Luiza (Links e Menções Textuais)
+    if (isMagazineLuiza(rawText)) {
+      console.log(`[Filtro Magazine Luiza] Mensagem sumariamente ignorada: contém link ou menção à Magazine Luiza.`);
+      const log = insertLog({
+        origem_chat_id: remoteJid,
+        origem_nome: origemNome,
+        destino_chat_id: '',
+        hash_conteudo: `magalu_block_${Date.now()}_${Math.random()}`,
+        texto_original: rawText,
+        texto_publicado: '',
+        tem_foto: Boolean(messageHasImage),
+        links_convertidos: 0,
+        status: 'ignorado',
+        motivo: 'magazine_luiza_bloqueado'
+      });
+      if (log) {
+        this.notifyMessage(log);
+      }
+      return;
+    }
+
     const isAtivo = getConfig('ativo', 'true') === 'true';
 
     // 1. Checar se esteira está ativa

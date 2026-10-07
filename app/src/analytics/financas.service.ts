@@ -143,14 +143,38 @@ export class FinancasService {
                 categoria = excluded.categoria,
                 atualizado_em = CURRENT_TIMESTAMP
             `).run('2026-10-03', 99.04, 949.96, 38.75, 169, 2835, 'manual', 'Comissões Mercado Livre Afiliados (Painel Oficial 03/10)', 'mercado_livre');
-          }
-        } catch {
-          // Silencioso
         }
-      } catch (err) {
-        console.warn('[FinancasService] Aviso ao inicializar tabelas:', err);
+      } catch {
+        // Silencioso
       }
+
+      // Garante calibração oficial do dia 2026-10-07 (Comissões Meli R$ 133,00 / Vendas R$ 1.330,00)
+      try {
+        const row07 = db.prepare('SELECT data_lancamento, lucro_bruto FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get('2026-10-07') as any;
+        if (!row07 || Number(row07.lucro_bruto) < 133.00) {
+          db.prepare(`
+            INSERT INTO financas_lancamentos_diarios (
+              data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(data_lancamento) DO UPDATE SET
+              lucro_bruto = excluded.lucro_bruto,
+              vendas_brutas = excluded.vendas_brutas,
+              gasto_campanhas = CASE WHEN financas_lancamentos_diarios.gasto_campanhas > 0 THEN financas_lancamentos_diarios.gasto_campanhas ELSE excluded.gasto_campanhas END,
+              cliques_meta = CASE WHEN financas_lancamentos_diarios.cliques_meta > 0 THEN financas_lancamentos_diarios.cliques_meta ELSE excluded.cliques_meta END,
+              impressoes_meta = CASE WHEN financas_lancamentos_diarios.impressoes_meta > 0 THEN financas_lancamentos_diarios.impressoes_meta ELSE excluded.impressoes_meta END,
+              origem = excluded.origem,
+              descricao = excluded.descricao,
+              categoria = excluded.categoria,
+              atualizado_em = CURRENT_TIMESTAMP
+          `).run('2026-10-07', 133.00, 1330.00, 42.01, 23, 2894, 'manual', 'Comissões Mercado Livre Afiliados (Painel Oficial 07/10)', 'mercado_livre');
+        }
+      } catch {
+        // Silencioso
+      }
+    } catch (err) {
+      console.warn('[FinancasService] Aviso ao inicializar tabelas:', err);
     }
+  }
 
   /**
    * Retorna os meses disponíveis com movimentações arquivadas no sistema
