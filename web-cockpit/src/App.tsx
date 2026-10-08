@@ -10,6 +10,7 @@ import { RadarPrecosView } from './components/RadarPrecosView.tsx';
 import { CookieModal } from './components/CookieModal.tsx';
 import { QrModal } from './components/QrModal.tsx';
 import { ExtratorLeadsMetaView } from './components/ExtratorLeadsMetaView.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import { useUnifiedStatus } from './hooks/useUnifiedStatus.ts';
 import { api } from './services/api.ts';
 
@@ -67,32 +68,34 @@ export const App: React.FC = () => {
 
       {/* Main Container com padding mobile seguro para BottomNav e largura ampla para monitores modernos */}
       <main className="flex-1 max-w-[1680px] w-full mx-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 transition-all">
-        {activeModule === 'dashboard' && (
-          <DashboardOverview
-            status={status}
-            recentLogs={recentLogs}
-            balanco={balanco}
-            onNavigate={(mod) => setActiveModule(mod)}
-            onOpenReplicaQr={() => setReplicaQrOpen(true)}
-            onRefreshGlobal={handleRefreshGlobal}
-          />
-        )}
+        <ErrorBoundary>
+          {activeModule === 'dashboard' && (
+            <DashboardOverview
+              status={status}
+              recentLogs={recentLogs}
+              balanco={balanco}
+              onNavigate={(mod) => setActiveModule(mod)}
+              onOpenReplicaQr={() => setReplicaQrOpen(true)}
+              onRefreshGlobal={handleRefreshGlobal}
+            />
+          )}
 
-        {activeModule === 'afiliados' && (
-          <MeliAfiliadosView onOpenCookieModal={() => setCookieModalOpen(true)} />
-        )}
+          {activeModule === 'afiliados' && (
+            <MeliAfiliadosView onOpenCookieModal={() => setCookieModalOpen(true)} />
+          )}
 
-        {activeModule === 'replica' && (
-          <ReplicadorView onOpenCookieModal={() => setCookieModalOpen(true)} />
-        )}
+          {activeModule === 'replica' && (
+            <ReplicadorView onOpenCookieModal={() => setCookieModalOpen(true)} />
+          )}
 
-        {activeModule === 'radar' && <RadarPrecosView />}
+          {activeModule === 'radar' && <RadarPrecosView />}
 
-        {activeModule === 'financas' && <FinancasView />}
+          {activeModule === 'financas' && <FinancasView />}
 
-        {activeModule === 'leads' && (
-          <ExtratorLeadsMetaView onOpenQrModal={() => setReplicaQrOpen(true)} />
-        )}
+          {activeModule === 'leads' && (
+            <ExtratorLeadsMetaView onOpenQrModal={() => setReplicaQrOpen(true)} />
+          )}
+        </ErrorBoundary>
       </main>
 
       {/* Modais Globais de Ação Rápida */}

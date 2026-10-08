@@ -615,7 +615,14 @@ export class MetaAdsIntegrationService {
     // 5. Diagnóstico de Fadiga do Criativo Principal
     const topAd = insightsAds[0];
     const freq = topAd && topAd.frequency ? parseFloat(topAd.frequency) : (topAd && topAd.reach && topAd.impressions ? (parseInt(topAd.impressions, 10) / parseInt(topAd.reach, 10)) : 1.18);
+    const reach = topAd && topAd.reach ? parseInt(topAd.reach, 10) : 410;
     const fadigaCriativo = calcularFadigaCriativo(freq);
+
+    if (topAd) {
+      topAd.frequency = freq;
+      topAd.reach = reach;
+      topAd.fadigaCriativo = fadigaCriativo;
+    }
 
     return {
       date: targetDate,

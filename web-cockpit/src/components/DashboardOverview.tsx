@@ -463,35 +463,41 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
   // Performance da Campanha Ativa (Lookalike 1% + Criativo 01 - New)
   const auditAd = metaAuditData?.insightsAds?.[0];
-  const cplHoje = auditAd?.cost_per_action_type?.find((a: any) => a.action_type === 'lead')?.value 
-    ? parseFloat(auditAd.cost_per_action_type.find((a: any) => a.action_type === 'lead').value) 
-    : 4.12;
+  const rawLeadVal = auditAd?.cost_per_action_type?.find((a: any) => a.action_type === 'lead')?.value;
+  const cplHoje = rawLeadVal ? (parseFloat(rawLeadVal) || 4.12) : 4.12;
   const cplOntem = 3.82;
-  const spendHojeCampanha = parseFloat(auditAd?.spend || '8.24');
-  const videoViewsHoje = auditAd?.actions?.find((a: any) => a.action_type === 'video_view')?.value 
-    ? parseInt(auditAd.actions.find((a: any) => a.action_type === 'video_view').value, 10) 
-    : 95;
-  const leadsHojeCampanha = auditAd?.actions?.find((a: any) => a.action_type === 'lead')?.value 
-    ? parseInt(auditAd.actions.find((a: any) => a.action_type === 'lead').value, 10) 
-    : 2;
+  const spendHojeCampanha = parseFloat(auditAd?.spend || '8.24') || 8.24;
+  const rawViews = auditAd?.actions?.find((a: any) => a.action_type === 'video_view')?.value;
+  const videoViewsHoje = rawViews ? (parseInt(rawViews, 10) || 95) : 95;
+  const rawLeads = auditAd?.actions?.find((a: any) => a.action_type === 'lead')?.value;
+  const leadsHojeCampanha = rawLeads ? (parseInt(rawLeads, 10) || 2) : 2;
   const membrosTotalComunidade = 328;
   const membrosBaseline = 310;
   const crescimentoComunidade = membrosTotalComunidade - membrosBaseline;
 
-  // Fadiga do Criativo & Frequência (Meta Ads Marketing API)
-  const frequenciaCampanha = auditAd?.frequency || (auditAd?.reach && auditAd?.impressions ? Number((auditAd.impressions / auditAd.reach).toFixed(2)) : 1.15);
-  const alcanceCampanha = auditAd?.reach || 410;
-  const fadigaInfo = auditAd?.fadigaCriativo || {
-    nivel: frequenciaCampanha > 2.2 ? 'fadiga' : frequenciaCampanha > 1.8 ? 'atencao' : 'saudavel',
-    frequencia: frequenciaCampanha,
-    alcance: alcanceCampanha,
-    recomendacao: frequenciaCampanha > 2.2 ? 'Fadiga detectada! Renove o criativo.' : 'Frequência ideal (< 1.8x). Criativo com alta tração!'
+  // Fadiga do Criativo & Frequência (Meta Ads Marketing API) - PARSING 100% NUMÉRICO SEGURO
+  const rawFreq = auditAd?.frequency ? parseFloat(String(auditAd.frequency)) : null;
+  const rawReach = auditAd?.reach ? parseInt(String(auditAd.reach), 10) : null;
+  const rawImpressions = auditAd?.impressions ? parseInt(String(auditAd.impressions), 10) : null;
+
+  const frequenciaCampanha: number = (typeof rawFreq === 'number' && !isNaN(rawFreq) && rawFreq > 0)
+    ? rawFreq
+    : (rawReach && rawImpressions && rawReach > 0 ? Number((rawImpressions / rawReach).toFixed(2)) : 1.15);
+
+  const alcanceCampanha: number = (typeof rawReach === 'number' && !isNaN(rawReach) && rawReach > 0) ? rawReach : 410;
+
+  const rawFadiga = metaAuditData?.fadigaCriativo || auditAd?.fadigaCriativo;
+  const fadigaInfo = {
+    nivel: rawFadiga?.nivel || (frequenciaCampanha > 2.2 ? 'fadiga' : frequenciaCampanha > 1.8 ? 'atencao' : 'saudavel'),
+    frequencia: typeof rawFadiga?.frequencia === 'number' ? rawFadiga.frequencia : frequenciaCampanha,
+    alcance: typeof rawFadiga?.alcance === 'number' ? rawFadiga.alcance : alcanceCampanha,
+    recomendacao: rawFadiga?.recomendacao || (frequenciaCampanha > 2.2 ? 'Fadiga detectada! Renove o criativo.' : 'Frequência ideal (< 1.8x). Criativo com alta tração!')
   };
 
   // Movimentação em Tempo Real da Comunidade WhatsApp (SQLite Baileys ao vivo)
-  const entradasHoje = comunidadeMetricas?.totalEntradasHoje ?? 0;
-  const saidasHoje = comunidadeMetricas?.totalSaidasHoje ?? 0;
-  const liquidoHoje = comunidadeMetricas?.crescimentoLiquidoHoje ?? (entradasHoje - saidasHoje);
+  const entradasHoje = Number(comunidadeMetricas?.totalEntradasHoje ?? 0);
+  const saidasHoje = Number(comunidadeMetricas?.totalSaidasHoje ?? 0);
+  const liquidoHoje = Number(comunidadeMetricas?.crescimentoLiquidoHoje ?? (entradasHoje - saidasHoje));
 
   // Métricas de Arbitragem de Tráfego (Net EPC vs CPC Meta - Opção 1)
   const cliquesMeliHoje = affiliateData?.clicksToday || 0;
@@ -591,7 +597,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   }`}
                 >
                   <Sparkles className="w-3 h-3" />
-                  Freq: {frequenciaCampanha.toFixed(2)}x · {fadigaInfo.nivel === 'saudavel' ? 'Criativo Saudável' : fadigaInfo.nivel === 'atencao' ? 'Atenção' : 'Fadiga'}
+                  Freq: {Number(frequenciaCampanha || 1.15).toFixed(2)}x · {fadigaInfo?.nivel === 'saudavel' ? 'Criativo Saudável' : fadigaInfo?.nivel === 'atencao' ? 'Atenção' : 'Fadiga'}
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
@@ -658,7 +664,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-heading font-extrabold text-blue-300">{videoViewsHoje}</span>
-              <span className="text-[10px] text-slate-400">views · {frequenciaCampanha.toFixed(2)}x freq</span>
+              <span className="text-[10px] text-slate-400">views · {Number(frequenciaCampanha || 1.15).toFixed(2)}x freq</span>
             </div>
             <p className="text-[10px] text-slate-300 mt-0.5 font-mono">
               Alcance único: {alcanceCampanha} pessoas
@@ -671,7 +677,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <DollarSign className="w-3.5 h-3.5 text-purple-400" />
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-lg font-heading font-extrabold text-purple-300">R$ {spendHojeCampanha.toFixed(2)}</span>
+              <span className="text-lg font-heading font-extrabold text-purple-300">R$ {Number(spendHojeCampanha || 0).toFixed(2)}</span>
               <span className="text-[10px] text-slate-400">hoje</span>
             </div>
             <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
@@ -1668,8 +1674,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
             <div className="text-[11px] text-slate-400 flex items-center justify-between pt-0.5">
               <span>Saúde Criativo:</span>
-              <span className={`font-mono font-semibold ${fadigaInfo.nivel === 'fadiga' ? 'text-rose-400' : fadigaInfo.nivel === 'atencao' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                {frequenciaCampanha.toFixed(2)}x ({fadigaInfo.nivel === 'saudavel' ? 'Saudável' : fadigaInfo.nivel === 'atencao' ? 'Atenção' : 'Fadiga'})
+              <span className={`font-mono font-semibold ${fadigaInfo?.nivel === 'fadiga' ? 'text-rose-400' : fadigaInfo?.nivel === 'atencao' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                {Number(frequenciaCampanha || 1.15).toFixed(2)}x ({fadigaInfo?.nivel === 'saudavel' ? 'Saudável' : fadigaInfo?.nivel === 'atencao' ? 'Atenção' : 'Fadiga'})
               </span>
             </div>
           </div>
