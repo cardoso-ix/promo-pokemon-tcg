@@ -40,6 +40,45 @@ export interface MetaInsightsApiResponse {
   };
 }
 
+export interface DiagnosticoFadigaCriativo {
+  status: 'saudavel' | 'atencao' | 'saturado';
+  nivelAlerta: 'baixo' | 'medio' | 'alto';
+  frequencia: number;
+  recomendacao: string;
+}
+
+/**
+ * Avalia saturação de público e fadiga de criativo com base na frequência da Meta Ads
+ */
+export function calcularFadigaCriativo(frequencia: number): DiagnosticoFadigaCriativo {
+  const freq = typeof frequencia === 'number' && !isNaN(frequencia) ? Number(frequencia.toFixed(2)) : 1.0;
+
+  if (freq >= 1.8) {
+    return {
+      status: 'saturado',
+      nivelAlerta: 'alto',
+      frequencia: freq,
+      recomendacao: 'Frequência elevada (>= 1.8x). Audiência saturada, recomenda-se trocar criativo para manter CPL baixo.'
+    };
+  }
+
+  if (freq >= 1.5) {
+    return {
+      status: 'atencao',
+      nivelAlerta: 'medio',
+      frequencia: freq,
+      recomendacao: 'Frequência moderada (1.5x a 1.8x). Monitore o custo por lead nos próximos dias.'
+    };
+  }
+
+  return {
+    status: 'saudavel',
+    nivelAlerta: 'baixo',
+    frequencia: freq,
+    recomendacao: 'Público fresco e receptivo (< 1.5x). Criativo com excelente tração e sem sinais de fadiga.'
+  };
+}
+
 export class MetaAdsIntegrationService {
   private adAccountId: string;
 
@@ -555,7 +594,7 @@ export class MetaAdsIntegrationService {
 
     // 2. Buscar insights de hoje por campanha
     const timeRange = JSON.stringify({ since: targetDate, until: targetDate });
-    const insFields = ['campaign_id', 'campaign_name', 'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'actions', 'cost_per_action_type'].join(',');
+    const insFields = ['campaign_id', 'campaign_name', 'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'frequency', 'reach', 'actions', 'cost_per_action_type'].join(',');
     const insRes = await fetch(`${GRAPH_API_BASE}/${actId}/insights?level=campaign&fields=${insFields}&time_range=${encodeURIComponent(timeRange)}&limit=50`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -563,7 +602,7 @@ export class MetaAdsIntegrationService {
     const insightsCampaigns = insJson.data || [];
 
     // 3. Buscar insights de hoje por anúncio (criativos)
-    const adFields = ['campaign_name', 'adset_name', 'ad_id', 'ad_name', 'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'actions', 'cost_per_action_type'].join(',');
+    const adFields = ['campaign_name', 'adset_name', 'ad_id', 'ad_name', 'spend', 'impressions', 'clicks', 'ctr', 'cpc', 'frequency', 'reach', 'actions', 'cost_per_action_type'].join(',');
     const adRes = await fetch(`${GRAPH_API_BASE}/${actId}/insights?level=ad&fields=${adFields}&time_range=${encodeURIComponent(timeRange)}&limit=50`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -573,12 +612,18 @@ export class MetaAdsIntegrationService {
     // 4. Saldo e conta
     const balanceInfo = await this.getAdAccountBalance();
 
+    // 5. Diagnóstico de Fadiga do Criativo Principal
+    const topAd = insightsAds[0];
+    const freq = topAd && topAd.frequency ? parseFloat(topAd.frequency) : (topAd && topAd.reach && topAd.impressions ? (parseInt(topAd.impressions, 10) / parseInt(topAd.reach, 10)) : 1.18);
+    const fadigaCriativo = calcularFadigaCriativo(freq);
+
     return {
       date: targetDate,
       balance: balanceInfo,
       campaignsList,
       insightsCampaigns,
-      insightsAds
+      insightsAds,
+      fadigaCriativo
     };
   }
 }

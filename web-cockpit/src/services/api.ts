@@ -20,7 +20,8 @@ import type {
   WhatsAppGroupItem,
   WhatsAppContactItem,
   WhatsAppContactsStats,
-  AmazonRelatorioItem
+  AmazonRelatorioItem,
+  MetricasComunidade
 } from '../types/index.ts';
 
 // Helper genérico para requests com tratamento de erro e resiliência
@@ -551,6 +552,11 @@ export const api = {
     }),
 
   // --- EXTRAÇÃO DE LEADS DO WHATSAPP PARA META ADS ---
+  getComunidadeMetricas: (chatId?: string) => {
+    const query = chatId ? `?chatId=${encodeURIComponent(chatId)}` : '';
+    return request<{ ok: boolean; data: MetricasComunidade }>(`/api/comunidade/metricas${query}`);
+  },
+
   getWhatsAppGroups: () =>
     request<{
       ok: boolean;

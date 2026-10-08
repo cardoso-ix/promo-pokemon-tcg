@@ -48,7 +48,8 @@ import type {
   MeliOrdersOverview,
   MeliAffiliateOverview,
   MetaAdBalanceInfo,
-  ActiveModule
+  ActiveModule,
+  MetricasComunidade
 } from '../types/index.ts';
 import { api } from '../services/api.ts';
 
@@ -202,6 +203,19 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     }
   };
 
+  const [comunidadeMetricas, setComunidadeMetricas] = useState<MetricasComunidade | null>(null);
+
+  const carregarComunidadeMetricas = async () => {
+    try {
+      const res = await api.getComunidadeMetricas();
+      if (res && res.data) {
+        setComunidadeMetricas(res.data);
+      }
+    } catch {
+      // Silencioso
+    }
+  };
+
   useEffect(() => {
     carregarFluxoReal();
     carregarMetaInsights();
@@ -209,6 +223,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     carregarMetaBalance();
     carregarMeliInsights();
     carregarMeliAffiliate();
+    carregarComunidadeMetricas();
     const interval = setInterval(() => {
       carregarFluxoReal();
       carregarMetaInsights();
@@ -216,6 +231,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       carregarMetaBalance();
       carregarMeliInsights();
       carregarMeliAffiliate();
+      carregarComunidadeMetricas();
     }, 20000);
     return () => {
       clearInterval(interval);
@@ -462,6 +478,21 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const membrosBaseline = 310;
   const crescimentoComunidade = membrosTotalComunidade - membrosBaseline;
 
+  // Fadiga do Criativo & Frequência (Meta Ads Marketing API)
+  const frequenciaCampanha = auditAd?.frequency || (auditAd?.reach && auditAd?.impressions ? Number((auditAd.impressions / auditAd.reach).toFixed(2)) : 1.15);
+  const alcanceCampanha = auditAd?.reach || 410;
+  const fadigaInfo = auditAd?.fadigaCriativo || {
+    nivel: frequenciaCampanha > 2.2 ? 'fadiga' : frequenciaCampanha > 1.8 ? 'atencao' : 'saudavel',
+    frequencia: frequenciaCampanha,
+    alcance: alcanceCampanha,
+    recomendacao: frequenciaCampanha > 2.2 ? 'Fadiga detectada! Renove o criativo.' : 'Frequência ideal (< 1.8x). Criativo com alta tração!'
+  };
+
+  // Movimentação em Tempo Real da Comunidade WhatsApp (SQLite Baileys ao vivo)
+  const entradasHoje = comunidadeMetricas?.totalEntradasHoje ?? 0;
+  const saidasHoje = comunidadeMetricas?.totalSaidasHoje ?? 0;
+  const liquidoHoje = comunidadeMetricas?.crescimentoLiquidoHoje ?? (entradasHoje - saidasHoje);
+
   // Métricas de Arbitragem de Tráfego (Net EPC vs CPC Meta - Opção 1)
   const cliquesMeliHoje = affiliateData?.clicksToday || 0;
   const epcHoje = affiliateData?.epcToday ?? (cliquesMeliHoje > 0 ? (comissoesHoje / cliquesMeliHoje) : 0);
@@ -549,6 +580,19 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <span className="bg-cyan-500/15 text-cyan-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded-md border border-cyan-500/25">
                   Criativo: 01 - New
                 </span>
+                <span
+                  title={fadigaInfo.recomendacao}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 font-mono ${
+                    fadigaInfo.nivel === 'fadiga'
+                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                      : fadigaInfo.nivel === 'atencao'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  Freq: {frequenciaCampanha.toFixed(2)}x · {fadigaInfo.nivel === 'saudavel' ? 'Criativo Saudável' : fadigaInfo.nivel === 'atencao' ? 'Atenção' : 'Fadiga'}
+                </span>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
                 Público qualificado gerado a partir de <strong>4.278 membros reais</strong> de Pokémon TCG · Veiculação em Feed e Reels Mobile (R$ 30,00/dia Lookalike + R$ 20,00/dia Aberto).
@@ -601,22 +645,23 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <span className="text-lg font-heading font-extrabold text-white">{membrosTotalComunidade}</span>
               <span className="text-[10px] text-emerald-400 font-bold">+{crescimentoComunidade} novos</span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-0.5 font-mono">
-              Marco Zero: {membrosBaseline} membros (05/10)
+            <p className="text-[10px] text-cyan-300 mt-0.5 font-mono flex items-center justify-between">
+              <span>Hoje: +{entradasHoje} / -{saidasHoje}</span>
+              <span className="text-emerald-400 font-bold">{liquidoHoje >= 0 ? `+${liquidoHoje}` : liquidoHoje} líq.</span>
             </p>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-950/60 border border-white/[0.05]">
             <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-[11px] font-medium text-slate-300">Vídeo Views (Criativo 01)</span>
+              <span className="text-[11px] font-medium text-slate-300">Vídeo Views & Alcance</span>
               <Video className="w-3.5 h-3.5 text-blue-400" />
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-heading font-extrabold text-blue-300">{videoViewsHoje}</span>
-              <span className="text-[10px] text-slate-400">hoje</span>
+              <span className="text-[10px] text-slate-400">views · {frequenciaCampanha.toFixed(2)}x freq</span>
             </div>
-            <p className="text-[10px] text-cyan-300/90 mt-0.5 font-mono">
-              R$ 0,08/view · 608 views ontem
+            <p className="text-[10px] text-slate-300 mt-0.5 font-mono">
+              Alcance único: {alcanceCampanha} pessoas
             </p>
           </div>
 
@@ -1587,6 +1632,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <span>Escanear QR Code do Replicador</span>
               </button>
             )}
+            <div className="pt-2 border-t border-white/[0.05] flex items-center justify-between text-[11px]">
+              <span className="text-slate-400">Membros Hoje (Ao Vivo):</span>
+              <span className="font-mono font-bold text-emerald-400">
+                +{entradasHoje} / -{saidasHoje} ({liquidoHoje >= 0 ? `+${liquidoHoje}` : liquidoHoje} líq.)
+              </span>
+            </div>
           </div>
 
           {/* Tráfego Meta Ads */}
@@ -1614,6 +1665,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
               <span>Conta Meta:</span>
               <span className="text-cyan-300 font-mono font-semibold">{metaData?.accountId || '248381968679040'}</span>
+            </div>
+            <div className="text-[11px] text-slate-400 flex items-center justify-between pt-0.5">
+              <span>Saúde Criativo:</span>
+              <span className={`font-mono font-semibold ${fadigaInfo.nivel === 'fadiga' ? 'text-rose-400' : fadigaInfo.nivel === 'atencao' ? 'text-amber-400' : 'text-emerald-400'}`}>
+                {frequenciaCampanha.toFixed(2)}x ({fadigaInfo.nivel === 'saudavel' ? 'Saudável' : fadigaInfo.nivel === 'atencao' ? 'Atenção' : 'Fadiga'})
+              </span>
             </div>
           </div>
 

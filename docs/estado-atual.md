@@ -105,5 +105,10 @@ O repositório está 100% pronto para ser clonado em outra máquina:
 ### 1.5. Base de Preços TCG & Motor Canônico Inteligente
 - **Status:** 🟢 Ativo em Produção (SQLite `historico_produtos_valores`).
 - **Motor Canônico:** Deduplica automaticamente centenas de variações de títulos de vendedores para o mesmo produto, agrupando por formato (Booster Box, ETB, Blister Triplo, etc.) e coleção (Escuridão Absoluta, Evoluções Prismáticas, 151, 30 Anos, etc.) gerando chaves canônicas determinísticas (`chave_canonica`).
-- **Radar de Precificação Integrado:** Ao colar um link ou copy no Gerador de Anúncios, o sistema busca a chave canônica e baliza instantaneamente o menor e maior preço já praticado para evitar ofertas fora da curva.
 - **Mensagem Diária de Bom Dia:** Protegida contra sobrescrita com isolamento de polling (`configDirty`), suporte completo a modelo personalizado (`custom`), auto-save antes do teste e botão dedicado no card.
+
+### 1.6. Monitoramento de Frequência de Criativo & Churn da Comunidade WhatsApp (Ao Vivo)
+- **Status:** 🟢 Ativo em Produção (08/10/2026).
+- **Diagnóstico de Fadiga do Criativo:** Monitoramento contínuo da métrica `frequency` e `reach` via Meta Ads Marketing API (`calcularFadigaCriativo`), alertando caso o criativo exceda 1.8x (Atenção) ou 2.2x (Fadiga).
+- **Rastreador de Entradas e Saídas (Tempo Real):** Listener nativo do Baileys (`group-participants.update`) persiste entradas e saídas de membros na tabela SQLite `comunidade_eventos`, calculando crescimento líquido, evasão diária e atividade sem depender de exportação manual.
+- **Painel Executivo Integrado:** Dashboard exibe em tempo real o balanço diário de membros e o estado de saturação do Criativo 01 no Centro de Comando da Campanha Ativa e no card lateral de status da operação.

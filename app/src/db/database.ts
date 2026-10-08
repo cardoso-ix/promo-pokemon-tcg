@@ -240,6 +240,18 @@ export function initDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_radar_ocultos_chave ON radar_itens_ocultos(chave_canonica);
     CREATE INDEX IF NOT EXISTS idx_radar_ocultos_prod ON radar_itens_ocultos(produto_limpo);
+
+    CREATE TABLE IF NOT EXISTS comunidade_eventos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat_id TEXT NOT NULL,
+      tipo TEXT NOT NULL,
+      telefone TEXT,
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_comunidade_eventos_ts ON comunidade_eventos(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_comunidade_eventos_tipo ON comunidade_eventos(tipo);
+    CREATE INDEX IF NOT EXISTS idx_comunidade_eventos_chat ON comunidade_eventos(chat_id);
   `);
 
   // Migração suave para adicionar foto_url se a tabela já existia sem a coluna
@@ -2206,6 +2218,81 @@ export function restaurarItemOcultoRadar(chaveOuProduto: string): boolean {
     return false;
   }
 }
+
+/**
+ * Registra uma entrada ou saída de membro no grupo da comunidade
+ */
+export function registrarEventoComunidade(chatId: string, tipo: 'entrada' | 'saida', telefone?: string): void {
+  try {
+    db.prepare(`
+      INSERT INTO comunidade_eventos (chat_id, tipo, telefone, timestamp)
+      VALUES (?, ?, ?, datetime('now', 'localtime'))
+    `).run(chatId, tipo, telefone || null);
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao registrar evento de comunidade:', err);
+  }
+}
+
+export interface MetricasComunidade {
+  totalEntradasHoje: number;
+  totalSaidasHoje: number;
+  crescimentoLiquidoHoje: number;
+  ultimosEventos: Array<{
+    id: number;
+    chat_id: string;
+    tipo: 'entrada' | 'saida';
+    telefone: string | null;
+    timestamp: string;
+  }>;
+}
+
+/**
+ * Obtém métricas consolidadas de entradas e saídas de membros
+ */
+export function obterMetricasComunidade(chatId?: string): MetricasComunidade {
+  try {
+    const hoje = new Date().toISOString().split('T')[0];
+
+    const whereChat = chatId ? 'AND chat_id = ?' : '';
+    const paramsChat = chatId ? [chatId] : [];
+
+    const entradasHoje = db.prepare(`
+      SELECT count(*) as c FROM comunidade_eventos 
+      WHERE tipo = 'entrada' AND date(timestamp) = date('now', 'localtime') ${whereChat}
+    `).get(...paramsChat) as { c: number } | undefined;
+
+    const saidasHoje = db.prepare(`
+      SELECT count(*) as c FROM comunidade_eventos 
+      WHERE tipo = 'saida' AND date(timestamp) = date('now', 'localtime') ${whereChat}
+    `).get(...paramsChat) as { c: number } | undefined;
+
+    const totalEntradasHoje = entradasHoje?.c || 0;
+    const totalSaidasHoje = saidasHoje?.c || 0;
+    const crescimentoLiquidoHoje = totalEntradasHoje - totalSaidasHoje;
+
+    const ultimosEventos = db.prepare(`
+      SELECT * FROM comunidade_eventos
+      ${chatId ? 'WHERE chat_id = ?' : ''}
+      ORDER BY id DESC LIMIT 20
+    `).all(...paramsChat) as MetricasComunidade['ultimosEventos'];
+
+    return {
+      totalEntradasHoje,
+      totalSaidasHoje,
+      crescimentoLiquidoHoje,
+      ultimosEventos
+    };
+  } catch (err: unknown) {
+    console.warn('[Database] Erro ao obter métricas de comunidade:', err);
+    return {
+      totalEntradasHoje: 0,
+      totalSaidasHoje: 0,
+      crescimentoLiquidoHoje: 0,
+      ultimosEventos: []
+    };
+  }
+}
+
 
 
 

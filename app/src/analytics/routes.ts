@@ -3,7 +3,7 @@ import { meliService } from './meli.service.js';
 import { meliAffiliateService } from './meli-affiliate.service.js';
 import { metaAdsService } from './meta.service.js';
 import { analyticsService } from './analytics.service.js';
-import { getMetaInsightsStats, getMeliOrdersStats, getConfig } from '../db/database.js';
+import { getMetaInsightsStats, getMeliOrdersStats, getConfig, obterMetricasComunidade } from '../db/database.js';
 import { getBrazilToday, getBrazilDaysAgo } from '../utils/date.js';
 import { financasService } from './financas.service.js';
 import { processarImportacaoAmazon, lancamentoRapidoAmazon, listarRelatoriosAmazon } from './amazon-financas.service.js';
@@ -942,4 +942,19 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   };
   app.get('/api/financas/amazon/relatorios', handleListarRelatoriosAmazon);
   app.get('/api/bot/financas/amazon/relatorios', handleListarRelatoriosAmazon);
+
+  // ==========================================
+  // 4. MÉTRICAS DE COMUNIDADE (WHATSAPP AO VIVO)
+  // ==========================================
+  const handleMetricasComunidade = async (
+    req: FastifyRequest<{
+      Querystring: { chatId?: string };
+    }>
+  ) => {
+    const { chatId } = req.query || {};
+    const metricas = obterMetricasComunidade(chatId);
+    return { ok: true, data: metricas };
+  };
+  app.get('/api/comunidade/metricas', handleMetricasComunidade);
+  app.get('/api/bot/comunidade/metricas', handleMetricasComunidade);
 }

@@ -611,3 +611,18 @@ export interface RelatorioMensalExecutivo {
   resumoWhatsapp: string;
   detalhamentoDiario: RelatorioMensalItemDiario[];
 }
+
+export interface EventoComunidadeItem {
+  id: number;
+  chat_id: string;
+  participante_jid: string;
+  tipo: 'entrada' | 'saida';
+  timestamp: string;
+}
+
+export interface MetricasComunidade {
+  totalEntradasHoje: number;
+  totalSaidasHoje: number;
+  crescimentoLiquidoHoje: number;
+  ultimosEventos: EventoComunidadeItem[];
+}

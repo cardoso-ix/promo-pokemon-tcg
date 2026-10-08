@@ -24,6 +24,7 @@ import {
   registrarProdutoReplicado,
   consultarCooldownProduto,
   inserirOfertaHistorico,
+  registrarEventoComunidade,
   db
 } from '../db/database.js';
 import { processMessageText, downloadProductImage, isAmazonUrl, buildAmazonAffiliateUrl, encurtarLinkAmazon, isMagazineLuiza } from '../core/affiliate.js';
@@ -293,6 +294,23 @@ export class WhatsAppManager {
           if (u.id && u.subject) {
             updateChatCache(u.id, u.subject, true);
           }
+        }
+      });
+
+      this.sock.ev.on('group-participants.update', async (event: any) => {
+        try {
+          const { id, participants, action } = event;
+          if (action === 'add' || action === 'remove') {
+            const tipo = action === 'add' ? 'entrada' : 'saida';
+            if (Array.isArray(participants)) {
+              for (const p of participants) {
+                const phone = typeof p === 'string' ? p.split('@')[0].split(':')[0] : '';
+                registrarEventoComunidade(id, tipo, phone);
+              }
+            }
+          }
+        } catch (err) {
+          console.error('[WA] Erro ao registrar evento de participantes de grupo:', err);
         }
       });
     } catch (err) {
