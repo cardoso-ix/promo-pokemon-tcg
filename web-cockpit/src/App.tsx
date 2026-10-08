@@ -51,7 +51,7 @@ export const App: React.FC = () => {
   // Carregar dados iniciais de dashboard
   useEffect(() => {
     carregarOverview();
-    const interval = setInterval(carregarOverview, 5000);
+    const interval = setInterval(carregarOverview, 25000);
     return () => clearInterval(interval);
   }, []);
 

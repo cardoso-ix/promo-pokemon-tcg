@@ -106,6 +106,10 @@ export const api = {
     const query = accountId ? `?accountId=${encodeURIComponent(accountId)}` : '';
     return request<{ ok: boolean; data: MetaAdBalanceInfo }>(`/api/integrations/meta/balance${query}`);
   },
+  getMetaAudit: (date?: string) => {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return request<{ ok: boolean; data: any }>(`/api/integrations/meta/audit${query}`);
+  },
   updateMetaBalance: (dados: {
     saldo?: number;
     recarga?: number;

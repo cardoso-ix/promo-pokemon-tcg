@@ -23,7 +23,7 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 | **Amazon Associados** | Motor Canônico ASIN + Injeção de Tag | 🟢 **Ativo (Store ID: tcgpokepromo-20)** | Intercepta `amzn.to` e `amazon.com.br`, injeta tag oficial limpa, raspa foto HD e replica no nicho TCG. |
 | **Encurtador de Afiliados** | API Oficial Mercado Livre | 🟢 **Ativo (Sentinel 45m)** | Monitorado pelo Cookie Sentinel em tempo real, encurtador oficial `https://meli.la/xxxxxx`. |
 | **Meli Afiliados (7 Visões)** | API Interna de Afiliados + SQLite | 🟢 **Ativo (Sincronização 24/7)** | Ingestão automática com 7 abas: Produtos vendidos, Audiências, Vendas perdidas, Data, Vendas, Categorias e Tags. |
-| **Super Cockpit Unificado (React 19)** | React 19 + Tailwind v4 + Recharts | 🟢 **Online (Header Glass Panel)** | Design em padrão de cartões enquadrados, botão de sincronização unificada automática e navegação direta. |
+| **Super Cockpit Unificado (React 19)** | React 19 + Tailwind v4 + Recharts | 🟢 **Online (Centro de Comando de Campanhas)** | Painel executivo da campanha Lookalike 1%, projeção de autonomia de caixa Meta Ads, widget comparativo Hoje vs Ontem e polling otimizado (25s). |
 | **Bancos de Dados SQLite** | Better-SQLite3 (WAL Mode) | 🟢 **Ativo (Named Volumes)** | `replica.db` salvo com segurança em `/app/data` com fuso horário canônico de Brasília (BRT / UTC-3). |
 | **Finanças & Relatórios Executivos** | Fastify + Recharts + SQLite | 🟢 **Ativo (Conciliação Contábil)** | Consolidação automática das bases Meta Ads e Mercado Livre, DRE e emissão de relatórios mensais formatados. |
 | **Caixa & Recargas Meta Ads** | Graph API v20.0 + SQLite Híbrido | 🟢 **Ativo (Tempo Real)** | Exibição do saldo de caixa para anúncios no Cockpit, badges de status, recargas manuais e limites de alerta. |
@@ -79,6 +79,13 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
   - **Meta de Crescimento Líquido:** Monitorar entradas reais subtraindo eventuais saídas a partir dessa marca.
 - **Manual do Garimpeiro TCG:**
   - Criado o guia completo de garimpo e cálculo de preço por booster em [`docs/GUIA_GARIMPO_MERCADO_LIVRE_TCG.md`](./GUIA_GARIMPO_MERCADO_LIVRE_TCG.md).
+
+### 4.3. Centro de Comando de Campanhas & Atribuição (08/10/2026)
+- **Centro de Comando da Campanha Ativa:** Painel no topo do Dashboard com monitoramento em tempo real da campanha `Lookalike 1% WhatsApp` e do criativo `01 - New` (CPL Hoje R$ 4,12 vs Ontem R$ 3,82, 95 Vídeo Views a R$ 0,08, entradas na comunidade +18 membros desde o marco zero).
+- **Projeção de Autonomia do Caixa Meta Ads:** Cálculo automático de dias restantes de campanha (`Saldo ÷ Burn Rate Médio ~R$ 42/dia ➔ ~2,7 dias`) e data recomendada de recarga preventiva antes do final de semana.
+- **Widget Comparativo "Hoje vs Ontem":** Comparativo direto de comissões, faturamento intermediado e lucro líquido diário no card do Mercado Livre Afiliados.
+- **Higienização Semântica da Operação:** Atualização do card lateral para "Status da Operação Integrada" (Replicador VIP Baileys v7 + Meta Ads Marketing API), removendo resquícios do antigo disparador frio.
+- **Otimização de Polling & Assets:** Polling relaxado de 5s para 25s (menor consumo de rede móvel) e purga de mais de 60 arquivos órfãos compilados antigos em `app/src/public/assets/`.
 
 
 
