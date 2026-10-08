@@ -374,6 +374,16 @@ export class MeliAffiliateService {
       if (cached.clicksToday && cached.clicksToday > clicksToday) clicksToday = cached.clicksToday;
     }
 
+    // 5. Auto-detecção de novas vendas: se o saldo total acumulado no Mercado Livre aumentou em relação ao cache,
+    // incorpora o acréscimo automaticamente no commissionsToday sem depender do fechamento de lote diário do ML
+    if (isCacheFromToday && cached && cached.totalCommissions && totalCommissions > cached.totalCommissions) {
+      const ganhoNovo = Number((totalCommissions - cached.totalCommissions).toFixed(2));
+      if (ganhoNovo > 0 && commissionsToday <= (cached.commissionsToday || 0)) {
+        commissionsToday = Number(((cached.commissionsToday || 0) + ganhoNovo).toFixed(2));
+        ordersToday = Math.max(ordersToday, (cached.ordersToday || 0) + 1);
+      }
+    }
+
     // 3. Montagem da Tabela de "Produtos Vendidos" (Replicando o painel oficial do Mercado Livre)
     if (productsSold.length === 0) {
       productsSold.push(
