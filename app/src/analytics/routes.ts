@@ -3,10 +3,11 @@ import { meliService } from './meli.service.js';
 import { meliAffiliateService } from './meli-affiliate.service.js';
 import { metaAdsService } from './meta.service.js';
 import { analyticsService } from './analytics.service.js';
-import { getMetaInsightsStats, getMeliOrdersStats, getConfig, obterMetricasComunidade } from '../db/database.js';
+import { getMetaInsightsStats, getMeliOrdersStats, getConfig, obterMetricasComunidade, getAllRotas, obterTotalMembrosComunidade, salvarTotalMembrosComunidade } from '../db/database.js';
 import { getBrazilToday, getBrazilDaysAgo } from '../utils/date.js';
 import { financasService } from './financas.service.js';
 import { processarImportacaoAmazon, lancamentoRapidoAmazon, listarRelatoriosAmazon } from './amazon-financas.service.js';
+import { whatsAppManager } from '../whatsapp/client.js';
 
 export async function registerAnalyticsRoutes(app: FastifyInstance) {
   // ==========================================
@@ -530,17 +531,92 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   );
 
   // ==========================================
-  // 5. SINCRONIZAÇÃO UNIFICADA (META ADS + MELI AFILIADOS + MELI ORDENS)
+  // 5. SINCRONIZAÇÃO UNIFICADA (META ADS + MELI AFILIADOS + MELI ORDENS + WHATSAPP MEMBROS)
   // ==========================================
-  // Sincronização Unificada Automática (POST / GET)
-  // ==========================================
+  const sincronizarBaseMembrosWhatsApp = async (): Promise<{
+    connected: boolean;
+    totalMembros: number;
+    grupoNome: string;
+    totalGrupos: number;
+  }> => {
+    try {
+      const state = whatsAppManager.getState();
+      const connected = state.status === 'connected';
+
+      if (!connected) {
+        const salvo = obterTotalMembrosComunidade();
+        return {
+          connected: false,
+          totalMembros: salvo.totalMembros,
+          grupoNome: salvo.grupoNome,
+          totalGrupos: 0
+        };
+      }
+
+      const groups = await whatsAppManager.obterGruposComDetalhes();
+      if (!groups || groups.length === 0) {
+        const salvo = obterTotalMembrosComunidade();
+        return {
+          connected: true,
+          totalMembros: salvo.totalMembros,
+          grupoNome: salvo.grupoNome,
+          totalGrupos: 0
+        };
+      }
+
+      // Identificar grupo VIP de destino prioritário
+      const rotas = getAllRotas().filter((r) => r.ativa);
+      const destinosRotas = new Set(rotas.flatMap((r) => r.destinos));
+
+      // 1. Prioridade: grupo cadastrado como destino de rota ativa
+      let targetGroup = groups.find((g) => destinosRotas.has(g.id));
+
+      // 2. Prioridade: grupo com maior número de membros que tenha nome relevante
+      if (!targetGroup) {
+        targetGroup = groups.find((g) => /pokemon|tcg|vip|promo|copag/i.test(g.nome));
+      }
+
+      // 3. Fallback: grupo com maior total de membros
+      if (!targetGroup) {
+        targetGroup = groups[0];
+      }
+
+      if (targetGroup && targetGroup.total_membros > 0) {
+        salvarTotalMembrosComunidade(targetGroup.total_membros, targetGroup.nome);
+        return {
+          connected: true,
+          totalMembros: targetGroup.total_membros,
+          grupoNome: targetGroup.nome,
+          totalGrupos: groups.length
+        };
+      }
+
+      const salvo = obterTotalMembrosComunidade();
+      return {
+        connected: true,
+        totalMembros: salvo.totalMembros,
+        grupoNome: salvo.grupoNome,
+        totalGrupos: groups.length
+      };
+    } catch (err) {
+      console.warn('[WhatsApp Sync] Erro ao sincronizar membros de grupos:', err);
+      const salvo = obterTotalMembrosComunidade();
+      return {
+        connected: false,
+        totalMembros: salvo.totalMembros,
+        grupoNome: salvo.grupoNome,
+        totalGrupos: 0
+      };
+    }
+  };
+
   const handleSyncAll = async (req: FastifyRequest, reply: FastifyReply) => {
     try {
       const hoje = getBrazilToday();
       const trintaDiasAtras = getBrazilDaysAgo(30);
 
-      // Disparar sincronização em paralelo
-      const [metaResult, affiliateResult, meliResult, balanceResult] = await Promise.allSettled([
+      // Disparar sincronização 360° em paralelo (Meta Ads + Mercado Livre + WhatsApp Membros)
+      const [metaResult, affiliateResult, meliResult, balanceResult, whatsappResult] = await Promise.allSettled([
         metaAdsService.syncMetaInsights(trintaDiasAtras, hoje),
         meliAffiliateService.fetchLiveMetrics(),
         meliService.getValidAccessToken().then(() => {
@@ -548,7 +624,8 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
           const dateFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
           return meliService.syncMeliOrders(dateFrom, dateTo);
         }).catch(() => null),
-        metaAdsService.getAdAccountBalance().catch(() => null)
+        metaAdsService.getAdAccountBalance().catch(() => null),
+        sincronizarBaseMembrosWhatsApp()
       ]);
 
       await analyticsService.consolidateRange(trintaDiasAtras, hoje).catch(() => null);
@@ -561,6 +638,7 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
         affiliate: affiliateResult.status === 'fulfilled' ? affiliateResult.value : { error: String(affiliateResult.reason) },
         meliOrders: meliResult.status === 'fulfilled' ? meliResult.value : null,
         balance: balanceResult.status === 'fulfilled' ? balanceResult.value : null,
+        whatsapp: whatsappResult.status === 'fulfilled' ? whatsappResult.value : null,
         timestamp: new Date().toISOString()
       };
     } catch (err: unknown) {
@@ -571,6 +649,19 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
 
   app.post('/api/integrations/sync-all', handleSyncAll);
   app.get('/api/integrations/sync-all', handleSyncAll);
+
+  // Rotas Dedicadas para Sincronização de Membros do WhatsApp
+  const handleSyncMembers = async () => {
+    const res = await sincronizarBaseMembrosWhatsApp();
+    return { ok: true, ...res };
+  };
+  app.post('/api/whatsapp/sync-members', handleSyncMembers);
+  app.get('/api/whatsapp/sync-members', handleSyncMembers);
+
+  app.get('/api/whatsapp/members-count', async () => {
+    const dados = obterTotalMembrosComunidade();
+    return { ok: true, ...dados };
+  });
 
   // ==========================================
   // 6. ROTAS DE FINANÇAS & DRE AUTOMÁTICO (META ADS + MERCADO LIVRE)

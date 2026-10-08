@@ -160,10 +160,29 @@ export const api = {
       body: JSON.stringify(dados || {})
     }),
   syncAll: () =>
-    request<{ ok: boolean; message: string; meta?: any; affiliate?: any; meliOrders?: any; timestamp: string }>('/api/integrations/sync-all', {
+    request<{
+      ok: boolean;
+      message: string;
+      meta?: any;
+      affiliate?: any;
+      meliOrders?: any;
+      whatsapp?: {
+        connected: boolean;
+        totalMembros: number;
+        grupoNome: string;
+        totalGrupos: number;
+      };
+      timestamp: string;
+    }>('/api/integrations/sync-all', {
       method: 'POST',
       body: JSON.stringify({})
     }),
+  syncWhatsAppMembers: () =>
+    request<{ ok: boolean; connected: boolean; totalMembros: number; grupoNome: string; totalGrupos: number }>('/api/whatsapp/sync-members', {
+      method: 'POST'
+    }),
+  getWhatsAppMembersCount: () =>
+    request<{ ok: boolean; totalMembros: number; grupoNome: string; atualizadoEm: string | null }>('/api/whatsapp/members-count'),
 
   // --- REPLICADOR DE OFERTAS ---
   getReplicaLogs: async (limit = 80): Promise<OfertaLog[]> => {

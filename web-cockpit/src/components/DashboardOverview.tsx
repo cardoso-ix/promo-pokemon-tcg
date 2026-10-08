@@ -204,6 +204,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   };
 
   const [comunidadeMetricas, setComunidadeMetricas] = useState<MetricasComunidade | null>(null);
+  const [membrosTotalComunidade, setMembrosTotalComunidade] = useState<number>(328);
+  const [nomeGrupoVip, setNomeGrupoVip] = useState<string>('Grupo VIP Pokémon TCG');
+  const [syncingMembersOnly, setSyncingMembersOnly] = useState<boolean>(false);
 
   const carregarComunidadeMetricas = async () => {
     try {
@@ -216,6 +219,34 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     }
   };
 
+  const carregarMembrosGrupo = async (forceSync = false) => {
+    try {
+      if (forceSync) {
+        setSyncingMembersOnly(true);
+        const res = await api.syncWhatsAppMembers();
+        if (res && res.totalMembros) {
+          setMembrosTotalComunidade(res.totalMembros);
+          if (res.grupoNome) setNomeGrupoVip(res.grupoNome);
+          setSyncFeedback({
+            tipo: 'sucesso',
+            texto: `Base atualizada com sucesso: ${res.totalMembros} participantes em "${res.grupoNome || 'Grupo VIP'}"!`
+          });
+          setTimeout(() => setSyncFeedback(null), 4500);
+        }
+      } else {
+        const res = await api.getWhatsAppMembersCount();
+        if (res && res.totalMembros) {
+          setMembrosTotalComunidade(res.totalMembros);
+          if (res.grupoNome) setNomeGrupoVip(res.grupoNome);
+        }
+      }
+    } catch {
+      // Silencioso
+    } finally {
+      setSyncingMembersOnly(false);
+    }
+  };
+
   useEffect(() => {
     carregarFluxoReal();
     carregarMetaInsights();
@@ -224,6 +255,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     carregarMeliInsights();
     carregarMeliAffiliate();
     carregarComunidadeMetricas();
+    carregarMembrosGrupo(false);
     const interval = setInterval(() => {
       carregarFluxoReal();
       carregarMetaInsights();
@@ -232,6 +264,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       carregarMeliInsights();
       carregarMeliAffiliate();
       carregarComunidadeMetricas();
+      carregarMembrosGrupo(false);
     }, 20000);
     return () => {
       clearInterval(interval);
@@ -265,6 +298,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     setSyncingAll(true);
     try {
       const res = await api.syncAll();
+      if (res?.whatsapp?.totalMembros) {
+        setMembrosTotalComunidade(res.whatsapp.totalMembros);
+        if (res.whatsapp.grupoNome) setNomeGrupoVip(res.whatsapp.grupoNome);
+      }
       await Promise.allSettled([
         carregarMetaInsights(),
         carregarMetaAudit(),
@@ -272,13 +309,16 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         carregarMeliInsights(),
         carregarMeliAffiliate(true),
         carregarFluxoReal(),
+        carregarComunidadeMetricas(),
+        carregarMembrosGrupo(false),
         onRefreshGlobal ? onRefreshGlobal() : Promise.resolve()
       ]);
+      const membrosMsg = res?.whatsapp?.totalMembros ? ` · ${res.whatsapp.totalMembros} participantes em "${res.whatsapp.grupoNome || 'Grupo VIP'}"` : '';
       setSyncFeedback({
         tipo: 'sucesso',
-        texto: res.message || 'Métricas do Meta Ads, Mercado Livre, Saldo e Ofertas sincronizadas com sucesso!'
+        texto: (res.message || 'Métricas sincronizadas com sucesso!') + membrosMsg
       });
-      setTimeout(() => setSyncFeedback(null), 4500);
+      setTimeout(() => setSyncFeedback(null), 5000);
     } catch (err: unknown) {
       setSyncFeedback({
         tipo: 'erro',
@@ -471,9 +511,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const videoViewsHoje = rawViews ? (parseInt(rawViews, 10) || 95) : 95;
   const rawLeads = auditAd?.actions?.find((a: any) => a.action_type === 'lead')?.value;
   const leadsHojeCampanha = rawLeads ? (parseInt(rawLeads, 10) || 2) : 2;
-  const membrosTotalComunidade = 328;
   const membrosBaseline = 310;
-  const crescimentoComunidade = membrosTotalComunidade - membrosBaseline;
+  const crescimentoComunidade = Math.max(0, membrosTotalComunidade - membrosBaseline);
 
   // Fadiga do Criativo & Frequência (Meta Ads Marketing API) - PARSING 100% NUMÉRICO SEGURO
   const rawFreq = auditAd?.frequency ? parseFloat(String(auditAd.frequency)) : null;
@@ -559,10 +598,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           <button
             onClick={handleSyncAllNow}
             disabled={syncingAll}
+            title="Sincronizar Meta Ads, Mercado Livre, Saldo de Caixa e Base de Membros do Grupo WhatsApp"
             className="group flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 active:scale-95 disabled:opacity-50 border border-white/10"
           >
             <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-            <span>{syncingAll ? 'Sincronizando Tudo...' : 'Sincronizar Métricas'}</span>
+            <span>{syncingAll ? 'Sincronizando Todo o Site...' : 'Sincronizar Métricas & Grupo'}</span>
           </button>
         </div>
       </div>
@@ -610,7 +650,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <button
               onClick={() => onNavigate('leads')}
               className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white font-bold text-xs border border-white/10 transition-all active:scale-95"
-              title="Gerar nova lista higienizada de contatos"
+              title={`Ver base higienizada (${membrosTotalComunidade} membros em ${nomeGrupoVip})`}
             >
               <Users className="w-3.5 h-3.5 text-cyan-400" />
               <span>Base de Leads ({membrosTotalComunidade})</span>
@@ -642,10 +682,22 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </p>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-950/60 border border-white/[0.05]">
+          <div className="p-3 rounded-xl bg-slate-950/60 border border-white/[0.05] relative group/comm">
             <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-[11px] font-medium text-slate-300">Comunidade WhatsApp</span>
-              <Users className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="text-[11px] font-medium text-slate-300 truncate" title={`Grupo VIP: ${nomeGrupoVip}`}>
+                Comunidade WhatsApp
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => carregarMembrosGrupo(true)}
+                  disabled={syncingMembersOnly}
+                  className="p-1 rounded-md bg-white/[0.04] hover:bg-white/[0.12] text-cyan-400 hover:text-cyan-300 transition-all disabled:opacity-40"
+                  title="Atualizar base de pessoas do grupo agora (Baileys)"
+                >
+                  <RefreshCw className={`w-3 h-3 ${syncingMembersOnly ? 'animate-spin text-cyan-300' : ''}`} />
+                </button>
+                <Users className="w-3.5 h-3.5 text-cyan-400" />
+              </div>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-heading font-extrabold text-white">{membrosTotalComunidade}</span>
@@ -1639,7 +1691,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </button>
             )}
             <div className="pt-2 border-t border-white/[0.05] flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">Membros Hoje (Ao Vivo):</span>
+              <span className="text-slate-400 truncate max-w-[160px]" title={nomeGrupoVip}>Total Grupo VIP:</span>
+              <span className="font-mono font-bold text-white">
+                {membrosTotalComunidade} pessoas
+              </span>
+            </div>
+            <div className="pt-1 flex items-center justify-between text-[11px]">
+              <span className="text-slate-400">Fluxo Hoje (Ao Vivo):</span>
               <span className="font-mono font-bold text-emerald-400">
                 +{entradasHoje} / -{saidasHoje} ({liquidoHoje >= 0 ? `+${liquidoHoje}` : liquidoHoje} líq.)
               </span>

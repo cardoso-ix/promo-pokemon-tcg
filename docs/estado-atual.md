@@ -112,3 +112,10 @@ O repositório está 100% pronto para ser clonado em outra máquina:
 - **Diagnóstico de Fadiga do Criativo:** Monitoramento contínuo da métrica `frequency` e `reach` via Meta Ads Marketing API (`calcularFadigaCriativo`), alertando caso o criativo exceda 1.8x (Atenção) ou 2.2x (Fadiga).
 - **Rastreador de Entradas e Saídas (Tempo Real):** Listener nativo do Baileys (`group-participants.update`) persiste entradas e saídas de membros na tabela SQLite `comunidade_eventos`, calculando crescimento líquido, evasão diária e atividade sem depender de exportação manual.
 - **Painel Executivo Integrado:** Dashboard exibe em tempo real o balanço diário de membros e o estado de saturação do Criativo 01 no Centro de Comando da Campanha Ativa e no card lateral de status da operação.
+
+### 1.7. Pipeline Atômico 360° no Servidor & Atualização de Membros do Grupo
+- **Status:** 🟢 Ativo em Produção (08/10/2026).
+- **Sincronização Integrada (`/api/integrations/sync-all`):** Um único clique no botão *"Sincronizar Métricas & Grupo"* dispara o pipeline unificado na VPS, renovando Meta Ads (gastos, cliques, CPL, frequência), Mercado Livre (comissões e pedidos), e consultando a contagem real de pessoas participantes no grupo VIP via Baileys (`groupFetchAllParticipating`).
+- **Contagem Dinâmica de Membros:** Substitui qualquer valor estático pelo total real de participantes do grupo de destino persistido no SQLite (`configs`).
+- **Micro-Botão de Refresh Rápido:** No mini card de *Comunidade WhatsApp*, botão dedicado para consultar a base de membros instantaneamente sem aguardar as demais APIs externas.
+

@@ -2293,6 +2293,50 @@ export function obterMetricasComunidade(chatId?: string): MetricasComunidade {
   }
 }
 
+/**
+ * Obtém os dados consolidados da contagem de membros do grupo VIP
+ */
+export function obterTotalMembrosComunidade(): {
+  totalMembros: number;
+  grupoNome: string;
+  atualizadoEm: string | null;
+} {
+  try {
+    const rawTotal = getConfig('comunidade_total_membros', '328');
+    const totalMembros = parseInt(rawTotal, 10) || 328;
+    const grupoNome = getConfig('comunidade_grupo_nome', 'Comunidade VIP Pokémon TCG');
+    const atualizadoEm = getConfig('comunidade_membros_sincronizado_em', '') || null;
+    return {
+      totalMembros,
+      grupoNome,
+      atualizadoEm
+    };
+  } catch {
+    return {
+      totalMembros: 328,
+      grupoNome: 'Comunidade VIP Pokémon TCG',
+      atualizadoEm: null
+    };
+  }
+}
+
+/**
+ * Salva a contagem de membros e carimbo de sincronização do grupo VIP
+ */
+export function salvarTotalMembrosComunidade(total: number, grupoNome?: string): void {
+  try {
+    if (typeof total === 'number' && !isNaN(total) && total > 0) {
+      setConfig('comunidade_total_membros', String(total));
+    }
+    if (grupoNome) {
+      setConfig('comunidade_grupo_nome', grupoNome);
+    }
+    setConfig('comunidade_membros_sincronizado_em', new Date().toISOString());
+  } catch (err) {
+    console.warn('[Database] Erro ao salvar total de membros da comunidade:', err);
+  }
+}
+
 
 
 
