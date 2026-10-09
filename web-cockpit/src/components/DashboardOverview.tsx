@@ -488,11 +488,16 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const roasBlended = gastoMetaAds > 0 && vendasGeradasMeli > 0 ? (vendasGeradasMeli / gastoMetaAds) : (balanco?.roiPercentual ? balanco.roiPercentual / 100 : 0);
   const isMetaConnected = Boolean(metaData?.configured);
 
-  // --- MÉTRICAS DA CAMPANHA ATIVA & AUTONOMIA DE CAIXA (OPÇÃO 2) ---
+  // --- MÉTRICAS DA CAMPANHA ATIVA & AUTONOMIA DE CAIXA AO VIVO ---
   const saldoAtualMeta = metaBalance?.currentBalance ?? 0;
-  const burnRateDiario = 42.00; // consumo médio diário da campanha ativa
+  const gastoHojeContaMeta = Number(metaData?.data?.spendToday || 0);
+  const burnRateDiario = gastoHojeContaMeta > 0 
+    ? gastoHojeContaMeta 
+    : (Number(metaData?.data?.totalSpend || 0) > 0 ? (Number(metaData?.data?.totalSpend) / 30) : 30.00);
   const diasAutonomiaMeta = burnRateDiario > 0 ? (saldoAtualMeta / burnRateDiario) : 0;
-  const previsaoRecargaData = new Date(Date.now() + Math.max(0, diasAutonomiaMeta) * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  const previsaoRecargaData = diasAutonomiaMeta > 0
+    ? new Date(Date.now() + diasAutonomiaMeta * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    : 'Hoje';
 
   // Dados Consolidados de Ontem vs Hoje
   const itemOntem = balanco?.itens?.find(i => (i.dataLancamento || i.data_lancamento) === '2026-10-07') || balanco?.itens?.[1];

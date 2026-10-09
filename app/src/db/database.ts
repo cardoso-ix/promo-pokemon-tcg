@@ -306,6 +306,19 @@ export function initDatabase() {
   // evitando que mensagens aleatórias cruzem entre múltiplos grupos monitorados
   db.prepare("UPDATE configs SET valor = 'false' WHERE chave = 'replicar_comunicados_texto' AND valor = 'true'").run();
 
+  // Sanitização de recargas de teste e restauração da primazia da Graph API do Meta Ads
+  try {
+    db.prepare("DELETE FROM meta_ad_recargas WHERE descricao LIKE '%Simulação%' OR descricao LIKE '%teste%'").run();
+  } catch {}
+
+  try {
+    const manualRow = db.prepare("SELECT valor FROM configs WHERE chave = 'meta_ad_balance_manual'").get() as { valor?: string } | undefined;
+    const manualVal = parseFloat(manualRow?.valor || '0') || 0;
+    if (manualVal <= 0) {
+      db.prepare("UPDATE configs SET valor = 'false' WHERE chave = 'meta_ad_balance_manual_set'").run();
+    }
+  } catch {}
+
   // Migração: Remover restrição UNIQUE legada de hash_conteudo na tabela logs para permitir histórico contínuo
   try {
     const autoIndex = db.prepare(`

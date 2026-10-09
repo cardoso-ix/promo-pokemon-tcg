@@ -481,27 +481,41 @@ export class MetaAdsIntegrationService {
       errorMsg = err instanceof Error ? err.message : String(err);
     }
 
-    // Cálculo do Saldo Efetivo (Opção 1: Híbrido)
+    // Cálculo do Saldo Efetivo (Opção 1: Híbrido com Primazia da API Real)
     const manualDefinido = getConfig('meta_ad_balance_manual_set', 'false') === 'true';
     let currentBalance = manualBalance;
 
     if (mode === 'auto') {
-      currentBalance = apiSuccess ? apiBalance : manualBalance;
+      currentBalance = apiSuccess ? apiBalance : (cachedApiBalance > 0 ? cachedApiBalance : manualBalance);
       source = 'api';
     } else if (mode === 'manual') {
       currentBalance = manualBalance;
       source = 'manual';
     } else {
-      // Modo Híbrido (Padrão)
-      if (manualDefinido) {
+      // Modo Híbrido (Padrão e Recomendado):
+      // A Graph API da Meta é a autoridade máxima sobre os fundos reais da conta.
+      // Se a API estiver respondendo com saldo (> 0):
+      if (apiSuccess && apiBalance > 0) {
+        // Se houver ajuste manual voluntário estritamente maior que o saldo da API
+        // (ex: recarga PIX recém-feita que ainda não compensou no extrato oficial do Meta)
+        if (manualDefinido && manualBalance > apiBalance) {
+          currentBalance = manualBalance;
+          source = 'hybrid';
+        } else {
+          currentBalance = apiBalance;
+          source = 'api';
+        }
+      } else if (manualDefinido && manualBalance > 0) {
         currentBalance = manualBalance;
         source = 'hybrid';
-      } else if (apiSuccess) {
-        currentBalance = apiBalance;
+      } else if (cachedApiBalance > 0) {
+        // Se a Graph API falhar momentaneamente (ex: rate limit temporário),
+        // usa o valor em cache persistido do último sync com a Meta
+        currentBalance = cachedApiBalance;
         source = 'api';
       } else {
         currentBalance = manualBalance;
-        source = 'manual';
+        source = manualDefinido ? 'hybrid' : 'manual';
       }
     }
 
@@ -567,7 +581,9 @@ export class MetaAdsIntegrationService {
       setConfig('meta_ad_balance_manual_set', 'true');
       salvarRecargaMeta(0, descricao || `Ajuste manual de saldo para R$ ${saldoAtual.toFixed(2)}`, saldoAtual);
     } else if (typeof recarga === 'number' && !isNaN(recarga) && recarga > 0) {
-      saldoAtual += recarga;
+      const cached = parseFloat(getConfig('meta_ad_balance_api_cached', '0.00')) || 0;
+      const saldoBase = saldoAtual > 0 ? saldoAtual : (cached > 0 ? cached : 0);
+      saldoAtual = saldoBase + recarga;
       setConfig('meta_ad_balance_manual', saldoAtual.toFixed(2));
       setConfig('meta_ad_balance_manual_set', 'true');
       salvarRecargaMeta(recarga, descricao || `Recarga de crédito Meta Ads: R$ ${recarga.toFixed(2)}`, saldoAtual);

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { encryptToken, decryptToken } from '../src/analytics/security.js';
 import { metaAdsService } from '../src/analytics/meta.service.js';
 import { meliAffiliateService } from '../src/analytics/meli-affiliate.service.js';
+import { setConfig, db } from '../src/db/database.js';
 import {
   integrationTokens,
   meliOrders,
@@ -121,14 +122,23 @@ test('Meta Ads - Atualização de Saldo Manual e Histórico de Recargas', async 
   assert.equal(saldoBaixo.currentBalance, 35.0);
   assert.equal(saldoBaixo.statusBadge, 'warning');
 
-  // 4. Simular saldo zerado ou crítico
+  // 4. Simular saldo zerado ou crítico (modo manual)
   const saldoZerado = await metaAdsService.updateAdAccountBalance({
     novoSaldo: 0.0,
-    descricao: 'Simulação de saldo zerado'
+    descricao: 'Simulação de saldo zerado',
+    mode: 'manual'
   });
 
   assert.equal(saldoZerado.currentBalance, 0.0);
   assert.equal(saldoZerado.statusBadge, 'critical');
+
+  // Limpeza: Restaurar modo de produção sem poluir a base real
+  setConfig('meta_ad_balance_manual_set', 'false');
+  setConfig('meta_ad_balance_manual', '0.00');
+  setConfig('meta_ad_balance_mode', 'hybrid');
+  try {
+    db.prepare("DELETE FROM meta_ad_recargas WHERE descricao LIKE '%teste%' OR descricao LIKE '%Simulação%'").run();
+  } catch {}
 });
 
 test('Meli Afiliados - resetarNovoDia zera comissões de hoje e preserva histórico', async () => {
