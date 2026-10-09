@@ -569,8 +569,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header Enquadrado em Card Padrão com Sincronização Unificada - Magic Patterns Signature */}
-      <div className="mp-card rounded-2xl p-5 sm:p-6 border border-white/[0.08] shadow-2xl backdrop-blur-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-40 bg-gradient-to-bl from-cyan-500/10 via-blue-500/5 to-transparent pointer-events-none rounded-tr-2xl" />
+      <div className="mp-card mp-card-gold rounded-2xl p-5 sm:p-6 border border-amber-400/25 shadow-2xl backdrop-blur-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-40 bg-gradient-to-bl from-amber-500/15 via-orange-500/5 to-transparent pointer-events-none rounded-tr-2xl" />
         <div className="relative z-10">
           <div className="flex items-center gap-2.5 mb-2 flex-wrap">
             <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm shadow-emerald-500/10">
@@ -578,18 +578,21 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isReplicaOnline ? 'bg-emerald-400' : 'bg-amber-400'}`} />
                 <span className={`relative inline-flex rounded-full h-2 w-2 ${isReplicaOnline ? 'bg-emerald-400' : 'bg-amber-400'}`} />
               </span>
-              {isReplicaOnline ? 'WhatsApp & Dashboard Online' : 'Dashboard Ativo'}
+              {isReplicaOnline ? 'WhatsApp & Cockpit Online' : 'Cockpit Ativo'}
             </span>
-            <span className="text-xs text-slate-400 font-mono tracking-tight px-2.5 py-0.5 rounded-md bg-white/[0.03] border border-white/[0.05]">
+            <span className="text-xs text-slate-400 font-mono tracking-tight px-2.5 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.06]">
               {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </span>
+            <span className="text-[11px] font-bold text-amber-300 font-display uppercase tracking-wider px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30">
+              ⚡ Modo Autônomo 24/7
             </span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-heading font-extrabold text-white tracking-tight">
-            Central de Comando <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">Pokémon TCG</span>
+          <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-white tracking-wide flex items-center gap-2 flex-wrap">
+            Central de Comando <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">Pokémon TCG Promo</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-300/80 mt-1.5 max-w-2xl leading-relaxed">
-            Gestão unificada de afiliados Mercado Livre, tráfego pago Meta Ads, réplica de grupos VIP e atendimento com IA em tempo real.
+          <p className="text-xs sm:text-sm text-slate-300/85 mt-1.5 max-w-2xl leading-relaxed">
+            Gestão unificada de afiliados Mercado Livre, inteligência Meta Ads, replicador oficial de grupos VIP e atendimento autônomo com IA.
           </p>
         </div>
 
@@ -599,31 +602,31 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             onClick={handleSyncAllNow}
             disabled={syncingAll}
             title="Sincronizar Meta Ads, Mercado Livre, Saldo de Caixa e Base de Membros do Grupo WhatsApp"
-            className="group flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 active:scale-95 disabled:opacity-50 border border-white/10"
+            className="group flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 shadow-glow-gold active:scale-95 disabled:opacity-50 border border-amber-300/40"
           >
-            <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-            <span>{syncingAll ? 'Sincronizando Todo o Site...' : 'Sincronizar Métricas & Grupo'}</span>
+            <RefreshCw className={`w-4 h-4 text-slate-950 ${syncingAll ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
+            <span>{syncingAll ? 'Sincronizando Todo o Cockpit...' : 'Sincronizar Métricas & Grupo'}</span>
           </button>
         </div>
       </div>
 
-      {/* Centro de Comando Executivo da Campanha Ativa (Lookalike 1% WhatsApp - Opção 2) */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-950/60 via-slate-900/80 to-cyan-950/60 border border-cyan-500/30 p-4 sm:p-5 shadow-2xl backdrop-blur-md space-y-4 group hover:border-cyan-500/50 transition-all">
+      {/* Centro de Comando Executivo da Campanha Ativa (Lookalike 1% WhatsApp) */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900/90 via-[#0a1226]/90 to-amber-950/40 border border-amber-500/25 p-4 sm:p-5 shadow-2xl backdrop-blur-md space-y-4 group hover:border-amber-400/45 transition-all">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500/25 to-blue-600/35 border border-cyan-500/40 flex items-center justify-center text-cyan-300 shrink-0 shadow-lg shadow-cyan-500/10 group-hover:scale-105 transition-transform">
-              <Target className="w-6 h-6 text-cyan-300" />
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-slate-950 shrink-0 shadow-glow-gold group-hover:scale-105 transition-transform">
+              <Target className="w-6 h-6 text-slate-950" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm sm:text-base font-black text-white tracking-tight flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-display font-bold text-white tracking-wide flex items-center gap-2">
                   <span>Campanha Pokémon · Lookalike 1% WhatsApp</span>
                 </h3>
-                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-wider flex items-center gap-1 font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-livedot" />
                   Ativa no Meta Ads
                 </span>
-                <span className="bg-cyan-500/15 text-cyan-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded-md border border-cyan-500/25">
+                <span className="bg-amber-500/15 text-amber-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-500/25">
                   Criativo: 01 - New
                 </span>
                 <span
@@ -636,12 +639,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                       : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                   }`}
                 >
-                  <Sparkles className="w-3 h-3" />
+                  <Sparkles className="w-3 h-3 text-amber-300" />
                   Freq: {Number(frequenciaCampanha || 1.15).toFixed(2)}x · {fadigaInfo?.nivel === 'saudavel' ? 'Criativo Saudável' : fadigaInfo?.nivel === 'atencao' ? 'Atenção' : 'Fadiga'}
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
-                Público qualificado gerado a partir de <strong>4.278 membros reais</strong> de Pokémon TCG · Veiculação em Feed e Reels Mobile (R$ 30,00/dia Lookalike + R$ 20,00/dia Aberto).
+                Público qualificado gerado a partir de <strong>4.278 colecionadores reais</strong> de Pokémon TCG · Veiculação em Feed e Reels Mobile (R$ 30,00/dia Lookalike + R$ 20,00/dia Aberto).
               </p>
             </div>
           </div>
@@ -657,7 +660,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </button>
             <button
               onClick={() => onNavigate('financas')}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-xs shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/35 transition-all shrink-0 active:scale-95"
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 font-display font-bold text-xs shadow-glow-gold transition-all shrink-0 active:scale-95"
             >
               <span>Ver DRE Completo</span>
               <ArrowUpRight className="w-3.5 h-3.5 text-slate-950 stroke-[3]" />
@@ -744,14 +747,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* KPI 1: Ofertas Hoje */}
         <div className="mp-card mp-card-cyan rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300/80">Ofertas Replicadas</span>
-            <div className="w-8 h-8 rounded-xl bg-cyan-500/15 flex items-center justify-center text-cyan-400 border border-cyan-500/30 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-cyan-500/20 transition-all">
+            <span className="text-xs font-display font-semibold uppercase tracking-wider text-slate-300">Ofertas Replicadas</span>
+            <div className="w-8 h-8 rounded-xl bg-cyan-500/15 flex items-center justify-center text-cyan-400 border border-cyan-400/30 group-hover:scale-110 shadow-glow-cyan transition-all">
               <Zap className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-white tracking-tight mp-metric-value">{totalHoje}</span>
-            <span className="text-xs font-medium text-emerald-400 flex items-center gap-0.5">
+            <span className="text-3xl font-display font-bold text-white tracking-tight mp-metric-value">{totalHoje}</span>
+            <span className="text-xs font-semibold text-emerald-400 flex items-center gap-0.5">
               <TrendingUp className="w-3 h-3" /> +100%
             </span>
           </div>
@@ -760,22 +763,22 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </p>
           <div className="w-full bg-slate-900/80 rounded-full h-1.5 mt-3.5 overflow-hidden border border-white/5">
             <div
-              className="bg-gradient-to-r from-cyan-500 to-blue-500 h-1.5 rounded-full shadow-sm shadow-cyan-500/50"
+              className="bg-gradient-to-r from-cyan-400 to-blue-500 h-1.5 rounded-full shadow-glow-cyan"
               style={{ width: `${Math.min(100, ((replica?.postsLastHour || 0) / 40) * 100)}%` }}
             />
           </div>
         </div>
 
         {/* KPI 2: Tráfego Pago & Meta Ads */}
-        <div className="mp-card mp-card-violet rounded-2xl p-5 relative overflow-hidden group">
+        <div className="mp-card mp-card-cyan rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300/80">Tráfego Meta Ads</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-500/15 flex items-center justify-center text-indigo-400 border border-indigo-500/30 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-indigo-500/20 transition-all">
+            <span className="text-xs font-display font-semibold uppercase tracking-wider text-slate-300">Tráfego Meta Ads</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400 border border-blue-400/30 group-hover:scale-110 transition-all">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-white tracking-tight mp-metric-value">
+            <span className="text-3xl font-display font-bold text-white tracking-tight mp-metric-value">
               R$ {gastoMetaAds.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
@@ -783,14 +786,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             {metaData?.data?.totalClicks || 0} cliques · {metaData?.data?.totalImpressions || 0} impressões
           </p>
           <div className="w-full bg-slate-900/80 rounded-full h-1.5 mt-3.5 overflow-hidden border border-white/5">
-            <div className="bg-gradient-to-r from-indigo-500 to-violet-500 h-1.5 rounded-full w-[85%] shadow-sm shadow-indigo-500/50" />
+            <div className="bg-gradient-to-r from-blue-500 to-cyan-400 h-1.5 rounded-full w-[85%] shadow-glow-cyan" />
           </div>
         </div>
 
         {/* KPI 3: Caixa Meta Ads (Saldo & Recargas) */}
         <div className="mp-card mp-card-emerald rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300/80 flex items-center gap-1.5">
+            <span className="text-xs font-display font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
               <span>Caixa Meta Ads</span>
             </span>
             <button
@@ -804,7 +807,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </button>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-white tracking-tight mp-metric-value">
+            <span className="text-3xl font-display font-bold text-white tracking-tight mp-metric-value">
               R$ {(metaBalance?.currentBalance ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
             <span className="text-xs text-slate-400 font-mono">
@@ -824,7 +827,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
                   metaBalance?.statusBadge === 'healthy'
-                    ? 'bg-emerald-400'
+                    ? 'bg-emerald-400 animate-livedot'
                     : metaBalance?.statusBadge === 'warning'
                     ? 'bg-amber-400'
                     : 'bg-red-400'
@@ -836,7 +839,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 ? 'Saldo Baixo'
                 : 'Recarga Urgente'}
             </span>
-            <span className="text-[10px] text-cyan-300/90 font-medium flex items-center gap-1 font-mono">
+            <span className="text-[10px] text-cyan-300 font-medium flex items-center gap-1 font-mono">
               <Clock className="w-3 h-3 text-cyan-400" />
               Recarga: ~{previsaoRecargaData}
             </span>
@@ -845,61 +848,61 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <div
               className={`h-1.5 rounded-full transition-all duration-500 shadow-sm ${
                 metaBalance?.statusBadge === 'healthy'
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 w-full shadow-emerald-500/50'
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 w-full shadow-glow-emerald'
                   : metaBalance?.statusBadge === 'warning'
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400 w-1/2 shadow-amber-500/50'
-                  : 'bg-gradient-to-r from-red-500 to-rose-400 w-1/5 shadow-red-500/50'
+                  ? 'bg-gradient-to-r from-amber-500 to-yellow-400 w-1/2 shadow-glow-gold'
+                  : 'bg-gradient-to-r from-red-500 to-rose-400 w-1/5 shadow-sm'
               }`}
             />
           </div>
         </div>
 
-        {/* KPI 4: Blended ROAS & Performance */}
-        <div className="mp-card mp-card-violet rounded-2xl p-5 relative overflow-hidden group">
+        {/* KPI 4: Blended ROAS & Performance (Ouro / Dourado Pokémon) */}
+        <div className="mp-card mp-card-gold rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300/80">Blended ROAS</span>
-            <div className="w-8 h-8 rounded-xl bg-purple-500/15 flex items-center justify-center text-purple-400 border border-purple-500/30 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-purple-500/20 transition-all">
-              <Sparkles className="w-4 h-4" />
+            <span className="text-xs font-display font-semibold uppercase tracking-wider text-amber-300">Blended ROAS</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 border border-amber-400/40 group-hover:scale-110 shadow-glow-gold transition-all">
+              <Sparkles className="w-4 h-4 text-amber-300" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-purple-400 tracking-tight mp-metric-value">
+            <span className="text-3xl font-display font-bold text-amber-300 tracking-tight mp-metric-value">
               {roasBlended.toFixed(2)}x
             </span>
-            <span className="text-xs text-emerald-400 font-medium">Retorno</span>
+            <span className="text-xs text-emerald-400 font-semibold font-mono">Retorno</span>
           </div>
           <p className="text-xs text-slate-400 mt-1.5">
-            Vendas / Investimento em tráfego
+            Vendas brutas / Tráfego pago
           </p>
           <div className="w-full bg-slate-900/80 rounded-full h-1.5 mt-3.5 overflow-hidden border border-white/5">
-            <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-1.5 rounded-full w-[75%] shadow-sm shadow-purple-500/50" />
+            <div className="bg-gradient-to-r from-amber-400 to-yellow-500 h-1.5 rounded-full w-[80%] shadow-glow-gold" />
           </div>
         </div>
 
-        {/* KPI 5: Faturamento & Regra 70% */}
+        {/* KPI 5: Lucro Líquido Real & Regra 70% */}
         <div className="mp-card mp-card-emerald rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-300/80">Lucro Líquido Real</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-500/30 group-hover:scale-110 group-hover:shadow-lg group-hover:shadow-emerald-500/20 transition-all">
+            <span className="text-xs font-display font-semibold uppercase tracking-wider text-emerald-300">Lucro Líquido Real</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400 border border-emerald-400/30 group-hover:scale-110 shadow-glow-emerald transition-all">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-heading font-extrabold text-emerald-400 tracking-tight mp-metric-value">
+            <span className="text-3xl font-display font-bold text-emerald-400 tracking-tight mp-metric-value">
               R$ {(lucroOperacaoReal > 0 ? lucroOperacaoReal : (balanco?.resultadoLiquido || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <p className="text-xs text-cyan-300/90 mt-1.5 font-medium">
+          <p className="text-xs text-cyan-300 mt-1.5 font-medium">
             Reinvestir: R$ {(reinvestir70 > 0 ? reinvestir70 : (balanco?.valorReinvestimentoCampanhas || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (70%)
           </p>
           <div className="w-full bg-slate-900/80 rounded-full h-1.5 mt-3.5 overflow-hidden border border-white/5">
-            <div className="bg-gradient-to-r from-emerald-500 to-cyan-500 h-1.5 rounded-full w-[70%] shadow-sm shadow-emerald-500/50" />
+            <div className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-1.5 rounded-full w-[70%] shadow-glow-emerald" />
           </div>
         </div>
       </div>
 
       {/* Banner / Card Executivo de Vendas do Mercado Livre Afiliados (Tempo Real via API Oficial) */}
-      <div className="glass-panel rounded-2xl p-5 border border-amber-500/25 bg-gradient-to-r from-amber-950/40 via-slate-900/70 to-yellow-950/30 space-y-4">
+      <div className="mp-card mp-card-gold rounded-2xl p-5 border border-amber-400/30 bg-gradient-to-r from-amber-950/45 via-[#0d1527]/90 to-amber-950/30 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg">
@@ -1354,32 +1357,33 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* Seção Principal de Gráficos Recharts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Gráfico 1: Atividade Horária & Conversão (2 Colunas) */}
-        <div className="lg:col-span-2 glass-panel rounded-2xl p-6 border border-white/[0.08] flex flex-col justify-between space-y-4">
+        <div className="lg:col-span-2 mp-card rounded-2xl p-6 border border-white/[0.08] flex flex-col justify-between space-y-4 shadow-xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
+                <h3 className="font-display font-bold text-base text-white flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-cyan-400" />
                   Fluxo de Ofertas & Links por Horário
                 </h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold">
-                  1 em 1 hora
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 font-semibold">
+                  Auditoria 1h em 1h
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">Envios e links oficiais de afiliados gerados ao longo do dia</p>
+              <p className="text-xs text-slate-400 mt-0.5">Envios e links oficiais de afiliados gerados ao longo do dia em tempo real</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setShowPlanilhaHoraria(!showPlanilhaHoraria)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-cyan-300 border border-cyan-500/30 text-xs font-semibold transition-all cursor-pointer shadow-sm active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-amber-300 border border-amber-400/30 text-xs font-semibold transition-all cursor-pointer shadow-sm active:scale-95"
                 title="Visualizar métricas em formato de planilha de 1 em 1 hora"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-amber-400" />
                 <span>{showPlanilhaHoraria ? 'Ocultar Planilha' : 'Planilha Horária (1 em 1h)'}</span>
                 {showPlanilhaHoraria ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </button>
-              <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold hidden sm:inline">
+              <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 font-bold hidden sm:inline flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-livedot" />
                 Live Feed
               </span>
             </div>
@@ -1390,12 +1394,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <AreaChart data={activityData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorCliques" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.4} />
+                    <stop offset="5%" stopColor="#00e5ff" stopOpacity={0.45} />
                     <stop offset="95%" stopColor="#00e5ff" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="colorOfertas" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                    <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.45} />
+                    <stop offset="95%" stopColor="#fbbf24" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
@@ -1403,11 +1407,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0d1527',
-                    borderColor: 'rgba(255,255,255,0.15)',
+                    backgroundColor: '#070d1e',
+                    borderColor: 'rgba(251, 191, 36, 0.3)',
                     borderRadius: '12px',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
-                    fontSize: '12px'
+                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.8)',
+                    fontSize: '12px',
+                    fontFamily: 'Inter, sans-serif'
                   }}
                 />
                 <Area
@@ -1422,7 +1427,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <Area
                   type="monotone"
                   dataKey="ofertas"
-                  stroke="#10b981"
+                  stroke="#fbbf24"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#colorOfertas)"
@@ -1432,12 +1437,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </ResponsiveContainer>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 border-t border-white/[0.04] pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-300 border-t border-white/[0.04] pt-2 font-medium">
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-cyan-400" /> Links Convertidos (meli.la)
+              <span className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_#00e5ff]" /> Links Convertidos (meli.la)
             </span>
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-emerald-400" /> Ofertas Replicadas
+              <span className="w-3 h-3 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]" /> Ofertas Replicadas
             </span>
           </div>
 
@@ -1445,11 +1450,11 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           {showPlanilhaHoraria && (
             <div className="mt-3 pt-3 border-t border-white/[0.08] space-y-2 animate-in fade-in duration-200">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-amber-400" />
                   Extrato Horário Detalhado (Dia de Hoje)
                 </span>
-                <span className="text-[11px] text-slate-500 font-mono">
+                <span className="text-[11px] text-slate-400 font-mono">
                   {activityData.length} faixas horárias auditadas
                 </span>
               </div>
@@ -1517,10 +1522,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         {/* Gráfico 2: Composição DRE & Regra 70% (1 Coluna) */}
-        <div className="glass-panel rounded-2xl p-6 border border-white/[0.08] flex flex-col justify-between">
+        <div className="mp-card rounded-2xl p-6 border border-white/[0.08] flex flex-col justify-between shadow-xl">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
+              <h3 className="font-display font-bold text-base text-white flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-emerald-400" />
                 Balanço DRE
               </h3>
@@ -1528,7 +1533,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
             <button
               onClick={() => onNavigate('financas')}
-              className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+              className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 transition-colors"
             >
               Detalhar <ArrowUpRight className="w-3 h-3" />
             </button>
@@ -1553,8 +1558,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 <Tooltip
                   formatter={(val: number) => `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                   contentStyle={{
-                    backgroundColor: '#0d1527',
-                    borderColor: 'rgba(255,255,255,0.15)',
+                    backgroundColor: '#070d1e',
+                    borderColor: 'rgba(251, 191, 36, 0.3)',
                     borderRadius: '12px',
                     fontSize: '12px'
                   }}
@@ -1564,17 +1569,17 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
 
           <div className="space-y-2 text-xs">
-            <div className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03]">
-              <span className="flex items-center gap-2 text-slate-300">
-                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" /> Reinvestimento (70%)
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+              <span className="flex items-center gap-2 text-slate-300 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00e5ff]" /> Reinvestimento (70%)
               </span>
               <span className="font-bold text-white font-mono">
                 R$ {(reinvestir70 > 0 ? reinvestir70 : (balanco?.valorReinvestimentoCampanhas || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
             </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-white/[0.03]">
-              <span className="flex items-center gap-2 text-slate-300">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" /> Lucro Sócios (30%)
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.04]">
+              <span className="flex items-center gap-2 text-slate-300 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" /> Lucro Sócios (30%)
               </span>
               <span className="font-bold text-emerald-400 font-mono">
                 R$ {(disponivel30 > 0 ? disponivel30 : (balanco?.valorLucroDisponivel || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -1587,10 +1592,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       {/* Seção Inferior: Feed em Tempo Real & Status dos Chips */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Feed Recente de Atividades ao Vivo (2 Colunas) */}
-        <div className="lg:col-span-2 glass-panel rounded-2xl p-6 border border-white/[0.08]">
+        <div className="lg:col-span-2 mp-card rounded-2xl p-6 border border-white/[0.08] shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
+              <h3 className="font-display font-bold text-base text-white flex items-center gap-2">
                 <Droplets className="w-4 h-4 text-cyan-400" />
                 Feed de Ofertas Replicadas ao Vivo
               </h3>
@@ -1598,7 +1603,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
             <button
               onClick={() => onNavigate('replica')}
-              className="text-xs text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1"
+              className="text-xs text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 transition-colors"
             >
               Abrir Feed Completo <ArrowUpRight className="w-3 h-3" />
             </button>
@@ -1653,10 +1658,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
 
-        {/* Card Lateral: Status da Operação (Replicador VIP + Meta Ads - Opção 2) */}
-        <div className="glass-panel rounded-2xl p-6 border border-white/[0.08] space-y-4">
+        {/* Card Lateral: Status da Operação (Replicador VIP + Meta Ads) */}
+        <div className="mp-card rounded-2xl p-6 border border-white/[0.08] space-y-4 shadow-xl">
           <div>
-            <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
+            <h3 className="font-display font-bold text-base text-white flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               Status da Operação Integrada
             </h3>

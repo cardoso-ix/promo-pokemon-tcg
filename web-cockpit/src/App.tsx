@@ -57,7 +57,15 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#070d17] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="relative min-h-screen bg-[#070d1e] text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
+      {/* Camada de Fundo Tecnológica & Auras Ambientais */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none">
+        <div className="absolute inset-0 bg-tech-grid opacity-70"></div>
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-amber-500/[0.04] blur-[160px]"></div>
+        <div className="absolute top-[35%] left-10 w-[550px] h-[550px] rounded-full bg-cyan-500/[0.035] blur-[150px]"></div>
+        <div className="absolute bottom-10 right-10 w-[600px] h-[600px] rounded-full bg-emerald-500/[0.035] blur-[160px]"></div>
+      </div>
+
       {/* Super Header Unificado */}
       <Header
         activeModule={activeModule}
@@ -67,7 +75,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Container com padding mobile seguro para BottomNav e largura ampla para monitores modernos */}
-      <main className="flex-1 max-w-[1680px] w-full mx-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 transition-all">
+      <main className="relative z-10 flex-1 max-w-[1680px] w-full mx-auto p-3 sm:p-6 lg:p-8 pb-24 md:pb-8 transition-all">
         <ErrorBoundary>
           {activeModule === 'dashboard' && (
             <DashboardOverview

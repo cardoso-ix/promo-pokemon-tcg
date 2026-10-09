@@ -41,165 +41,168 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 h-16 w-full bg-[#09101d]/90 backdrop-blur-xl border-b border-white/[0.08] px-4 sm:px-6 lg:px-8 flex items-center transition-all">
+    <header className="sticky top-0 z-50 h-16 w-full bg-[#070d1e]/90 backdrop-blur-xl border-b border-white/[0.08] px-3 sm:px-6 lg:px-8 flex items-center transition-all shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
       <div className="max-w-[1680px] w-full mx-auto flex items-center justify-between">
-      <div
-        className="flex items-center gap-3 cursor-pointer group"
-        onClick={() => onSelectModule('dashboard')}
-      >
-        <div className="relative w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500/20 to-orange-500/20 border border-white/10 flex items-center justify-center p-1.5 shadow-lg shadow-cyan-500/10 group-hover:scale-105 transition-transform">
-          <svg viewBox="0 0 48 48" className="w-full h-full drop-shadow">
-            <circle cx="24" cy="24" r="22" fill="#cbd5e1" stroke="#082f49" strokeWidth="2.5" />
-            <path d="M 2 24 A 22 22 0 0 1 46 24 Z" fill="#0284c7" />
-            <path d="M 10 14 C 14 9, 19 7, 24 7 C 22 11, 20 16, 17 22 Z" fill="#00e5ff" />
-            <path d="M 38 14 C 34 9, 29 7, 24 7 C 26 11, 28 16, 31 22 Z" fill="#f97316" />
-            <line x1="2" y1="24" x2="46" y2="24" stroke="#082f49" strokeWidth="3" />
-            <circle cx="24" cy="24" r="7" fill="#082f49" />
-            <circle cx="24" cy="24" r="4.5" fill="#ffffff" stroke="#38bdf8" strokeWidth="1.5" />
-            <circle cx="24" cy="24" r="2" fill="#00e5ff" />
-          </svg>
-        </div>
-        <div className="block">
-          <h1 className="font-heading font-bold text-xs sm:text-sm tracking-tight text-white flex items-center gap-1.5">
-            Promo Pokémon TCG
-            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-semibold hidden xs:inline">
-              Dashboard PRO
-            </span>
-          </h1>
-          <p className="text-[10px] sm:text-[11px] text-cyan-300/80 font-medium hidden sm:block">Dashboard Pokémon TCG</p>
-        </div>
-      </div>
-
-      {/* Navegação Central de Módulos (Tabs) - Apenas Desktop (No Mobile é BottomNav) */}
-      <nav className="hidden md:flex items-center gap-1.5 p-1 rounded-xl bg-white/[0.04] border border-white/[0.06] shadow-inner">
-        <button
+        
+        {/* LOGO OFICIAL COM MEDALHÃO DO CHARIZARD */}
+        <div
+          className="flex items-center gap-3 cursor-pointer group select-none"
           onClick={() => onSelectModule('dashboard')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
-            activeModule === 'dashboard'
-              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25 border border-blue-400/30'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-          }`}
         >
-          <Activity className="w-3.5 h-3.5 text-cyan-300" />
-          <span>Visão Geral 360°</span>
-        </button>
+          <div className="relative w-10 h-10 rounded-full p-[2px] bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-[0_0_15px_rgba(251,191,36,0.4)] group-hover:scale-105 transition-transform shrink-0">
+            <img
+              src="/brand/logo-grupo-pokemon-tcg-promo.png"
+              alt="Logo Oficial Pokémon TCG Promo com Charizard"
+              className="w-full h-full rounded-full object-cover"
+            />
+            <div className="absolute inset-0 rounded-full bg-amber-400/20 blur-sm -z-10 group-hover:opacity-100 opacity-60 transition-opacity" />
+          </div>
 
-        <button
-          onClick={() => onSelectModule('afiliados')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
-            activeModule === 'afiliados'
-              ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white shadow-md shadow-amber-500/25 border border-amber-400/30'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-          }`}
-        >
-          <ShoppingBag className="w-3.5 h-3.5 text-amber-300" />
-          <span>Meli Afiliados</span>
-        </button>
+          <div className="block">
+            <h1 className="font-display font-bold text-xs sm:text-sm tracking-wide text-white flex items-center gap-1.5">
+              Pokémon TCG Promo
+              <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 font-bold hidden xs:inline tracking-wider">
+                VIP COCKPIT
+              </span>
+            </h1>
+            <p className="text-[10px] text-slate-400 font-medium hidden sm:flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-livedot" />
+              <span>Centro de Comando Autônomo</span>
+            </p>
+          </div>
+        </div>
 
-        <button
-          onClick={() => onSelectModule('replica')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
-            activeModule === 'replica'
-              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/25 border border-cyan-400/30'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-          }`}
-        >
-          <Droplets className="w-3.5 h-3.5 text-cyan-300" />
-          <span>Replicador</span>
-        </button>
-
-        <button
-          onClick={() => onSelectModule('radar')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
-            activeModule === 'radar'
-              ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-md shadow-cyan-500/25 border border-cyan-400/30'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-          }`}
-        >
-          <Search className="w-3.5 h-3.5 text-cyan-300" />
-          <span>Radar TCG</span>
-        </button>
-
-        <button
-          onClick={() => onSelectModule('financas')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
-            activeModule === 'financas'
-              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/25 border border-emerald-400/30'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-          }`}
-        >
-          <DollarSign className="w-3.5 h-3.5 text-emerald-300" />
-          <span>Finanças Meta</span>
-        </button>
-
-        <button
-          onClick={() => onSelectModule('leads')}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
-            activeModule === 'leads'
-              ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/25 border border-cyan-400/30'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5 text-cyan-300" />
-          <span>Leads Meta</span>
-          <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.2 rounded-full border border-emerald-500/30">
-            NOVO
-          </span>
-        </button>
-      </nav>
-
-      {/* Ações Rápidas & Badges de Conexão */}
-      <div className="flex items-center gap-2.5">
-        {/* Badge Mercado Livre Sentinel */}
-        <button
-          onClick={onOpenCookieModal}
-          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-            isMeliValid
-              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
-              : 'bg-amber-500/10 text-amber-300 border-amber-500/30 hover:bg-amber-500/20 animate-pulse'
-          }`}
-          title="Clique para renovar o Cookie de afiliado Mercado Livre"
-        >
-          {isMeliValid ? (
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          ) : (
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-          )}
-          <span>{isMeliValid ? 'meli.la Ativo' : 'Renovar Cookie'}</span>
-        </button>
-
-        {/* Badge WhatsApp Replicador */}
-        <button
-          onClick={onOpenReplicaQr}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
-            isReplicaConnected
-              ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/20'
-              : isReplicaQrReady
-              ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25 animate-pulse'
-              : 'bg-red-500/10 text-red-300 border-red-500/20 hover:bg-red-500/20'
-          }`}
-          title="Status do Chip do Replicador. Clique para escanear QR Code."
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isReplicaConnected ? 'bg-cyan-400 shadow-[0_0_8px_#00e5ff]' : 'bg-amber-400'
+        {/* NAVEGAÇÃO CENTRAL DE MÓDULOS (DESKTOP) */}
+        <nav className="hidden md:flex items-center gap-1 p-1 rounded-xl bg-white/[0.03] border border-white/[0.06] shadow-inner">
+          <button
+            onClick={() => onSelectModule('dashboard')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
+              activeModule === 'dashboard'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-glow-cyan border border-cyan-400/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
             }`}
-          />
-          <QrCode className="w-3 h-3 opacity-70" />
-          <span>
-            {isReplicaConnected ? 'Replicador OK' : isReplicaQrReady ? 'Escanear QR' : 'Replicador Off'}
-          </span>
-        </button>
+          >
+            <Activity className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Visão Geral</span>
+          </button>
 
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-          title="Encerrar Sessão"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
-      </div>
+          <button
+            onClick={() => onSelectModule('afiliados')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
+              activeModule === 'afiliados'
+                ? 'bg-gradient-to-r from-amber-600 to-yellow-600 text-white shadow-glow-gold border border-amber-400/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <ShoppingBag className="w-3.5 h-3.5 text-amber-300" />
+            <span>Meli Afiliados</span>
+          </button>
+
+          <button
+            onClick={() => onSelectModule('replica')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
+              activeModule === 'replica'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-glow-cyan border border-cyan-400/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <Droplets className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Replicador</span>
+          </button>
+
+          <button
+            onClick={() => onSelectModule('radar')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
+              activeModule === 'radar'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/25 border border-blue-400/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <Search className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Radar TCG</span>
+          </button>
+
+          <button
+            onClick={() => onSelectModule('financas')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
+              activeModule === 'financas'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-glow-emerald border border-emerald-400/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <DollarSign className="w-3.5 h-3.5 text-emerald-300" />
+            <span>Finanças Meta</span>
+          </button>
+
+          <button
+            onClick={() => onSelectModule('leads')}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-heading font-semibold transition-all ${
+              activeModule === 'leads'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-glow-cyan border border-cyan-400/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Leads Meta</span>
+            <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.2 rounded-full border border-emerald-500/30">
+              NOVO
+            </span>
+          </button>
+        </nav>
+
+        {/* TELEMETRIA DE CONEXÕES & AÇÕES RÁPIDAS */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Badge Mercado Livre Sentinel */}
+          <button
+            onClick={onOpenCookieModal}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border backdrop-blur-md transition-all ${
+              isMeliValid
+                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                : 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25 animate-pulse'
+            }`}
+            title="Status do Cookie de Afiliado Mercado Livre. Clique para renovar."
+          >
+            {isMeliValid ? (
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            )}
+            <span className="hidden sm:inline font-mono">{isMeliValid ? 'meli.la Ativo' : 'Renovar Cookie'}</span>
+          </button>
+
+          {/* Badge WhatsApp Replicador */}
+          <button
+            onClick={onOpenReplicaQr}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border backdrop-blur-md transition-all ${
+              isReplicaConnected
+                ? 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/20'
+                : isReplicaQrReady
+                ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25 animate-pulse'
+                : 'bg-red-500/10 text-red-300 border-red-500/25 hover:bg-red-500/20'
+            }`}
+            title="Status de Conexão do Chip do Replicador. Clique para escanear QR Code."
+          >
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                isReplicaConnected ? 'bg-cyan-400 shadow-[0_0_8px_#00e5ff] animate-livedot' : 'bg-amber-400'
+              }`}
+            />
+            <QrCode className="w-3.5 h-3.5 opacity-70 shrink-0" />
+            <span className="hidden sm:inline font-mono">
+              {isReplicaConnected ? 'Chip WhatsApp OK' : isReplicaQrReady ? 'Escanear QR' : 'Chip Offline'}
+            </span>
+          </button>
+
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-red-300 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 transition-all shrink-0"
+            title="Encerrar Sessão"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+        </div>
+
       </div>
     </header>
   );
