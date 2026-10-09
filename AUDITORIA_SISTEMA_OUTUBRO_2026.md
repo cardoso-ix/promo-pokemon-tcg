@@ -66,8 +66,12 @@
    - **BottomNav Mobile Expandido:** Inclusão de aba para Leads Meta e navegação com pills iluminados para navegação touch fluida.
    - **Deploy Contínuo:** Compilado via Vite, empacotado no container Docker e publicado na VPS HostGator via Coolify.
 
+8. ✅ **Eliminação de Bug Visual em Cards de KPI (MetricHelp Portal):**
+   - **Diagnóstico:** A anomalia visual com linha dourada curva no topo dos cards de KPI decorria do card do tooltip explicativo (`MetricHelp`) sendo posicionado em `absolute bottom-full` dentro de um container com `overflow-hidden`, provocando o ceifamento da parte superior do balão e deixando apenas o filete inferior visível no topo do card.
+   - **Correção:** Refatorado o componente `MetricHelp` para utilizar `createPortal` renderizado diretamente no `document.body` com cálculo de posicionamento dinâmico via `getBoundingClientRect()`, suporte a auto-inversão (topo/fundo) e fechamento inteligente em scroll/resize. Cards de KPI e legendas agora operam com 100% de clareza e fidelidade visual.
+
 ---
 
 ## 4. ✅ Conclusão
-O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais e auditadas, landing page oficial de máxima atração publicada e Cockpit executivo VIP no ar na VPS.
+O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais e auditadas, landing page oficial de máxima atração publicada e Cockpit executivo VIP no ar na VPS sem bugs visuais.
 
