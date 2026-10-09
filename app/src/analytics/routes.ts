@@ -464,6 +464,32 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
     }
   );
 
+  // Diagnóstico raw para inspecionar resposta oficial da API do Mercado Livre
+  app.get('/api/integrations/meli-affiliate/raw-test', async (req: FastifyRequest<{ Querystring: { endpoint?: string; params?: string } }>, reply: FastifyReply) => {
+    try {
+      const endpoint = req.query?.endpoint || 'dashboard/detalle-diario/general';
+      const extraParams = req.query?.params ? `&${req.query.params}` : '';
+      const cookie = getConfig('meli_cookie', '').trim();
+      const headers = {
+        'accept': 'application/json, text/plain, */*',
+        'accept-language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+        'origin': 'https://www.mercadolivre.com.br',
+        'referer': 'https://www.mercadolivre.com.br/afiliados/dashboard',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+        'cookie': cookie
+      };
+      const url = `https://www.mercadolivre.com.br/affiliate-program/api/${endpoint}?_t=${Date.now()}${extraParams}`;
+      const res = await fetch(url, { headers });
+      const text = await res.text();
+      let json = null;
+      try { json = JSON.parse(text); } catch {}
+      return { ok: true, status: res.status, url, json, rawText: json ? undefined : text.slice(0, 500) };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  });
+
   // Renovar Cookie de Afiliados do Mercado Livre (usado pelo CookieModal)
   app.post(
     '/api/afiliados/cookie',
