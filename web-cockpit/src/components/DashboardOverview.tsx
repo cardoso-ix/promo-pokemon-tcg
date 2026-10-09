@@ -52,6 +52,7 @@ import type {
   MetricasComunidade
 } from '../types/index.ts';
 import { api } from '../services/api.ts';
+import { MetricHelp } from './MetricHelp';
 
 interface DashboardOverviewProps {
   status: UnifiedStatus | null;
@@ -625,7 +626,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm sm:text-base font-display font-bold text-white tracking-wide flex items-center gap-2">
-                  <span>Campanha Pokémon · Lookalike 1% WhatsApp</span>
+                  <span>Campanha Pokémon ·</span>
+                  <MetricHelp term="Lookalike 1%">Lookalike 1% WhatsApp</MetricHelp>
                 </h3>
                 <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-wider flex items-center gap-1 font-mono">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-livedot" />
@@ -645,7 +647,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   }`}
                 >
                   <Sparkles className="w-3 h-3 text-amber-300" />
-                  Freq: {Number(frequenciaCampanha || 1.15).toFixed(2)}x · {fadigaInfo?.nivel === 'saudavel' ? 'Criativo Saudável' : fadigaInfo?.nivel === 'atencao' ? 'Atenção' : 'Fadiga'}
+                  <MetricHelp term="Frequencia">Freq: {Number(frequenciaCampanha || 1.15).toFixed(2)}x</MetricHelp>
+                  <span>·</span>
+                  <MetricHelp term="Fadiga de Criativo">{fadigaInfo?.nivel === 'saudavel' ? 'Criativo Saudável' : fadigaInfo?.nivel === 'atencao' ? 'Atenção' : 'Fadiga'}</MetricHelp>
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1 max-w-3xl leading-relaxed">
@@ -677,7 +681,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 border-t border-white/[0.06]">
           <div className="p-3 rounded-xl bg-slate-950/60 border border-white/[0.05]">
             <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-[11px] font-medium text-slate-300">Custo por Lead (CPL)</span>
+              <span className="text-[11px] font-medium text-slate-300">
+                <MetricHelp term="CPL">Custo por Lead (CPL)</MetricHelp>
+              </span>
               <Target className="w-3.5 h-3.5 text-emerald-400" />
             </div>
             <div className="flex items-baseline gap-2">
@@ -719,7 +725,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           <div className="p-3 rounded-xl bg-slate-950/60 border border-white/[0.05]">
             <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-[11px] font-medium text-slate-300">Vídeo Views & Alcance</span>
+              <span className="text-[11px] font-medium text-slate-300">
+                <MetricHelp term="Frequencia">Vídeo Views & Alcance</MetricHelp>
+              </span>
               <Video className="w-3.5 h-3.5 text-blue-400" />
             </div>
             <div className="flex items-baseline gap-2">
@@ -733,7 +741,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           <div className="p-3 rounded-xl bg-slate-950/60 border border-white/[0.05]">
             <div className="flex items-center justify-between text-slate-400 mb-1">
-              <span className="text-[11px] font-medium text-slate-300">Gasto da Campanha</span>
+              <span className="text-[11px] font-medium text-slate-300">
+                <MetricHelp term="Burn Rate">Gasto da Campanha</MetricHelp>
+              </span>
               <DollarSign className="w-3.5 h-3.5 text-purple-400" />
             </div>
             <div className="flex items-baseline gap-2">
@@ -799,7 +809,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         <div className="mp-card mp-card-emerald rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-2">
             <span className="text-xs font-display font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <span>Caixa Meta Ads</span>
+              <MetricHelp term="Burn Rate">Caixa Meta Ads</MetricHelp>
             </span>
             <button
               type="button"
@@ -865,7 +875,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         {/* KPI 4: Blended ROAS & Performance (Ouro / Dourado Pokémon) */}
         <div className="mp-card mp-card-gold rounded-2xl p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-400 mb-3">
-            <span className="text-xs font-display font-semibold uppercase tracking-wider text-amber-300">Blended ROAS</span>
+            <span className="text-xs font-display font-semibold uppercase tracking-wider text-amber-300">
+              <MetricHelp term="Blended ROAS">Blended ROAS</MetricHelp>
+            </span>
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 border border-amber-400/40 group-hover:scale-110 shadow-glow-gold transition-all">
               <Sparkles className="w-4 h-4 text-amber-300" />
             </div>
@@ -994,26 +1006,36 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <p className="text-lg font-heading font-extrabold text-emerald-400 mt-0.5">
               {cliquesAfiliado.toLocaleString('pt-BR')} <span className="text-xs text-slate-400 font-normal">cliques</span>
             </p>
-            <span className="text-[10px] text-emerald-400 font-medium">CVR: {(cvrAfiliado * 100).toFixed(2)}%</span>
+            <span className="text-[10px] text-emerald-400 font-medium">
+              <MetricHelp term="CVR">CVR: {(cvrAfiliado * 100).toFixed(2)}%</MetricHelp>
+            </span>
           </div>
         </div>
 
         {/* Micro-Badges de KPIs Estratégicos de Hoje */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/[0.04] text-[11px]">
           <div className="flex items-center justify-between p-2 rounded-lg bg-amber-500/[0.05] border border-amber-500/15">
-            <span className="text-slate-400">EPC Hoje (Ganho/Clique):</span>
+            <span className="text-slate-400">
+              <MetricHelp term="EPC">EPC Hoje (Ganho/Clique):</MetricHelp>
+            </span>
             <span className="font-mono font-bold text-amber-300">R$ {epcHoje.toFixed(4)}</span>
           </div>
           <div className="flex items-center justify-between p-2 rounded-lg bg-cyan-500/[0.05] border border-cyan-500/15">
-            <span className="text-slate-400">Ticket Médio (AOV):</span>
+            <span className="text-slate-400">
+              <MetricHelp term="AOV">Ticket Médio (AOV):</MetricHelp>
+            </span>
             <span className="font-mono font-bold text-cyan-300">R$ {aovHoje.toFixed(2)}</span>
           </div>
           <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-500/[0.05] border border-emerald-500/15">
-            <span className="text-slate-400">Comissão Real:</span>
+            <span className="text-slate-400">
+              <MetricHelp term="Comissão Efetiva">Comissão Real:</MetricHelp>
+            </span>
             <span className="font-mono font-bold text-emerald-300">{comissaoEfetivaHoje.toFixed(2)}%</span>
           </div>
           <div className="flex items-center justify-between p-2 rounded-lg bg-purple-500/[0.05] border border-purple-500/15">
-            <span className="text-slate-400">Cesta Média:</span>
+            <span className="text-slate-400">
+              <MetricHelp term="Cesta Média">Cesta Média:</MetricHelp>
+            </span>
             <span className="font-mono font-bold text-purple-300">{cestaMediaHoje.toFixed(1)} itens/venda</span>
           </div>
         </div>
@@ -1234,7 +1256,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           {/* Card 1: EPC Meli */}
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[11px] uppercase font-medium">EPC Mercado Livre</span>
+              <span className="text-[11px] uppercase font-medium">
+                <MetricHelp term="EPC">EPC Mercado Livre</MetricHelp>
+              </span>
               <Coins className="w-3.5 h-3.5 text-amber-400" />
             </div>
             <p className="text-lg font-heading font-extrabold text-amber-400 mt-1">
@@ -1246,7 +1270,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           {/* Card 2: CPC Meta Ads */}
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[11px] uppercase font-medium">CPC Meta Ads</span>
+              <span className="text-[11px] uppercase font-medium">
+                <MetricHelp term="CPC">CPC Meta Ads</MetricHelp>
+              </span>
               <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
             </div>
             <p className="text-lg font-heading font-extrabold text-blue-400 mt-1">
@@ -1258,7 +1284,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           {/* Card 3: Net EPC (Spread) */}
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[11px] uppercase font-medium">Net EPC (Spread)</span>
+              <span className="text-[11px] uppercase font-medium">
+                <MetricHelp term="Net EPC">Net EPC (Spread)</MetricHelp>
+              </span>
               <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
             </div>
             <p className={`text-lg font-heading font-extrabold mt-1 ${netEpcHoje >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -1270,13 +1298,17 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           {/* Card 4: Ticket Médio & Cesta */}
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
             <div className="flex items-center justify-between text-slate-400">
-              <span className="text-[11px] uppercase font-medium">Ticket Médio (AOV)</span>
+              <span className="text-[11px] uppercase font-medium">
+                <MetricHelp term="AOV">Ticket Médio (AOV)</MetricHelp>
+              </span>
               <Percent className="w-3.5 h-3.5 text-cyan-400" />
             </div>
             <p className="text-lg font-heading font-extrabold text-cyan-300 mt-1">
               R$ {aovHoje.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </p>
-            <span className="text-[10px] text-cyan-400">Comissão Efetiva: {comissaoEfetivaHoje.toFixed(1)}%</span>
+            <span className="text-[10px] text-cyan-400">
+              <MetricHelp term="Comissão Efetiva">Comissão Efetiva: {comissaoEfetivaHoje.toFixed(1)}%</MetricHelp>
+            </span>
           </div>
         </div>
 
