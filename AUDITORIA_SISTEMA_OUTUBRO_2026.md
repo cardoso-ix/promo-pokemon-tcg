@@ -47,8 +47,16 @@
    - Motor Lookback Sync de 7 dias com auto-detecção de cancelamentos/estornos e recálculo dinâmico de DRE.
 4. ✅ **Cobertura Completa de Testes:**
    - 178 testes automatizados unitários e de integração passando 100% verdes.
+5. ✅ **Auditoria e Eliminação de Métricas Arbitrárias no Fluxo Horário:**
+   - Descoberta e eliminação da fórmula fictícia `* 3` (`cliques_estimados`) em `getFluxoHorarioHoje()`.
+   - Implementação de métricas 100% auditáveis: agora o painel exibe **Ofertas Replicadas Reais** e **Links Oficiais Convertidos (`meli.la`)**, mantendo a apuração de cliques de compradores no painel oficial de Afiliados.
+6. ✅ **Nova Landing Page de Alta Conversão (`pokemontcgpromo.online`):**
+   - Concepção via **Magic Patterns** com tema de colecionador escuro (*Collector Dark Edition*).
+   - Card 3D holográfico com acabamento *foil* arco-íris e arte hiper-realista de Charizard e Pikachu.
+   - Botão de WhatsApp de alto impacto com efeito *Radar Pulse*, reflexo *Shimmer* e *Neon Glow*, além de barra inferior fixa (*Sticky CTA*) para mobile.
+   - Preservação total dos disparos nativos do Meta Pixel (`Lead`, `CompleteRegistration`, `WhatsAppGroupClick`).
 
 ---
 
 ## 4. ✅ Conclusão
-O sistema encontra-se em **perfeito estado de funcionamento**, 100% calibrado, com **178 testes automatizados aprovados**, zero erros em produção e total resiliência financeira para cancelamentos e estornos.
+O sistema encontra-se em **perfeito estado de funcionamento**, 100% calibrado, com métricas horárias auditadas sem distorções, nova landing page de máxima conversão publicada e total resiliência operacional.

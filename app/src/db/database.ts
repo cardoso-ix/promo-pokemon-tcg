@@ -642,7 +642,8 @@ export function consultarCooldownProduto(
 export interface FluxoHorarioItem {
   hora: string;
   ofertas: number;
-  cliques: number;
+  links?: number;
+  cliques: number; // Mapeado para links convertidos reais (auditado)
   leads?: number;
 }
 
@@ -652,18 +653,18 @@ export function getFluxoHorarioHoje(): FluxoHorarioItem[] {
       SELECT 
         strftime('%H', datetime(criado_em, '-3 hours')) as hora_br,
         SUM(CASE WHEN status = 'enviado' THEN 1 ELSE 0 END) as enviadas,
-        SUM(CASE WHEN status = 'enviado' THEN COALESCE(NULLIF(links_convertidos, 0), 1) * 3 ELSE 0 END) as cliques_estimados
+        SUM(CASE WHEN status = 'enviado' THEN COALESCE(NULLIF(links_convertidos, 0), 1) ELSE 0 END) as links_reais
       FROM logs
       WHERE date(datetime(criado_em, '-3 hours')) = date('now', '-3 hours')
       GROUP BY hora_br
-    `).all() as { hora_br: string; enviadas: number; cliques_estimados: number }[];
+    `).all() as { hora_br: string; enviadas: number; links_reais: number }[];
 
-    const mapaEnvios: Record<string, { ofertas: number; cliques: number }> = {};
+    const mapaEnvios: Record<string, { ofertas: number; links: number }> = {};
     for (const r of rows) {
       if (r && r.hora_br) {
         mapaEnvios[r.hora_br] = {
           ofertas: Number(r.enviadas) || 0,
-          cliques: Number(r.cliques_estimados) || 0
+          links: Number(r.links_reais) || 0
         };
       }
     }
@@ -680,12 +681,13 @@ export function getFluxoHorarioHoje(): FluxoHorarioItem[] {
       const h = String(horaNum).padStart(2, '0');
 
       const ofertas = mapaEnvios[h]?.ofertas || 0;
-      const cliques = mapaEnvios[h]?.cliques || 0;
+      const links = mapaEnvios[h]?.links || 0;
 
       return {
         hora: label,
         ofertas,
-        cliques
+        links,
+        cliques: links // Links oficiais convertidos e enviados (sem multiplicador fictício)
       };
     });
   } catch (err: unknown) {

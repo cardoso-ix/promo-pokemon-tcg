@@ -1360,13 +1360,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <div className="flex items-center gap-2">
                 <h3 className="font-heading font-bold text-base text-white flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-cyan-400" />
-                  Fluxo de Cliques & Ofertas por Horário
+                  Fluxo de Ofertas & Links por Horário
                 </h3>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 font-semibold">
                   1 em 1 hora
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">Desempenho detalhado em tempo real ao longo do dia</p>
+              <p className="text-xs text-slate-400 mt-0.5">Envios e links oficiais de afiliados gerados ao longo do dia</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -1417,7 +1417,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   strokeWidth={2.5}
                   fillOpacity={1}
                   fill="url(#colorCliques)"
-                  name="Cliques Afiliado (meli.la)"
+                  name="Links Convertidos (meli.la)"
                 />
                 <Area
                   type="monotone"
@@ -1434,7 +1434,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400 border-t border-white/[0.04] pt-2">
             <span className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-cyan-400" /> Cliques Afiliado (meli.la)
+              <span className="w-3 h-3 rounded-full bg-cyan-400" /> Links Convertidos (meli.la)
             </span>
             <span className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-emerald-400" /> Ofertas Replicadas
@@ -1458,7 +1458,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   <thead className="bg-[#0b1329] text-[10px] uppercase tracking-wider text-slate-400 sticky top-0 z-10 border-b border-white/[0.08]">
                     <tr>
                       <th className="py-2 px-3">Horário</th>
-                      <th className="py-2 px-3 text-right">Cliques (meli.la)</th>
+                      <th className="py-2 px-3 text-right">Links (meli.la)</th>
                       <th className="py-2 px-3 text-right">Ofertas Replicadas</th>
                       <th className="py-2 px-3 text-center">Intensidade</th>
                     </tr>
@@ -1509,6 +1509,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   </tfoot>
                 </table>
               </div>
+              <p className="text-[10px] text-slate-500 italic text-right pt-1">
+                * Métricas 100% auditadas com base nos envios do robô. Cliques globais de compradores no Mercado Livre são apurados oficialmente via API no card de Afiliados.
+              </p>
             </div>
           )}
         </div>
