@@ -44,24 +44,24 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-50 h-16 w-full bg-[#070d1e]/90 backdrop-blur-xl border-b border-white/[0.08] px-3 sm:px-6 lg:px-8 flex items-center transition-all shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
       <div className="max-w-[1680px] w-full mx-auto flex items-center justify-between">
         
-        {/* LOGO OFICIAL COM MEDALHÃO DO CHARIZARD */}
+        {/* LOGO OFICIAL COM MEDALHÃO DO BLASTOISE NO COCKPIT */}
         <div
           className="flex items-center gap-3 cursor-pointer group select-none"
           onClick={() => onSelectModule('dashboard')}
         >
-          <div className="relative w-10 h-10 rounded-full p-[2px] bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-600 shadow-[0_0_15px_rgba(251,191,36,0.4)] group-hover:scale-105 transition-transform shrink-0">
+          <div className="relative w-11 h-11 rounded-full p-[2.5px] bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 shadow-[0_0_20px_rgba(0,229,255,0.45)] group-hover:scale-105 transition-transform shrink-0">
             <img
-              src="/brand/logo-grupo-pokemon-tcg-promo.png"
-              alt="Logo Oficial Pokémon TCG Promo com Charizard"
+              src="/brand/logo-blastoise-cockpit.png"
+              alt="Logo Oficial Pokémon TCG Promo com Blastoise"
               className="w-full h-full rounded-full object-cover"
             />
-            <div className="absolute inset-0 rounded-full bg-amber-400/20 blur-sm -z-10 group-hover:opacity-100 opacity-60 transition-opacity" />
+            <div className="absolute inset-0 rounded-full bg-cyan-400/25 blur-md -z-10 group-hover:opacity-100 opacity-60 transition-opacity" />
           </div>
 
           <div className="block">
             <h1 className="font-display font-bold text-xs sm:text-sm tracking-wide text-white flex items-center gap-1.5">
               Pokémon TCG Promo
-              <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 font-bold hidden xs:inline tracking-wider">
+              <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded-full bg-cyan-400/15 text-cyan-300 border border-cyan-400/35 font-bold hidden xs:inline tracking-wider">
                 VIP COCKPIT
               </span>
             </h1>
