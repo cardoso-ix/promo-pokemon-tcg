@@ -57,13 +57,12 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-[#070d1e] text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
-      {/* Camada de Fundo Tecnológica & Auras Ambientais */}
+    <div className="relative min-h-screen bg-gradient-to-b from-[#070d1e] via-[#081126] to-[#050a17] text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
+      {/* Camada de Fundo Lisa com Auras Fluídas (Sem Quadradinhos) */}
       <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none">
-        <div className="absolute inset-0 bg-tech-grid opacity-70"></div>
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[700px] rounded-full bg-amber-500/[0.04] blur-[160px]"></div>
-        <div className="absolute top-[35%] left-10 w-[550px] h-[550px] rounded-full bg-cyan-500/[0.035] blur-[150px]"></div>
-        <div className="absolute bottom-10 right-10 w-[600px] h-[600px] rounded-full bg-emerald-500/[0.035] blur-[160px]"></div>
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[750px] h-[750px] rounded-full bg-cyan-500/[0.045] blur-[170px]"></div>
+        <div className="absolute top-[35%] left-5 w-[600px] h-[600px] rounded-full bg-blue-500/[0.04] blur-[160px]"></div>
+        <div className="absolute bottom-5 right-5 w-[650px] h-[650px] rounded-full bg-emerald-500/[0.04] blur-[170px]"></div>
       </div>
 
       {/* Super Header Unificado */}
