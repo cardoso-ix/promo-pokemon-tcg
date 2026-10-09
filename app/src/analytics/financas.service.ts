@@ -148,25 +148,15 @@ export class FinancasService {
         // Silencioso
       }
 
-      // Garante calibração oficial do dia 2026-10-07 (Comissões Meli R$ 146,83 / Vendas R$ 2.393,97 - Painel Oficial com nova venda)
+      // Garante bootstrap inicial do dia 2026-10-07 se ainda não estiver preenchido
       try {
         const row07 = db.prepare('SELECT data_lancamento, lucro_bruto FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get('2026-10-07') as any;
-        if (!row07 || Number(row07.lucro_bruto) < 146.83) {
+        if (!row07) {
           db.prepare(`
             INSERT INTO financas_lancamentos_diarios (
               data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(data_lancamento) DO UPDATE SET
-              lucro_bruto = excluded.lucro_bruto,
-              vendas_brutas = excluded.vendas_brutas,
-              gasto_campanhas = CASE WHEN financas_lancamentos_diarios.gasto_campanhas > 0 THEN financas_lancamentos_diarios.gasto_campanhas ELSE excluded.gasto_campanhas END,
-              cliques_meta = CASE WHEN financas_lancamentos_diarios.cliques_meta > 0 THEN financas_lancamentos_diarios.cliques_meta ELSE excluded.cliques_meta END,
-              impressoes_meta = CASE WHEN financas_lancamentos_diarios.impressoes_meta > 0 THEN financas_lancamentos_diarios.impressoes_meta ELSE excluded.impressoes_meta END,
-              origem = excluded.origem,
-              descricao = excluded.descricao,
-              categoria = excluded.categoria,
-              atualizado_em = CURRENT_TIMESTAMP
-          `).run('2026-10-07', 146.83, 2393.97, 47.28, 25, 3251, 'manual', 'Comissões Mercado Livre Afiliados (Painel Oficial 07/10 - R$ 146,83)', 'mercado_livre');
+          `).run('2026-10-07', 146.83, 2393.97, 47.28, 25, 3251, 'auto', 'Comissões Mercado Livre Afiliados (Painel Oficial 07/10)', 'mercado_livre');
         }
       } catch {
         // Silencioso
@@ -286,8 +276,8 @@ export class FinancasService {
                   data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(data_lancamento) DO UPDATE SET
-                  lucro_bruto = CASE WHEN financas_lancamentos_diarios.origem != 'manual' THEN excluded.lucro_bruto ELSE financas_lancamentos_diarios.lucro_bruto END,
-                  vendas_brutas = CASE WHEN financas_lancamentos_diarios.origem != 'manual' THEN excluded.vendas_brutas ELSE financas_lancamentos_diarios.vendas_brutas END,
+                  lucro_bruto = CASE WHEN financas_lancamentos_diarios.origem NOT IN ('auto_reconciliado', 'manual') THEN excluded.lucro_bruto ELSE financas_lancamentos_diarios.lucro_bruto END,
+                  vendas_brutas = CASE WHEN financas_lancamentos_diarios.origem NOT IN ('auto_reconciliado', 'manual') THEN excluded.vendas_brutas ELSE financas_lancamentos_diarios.vendas_brutas END,
                   atualizado_em = CURRENT_TIMESTAMP
               `).run(dia, Number(d.earnings) || 0, Number(d.earnings ? d.earnings / 0.10 : 0), mapaDias[dia]?.gastoCampanhas || 0, mapaDias[dia]?.cliquesMeta || 0, mapaDias[dia]?.impressoesMeta || 0, 'auto');
             } catch {
@@ -366,8 +356,12 @@ export class FinancasService {
             }
           }
 
-          // Se for manual e não houver dados ao vivo mais recentes da API, sobrepõe com os dados persistidos
-          if ((l.origem === 'manual' && !apiTemMaisRecente) || mapaDias[dia].lucroBruto === 0) {
+          // Se for auto_reconciliado, prevalece o extrato auditado oficial do Mercado Livre (com cancelamentos abatidos)
+          if (l.origem === 'auto_reconciliado') {
+            mapaDias[dia].lucroBruto = Number(l.lucro_bruto) || 0;
+            mapaDias[dia].vendasBrutas = Number(l.vendas_brutas) || (Number(l.lucro_bruto) ? Number(l.lucro_bruto) * 10 : 0);
+            mapaDias[dia].origem = 'auto_reconciliado';
+          } else if ((l.origem === 'manual' && !apiTemMaisRecente) || mapaDias[dia].lucroBruto === 0) {
             if (l.lucro_bruto !== undefined && (l.origem === 'manual' || Number(l.lucro_bruto) > 0)) {
               mapaDias[dia].lucroBruto = Number(l.lucro_bruto) || 0;
               mapaDias[dia].vendasBrutas = Number(l.vendas_brutas) || (Number(l.lucro_bruto) ? Number(l.lucro_bruto) * 10 : 0);
@@ -667,6 +661,17 @@ export class FinancasService {
       console.warn('[FinancasService] Erro ao sincronizar hoje com afiliados:', err);
       return false;
     }
+  }
+
+  /**
+   * Reconcilia os lançamentos diários dos últimos N dias chamando o motor do MeliAffiliateService
+   */
+  async reconciliarCancelamentos(janelaDias: number = 7): Promise<{ totalReconciliados: number; cancelamentos: number }> {
+    const affiliate = await meliAffiliateService.getMetrics().catch(() => null);
+    if (affiliate?.dailyData && Array.isArray(affiliate.dailyData)) {
+      return meliAffiliateService.reconciliarJanelaRetroativa(affiliate.dailyData, janelaDias);
+    }
+    return { totalReconciliados: 0, cancelamentos: 0 };
   }
 }
 

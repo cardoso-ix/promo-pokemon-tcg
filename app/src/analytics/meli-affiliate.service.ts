@@ -1,5 +1,5 @@
 import { getConfig, setConfig, db } from '../db/database.js';
-import { getBrazilToday, normalizeDateToIsoDay, getBrazilDateStr } from '../utils/date.js';
+import { getBrazilToday, normalizeDateToIsoDay, getBrazilDateStr, getBrazilDaysAgo } from '../utils/date.js';
 
 export interface MeliProductSold {
   id: string;
@@ -134,6 +134,84 @@ export class MeliAffiliateService {
     setConfig('meli_cookie', cookie.trim());
     this.cache = null;
     this.lastFetchTime = 0;
+  }
+
+  /**
+   * Reconcilia os lançamentos diários dos últimos N dias com base no extrato auditado do Mercado Livre.
+   * Se houver cancelamento (estorno de comissão) ou novas vendas consolidadas nos últimos dias,
+   * atualiza automaticamente o banco SQLite para refletir o saldo real no bolso.
+   */
+  reconciliarJanelaRetroativa(
+    dData: Array<{ date: string; earnings: number; orders: number; quantity?: number }>,
+    janelaDias: number = 7
+  ): { totalReconciliados: number; cancelamentos: number } {
+    let totalReconciliados = 0;
+    let cancelamentos = 0;
+
+    if (!dData || !Array.isArray(dData) || dData.length === 0) {
+      return { totalReconciliados: 0, cancelamentos: 0 };
+    }
+
+    const hoje = getBrazilToday();
+    const limitePassado = getBrazilDaysAgo(janelaDias);
+
+    for (const item of dData) {
+      const diaIso = normalizeDateToIsoDay(item.date);
+      if (!diaIso || diaIso < limitePassado || diaIso > hoje) continue;
+
+      const earningsMeli = Number(item.earnings) || 0;
+
+      try {
+        const row = db.prepare(`
+          SELECT data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+          FROM financas_lancamentos_diarios
+          WHERE data_lancamento = ?
+        `).get(diaIso) as any;
+
+        if (row) {
+          const lucroAtual = Number(row.lucro_bruto) || 0;
+          // Discrepância superior a 2 centavos
+          if (Math.abs(lucroAtual - earningsMeli) >= 0.02) {
+            const isCancelamento = earningsMeli < lucroAtual;
+            if (isCancelamento) cancelamentos++;
+
+            const vendasEstimadas = earningsMeli > 0
+              ? (Number(row.vendas_brutas) > 0 && lucroAtual > 0
+                  ? Number(((Number(row.vendas_brutas) / lucroAtual) * earningsMeli).toFixed(2))
+                  : Number((earningsMeli * 10).toFixed(2)))
+              : 0;
+
+            const desc = isCancelamento
+              ? `Mercado Livre Afiliados (Cancelamento abatido: R$ ${earningsMeli.toFixed(2)})`
+              : `Mercado Livre Afiliados (Reconciliado oficial: R$ ${earningsMeli.toFixed(2)})`;
+
+            db.prepare(`
+              UPDATE financas_lancamentos_diarios
+              SET lucro_bruto = ?,
+                  vendas_brutas = ?,
+                  origem = 'auto_reconciliado',
+                  descricao = ?,
+                  atualizado_em = CURRENT_TIMESTAMP
+              WHERE data_lancamento = ?
+            `).run(earningsMeli, vendasEstimadas, desc, diaIso);
+
+            totalReconciliados++;
+            console.log(`[Meli Reconciliação] Dia ${diaIso} ${isCancelamento ? 'CANCELAMENTO DETECTADO' : 'ATUALIZADO'}: R$ ${lucroAtual.toFixed(2)} -> R$ ${earningsMeli.toFixed(2)}`);
+          }
+        } else if (earningsMeli > 0) {
+          db.prepare(`
+            INSERT INTO financas_lancamentos_diarios (
+              data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+            ) VALUES (?, ?, ?, 0, 0, 0, 'auto_reconciliado', ?, 'mercado_livre')
+          `).run(diaIso, earningsMeli, earningsMeli * 10, `Mercado Livre Afiliados (Auto Sync R$ ${earningsMeli.toFixed(2)})`);
+          totalReconciliados++;
+        }
+      } catch (err) {
+        console.warn(`[Meli Reconciliação] Erro ao reconciliar dia ${diaIso}:`, err);
+      }
+    }
+
+    return { totalReconciliados, cancelamentos };
   }
 
   /**
@@ -304,6 +382,8 @@ export class MeliAffiliateService {
               }
               dailyData.length = 0;
               dailyData.push(...Array.from(mapExisting.values()).sort((a, b) => b.date.localeCompare(a.date)));
+              // Reconciliação Automática dos Últimos 7 Dias (detecta cancelamentos/estornos ou novas vendas)
+              this.reconciliarJanelaRetroativa(dailyData, 7);
             }
           }
         } catch {
@@ -366,12 +446,15 @@ export class MeliAffiliateService {
       }
     }
 
-    // 4. Preserva dados do cache do dia se superiores ou já consolidados
+    // 4. Preserva dados do cache do dia se superiores ou já consolidados APENAS se a sessão expirou
+    // (Se a sessão está ativa e o Mercado Livre reduziu comissões por cancelamento em tempo real, aceita o valor real)
     if (isCacheFromToday && cached) {
-      if (cached.commissionsToday > commissionsToday) commissionsToday = cached.commissionsToday;
-      if (cached.ordersToday > ordersToday) ordersToday = cached.ordersToday;
-      if (cached.totalSalesToday && cached.totalSalesToday > totalSalesToday) totalSalesToday = cached.totalSalesToday;
-      if (cached.clicksToday && cached.clicksToday > clicksToday) clicksToday = cached.clicksToday;
+      if (sessionExpired) {
+        if (cached.commissionsToday > commissionsToday) commissionsToday = cached.commissionsToday;
+        if (cached.ordersToday > ordersToday) ordersToday = cached.ordersToday;
+        if (cached.totalSalesToday && cached.totalSalesToday > totalSalesToday) totalSalesToday = cached.totalSalesToday;
+        if (cached.clicksToday && cached.clicksToday > clicksToday) clicksToday = cached.clicksToday;
+      }
     }
 
     // 5. Auto-detecção de novas vendas: se o saldo total acumulado no Mercado Livre aumentou em relação ao cache,

@@ -528,6 +528,28 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
         return reply.status(500).send({ ok: false, error: msg });
       }
     }
+  // Reconciliação Automática Retroativa de Cancelamentos (Lookback Sync)
+  app.post(
+    '/api/dashboard/meli-affiliate/reconciliar',
+    async (
+      req: FastifyRequest<{
+        Body?: { dias?: number };
+      }>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const dias = Number(req.body?.dias) || 7;
+        const resultado = await financasService.reconciliarCancelamentos(dias);
+        return {
+          ok: true,
+          message: `Reconciliação dos últimos ${dias} dias concluída!`,
+          ...resultado
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return reply.status(500).send({ ok: false, error: msg });
+      }
+    }
   );
 
   // ==========================================
