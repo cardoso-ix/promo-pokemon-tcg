@@ -20,7 +20,7 @@ export interface BalancoItem {
   impressoesMeta: number;
   descricao?: string;
   categoria?: string;
-  origem?: 'auto' | 'manual';
+  origem?: 'auto' | 'manual' | 'auto_reconciliado';
 }
 
 export interface BalancoMensalResult {

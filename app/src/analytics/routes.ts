@@ -528,6 +528,8 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
         return reply.status(500).send({ ok: false, error: msg });
       }
     }
+  );
+
   // Reconciliação Automática Retroativa de Cancelamentos (Lookback Sync)
   app.post(
     '/api/dashboard/meli-affiliate/reconciliar',
