@@ -150,43 +150,7 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
     }
   );
 
-  // Histórico de alterações e tempo de veiculação da campanha ativa no Meta Ads
-  app.get('/api/integrations/meta/campaign-history', async (req: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const token = await metaAdsService.getValidAccessToken();
-      const campaignId = '52760556043290';
-      
-      const campRes = await fetch(`https://graph.facebook.com/v20.0/${campaignId}?fields=id,name,status,effective_status,created_time,updated_time,start_time,stop_time,daily_budget,lifetime_budget,budget_remaining,bid_strategy`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const campaign = await campRes.json() as any;
 
-      const adsetsRes = await fetch(`https://graph.facebook.com/v20.0/${campaignId}/adsets?fields=id,name,status,effective_status,created_time,updated_time,start_time,end_time,daily_budget,targeting`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const adsets = await adsetsRes.json() as any;
-
-      const adsRes = await fetch(`https://graph.facebook.com/v20.0/${campaignId}/ads?fields=id,name,status,effective_status,created_time,updated_time,creative{id,name,title,body}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const ads = await adsRes.json() as any;
-
-      const insightsRes = await fetch(`https://graph.facebook.com/v20.0/${campaignId}/insights?time_increment=1&fields=spend,impressions,clicks,cpc,ctr,actions,date_start,date_stop&date_preset=maximum&limit=100`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const insights = await insightsRes.json() as any;
-
-      const activitiesRes = await fetch(`https://graph.facebook.com/v20.0/${campaignId}/activities?fields=actor_name,event_type,event_time,extra_data&limit=20`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const activities = await activitiesRes.json().catch(() => ({})) as any;
-
-      return { ok: true, campaign, adsets, ads, insights, activities };
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return reply.status(500).send({ ok: false, error: msg });
-    }
-  });
 
   // Atualização ou Recarga de Saldo de Caixa Meta Ads
   app.post(
