@@ -60,7 +60,8 @@
 7. ✅ **Reformulação Visual e Arquitetural do Cockpit (`http://108.174.145.77:3000/`):**
    - **Identidade Unificada (Design Tokens Magic Patterns):** Transposição das cores oficiais da marca (`#070d1e`, Dourado/Fogo Charizard `#fbbf24`, Ciano Neon `#00e5ff`, Esmeralda `#10b981`).
    - **Camada de Fundo Tecnológica:** Malha *Tech-Grid* e auras de iluminação periférica aceleradas por GPU sem impacto de desempenho.
-   - **Super Header Modernizado:** Logo oficial em alta resolução com o medalhão do Charizard e anel de ouro luminoso, badges de status de chip com pulso vivo (`animate-livedot`) e cápsulas de navegação ativa com brilho correspondente.
+   - **Super Header Modernizado com o Blastoise:** Logo oficial recortada com precisão circular transparente do medalhão do Blastoise (`logo-blastoise-cockpit.png`), com anel de água e ciano luminoso (`shadow-glow-cyan`), badges de status com pulso vivo (`animate-livedot`) e cápsulas de navegação ativa com brilho correspondente.
+   - **Favicon do Cockpit Exclusivo:** Ícone recortado do Blastoise com canal alpha (fundo 100% transparente) em resoluções 32x32, 64x64 e 180x180.
    - **Hero Strip & KPIs Executivos:** Cards temáticos (`mp-card-gold`, `mp-card-cyan`, `mp-card-emerald`) com tipografia *Chakra Petch*, números tabulares (`mp-metric-value`) e gráficos Recharts com gradientes fluidos.
    - **BottomNav Mobile Expandido:** Inclusão de aba para Leads Meta e navegação com pills iluminados para navegação touch fluida.
    - **Deploy Contínuo:** Compilado via Vite, empacotado no container Docker e publicado na VPS HostGator via Coolify.
