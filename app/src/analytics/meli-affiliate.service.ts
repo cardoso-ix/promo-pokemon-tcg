@@ -157,9 +157,14 @@ export class MeliAffiliateService {
 
     for (const item of dData) {
       const diaIso = normalizeDateToIsoDay(item.date);
-      if (!diaIso || diaIso < limitePassado || diaIso > hoje) continue;
+      // Blindagem 1: NUNCA reconciliar o dia de HOJE via lote (o dia corrente é dinâmico e em tempo real)
+      if (!diaIso || diaIso < limitePassado || diaIso >= hoje) continue;
 
       const earningsMeli = Number(item.earnings) || 0;
+
+      // Blindagem 2: Se o Mercado Livre retornar 0 para um dia anterior onde já há comissões,
+      // NUNCA zerar o dia! Zero no lote diário indica ausência de dados do ML ou vendas de outros canais (Amazon/manual).
+      if (earningsMeli <= 0) continue;
 
       try {
         const row = db.prepare(`
@@ -169,6 +174,9 @@ export class MeliAffiliateService {
         `).get(diaIso) as any;
 
         if (row) {
+          // Blindagem 3: Se o lançamento for multicanal ou marcado manualmente pelo usuário, preserva
+          if (row.origem === 'manual' && row.categoria === 'multicanal') continue;
+
           const lucroAtual = Number(row.lucro_bruto) || 0;
           // Discrepância superior a 2 centavos
           if (Math.abs(lucroAtual - earningsMeli) >= 0.02) {
