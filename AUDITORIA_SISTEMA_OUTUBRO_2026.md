@@ -70,8 +70,13 @@
    - **Diagnóstico:** A anomalia visual com linha dourada curva no topo dos cards de KPI decorria do card do tooltip explicativo (`MetricHelp`) sendo posicionado em `absolute bottom-full` dentro de um container com `overflow-hidden`, provocando o ceifamento da parte superior do balão e deixando apenas o filete inferior visível no topo do card.
    - **Correção:** Refatorado o componente `MetricHelp` para utilizar `createPortal` renderizado diretamente no `document.body` com cálculo de posicionamento dinâmico via `getBoundingClientRect()`, suporte a auto-inversão (topo/fundo) e fechamento inteligente em scroll/resize. Cards de KPI e legendas agora operam com 100% de clareza e fidelidade visual.
 
+9. ✅ **Limpeza & Organização da Conta Meta Ads (`act_248381968679040`):**
+   - **Ação:** Exclusão via Graph API de campanhas de testes e adsets inativos/pausados de setembro e outubro de 2026.
+   - **Preservação:** Campanha oficial ativa mantida 100% intocada (`Campanha Pokemon - Lookalike 1% WhatsApp (05/10/2026)` - ID: `52760556043290`), junto com seu conjunto `Conjunto 01 - Lookalike 1% WhatsApp`, anúncio `01 - New` e públicos Lookalike e Lista de Clientes.
+   - **Resultado:** Ads Manager pronto e visualmente limpo para gravação de tela e criação de novos criativos.
+
 ---
 
 ## 4. ✅ Conclusão
-O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais e auditadas, landing page oficial de máxima atração publicada e Cockpit executivo VIP no ar na VPS sem bugs visuais.
+O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais e auditadas, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS e Meta Ads organizado para gravação.
 
