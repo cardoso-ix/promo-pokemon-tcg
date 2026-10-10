@@ -488,6 +488,60 @@ test('formatarMensagemReplicada para comunicado de cupom deve preservar cabeçal
   assert.strictEqual(replicada.includes('https://mercadolivre.com/sec/2rM6RPm'), true);
 });
 
+test("extrairCupom deve extrair múltiplos cupons alternativos com 'ou' (ex: DDRESGATEFULL ou RESGATEDDLOJAS)", () => {
+  const msgConcorrente = `🇺🇸 Pokémontcg: Megaevolution-pitch Black- Booster Bundle-inglês
+
+De R$ 199 Por R$ 149 💵
+Use o cupom: DDRESGATEFULL ou RESGATEDDLOJAS 📌
+
+Loja no Mercado Livre:
+https://meli.la/2cnPXT1`;
+
+  const cupom = extrairCupom(msgConcorrente);
+  assert.strictEqual(cupom, 'DDRESGATEFULL ou RESGATEDDLOJAS');
+});
+
+test("extrairCupom deve suportar múltiplos cupons com 'ou', 'e' e '+' em diversos formatos", () => {
+  assert.strictEqual(
+    extrairCupom('Use o cupom: CUPOM1 ou CUPOM2'),
+    'CUPOM1 ou CUPOM2'
+  );
+  assert.strictEqual(
+    extrairCupom('Cupom: POKE10 ou POKE20'),
+    'POKE10 ou POKE20'
+  );
+  assert.strictEqual(
+    extrairCupom('Use o cupom POKE10 ou o cupom POKE20'),
+    'POKE10 ou POKE20'
+  );
+  assert.strictEqual(
+    extrairCupom('🎟️ DDRESGATEFULL ou RESGATEDDLOJAS'),
+    'DDRESGATEFULL ou RESGATEDDLOJAS'
+  );
+  assert.strictEqual(
+    extrairCupom('Cupons: MELIUZKIDS + MELIMAXITOYS'),
+    'MELIUZKIDS + MELIMAXITOYS'
+  );
+  assert.strictEqual(
+    extrairCupom('Cupons: MELIUZKIDS e MELIMAXITOYS'),
+    'MELIUZKIDS + MELIMAXITOYS'
+  );
+});
+
+test("formatarMensagemReplicada deve formatar cupons alternativos com 'Cupons: *CUPOM1 ou CUPOM2*'", () => {
+  const replicada = formatarMensagemReplicada({
+    tipo: 'oferta',
+    titulo: '🇺🇸 Pokémontcg: Megaevolution-pitch Black- Booster Bundle-inglês',
+    precoDe: 'R$ 199',
+    precoPor: 'R$ 149',
+    cupom: 'DDRESGATEFULL ou RESGATEDDLOJAS',
+    linkAfiliado: 'https://meli.la/2QBhU8F'
+  });
+
+  assert.strictEqual(replicada.includes('🎟️ Cupons: *DDRESGATEFULL ou RESGATEDDLOJAS*'), true);
+});
+
+
 
 
 

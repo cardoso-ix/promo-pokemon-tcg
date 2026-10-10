@@ -593,7 +593,12 @@ export function detectarMensagemCupom(texto: string): boolean {
  */
 function sanitizarCodigoCupom(bruto: string, blacklist: Set<string>): string | null {
   if (!bruto) return null;
-  const code = bruto.trim().replace(/[\*_~\[\]\(\)\"\':]/g, '').toUpperCase();
+  // Remove emojis decorativos (ex: 📌, 🔥, 👉), aspas, colchetes e pontuações das extremidades
+  const limpoBordas = bruto
+    .trim()
+    .replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/gu, '')
+    .trim();
+  const code = limpoBordas.replace(/[\*_~\[\]\(\)\"\'`:]/g, '').toUpperCase();
   if (
     !blacklist.has(code) &&
     !/^\d+$/.test(code) &&
@@ -609,27 +614,32 @@ function sanitizarCodigoCupom(bruto: string, blacklist: Set<string>): string | n
 }
 
 /**
- * Fatia trecho procurando múltiplos cupons combinados (ex: MELIUZKIDS+MELIMAXITOYS, MELIUZKIDS e MELIMAXITOYS)
+ * Fatia trecho procurando múltiplos cupons combinados (ex: MELIUZKIDS+MELIMAXITOYS, DDRESGATEFULL ou RESGATEDDLOJAS)
  */
-function extrairCuponsMultiplosDeTrecho(trecho: string, blacklist: Set<string>): string[] {
-  if (!trecho) return [];
-  const pedacos = trecho.split(/\s*(?:\+|&|\/|\s+e\s+)\s*/i);
+function extrairCuponsMultiplosDeTrecho(trecho: string, blacklist: Set<string>): string | null {
+  if (!trecho) return null;
+  const isOu = /\s+ou\s+/i.test(trecho);
+  const pedacos = trecho.split(/\s*(?:\+|&|\/|\s+e\s+|\s+ou\s+)\s*/i);
   if (pedacos.length > 1) {
     const validos: string[] = [];
     for (const p of pedacos) {
-      const cod = sanitizarCodigoCupom(p, blacklist);
-      if (cod) validos.push(cod);
+      const limpo = p.replace(/^(?:o\s+)?cupo(?:m|ns)(?:\s+|:\s*)/i, '').trim();
+      const cod = sanitizarCodigoCupom(limpo, blacklist);
+      if (cod && !validos.includes(cod)) {
+        validos.push(cod);
+      }
     }
     if (validos.length >= 2) {
-      return [...new Set(validos)];
+      const separador = isOu ? ' ou ' : ' + ';
+      return validos.join(separador);
     }
   }
-  return [];
+  return null;
 }
 
 /**
  * Extrai o código ou condição do cupom mencionado no texto da oferta com alta precisão e resiliência.
- * Suporta tanto cupons individuais quanto múltiplos cupons acumulativos (ex: Cupom:MELIUZKIDS+MELIMAXITOYS).
+ * Suporta tanto cupons individuais quanto múltiplos cupons acumulativos ou alternativos (ex: Cupom: A ou B, Cupom: A + B).
  */
 export function extrairCupom(texto: string): string | null {
   if (!texto) return null;
@@ -648,18 +658,18 @@ export function extrairCupom(texto: string): string | null {
   ]);
 
   // A1) Expressões regulares para encontrar MÚLTIPLOS CÓDIGOS de cupom juntos na mesma expressão
-  // Ex: Cupom:MELIUZKIDS+MELIMAXITOYS, Cupom: MELIUZKIDS + MELIMAXITOYS, Cupons: MELIUZKIDS e MELIMAXITOYS
+  // Ex: Cupom:MELIUZKIDS+MELIMAXITOYS, Use o cupom: DDRESGATEFULL ou RESGATEDDLOJAS, 🎟️ A ou B
   const regexesMultiplos = [
-    /cupo(?:m|ns)(?:\s+(?:ativo|v[aá]lido|exclusivo|liberado|especial|novo|do\s+app|no\s+app|no\s+carrinho|direto\s+no\s+app|na\s+p[aá]gina|no\s+an[uú]ncio|de\s+[^\n:]+))?[:\s\*_~=\-]+([a-z0-9_\s+&/*-]{5,60})/i,
-    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?)\s*(?:(?:cupo(?:m|ns)|c[oó]digo|cod)[:\s\*_~=\-]*)?([a-z0-9_\s+&/*-]{5,60})/iu
+    /(?:(?:use|usando|com|aplique|aplicar|ative|ativar|insira|inserir|coloque|colocar|digite|digitar|resgate|resgatar)\s+(?:os?\s+)?)?cupo(?:m|ns)(?:\s+(?:[#\d]+|ativo|v[aá]lido|exclusivo|liberado|especial|novo|do\s+app|no\s+app|no\s+carrinho|direto\s+no\s+app|na\s+p[aá]gina|no\s+an[uú]ncio|de\s+[^\n:]+))?[:\s\*_~=\-]+([a-z0-9_\s+&/*\-]{5,80})/i,
+    /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?)\s*(?:(?:cupo(?:m|ns)|c[oó]digo|cod)[:\s\*_~=\-]*)?([a-z0-9_\s+&/*\-]{5,80})/iu
   ];
 
   for (const regex of regexesMultiplos) {
     const match = texto.match(regex);
     if (match && match[1]) {
       const multiplos = extrairCuponsMultiplosDeTrecho(match[1], blacklist);
-      if (multiplos.length >= 2) {
-        return multiplos.join(' + ');
+      if (multiplos) {
+        return multiplos;
       }
     }
   }
@@ -717,7 +727,11 @@ export function extrairCupom(texto: string): string | null {
 
   // Se coletou múltiplos cupons distintos em linhas ou trechos diferentes
   if (codigosColetados.length >= 2) {
-    return codigosColetados.join(' + ');
+    const c1 = codigosColetados[0];
+    const c2 = codigosColetados[1];
+    const regexOu = new RegExp(`${c1}[^\\n]*?\\s+ou\\s+[^\\n]*?${c2}`, 'i');
+    const isAlternativo = regexOu.test(texto) || (/\bou\b/i.test(texto) && !/\s\+\s/.test(texto));
+    return codigosColetados.join(isAlternativo ? ' ou ' : ' + ');
   } else if (codigosColetados.length === 1) {
     return codigosColetados[0];
   }
@@ -918,7 +932,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
 
     const codCupom = (cupom || 'CUPOM NO APP').trim().toUpperCase();
     const vitrine = (linkVitrineCurto || linkAfiliado || '').trim();
-    const isMultiplos = codCupom.includes('+');
+    const isMultiplos = codCupom.includes('+') || /\bou\b/i.test(codCupom);
     const labelCupom = isMultiplos ? 'Cupons' : 'Cupom';
 
     const linhas: string[] = [
@@ -977,7 +991,7 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
   if (cupom && cupom.trim()) {
     const limpo = cupom.trim();
     if (!/^(?:com\s+cupom(?:\s+no\s+app)?|cupom(?:\s+de\s+desconto)?|sem\s+cupom)$/i.test(limpo)) {
-      if (limpo.includes('+')) {
+      if (limpo.includes('+') || /\bou\b/i.test(limpo)) {
         linhaCupom = `🎟️ Cupons: *${limpo}*`;
       } else if (/^[a-z0-9_\-]+$/i.test(limpo)) {
         linhaCupom = `🎟️ Cupom: *${limpo.toUpperCase()}*`;
