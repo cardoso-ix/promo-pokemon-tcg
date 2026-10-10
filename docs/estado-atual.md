@@ -50,11 +50,16 @@ O ecossistema foi otimizado para focar integralmente na atração via **Tráfego
 
 ## 4. Cobertura de Testes Automatizados
 
-- **Total de Testes:** **156 testes unitários e de integração** (100% aprovados, 0 falhas).
-  - `app` (Replicador, Guardião TCG, Radar, Meta Ads e Amazon Associados): **156 testes aprovados** (Guardião TCG expandido, parcelamento sem juros higienizado, fotos 2X HD, vitrine social, extrator de leads Meta e motor canônico Amazon).
+- **Total de Testes:** **186 testes unitários e de integração** (100% aprovados, 0 falhas).
+  - `app` (Replicador, Cupons Mercado Livre, Imagem Nativa, Guardião TCG, Radar, Meta Ads e Amazon Associados): **186 testes aprovados** (Réplica fiel de cupons do Mercado Livre, preservação de imagens originais de WhatsApp sem distorção 1:1, blacklist estrita de cabeçalhos de cupom, Guardião TCG expandido, parcelamento sem juros higienizado, fotos 2X HD, vitrine social, extrator de leads Meta e motor canônico Amazon).
 - Executável com um único comando na raiz do projeto: `npm test`.
 
-### 4.1. Suporte Multi-Marketplace: Amazon Associados (Outubro/2026)
+### 4.1. Motor de Réplica Fiel de Cupons do Mercado Livre (Outubro/2026)
+- **Fidelidade Integral de Comunicados:** Mensagens de cupons do Mercado Livre (ex: `NOVO CUPOM`, `20% OFF acima de R$99`, `🎟️ Cupom: SUPERDESCONTO`) são replicadas mantendo 100% do formato original com regras, descontos e emojis.
+- **Substituição Cirúrgica de Links:** O link do concorrente é exclusivamente substituído pelo link de afiliado oficial do usuário (`link_vitrine_curto`), sem aplicar templates sintéticos de produto (`@pokemon_tcg_promo`, emoji `📦`, aviso legal no rodapé).
+- **Preservação de Mídia Original:** Banners e fotos anexadas vindas do WhatsApp (como artes oficiais retangulares do Mercado Livre) são enviadas em seu formato original, sem aplicação de canvas 1:1 de estúdio com bordas brancas.
+
+### 4.2. Suporte Multi-Marketplace: Amazon Associados (Outubro/2026)
 - **Motor Canônico ASIN:** Detecção de `amazon.com.br`, `amazon.com`, `amzn.to` e `a.co`, extração do código do produto (ASIN) e montagem de URLs canônicas ultrarrápidas (`https://www.amazon.com.br/dp/ASIN?tag=tcgpokepromo-20`).
 - **Limpeza de Parâmetros Concorrentes:** Higienização total de tags alheias (`tag`, `linkCode`, `ref_`, `creative`) garantindo atribuição limpa das comissões.
 - **Download de Fotos HD:** Captura automática de imagens em alta resolução dos servidores oficiais da Amazon (`m.media-amazon.com`).

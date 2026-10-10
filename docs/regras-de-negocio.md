@@ -41,12 +41,17 @@ Toda mensagem que chega aos grupos de WhatsApp em que o chip participa é avalia
   - Links de marketplaces concorrentes (Amazon, Shopee, Magalu, AliExpress) são **automaticamente ignorados** pelo filtro (`status: 'ignorado'`, `motivo: 'marketplace_concorrente'`).
   - Links de convite para grupos de WhatsApp de concorrentes (`chat.whatsapp.com`) são **automaticamente removidos** de todas as mensagens replicadas.
 
-### 2.4. Telas de Cupom e Digitações Avulsas (Comunicados)
-- **Telas de Cupom (Prints de Cupons)**:
-  - Se um grupo monitorado postar um print do app ou texto anunciando cupom (mesmo sem link no original), o sistema aceita o alerta e anexa automaticamente o **link curto oficial da sua vitrine do Mercado Livre** (`link_vitrine_curto`, ex: `https://mercadolivre.com/sec/2rM6RPm`).
-  - O Guardião de Nicho TCG aceita cupons automaticamente, pois são de interesse direto de todos os colecionadores.
-- **Digitações Avulsas e Comunicados**:
-  - Mensagens informativas de texto puro ou fotos sem link de compra (ex: comunicados de envios da Copag, regras do grupo ou avisos do admin) podem ser replicadas diretamente caso a opção *"Replicar Comunicados & Telas de Cupom (Sem Link)"* esteja ativada (`replicar_comunicados_texto: 'true'`).
+### 2.4. Telas de Cupom, Comunicados e Réplica Fiel de Cupons do Mercado Livre
+- **Réplica Fiel de Comunicados de Cupom do Mercado Livre**:
+  - Quando um grupo monitorado envia um comunicado de cupom (ex: `NOVO CUPOM MERACDO LIVRE`, regras de desconto `% OFF` ou cupons com código e valor mínimo):
+    - **Texto Fiel:** O bot replica integralmente o texto original com todos os seus emojis, quebras de linha e regras, **substituindo exclusivamente o link do concorrente pelo link de afiliado oficial do usuário** (`link_vitrine_curto`, ex: `https://mercadolivre.com/sec/2rM6RPm`).
+    - **Sem Formatação de Produto:** Não são aplicados templates sintéticos de produto (não adiciona `@pokemon_tcg_promo`, não adiciona emoji `📦` nem avisos de rodapé).
+    - **Preservação de Mídia Original:** Se a mensagem veio com imagem anexada no WhatsApp (ex: arte oficial amarela retangular do Mercado Livre), a imagem é replicada exatamente como recebida, **sem aplicar canvas 1:1 de estúdio com bordas brancas**.
+    - **Fallback de Foto Amarela:** Caso a mensagem chegue apenas em texto sem imagem, o bot anexa automaticamente a foto oficial amarela de cupom do Mercado Livre como banner.
+- **Telas de Cupom (Prints sem Link Original)**:
+  - Se um grupo postar um print do app ou texto anunciando cupom sem nenhum link, o sistema aceita o alerta e anexa o link oficial da sua vitrine do Mercado Livre.
+- **Digitações Avulsas e Comunicados Sem Link**:
+  - Mensagens informativas de texto puro sem link de compra (ex: avisos de envios Copag) podem ser replicadas caso a opção *"Replicar Comunicados & Telas de Cupom (Sem Link)"* esteja ativada (`replicar_comunicados_texto: 'true'`).
   - Assinaturas e @arrobas de concorrentes continuam sendo limpos automaticamente antes do envio.
 
 ---
