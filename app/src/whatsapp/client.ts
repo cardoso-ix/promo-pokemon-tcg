@@ -703,7 +703,7 @@ export class WhatsAppManager {
       ? /(?:shopee\.com|shope\.ee|magazineluiza\.com|aliexpress\.com)/i.test(rawText)
       : /(?:amazon\.com|amzn\.to|shopee\.com|shope\.ee|magazineluiza\.com|aliexpress\.com)/i.test(rawText);
 
-    const temLinkMarketplaceValido = contemMercadoLivre || (replicarAmazon && contemAmazon);
+    const temLinkMarketplaceValido = Boolean(contemMercadoLivre || (replicarAmazon && contemAmazon));
 
     // C) GUARDIÃO DE MENSAGENS SOLTAS:
     // Erratas, correções de chat (ex: "cupom correto: XYZ") ou cupons de texto puro sem foto e sem link

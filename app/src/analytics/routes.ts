@@ -148,6 +148,8 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
         return reply.status(500).send({ ok: false, error: msg });
       }
     }
+  );
+
   // Criação da Campanha de Teste (Vídeo Shopping Deck Lucario - R$ 20/dia)
   app.post('/api/integrations/meta/campaigns/create-test', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
