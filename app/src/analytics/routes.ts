@@ -165,6 +165,18 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
     }
   });
 
+  // Inspeção de Status e Criativos dos Anúncios Publicados
+  app.get('/api/integrations/meta/ads-status', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const data = await metaAdsService.listAdsStatus();
+      return { ok: true, data };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  });
+
+
   app.post(
     '/api/integrations/meta/balance',
     async (

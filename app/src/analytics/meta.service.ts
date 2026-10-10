@@ -756,6 +756,19 @@ export class MetaAdsIntegrationService {
       dailyBudget: 'R$ 20,00'
     };
   }
+
+  /**
+   * Lista anúncios existentes na conta de anúncios com status e criativo
+   */
+  async listAdsStatus(): Promise<any> {
+    const token = await this.getValidAccessToken();
+    const actId = this.formatAccountId();
+    const fields = 'id,name,status,effective_status,campaign_id,adset_id,created_time,updated_time,creative{title,body,image_url,video_id}';
+    const res = await fetch(`${GRAPH_API_BASE}/${actId}/ads?fields=${fields}&limit=25`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return res.json();
+  }
 }
 
 export interface MetaAdAccountBalanceInfo {
