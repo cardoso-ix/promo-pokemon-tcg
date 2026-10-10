@@ -80,8 +80,15 @@
    - **Solução Implementada:** Desenvolvida a função `isMensagemSoltaDescartavel` atuando na Camada Zero. Comunicações de cupom sem imagem anexada (`!messageHasImage`) e sem links diretos de marketplace são categoricamente descartadas com status `ignorado` e motivo `mensagem_solta_descartada`.
    - **Preservação:** Publicações legítimas de campanhas com imagem de banner oficial do Mercado Livre ou ofertas com links reais continuam sendo replicadas perfeitamente.
 
+11. ✅ **Criação da Nova Campanha de Teste Meta Ads (Vídeo Shopping Lucario - R$ 20/dia):**
+    - **Campanha Criada:** `[TESTE] Campanha Pokemon - Vídeo Shopping Lucario` (ID: `52761979947290`)
+    - **Conjunto Criado:** `Conjunto 01 - Lookalike 1% WhatsApp (R$ 20/dia)` (ID: `52761979954890`)
+    - **Orçamento:** R$ 20,00 diários (CBO Advantage Campaign Budget)
+    - **Público & Destino:** Espelhado do Lookalike 1% WhatsApp oficial com Pixel de Conversão para Leads (`https://pokemontcgpromo.online/`).
+    - **Status de Segurança:** `PAUSED` (em rascunho/pausado para evitar qualquer consumo antes do upload do vídeo e aprovação pelo usuário).
+
 ---
 
 ## 4. ✅ Conclusão
-O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais e auditadas, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS, Meta Ads organizado e proteção total contra mensagens soltas e erratas de chat.
+O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais e auditadas, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS, Meta Ads organizado, nova campanha de teste de R$ 20/dia criada e pronta para receber o vídeo do deck de Lucario, e proteção total contra mensagens soltas e erratas de chat.
 
