@@ -411,73 +411,94 @@ export class MeliAffiliateService {
     let totalSalesToday = isCacheFromToday ? (cached?.totalSalesToday || 0) : 0;
     let clicksToday = isCacheFromToday ? (cached?.clicksToday || 0) : 0;
 
-    // 0. Consulta prévia ao lançamento financeiro diário consolidado oficial no SQLite
-    let comissaoLancamento = 0;
-    let vendasLancamento = 0;
+    // 0. Consulta prévia ao lançamento financeiro diário manual no SQLite (apenas manual se sessão expirada)
+    let comissaoLancamentoManual = 0;
+    let vendasLancamentoManual = 0;
     try {
-      const rowLanc = db.prepare('SELECT lucro_bruto, vendas_brutas FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get(todayIso) as any;
-      if (rowLanc && Number(rowLanc.lucro_bruto) > 0) {
-        comissaoLancamento = Number(rowLanc.lucro_bruto);
-        vendasLancamento = Number(rowLanc.vendas_brutas) || (comissaoLancamento * 10);
+      const rowLanc = db.prepare('SELECT lucro_bruto, vendas_brutas, origem FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get(todayIso) as any;
+      if (rowLanc && Number(rowLanc.lucro_bruto) > 0 && rowLanc.origem === 'manual') {
+        comissaoLancamentoManual = Number(rowLanc.lucro_bruto);
+        vendasLancamentoManual = Number(rowLanc.vendas_brutas) || (comissaoLancamentoManual * 10);
       }
     } catch {}
 
-    // 1. Tenta pegar do detalhe diário oficial do Meli
+    // 1. Tenta pegar do detalhe diário oficial do Meli (FONTE DA VERDADE OFICIAL)
+    let hasOfficialMeliToday = false;
     for (const d of dailyData) {
       const itemDateIso = normalizeDateToIsoDay(d.date);
       if (itemDateIso === todayIso) {
         commissionsToday = d.earnings || 0;
         ordersToday = d.orders || 0;
         if (d.touchpoints) clicksToday = d.touchpoints;
+        hasOfficialMeliToday = true;
         break;
       }
     }
 
-    // 2. Se o detalhe diário ainda não consolidou o dia de hoje, consolida a partir das vendas individuais
-    const salesHoje = recentSales.filter(s => normalizeDateToIsoDay(s.date) === todayIso);
-    if (salesHoje.length > 0) {
-      const comissaoSomada = salesHoje.reduce((acc, s) => acc + s.commissionValue, 0);
-      const pedidosSomados = salesHoje.reduce((acc, s) => acc + s.saleUnits, 0);
+    // 2. Se o detalhe diário ainda NÃO consolidou o dia de hoje no Meli, consolida a partir das vendas individuais
+    if (!hasOfficialMeliToday) {
+      const salesHoje = recentSales.filter(s => normalizeDateToIsoDay(s.date) === todayIso);
+      if (salesHoje.length > 0) {
+        const comissaoSomada = salesHoje.reduce((acc, s) => acc + s.commissionValue, 0);
+        const pedidosSomados = salesHoje.reduce((acc, s) => acc + s.saleUnits, 0);
+        const vendasBrutasSomadas = salesHoje.reduce((acc, s) => acc + s.saleValue, 0);
+        if (comissaoSomada > commissionsToday) {
+          commissionsToday = Number(comissaoSomada.toFixed(2));
+        }
+        if (pedidosSomados > ordersToday) {
+          ordersToday = pedidosSomados;
+        }
+        if (vendasBrutasSomadas > totalSalesToday) {
+          totalSalesToday = Number(vendasBrutasSomadas.toFixed(2));
+        }
+      }
+    } else {
+      // Quando temos detalhe diário oficial, calcula vendas brutas de hoje pelas vendas individuais ou proporção
+      const salesHoje = recentSales.filter(s => normalizeDateToIsoDay(s.date) === todayIso);
       const vendasBrutasSomadas = salesHoje.reduce((acc, s) => acc + s.saleValue, 0);
-      if (comissaoSomada > commissionsToday) {
-        commissionsToday = Number(comissaoSomada.toFixed(2));
-      }
-      if (pedidosSomados > ordersToday) {
-        ordersToday = pedidosSomados;
-      }
-      if (vendasBrutasSomadas > totalSalesToday) {
-        totalSalesToday = Number(vendasBrutasSomadas.toFixed(2));
+      totalSalesToday = vendasBrutasSomadas > 0 ? Number(vendasBrutasSomadas.toFixed(2)) : Number((commissionsToday * 10).toFixed(2));
+    }
+
+    // 3. Apenas se a sessão expirou e o usuário fez um lançamento explicitamente manual, usa o valor manual
+    if (sessionExpired && comissaoLancamentoManual > 0) {
+      commissionsToday = comissaoLancamentoManual;
+      if (vendasLancamentoManual > totalSalesToday) {
+        totalSalesToday = vendasLancamentoManual;
       }
     }
 
-    // 3. O lançamento oficial consolidado prevalece sobre somas parciais de vendas truncadas
-    // (O painel oficial do Mercado Livre inclui comissões de parceria de vendedores e ordens com delay na listagem de sales)
-    if (comissaoLancamento > commissionsToday) {
-      commissionsToday = comissaoLancamento;
-      if (vendasLancamento > totalSalesToday) {
-        totalSalesToday = vendasLancamento;
-      }
+    // 4. Preserva dados do cache do dia se a sessão expirou
+    if (isCacheFromToday && cached && sessionExpired) {
+      if (cached.commissionsToday > commissionsToday) commissionsToday = cached.commissionsToday;
+      if (cached.ordersToday > ordersToday) ordersToday = cached.ordersToday;
+      if (cached.totalSalesToday && cached.totalSalesToday > totalSalesToday) totalSalesToday = cached.totalSalesToday;
+      if (cached.clicksToday && cached.clicksToday > clicksToday) clicksToday = cached.clicksToday;
     }
 
-    // 4. Preserva dados do cache do dia se superiores ou já consolidados APENAS se a sessão expirou
-    // (Se a sessão está ativa e o Mercado Livre reduziu comissões por cancelamento em tempo real, aceita o valor real)
-    if (isCacheFromToday && cached) {
-      if (sessionExpired) {
-        if (cached.commissionsToday > commissionsToday) commissionsToday = cached.commissionsToday;
-        if (cached.ordersToday > ordersToday) ordersToday = cached.ordersToday;
-        if (cached.totalSalesToday && cached.totalSalesToday > totalSalesToday) totalSalesToday = cached.totalSalesToday;
-        if (cached.clicksToday && cached.clicksToday > clicksToday) clicksToday = cached.clicksToday;
-      }
-    }
-
-    // 5. Auto-detecção de novas vendas: se o saldo total acumulado no Mercado Livre aumentou em relação ao cache,
-    // incorpora o acréscimo automaticamente no commissionsToday sem depender do fechamento de lote diário do ML
-    if (isCacheFromToday && cached && cached.totalCommissions && totalCommissions > cached.totalCommissions) {
+    // 5. Se o detalhe diário oficial AINDA NÃO registrou o dia de hoje, e o saldo total acumulado aumentou:
+    if (!hasOfficialMeliToday && isCacheFromToday && cached && cached.totalCommissions && totalCommissions > cached.totalCommissions) {
       const ganhoNovo = Number((totalCommissions - cached.totalCommissions).toFixed(2));
       if (ganhoNovo > 0 && commissionsToday <= (cached.commissionsToday || 0)) {
         commissionsToday = Number(((cached.commissionsToday || 0) + ganhoNovo).toFixed(2));
         ordersToday = Math.max(ordersToday, (cached.ordersToday || 0) + 1);
       }
+    }
+
+    // Atualiza automaticamente o registro financeiro diário de hoje com o valor oficial do Mercado Livre
+    if (isSessionValid && hasOfficialMeliToday && commissionsToday > 0) {
+      try {
+        db.prepare(`
+          INSERT INTO financas_lancamentos_diarios (
+            data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+          ) VALUES (?, ?, ?, 0, 0, 0, 'auto', 'Mercado Livre Afiliados (Painel Oficial)', 'mercado_livre')
+          ON CONFLICT(data_lancamento) DO UPDATE SET
+            lucro_bruto = excluded.lucro_bruto,
+            vendas_brutas = excluded.vendas_brutas,
+            descricao = 'Mercado Livre Afiliados (Painel Oficial)',
+            atualizado_em = CURRENT_TIMESTAMP
+          WHERE financas_lancamentos_diarios.origem != 'manual'
+        `).run(todayIso, commissionsToday, totalSalesToday || (commissionsToday * 10));
+      } catch {}
     }
 
     // 3. Montagem da Tabela de "Produtos Vendidos" (Replicando o painel oficial do Mercado Livre)
