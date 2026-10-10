@@ -975,7 +975,7 @@ export class WhatsAppManager {
       const linkMatches = novoTexto.match(/https?:\/\/[^\s]+/gi);
       let linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
 
-      if (isPublicacaoCupomPuro) {
+      if (isPublicacaoCupomPuro || (isCupom && !hasCanonicalProduct)) {
         // Para comunicados de cupons, o link DEVE ser incondicionalmente a vitrine oficial do Eduardo
         linkAfiliadoFinal = linkVitrineCurto;
         novoTexto = novoTexto.replace(/https?:\/\/[^\s]+/gi, linkVitrineCurto);
@@ -1076,22 +1076,30 @@ export class WhatsAppManager {
       let safeImageBuffer: Buffer | null = imageBuffer;
 
       let usouFotoOficialCupom = false;
-      if (isCupom || isPublicacaoCupomPuro || isMsgCupomGeral) {
+      const isQualquerCupom = Boolean(isCupom || isPublicacaoCupomPuro || isMsgCupomGeral);
+
+      if (isQualquerCupom) {
         if (!hasCanonicalProduct) {
-          const bufferOficialCupom = obterFotoCupomBuffer();
-          if (bufferOficialCupom) {
-            safeImageBuffer = bufferOficialCupom;
-            usouFotoOficialCupom = true;
-            console.log(`[Cupom WhatsApp] Anexando foto oficial amarela "NOVO CUPOM" (${Math.round(bufferOficialCupom.length / 1024)} KB).`);
+          // Se a mensagem original já veio com imagem anexada do WhatsApp, PRESERVA A MESMA IMAGEM!
+          if (safeImageBuffer && safeImageBuffer.length > 0) {
+            console.log(`[Cupom WhatsApp] Replicando a mesma imagem recebida na mensagem original (${Math.round(safeImageBuffer.length / 1024)} KB).`);
+          } else {
+            // Se veio apenas texto sem imagem, anexa a foto oficial amarela de cupom como fallback
+            const bufferOficialCupom = obterFotoCupomBuffer();
+            if (bufferOficialCupom) {
+              safeImageBuffer = bufferOficialCupom;
+              usouFotoOficialCupom = true;
+              console.log(`[Cupom WhatsApp] Anexando foto oficial amarela "NOVO CUPOM" (${Math.round(bufferOficialCupom.length / 1024)} KB).`);
+            }
           }
         }
       }
 
       // REGRA DE OURO DE ESTÚDIO:
-      // Se a padronização estiver ativa e houver foto de produto (não sendo banner oficial de cupom ou comunicado puro),
+      // Se a padronização estiver ativa e houver foto de produto (não sendo banner de cupom ou comunicado puro),
       // padroniza no canvas 1:1 com respiro proporcional de estúdio
       const padronizarAtivo = getConfig('padronizar_fotos_respiro', 'true') === 'true';
-      if (padronizarAtivo && safeImageBuffer && safeImageBuffer.length > 0 && !usouFotoOficialCupom && !isPublicacaoCupomPuro) {
+      if (padronizarAtivo && safeImageBuffer && safeImageBuffer.length > 0 && !usouFotoOficialCupom && !isPublicacaoCupomPuro && !isQualquerCupom) {
         try {
           const paddingPercentual = parseInt(getConfig('padding_foto_percentual', '12'), 10) || 12;
           const corFundo = getConfig('fundo_foto_cor', '#FFFFFF');

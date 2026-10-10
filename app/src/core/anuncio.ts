@@ -38,9 +38,12 @@ export function obterFotoCupomBuffer(): Buffer | null {
     path.resolve(process.cwd(), 'public/assets/cupom-mercadolivre.png'),
     path.resolve(process.cwd(), 'app/src/public/assets/cupom-mercadolivre.png'),
     path.resolve(process.cwd(), 'app/dist/public/assets/cupom-mercadolivre.png'),
+    path.resolve(process.cwd(), 'logo-app-mercadolivre.png'),
+    path.resolve(process.cwd(), 'app/logo-app-mercadolivre.png'),
     path.resolve(currentDir, '../public/assets/cupom-mercadolivre.png'),
     path.resolve(currentDir, '../../src/public/assets/cupom-mercadolivre.png'),
-    path.resolve(currentDir, '../../dist/public/assets/cupom-mercadolivre.png')
+    path.resolve(currentDir, '../../dist/public/assets/cupom-mercadolivre.png'),
+    path.resolve(currentDir, '../../logo-app-mercadolivre.png')
   ];
 
   for (const p of candidatePaths) {

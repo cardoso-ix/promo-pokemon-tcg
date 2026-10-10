@@ -82,3 +82,42 @@ Mínimo: R$ 79
   assert.ok(formatado.includes('@pokemon_tcg_promo'), 'Deve conter a assinatura da marca');
 });
 
+test('Replica de Cupom Mercado Livre deve replicar a mesma coisa trocando apenas o link para o do usuario', async () => {
+  const { extrairCupom, formatarMensagemReplicada } = await import('../src/core/anuncio.js');
+
+  const msgConcorrente = `NOVO CUPOM MERACDO LIVRE
+
+R$ 100 OFF acima de R$799
+🎟️ Cupom: 10DO10SITE
+
+🔗 https://meli.la/2j69N6U`;
+
+  const cupom = extrairCupom(msgConcorrente);
+  assert.strictEqual(cupom, '10DO10SITE');
+
+  const linkOficialEduardo = 'https://mercadolivre.com/sec/2rM6RPm';
+  const textoHigienizado = msgConcorrente
+    .replace(/\bmera?cdo\s+livre\b/gi, 'MERCADO LIVRE')
+    .replace('https://meli.la/2j69N6U', linkOficialEduardo);
+
+  const formatado = formatarMensagemReplicada({
+    tipo: 'cupom',
+    titulo: 'NOVO CUPOM MERCADO LIVRE',
+    cupom: cupom || undefined,
+    linkVitrineCurto: linkOficialEduardo,
+    textoOriginalHigienizado: textoHigienizado
+  });
+
+  // 1. Deve preservar todas as regras e valores originais
+  assert.ok(formatado.includes('R$ 100 OFF acima de R$799'), 'Deve preservar o desconto e valor mínimo original');
+  assert.ok(formatado.includes('10DO10SITE'), 'Deve conter o código exato do cupom');
+
+  // 2. Deve conter apenas o link do usuário e remover o do concorrente
+  assert.ok(formatado.includes(linkOficialEduardo), 'Deve conter o link de afiliado oficial do Eduardo');
+  assert.ok(!formatado.includes('https://meli.la/2j69N6U'), 'Não deve conter o link do concorrente');
+
+  // 3. Cabeçalho de loja corrigido
+  assert.ok(formatado.includes('NOVO CUPOM MERCADO LIVRE'));
+});
+
+

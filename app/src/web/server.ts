@@ -748,8 +748,9 @@ export async function createServer() {
 
       const linkMatches = result.novoTexto.match(/https?:\/\/[^\s]+/gi);
       let linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
-      if (isPublicacaoCupomPuro) {
+      if (isPublicacaoCupomPuro || (isCupom && !hasCanonicalProduct)) {
         linkAfiliadoFinal = linkVitrineCurto;
+        result.novoTexto = result.novoTexto.replace(/https?:\/\/[^\s]+/gi, linkVitrineCurto);
       }
       const parcelamentoExtraido = extrairParcelamento(text);
 
