@@ -435,5 +435,59 @@ https://meli.la/21rpBnN`;
   assert.strictEqual(msgFormatada.includes('🛒 https://meli.la/1FRkD5j'), true);
 });
 
+test('extrairCupom NÃO deve confundir erros de digitação (MERACDO) ou cabeçalhos promocionais com códigos de cupom', () => {
+  const msgUsuario = `NOVO CUPOM MERACDO LIVRE
+
+25% OFF acima de R$219 (limitado a R$ 60)
+🎟️ Cupom: 10D010TODOSITE
+
+🔗 https://meli.la/2j69N6U`;
+
+  const cupom = extrairCupom(msgUsuario);
+  assert.strictEqual(cupom, '10D010TODOSITE');
+});
+
+test('extrairCupom deve ignorar marcas e cabeçalhos em variações de NOVO CUPOM [LOJA] LIVRE', () => {
+  assert.strictEqual(extrairCupom('NOVO CUPOM MERCADO LIVRE\nCupom: VALE10'), 'VALE10');
+  assert.strictEqual(extrairCupom('NOVOS CUPONS MERCADO LIVRE\nCupom: DESCONTO10'), 'DESCONTO10');
+  assert.strictEqual(extrairCupom('NOVO CUPOM MERACDO LIVRE\nCupom: POKE20'), 'POKE20');
+  assert.strictEqual(extrairCupom('NOVO CUPOM MELI LIVRE\nCupom: MELI10'), 'MELI10');
+  assert.strictEqual(extrairCupom('NOVO CUPOM SHOPEE BRASIL\nCupom: SHOPEE20'), 'SHOPEE20');
+});
+
+test('formatarMensagemReplicada para comunicado de cupom deve preservar cabeçalho da promoção e código correto', () => {
+  const msgOriginal = `NOVO CUPOM MERACDO LIVRE
+
+25% OFF acima de R$219 (limitado a R$ 60)
+🎟️ Cupom: 10D010TODOSITE
+
+🔗 https://meli.la/2j69N6U`;
+
+  const cupom = extrairCupom(msgOriginal);
+  assert.strictEqual(cupom, '10D010TODOSITE');
+
+  // Higieniza texto original para a réplica (substituindo link pelo link de afiliado)
+  const textoHigienizado = msgOriginal.replace('https://meli.la/2j69N6U', 'https://mercadolivre.com/sec/2rM6RPm');
+
+  const replicada = formatarMensagemReplicada({
+    tipo: 'cupom',
+    titulo: 'NOVO CUPOM MERCADO LIVRE',
+    cupom: cupom || undefined,
+    linkVitrineCurto: 'https://mercadolivre.com/sec/2rM6RPm',
+    textoOriginalHigienizado: textoHigienizado
+  });
+
+  // Deve conter a assinatura da marca
+  assert.strictEqual(replicada.startsWith('@pokemon_tcg_promo'), true);
+  // Deve conter o cabeçalho original da promoção
+  assert.strictEqual(replicada.includes('NOVO CUPOM MERACDO LIVRE') || replicada.includes('NOVO CUPOM MERCADO LIVRE'), true);
+  // O cupom deve ser exatamente 10D010TODOSITE e NÃO 'Cupons: MERACDO + 10D010TODOSITE'
+  assert.strictEqual(replicada.includes('MERACDO + 10D010TODOSITE'), false);
+  assert.strictEqual(replicada.includes('10D010TODOSITE'), true);
+  // O link deve ser o oficial do Eduardo
+  assert.strictEqual(replicada.includes('https://mercadolivre.com/sec/2rM6RPm'), true);
+});
+
+
 
 

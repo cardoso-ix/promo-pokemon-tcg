@@ -599,7 +599,8 @@ function sanitizarCodigoCupom(bruto: string, blacklist: Set<string>): string | n
     !/^\d+$/.test(code) &&
     code.length >= 3 &&
     code.length <= 30 &&
-    !/^(?:COM|SEM|TEM|CUPOM|CUPONS)$/i.test(code) &&
+    !/^(?:COM|SEM|TEM|CUPOM|CUPONS|BRASIL|BR)$/i.test(code) &&
+    !/^MERA?CD|^MECAD|^MERCAD/i.test(code) &&
     /^[A-Z0-9_\-]+$/.test(code)
   ) {
     return code;
@@ -635,13 +636,15 @@ export function extrairCupom(texto: string): string | null {
 
   const blacklist = new Set([
     'DE', 'NO', 'DO', 'DA', 'EM', 'NA', 'PARA', 'COM', 'SEM', 'POR', 'QUE', 'SEU', 'SUA',
-    'DESCONTO', 'APP', 'APLICATIVO', 'MERCADO', 'LIVRE', 'TCG', 'POKEMON', 'NENHUM', 'NOVO',
-    'NOVOS', 'VALIDO', 'VALIDOS', 'ATIVO', 'ATIVOS', 'DISPONIVEL', 'DISPONIVEIS', 'LIBERADO',
-    'LIBERADOS', 'ESPECIAL', 'HOJE', 'AGORA', 'AQUI', 'TODO', 'TODOS', 'SITE', 'ITEM', 'ITEMS',
-    'PRODUTO', 'PRODUTOS', 'CLIENTE', 'PRIMEIRA', 'COMPRA', 'APENAS', 'EXCLUSIVO', 'DIRETO',
-    'CARRINHO', 'PAGINA', 'ANUNCIO', 'FINALIZAR', 'PAGAMENTO', 'COMPRANDO', 'USANDO', 'RESGATE',
-    'RESGATAR', 'PEGUE', 'ATIVE', 'APLIQUE', 'USE', 'INSIRA', 'COLOQUE', 'DIGITE', 'OFF',
-    'TREINADORES', 'RESGATEM', 'ACESSE', 'ACESSEM', 'CONFIRA', 'CONFIRAM', 'LINK', 'LINKS'
+    'DESCONTO', 'APP', 'APLICATIVO', 'MERCADO', 'MERACDO', 'MECADO', 'MERCADOLIVRE', 'MERCADOLIVREBR',
+    'MELI', 'MELIBR', 'SHOPEE', 'AMAZON', 'MAGALU', 'MAGAZINE', 'LUIZA', 'ALIEXPRESS', 'ALI',
+    'SUBMARINO', 'AMERICANAS', 'LIVRE', 'TCG', 'POKEMON', 'NENHUM', 'NOVO', 'NOVOS', 'VALIDO',
+    'VALIDOS', 'ATIVO', 'ATIVOS', 'DISPONIVEL', 'DISPONIVEIS', 'LIBERADO', 'LIBERADOS', 'ESPECIAL',
+    'HOJE', 'AGORA', 'AQUI', 'TODO', 'TODOS', 'SITE', 'ITEM', 'ITEMS', 'PRODUTO', 'PRODUTOS',
+    'CLIENTE', 'PRIMEIRA', 'COMPRA', 'APENAS', 'EXCLUSIVO', 'DIRETO', 'CARRINHO', 'PAGINA',
+    'ANUNCIO', 'FINALIZAR', 'PAGAMENTO', 'COMPRANDO', 'USANDO', 'RESGATE', 'RESGATAR', 'PEGUE',
+    'ATIVE', 'APLIQUE', 'USE', 'INSIRA', 'COLOQUE', 'DIGITE', 'OFF', 'TREINADORES', 'RESGATEM',
+    'ACESSE', 'ACESSEM', 'CONFIRA', 'CONFIRAM', 'LINK', 'LINKS'
   ]);
 
   // A1) Expressões regulares para encontrar MÚLTIPLOS CÓDIGOS de cupom juntos na mesma expressão
@@ -661,22 +664,19 @@ export function extrairCupom(texto: string): string | null {
     }
   }
 
-  // A2) Expressões regulares para encontrar CÓDIGO de cupom alfanumérico individual
-  const regexesCodigo = [
-    // cupom (com possíveis adjetivos/local/números: cupom 1, cupom 2, ativo, válido, exclusivo, liberado, no app, de 10% off, etc.)
-    // seguido de separadores como colons, asteriscos, espaços ou hífens e o código
-    /cupo(?:m|ns)(?:\s+(?:[#\d]+|ativo|v[aá]lido|exclusivo|liberado|especial|novo|do\s+app|no\s+app|no\s+carrinho|direto\s+no\s+app|na\s+p[aá]gina|no\s+an[uú]ncio|de\s+[^\n:]+))?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/gi,
-    // (use | usando | com | aplique | aplicar | ative | ativar | insira | inserir | coloque | colocar | digite | digitar | resgate | resgatar) [o] (cupom|código|cod) [:] [*]CODE[*]
+  // A2) Camada 1: Expressões regulares de ALTA PRECISÃO (delimitadores explícitos, emojis de cupom ou comandos verbais)
+  const regexesAltaPrecisao = [
+    // cupom seguido de separador real (:, *, _, ~, =, -) e o código (ex: Cupom: *POKEMON10*, Cupom: MELIKIDS)
+    /cupo(?:m|ns)(?:\s+(?:[#\d]+|ativo|v[aá]lido|exclusivo|liberado|especial|novo|do\s+app|no\s+app|no\s+carrinho|direto\s+no\s+app|na\s+p[aá]gina|no\s+an[uú]ncio|de\s+[^\n:]+))?[:\*_~=\-]+[\s\*_~=\-]*([a-z0-9_\-]{3,25})/gi,
+    // (use | usando | com | aplique | aplicar | ative | ativar | insira | inserir | coloque | colocar | digite | digitar | resgate | resgatar) [o] (cupom|código|cod)
     /(?:use|usando|com|aplique|aplicar|ative|ativar|insira|inserir|coloque|colocar|digite|digitar|resgate|resgatar)\s+(?:o\s+)?(?:cupo(?:m|ns)|c[oó]digo|cod)(?:\s+[#\d]+)?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/gi,
     // (código | cod) [:] CODE
-    /(?:c[oó]digo|cod)(?:\s+[#\d]+)?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/gi,
+    /(?:c[oó]digo|cod)(?:\s+[#\d]+)?[:\*_~=\-]+[\s\*_~=\-]*([a-z0-9_\-]{3,25})/gi,
     // cupom [de] 10% [off] [:] CODE
-    /cupo(?:m|ns)(?:\s+de)?\s+\d+%\s*(?:off)?[:\s\*_~=\-]+([a-z0-9_\-]{3,25})/gi,
+    /cupo(?:m|ns)(?:\s+de)?\s+\d+%\s*(?:off)?[:\*_~=\-]+[\s\*_~=\-]*([a-z0-9_\-]{3,25})/gi,
     // cupom [CODE] ou cupom (CODE) ou cupom "CODE"
     /cupo(?:m|ns)[\s:]+[\[\("]([a-z0-9_\-]{3,25})[\]\)"]/gi,
-    // cupom CODE destacado (ex: Cupom MELIKIDS, Cupom 20OFF)
-    /cupo(?:m|ns)\s+([A-Z0-9_\-]{3,25})/g,
-    // Emojis de cupom (🎟️, 🎫, 🏷️) seguidos de código diretamente ou após 'cupom/código' (ex: 🎟️ MELIUZKIDS)
+    // Emojis de cupom (🎟️, 🎫, 🏷️) seguidos de código diretamente ou após 'cupom/código' (ex: 🎟️ MELIUZKIDS, 🎟️ Cupom: 10D010TODOSITE)
     /(?:[\u{1F39F}\u{1F3AB}\u{1F3F7}]\u{FE0F}?)\s*(?:(?:cupo(?:m|ns)|c[oó]digo|cod)(?:\s+[#\d]+)?[:\s\*_~=\-]*)?([a-z0-9_\-]{3,25})/giu,
     // Linha com especificação de % OFF seguida de quebra de linha e código isolado (ex: 🎟️ 20% OFF acima de R$ 49...\nQUEIMADEESTOQUE24)
     /(?:\d+%\s*off[^\n]*\n+)\s*([a-z0-9_\-]{3,25})/gi,
@@ -686,9 +686,25 @@ export function extrairCupom(texto: string): string | null {
 
   const codigosColetados: string[] = [];
 
-  for (const regex of regexesCodigo) {
+  for (const regex of regexesAltaPrecisao) {
     regex.lastIndex = 0;
     const matches = Array.from(texto.matchAll(regex));
+    for (const match of matches) {
+      if (match[1]) {
+        const cod = sanitizarCodigoCupom(match[1], blacklist);
+        if (cod && !codigosColetados.includes(cod)) {
+          codigosColetados.push(cod);
+        }
+      }
+    }
+  }
+
+  // A3) Camada 2: Fallback informal para "cupom CODE" apenas se NENHUM código explícito foi encontrado na Camada 1
+  // Protegido contra cabeçalhos de lojas como "NOVO CUPOM MERACDO LIVRE" ou "CUPOM SHOPEE BRASIL"
+  if (codigosColetados.length === 0) {
+    const regexFallback = /(?<!novo\s+|novos\s+)cupo(?:m|ns)\s+([A-Z0-9_\-]{3,25})(?!\s+(?:livre|brasil|br|app|site|loja|online|oficial)\b)/gi;
+    regexFallback.lastIndex = 0;
+    const matches = Array.from(texto.matchAll(regexFallback));
     for (const match of matches) {
       if (match[1]) {
         const cod = sanitizarCodigoCupom(match[1], blacklist);

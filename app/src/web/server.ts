@@ -725,15 +725,19 @@ export async function createServer() {
         !dadosOferta.produto.toLowerCase().includes('desconto')
       );
 
-      const hasProdutoEspecifico = Boolean(
-        hasCanonicalProduct ||
-        (!isMsgCupomGeral && (
-          (hasPrecoValido && isTituloProduto) ||
-          Boolean(imagePreviewUrl)
-        ))
+      const isPublicacaoCupomPuro = Boolean(
+        isMsgCupomGeral && (!hasCanonicalProduct || !isTituloProduto)
       );
 
-      const isPublicacaoCupomPuro = Boolean(isMsgCupomGeral && !hasCanonicalProduct);
+      const hasProdutoEspecifico = Boolean(
+        !isPublicacaoCupomPuro && (
+          hasCanonicalProduct ||
+          (!isMsgCupomGeral && (
+            (hasPrecoValido && isTituloProduto) ||
+            Boolean(imagePreviewUrl)
+          ))
+        )
+      );
 
       const tipoDetectado = isPublicacaoCupomPuro
         ? 'cupom'

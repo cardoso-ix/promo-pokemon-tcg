@@ -95,7 +95,7 @@ test('Meta Ads - Atualização de Saldo Manual e Histórico de Recargas', async 
     novoSaldo: 150.0,
     descricao: 'Ajuste inicial de caixa teste',
     alertThreshold: 40.0,
-    mode: 'hybrid'
+    mode: 'manual'
   });
 
   assert.equal(saldoDefinido.ok, true);

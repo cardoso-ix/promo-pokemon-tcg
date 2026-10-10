@@ -307,13 +307,14 @@ export async function expandUrl(
 
     if (candidatos.length > 0) {
       candidatos.sort((a, b) => b.pontos - a.pontos);
-      // Exige pontuação relevante para assumir que é o mesmo produto, ou adota se for o único candidato
-      if (candidatos[0].pontos >= 2 || candidatos.length === 1) {
+      const isCupomSemProduto = /(?:novos?\s+)?cupo(?:m|ns)|\bcupons\b|use\s+(?:o\s+)?cupom/i.test(textHint) && candidatos[0].pontos < 2;
+      // Exige pontuação relevante para assumir que é o mesmo produto, ou adota se for o único candidato (e NÃO for post puro de cupom)
+      if (!isCupomSemProduto && (candidatos[0].pontos >= 2 || candidatos.length === 1)) {
         currentUrl = candidatos[0].url;
         if (!productImageUrl && candidatos[0].img && isImagemValidaProdutoMl(candidatos[0].img)) {
           productImageUrl = candidatos[0].img;
         }
-      } else if (candidatos.length > 0 && !productImageUrl && candidatos[0].img && isImagemValidaProdutoMl(candidatos[0].img)) {
+      } else if (!isCupomSemProduto && candidatos.length > 0 && !productImageUrl && candidatos[0].img && isImagemValidaProdutoMl(candidatos[0].img)) {
         // Se há produtos listados na vitrine do concorrente, aproveita a imagem do card com melhor pontuação
         productImageUrl = candidatos[0].img;
       }
@@ -919,6 +920,10 @@ export function normalizarFotoAmazon(url: string): string {
  */
 export function cleanSpamLines(text: string, phrasesToRemove: string[]): string {
   let result = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Normalização de erros comuns de digitação de concorrentes em cabeçalhos de lojas
+  result = result.replace(/\bmera?cdo\s+livre\b/gi, 'MERCADO LIVRE');
+  result = result.replace(/\bmecado\s+livre\b/gi, 'MERCADO LIVRE');
 
   for (const rawPhrase of phrasesToRemove) {
     const p = rawPhrase.trim();

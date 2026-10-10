@@ -906,18 +906,21 @@ export class WhatsAppManager {
       !dadosOferta.produto.toLowerCase().includes('desconto')
     );
 
-    // Se for mensagem geral de cupom sem produto canônico individual (MLB), NUNCA é produto específico
-    const hasProdutoEspecifico = Boolean(
-      hasCanonicalProduct ||
-      (!isMsgCupomGeral && (
-        (hasPrecoValido && isTituloProduto) ||
-        Boolean(messageHasImage) ||
-        (contemMercadoLivre && hasPrecoValido)
-      ))
+    // Se for mensagem geral de cupom sem produto canônico individual (MLB) ou sem título legítimo de produto, é cupom puro
+    const isPublicacaoCupomPuro = Boolean(
+      isMsgCupomGeral && (!hasCanonicalProduct || !isTituloProduto)
     );
 
-    // Quando for cupom e não tiver produto canônico individual (MLB), é publicação de cupom puro
-    const isPublicacaoCupomPuro = Boolean(isMsgCupomGeral && !hasCanonicalProduct);
+    const hasProdutoEspecifico = Boolean(
+      !isPublicacaoCupomPuro && (
+        hasCanonicalProduct ||
+        (!isMsgCupomGeral && (
+          (hasPrecoValido && isTituloProduto) ||
+          Boolean(messageHasImage) ||
+          (contemMercadoLivre && hasPrecoValido)
+        ))
+      )
+    );
 
     // Para comunicados de cupons puros, NUNCA busca foto externa de produtos do Mercado Livre
     const buscarFotoMl = !isPublicacaoCupomPuro && deveBuscarFotoExterna({
