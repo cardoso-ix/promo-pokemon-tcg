@@ -541,6 +541,18 @@ test("formatarMensagemReplicada deve formatar cupons alternativos com 'Cupons: *
   assert.strictEqual(replicada.includes('🎟️ Cupons: *DDRESGATEFULL ou RESGATEDDLOJAS*'), true);
 });
 
+test('formatarMensagemReplicada deve descartar termos de blacklist mesmo se chegarem combinados no cupom (ex: MERACDO + JOGOS50)', () => {
+  const replicada = formatarMensagemReplicada({
+    tipo: 'padrao',
+    titulo: '50% OFF acima de R$ 39 - Limitado a R$ 25',
+    cupom: 'MERACDO + JOGOS50',
+    linkAfiliado: 'https://meli.la/1xAHTnw'
+  });
+
+  assert.strictEqual(replicada.includes('MERACDO'), false);
+  assert.strictEqual(replicada.includes('🎟️ Cupom: *JOGOS50*'), true);
+});
+
 
 
 

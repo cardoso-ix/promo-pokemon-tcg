@@ -640,6 +640,19 @@ function extrairCuponsMultiplosDeTrecho(trecho: string, blacklist: Set<string>):
   return null;
 }
 
+export const BLACKLIST_CUPOM = new Set([
+  'DE', 'NO', 'DO', 'DA', 'EM', 'NA', 'PARA', 'COM', 'SEM', 'POR', 'QUE', 'SEU', 'SUA',
+  'DESCONTO', 'APP', 'APLICATIVO', 'MERCADO', 'MERACDO', 'MECADO', 'MERCADOLIVRE', 'MERCADOLIVREBR',
+  'MELI', 'MELIBR', 'SHOPEE', 'AMAZON', 'MAGALU', 'MAGAZINE', 'LUIZA', 'ALIEXPRESS', 'ALI',
+  'SUBMARINO', 'AMERICANAS', 'LIVRE', 'TCG', 'POKEMON', 'NENHUM', 'NOVO', 'NOVOS', 'VALIDO',
+  'VALIDOS', 'ATIVO', 'ATIVOS', 'DISPONIVEL', 'DISPONIVEIS', 'LIBERADO', 'LIBERADOS', 'ESPECIAL',
+  'HOJE', 'AGORA', 'AQUI', 'TODO', 'TODOS', 'SITE', 'ITEM', 'ITEMS', 'PRODUTO', 'PRODUTOS',
+  'CLIENTE', 'PRIMEIRA', 'COMPRA', 'APENAS', 'EXCLUSIVO', 'DIRETO', 'CARRINHO', 'PAGINA',
+  'ANUNCIO', 'FINALIZAR', 'PAGAMENTO', 'COMPRANDO', 'USANDO', 'RESGATE', 'RESGATAR', 'PEGUE',
+  'ATIVE', 'APLIQUE', 'USE', 'INSIRA', 'COLOQUE', 'DIGITE', 'OFF', 'TREINADORES', 'RESGATEM',
+  'ACESSE', 'ACESSEM', 'CONFIRA', 'CONFIRAM', 'LINK', 'LINKS'
+]);
+
 /**
  * Extrai o código ou condição do cupom mencionado no texto da oferta com alta precisão e resiliência.
  * Suporta tanto cupons individuais quanto múltiplos cupons acumulativos ou alternativos (ex: Cupom: A ou B, Cupom: A + B).
@@ -647,18 +660,7 @@ function extrairCuponsMultiplosDeTrecho(trecho: string, blacklist: Set<string>):
 export function extrairCupom(texto: string): string | null {
   if (!texto) return null;
 
-  const blacklist = new Set([
-    'DE', 'NO', 'DO', 'DA', 'EM', 'NA', 'PARA', 'COM', 'SEM', 'POR', 'QUE', 'SEU', 'SUA',
-    'DESCONTO', 'APP', 'APLICATIVO', 'MERCADO', 'MERACDO', 'MECADO', 'MERCADOLIVRE', 'MERCADOLIVREBR',
-    'MELI', 'MELIBR', 'SHOPEE', 'AMAZON', 'MAGALU', 'MAGAZINE', 'LUIZA', 'ALIEXPRESS', 'ALI',
-    'SUBMARINO', 'AMERICANAS', 'LIVRE', 'TCG', 'POKEMON', 'NENHUM', 'NOVO', 'NOVOS', 'VALIDO',
-    'VALIDOS', 'ATIVO', 'ATIVOS', 'DISPONIVEL', 'DISPONIVEIS', 'LIBERADO', 'LIBERADOS', 'ESPECIAL',
-    'HOJE', 'AGORA', 'AQUI', 'TODO', 'TODOS', 'SITE', 'ITEM', 'ITEMS', 'PRODUTO', 'PRODUTOS',
-    'CLIENTE', 'PRIMEIRA', 'COMPRA', 'APENAS', 'EXCLUSIVO', 'DIRETO', 'CARRINHO', 'PAGINA',
-    'ANUNCIO', 'FINALIZAR', 'PAGAMENTO', 'COMPRANDO', 'USANDO', 'RESGATE', 'RESGATAR', 'PEGUE',
-    'ATIVE', 'APLIQUE', 'USE', 'INSIRA', 'COLOQUE', 'DIGITE', 'OFF', 'TREINADORES', 'RESGATEM',
-    'ACESSE', 'ACESSEM', 'CONFIRA', 'CONFIRAM', 'LINK', 'LINKS'
-  ]);
+  const blacklist = BLACKLIST_CUPOM;
 
   // A1) Expressões regulares para encontrar MÚLTIPLOS CÓDIGOS de cupom juntos na mesma expressão
   // Ex: Cupom:MELIUZKIDS+MELIMAXITOYS, Use o cupom: DDRESGATEFULL ou RESGATEDDLOJAS, 🎟️ A ou B
@@ -995,9 +997,22 @@ export function formatarMensagemReplicada(params: FormatarReplicadaParams): stri
     const limpo = cupom.trim();
     if (!/^(?:com\s+cupom(?:\s+no\s+app)?|cupom(?:\s+de\s+desconto)?|sem\s+cupom)$/i.test(limpo)) {
       if (limpo.includes('+') || /\bou\b/i.test(limpo)) {
-        linhaCupom = `🎟️ Cupons: *${limpo}*`;
+        const isOu = /\bou\b/i.test(limpo);
+        const partes = limpo.split(/\s*(?:\+|\bou\b)\s*/i);
+        const partesValidas = partes
+          .map((p) => sanitizarCodigoCupom(p, BLACKLIST_CUPOM))
+          .filter(Boolean) as string[];
+
+        if (partesValidas.length > 1) {
+          linhaCupom = `🎟️ Cupons: *${partesValidas.join(isOu ? ' ou ' : ' + ')}*`;
+        } else if (partesValidas.length === 1) {
+          linhaCupom = `🎟️ Cupom: *${partesValidas[0]}*`;
+        }
       } else if (/^[a-z0-9_\-]+$/i.test(limpo)) {
-        linhaCupom = `🎟️ Cupom: *${limpo.toUpperCase()}*`;
+        const codSanitizado = sanitizarCodigoCupom(limpo, BLACKLIST_CUPOM);
+        if (codSanitizado) {
+          linhaCupom = `🎟️ Cupom: *${codSanitizado}*`;
+        }
       } else {
         linhaCupom = `🎟️ Cupom: *${limpo}*`;
       }
