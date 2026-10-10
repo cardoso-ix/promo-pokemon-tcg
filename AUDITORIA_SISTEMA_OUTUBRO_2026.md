@@ -80,12 +80,15 @@
    - **Solução Implementada:** Desenvolvida a função `isMensagemSoltaDescartavel` atuando na Camada Zero. Comunicações de cupom sem imagem anexada (`!messageHasImage`) e sem links diretos de marketplace são categoricamente descartadas com status `ignorado` e motivo `mensagem_solta_descartada`.
    - **Preservação:** Publicações legítimas de campanhas com imagem de banner oficial do Mercado Livre ou ofertas com links reais continuam sendo replicadas perfeitamente.
 
-11. ✅ **Criação da Nova Campanha de Teste Meta Ads (Vídeo Shopping Lucario - R$ 20/dia):**
-    - **Campanha Criada:** `[TESTE] Campanha Pokemon - Vídeo Shopping Lucario` (ID: `52761979947290`)
-    - **Conjunto Criado:** `Conjunto 01 - Lookalike 1% WhatsApp (R$ 20/dia)` (ID: `52761979954890`)
+11. ✅ **Criação & Publicação da Nova Campanha de Teste Meta Ads (Vídeo Shopping Lucario - R$ 20/dia):**
+    - **Campanha Criada:** `[TESTE] Campanha Pokemon - Vídeo Shopping Lucario` (ID: `52761979947290`) - Status: `ACTIVE`
+    - **Conjunto Criado:** `Conjunto 01 - Lookalike 1% WhatsApp (R$ 20/dia)` (ID: `52761979954890`) - Status: `ACTIVE`
+    - **Anúncio Publicado:** `02 - Vídeo Shopping Lucario` (ID: `52762011873290`) - Status: `ACTIVE`
+    - **Vídeo Anexado:** ID `1008761282251863` (Renderizado e vinculado ao anúncio)
+    - **Copy & Headline:** Textos promocionais de contraste shopping vs grupo integrados com perfeição
     - **Orçamento:** R$ 20,00 diários (CBO Advantage Campaign Budget)
-    - **Público & Destino:** Espelhado do Lookalike 1% WhatsApp oficial com Pixel de Conversão para Leads (`https://pokemontcgpromo.online/`).
-    - **Status de Segurança:** `PAUSED` (em rascunho/pausado para evitar qualquer consumo antes do upload do vídeo e aprovação pelo usuário).
+    - **Público & Destino:** Lookalike 1% WhatsApp com Pixel de Conversão para Leads (`https://pokemontcgpromo.online/`).
+    - **Campanha Principal Preservada:** Campanha ativa de R$ 50/dia (`01 - New`) mantida 100% isolada entregando leads a R$ 2,81.
 
 ---
 
