@@ -657,20 +657,36 @@ export class MetaAdsIntegrationService {
     const token = await this.getValidAccessToken();
     const actId = this.formatAccountId();
 
-    // 1. Obter detalhes do conjunto de anúncios ativo da campanha Lookalike atual
-    const adsetRes = await fetch(`${GRAPH_API_BASE}/52760556043290/adsets?fields=id,name,targeting,promoted_object,optimization_goal,billing_event,bid_strategy,destination_type&limit=5`, {
+    // 1. Obter detalhes da campanha ativa e do conjunto existente da conta
+    const baseCampRes = await fetch(`${GRAPH_API_BASE}/52760556043290?fields=id,name,objective,status,special_ad_categories,buying_type,daily_budget,bid_strategy`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const baseCamp = (await baseCampRes.json()) as any;
+
+    const adsetRes = await fetch(`${GRAPH_API_BASE}/52760556043290/adsets?fields=id,name,targeting,promoted_object,optimization_goal,billing_event,bid_strategy,destination_type,daily_budget&limit=5`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     const adsetJson = (await adsetRes.json()) as any;
     const baseAdset = adsetJson.data && adsetJson.data[0];
 
-    // 2. Criar a nova campanha
-    const campPayload = {
+    // 2. Criar a nova campanha espelhando os parâmetros da conta
+    const campPayload: any = {
       name: '[TESTE] Campanha Pokemon - Vídeo Shopping Lucario',
-      objective: 'OUTCOME_LEADS',
-      status: 'PAUSED', // Pausada para segurança até ele subir o criativo
-      special_ad_categories: []
+      objective: baseCamp?.objective || 'OUTCOME_LEADS',
+      status: 'PAUSED', // Pausada para segurança até anexar o criativo
+      special_ad_categories: (baseCamp?.special_ad_categories && baseCamp.special_ad_categories.length > 0)
+        ? baseCamp.special_ad_categories
+        : ['NONE'],
+      buying_type: baseCamp?.buying_type || 'AUCTION'
     };
+
+    // Se a campanha base usa CBO (Advantage Campaign Budget)
+    if (baseCamp?.daily_budget) {
+      campPayload.daily_budget = 2000; // R$ 20,00 diários
+      if (baseCamp?.bid_strategy) {
+        campPayload.bid_strategy = baseCamp.bid_strategy;
+      }
+    }
 
     const campCreateRes = await fetch(`${GRAPH_API_BASE}/${actId}/campaigns`, {
       method: 'POST',
@@ -683,20 +699,24 @@ export class MetaAdsIntegrationService {
 
     const campCreated = (await campCreateRes.json()) as any;
     if (campCreated.error) {
-      throw new Error(campCreated.error.message || 'Erro ao criar campanha no Meta Ads');
+      throw new Error(`Erro na criação da Campanha Meta: ${campCreated.error.message || JSON.stringify(campCreated.error)}`);
     }
 
     const newCampaignId = campCreated.id;
 
-    // 3. Criar o conjunto de anúncios com R$ 20,00 diários (2000 centavos)
+    // 3. Criar o conjunto de anúncios espelhando o conjunto ativo (Lookalike 1% WhatsApp)
     const adsetPayload: any = {
       name: 'Conjunto 01 - Lookalike 1% WhatsApp (R$ 20/dia)',
       campaign_id: newCampaignId,
-      daily_budget: 2000, // R$ 20,00
       status: 'PAUSED',
       optimization_goal: baseAdset?.optimization_goal || 'LEAD',
       billing_event: baseAdset?.billing_event || 'IMPRESSIONS'
     };
+
+    // Se NÃO for CBO, o daily_budget vai no conjunto
+    if (!baseCamp?.daily_budget) {
+      adsetPayload.daily_budget = 2000; // R$ 20,00 diários
+    }
 
     if (baseAdset?.targeting) {
       adsetPayload.targeting = baseAdset.targeting;
@@ -723,7 +743,7 @@ export class MetaAdsIntegrationService {
         ok: true,
         campaignId: newCampaignId,
         campaignName: campPayload.name,
-        adsetError: adsetCreated.error.message
+        adsetError: `Erro ao criar AdSet: ${adsetCreated.error.message || JSON.stringify(adsetCreated.error)}`
       };
     }
 
