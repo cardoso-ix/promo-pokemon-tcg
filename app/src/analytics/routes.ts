@@ -148,11 +148,21 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
         return reply.status(500).send({ ok: false, error: msg });
       }
     }
-  );
+  // Criação da Campanha de Teste (Vídeo Shopping Deck Lucario - R$ 20/dia)
+  app.post('/api/integrations/meta/campaigns/create-test', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const result = await metaAdsService.criarCampanhaTesteLucario();
+      return {
+        ok: true,
+        message: 'Campanha de teste Lucario criada com sucesso no Meta Ads!',
+        data: result
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return reply.status(500).send({ ok: false, error: msg });
+    }
+  });
 
-
-
-  // Atualização ou Recarga de Saldo de Caixa Meta Ads
   app.post(
     '/api/integrations/meta/balance',
     async (

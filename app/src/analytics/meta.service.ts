@@ -649,6 +649,93 @@ export class MetaAdsIntegrationService {
       fadigaCriativo
     };
   }
+
+  /**
+   * Cria uma campanha de teste e conjunto de anúncios de R$ 20/dia espelhando o conjunto ativo
+   */
+  async criarCampanhaTesteLucario(): Promise<any> {
+    const token = await this.getValidAccessToken();
+    const actId = this.formatAccountId();
+
+    // 1. Obter detalhes do conjunto de anúncios ativo da campanha Lookalike atual
+    const adsetRes = await fetch(`${GRAPH_API_BASE}/52760556043290/adsets?fields=id,name,targeting,promoted_object,optimization_goal,billing_event,bid_strategy,destination_type&limit=5`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const adsetJson = (await adsetRes.json()) as any;
+    const baseAdset = adsetJson.data && adsetJson.data[0];
+
+    // 2. Criar a nova campanha
+    const campPayload = {
+      name: '[TESTE] Campanha Pokemon - Vídeo Shopping Lucario',
+      objective: 'OUTCOME_LEADS',
+      status: 'PAUSED', // Pausada para segurança até ele subir o criativo
+      special_ad_categories: []
+    };
+
+    const campCreateRes = await fetch(`${GRAPH_API_BASE}/${actId}/campaigns`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(campPayload)
+    });
+
+    const campCreated = (await campCreateRes.json()) as any;
+    if (campCreated.error) {
+      throw new Error(campCreated.error.message || 'Erro ao criar campanha no Meta Ads');
+    }
+
+    const newCampaignId = campCreated.id;
+
+    // 3. Criar o conjunto de anúncios com R$ 20,00 diários (2000 centavos)
+    const adsetPayload: any = {
+      name: 'Conjunto 01 - Lookalike 1% WhatsApp (R$ 20/dia)',
+      campaign_id: newCampaignId,
+      daily_budget: 2000, // R$ 20,00
+      status: 'PAUSED',
+      optimization_goal: baseAdset?.optimization_goal || 'LEAD',
+      billing_event: baseAdset?.billing_event || 'IMPRESSIONS'
+    };
+
+    if (baseAdset?.targeting) {
+      adsetPayload.targeting = baseAdset.targeting;
+    }
+    if (baseAdset?.promoted_object) {
+      adsetPayload.promoted_object = baseAdset.promoted_object;
+    }
+    if (baseAdset?.destination_type) {
+      adsetPayload.destination_type = baseAdset.destination_type;
+    }
+
+    const adsetCreateRes = await fetch(`${GRAPH_API_BASE}/${actId}/adsets`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(adsetPayload)
+    });
+
+    const adsetCreated = (await adsetCreateRes.json()) as any;
+    if (adsetCreated.error) {
+      return {
+        ok: true,
+        campaignId: newCampaignId,
+        campaignName: campPayload.name,
+        adsetError: adsetCreated.error.message
+      };
+    }
+
+    return {
+      ok: true,
+      campaignId: newCampaignId,
+      campaignName: campPayload.name,
+      adsetId: adsetCreated.id,
+      adsetName: adsetPayload.name,
+      dailyBudget: 'R$ 20,00'
+    };
+  }
 }
 
 export interface MetaAdAccountBalanceInfo {
