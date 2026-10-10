@@ -75,8 +75,13 @@
    - **Preservação:** Campanha oficial ativa mantida 100% intocada (`Campanha Pokemon - Lookalike 1% WhatsApp (05/10/2026)` - ID: `52760556043290`), junto com seu conjunto `Conjunto 01 - Lookalike 1% WhatsApp`, anúncio `01 - New` e públicos Lookalike e Lista de Clientes.
    - **Resultado:** Ads Manager pronto e visualmente limpo para gravação de tela e criação de novos criativos.
 
+10. ✅ **Guardião Estrito contra Mensagens Soltas & Erratas de Terceiros (`isMensagemSoltaDescartavel`):**
+   - **Diagnóstico:** Quando grupos concorrentes postavam erratas de chat isoladas (ex: `cupom correto: BEN3FICIO13AF`, `cupom esgotado!`), o robô detectava a palavra "cupom" e tentava forçar uma replicação com a vitrine do Mercado Livre, inclusive vazando cupons de outros marketplaces (ex: Shopee).
+   - **Solução Implementada:** Desenvolvida a função `isMensagemSoltaDescartavel` atuando na Camada Zero. Comunicações de cupom sem imagem anexada (`!messageHasImage`) e sem links diretos de marketplace são categoricamente descartadas com status `ignorado` e motivo `mensagem_solta_descartada`.
+   - **Preservação:** Publicações legítimas de campanhas com imagem de banner oficial do Mercado Livre ou ofertas com links reais continuam sendo replicadas perfeitamente.
+
 ---
 
 ## 4. ✅ Conclusão
-O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais e auditadas, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS e Meta Ads organizado para gravação.
+O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais e auditadas, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS, Meta Ads organizado e proteção total contra mensagens soltas e erratas de chat.
 

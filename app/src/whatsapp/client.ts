@@ -40,7 +40,8 @@ import {
   determinarTipoMensagem,
   calcularDesconto,
   deveBuscarFotoExterna,
-  obterFotoCupomBuffer
+  obterFotoCupomBuffer,
+  isMensagemSoltaDescartavel
 } from '../core/anuncio.js';
 import { notificarDisparadorOferta } from '../core/internal-sync.js';
 import { padronizarFotoEstudio } from '../core/image-studio.js';
@@ -702,13 +703,42 @@ export class WhatsAppManager {
       ? /(?:shopee\.com|shope\.ee|magazineluiza\.com|aliexpress\.com)/i.test(rawText)
       : /(?:amazon\.com|amzn\.to|shopee\.com|shope\.ee|magazineluiza\.com|aliexpress\.com)/i.test(rawText);
 
-    // C) Digitação avulsa / Comunicado informativo sem link de marketplace
+    const temLinkMarketplaceValido = contemMercadoLivre || (replicarAmazon && contemAmazon);
+
+    // C) GUARDIÃO DE MENSAGENS SOLTAS:
+    // Erratas, correções de chat (ex: "cupom correto: XYZ") ou cupons de texto puro sem foto e sem link
+    // NUNCA devem ser replicados nos grupos oficiais.
+    const isMensagemSolta = isMensagemSoltaDescartavel({
+      texto: rawText,
+      hasImage: Boolean(messageHasImage),
+      hasMarketplaceLink: temLinkMarketplaceValido
+    });
+
+    if (isMensagemSolta) {
+      console.log(`[Guardião Mensagens Soltas] Mensagem ignorada: errata ou texto avulso sem link nem foto ("${rawText.slice(0, 50)}...").`);
+      const log = insertLog({
+        origem_chat_id: remoteJid,
+        origem_nome: origemNome,
+        destino_chat_id: '',
+        hash_conteudo: hashConteudo,
+        texto_original: rawText,
+        texto_publicado: novoTexto,
+        tem_foto: Boolean(messageHasImage),
+        links_convertidos: linksConvertidos,
+        status: 'ignorado',
+        motivo: 'mensagem_solta_descartada'
+      });
+      this.notifyMessage(log);
+      return;
+    }
+
+    // D) Digitação avulsa / Comunicado informativo sem link de marketplace
     const replicarComunicados = getConfig('replicar_comunicados_texto', 'false') === 'true';
     const isComunicadoSemLink = linksConvertidos === 0 && !contemMarketplaceConcorrente && !isCupom;
 
-    // Se for uma TELA DE CUPOM (print ou texto de cupom) sem link prévio:
+    // Se for uma TELA DE CUPOM (print/banner de cupom com imagem anexada) sem link prévio:
     // Aceita e vincula automaticamente o link oficial da sua vitrine do Mercado Livre
-    if (isCupom && (!contemMercadoLivre || linksConvertidos === 0)) {
+    if (isCupom && Boolean(messageHasImage) && (!contemMercadoLivre || linksConvertidos === 0)) {
       contemMercadoLivre = true;
       linksConvertidos = 1;
       resolvedProductUrl = linkVitrineCurto;

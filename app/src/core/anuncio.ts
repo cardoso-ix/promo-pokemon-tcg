@@ -592,6 +592,47 @@ export function detectarMensagemCupom(texto: string): boolean {
 }
 
 /**
+ * Detecta se a mensagem é uma mensagem solta de chat, errata ou menção a cupom sem mídia nem link
+ * de marketplace. Mensagens sob essa condição nunca devem ser replicadas nos grupos.
+ */
+export function isMensagemSoltaDescartavel(params: {
+  texto: string;
+  hasImage: boolean;
+  hasMarketplaceLink: boolean;
+}): boolean {
+  const { texto, hasImage, hasMarketplaceLink } = params;
+  if (!texto) return true;
+
+  // Se já tem link de marketplace suportado (Mercado Livre ou Amazon), não é solta
+  if (hasMarketplaceLink) return false;
+
+  // Se tem imagem anexada (print oficial de banner ou produto com/sem legenda), não é solta
+  if (hasImage) return false;
+
+  const limpo = texto.trim();
+
+  // 1. Padrões explícitos de errata, correção, aviso solto ou bate-papo de chat
+  const regexErrataChat = /^(?:cupom\s+correto|c[oó]digo\s+correto|link\s+correto|corrigindo(?:\s+cupom|\s+link)?|esgotou|esgotado|acabou(?:\s+o\s+cupom)?|caiu(?:\s+o\s+cupom)?|errei|ops|algu[eé]m\s+tem\s+cupom|deu\s+certo|voltou|ainda\s+funciona|n[aã]o\s+funciona)/i;
+  if (regexErrataChat.test(limpo)) {
+    return true;
+  }
+
+  // 2. Qualquer menção a cupom sem imagem e sem link é mensagem solta de terceiro
+  const temCupom = Boolean(extrairCupom(limpo) || detectarMensagemCupom(limpo) || /\bcupo(?:m|ns)\b/i.test(limpo));
+  if (temCupom) {
+    return true;
+  }
+
+  // 3. Textos curtos de até 2 linhas sem URL e sem estrutura comercial
+  const linhas = limpo.split('\n').map((l) => l.trim()).filter(Boolean);
+  if (linhas.length <= 2 && limpo.length < 120 && !/https?:\/\//i.test(limpo)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Sanitiza e valida código individual de cupom
  */
 function sanitizarCodigoCupom(bruto: string, blacklist: Set<string>): string | null {

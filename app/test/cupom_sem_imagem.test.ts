@@ -112,3 +112,56 @@ test('deveBuscarFotoExterna - Download da imagem do WhatsApp com sucesso NÃO pr
   assert.strictEqual(resultado, false, 'Não deve buscar foto externa se o download do WhatsApp foi concluído com sucesso');
 });
 
+test('isMensagemSoltaDescartavel - Deve descartar erratas de cupom soltas sem imagem nem link (ex: cupom correto: BEN3FICIO13AF)', async () => {
+  const { isMensagemSoltaDescartavel } = await import('../src/core/anuncio.js');
+
+  // Caso real da imagem enviada pelo usuário
+  const solta1 = isMensagemSoltaDescartavel({
+    texto: 'cupom correto: BEN3FICIO13AF',
+    hasImage: false,
+    hasMarketplaceLink: false
+  });
+  assert.strictEqual(solta1, true, 'Deve descartar errata de cupom correto sem link e sem foto');
+
+  const solta2 = isMensagemSoltaDescartavel({
+    texto: 'cupom esgotado!',
+    hasImage: false,
+    hasMarketplaceLink: false
+  });
+  assert.strictEqual(solta2, true, 'Deve descartar aviso de cupom esgotado sem link e sem foto');
+
+  const solta3 = isMensagemSoltaDescartavel({
+    texto: 'corrigindo: cupom D3SC0NT070',
+    hasImage: false,
+    hasMarketplaceLink: false
+  });
+  assert.strictEqual(solta3, true, 'Deve descartar mensagem de correção sem link e sem foto');
+
+  const solta4 = isMensagemSoltaDescartavel({
+    texto: 'acabou o cupom galera',
+    hasImage: false,
+    hasMarketplaceLink: false
+  });
+  assert.strictEqual(solta4, true, 'Deve descartar mensagem solta de fim de cupom');
+});
+
+test('isMensagemSoltaDescartavel - NÃO deve descartar mensagens legítimas com banner/foto ou link oficial de marketplace', async () => {
+  const { isMensagemSoltaDescartavel } = await import('../src/core/anuncio.js');
+
+  // Tela de cupom oficial com banner anexado (hasImage = true)
+  const cupomComBanner = isMensagemSoltaDescartavel({
+    texto: '50% OFF acima de R$ 39 - Limitado a R$ 25\nCupom: JOGOS50',
+    hasImage: true,
+    hasMarketplaceLink: false
+  });
+  assert.strictEqual(cupomComBanner, false, 'Não deve descartar tela de cupom quando há imagem de banner anexada');
+
+  // Oferta com link direto do Mercado Livre
+  const ofertaComLink = isMensagemSoltaDescartavel({
+    texto: 'Blister Triplo Pokémon... Por R$ 19 Use o cupom: JOGOS50 https://meli.la/2PVdDby',
+    hasImage: false,
+    hasMarketplaceLink: true
+  });
+  assert.strictEqual(ofertaComLink, false, 'Não deve descartar oferta que contém link de marketplace');
+});
+
