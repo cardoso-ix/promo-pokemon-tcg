@@ -725,8 +725,11 @@ export async function createServer() {
         !dadosOferta.produto.toLowerCase().includes('desconto')
       );
 
+      const isCabecalhoCupom = /(?:novo|novos)\s+cupo(?:m|ns)|cupo(?:m|ns)\s+(?:no\s+app|de\s+desconto|do\s+mercado|mercado\s+livre|meracdo\s+livre)/i.test(text);
+
       const isPublicacaoCupomPuro = Boolean(
-        isMsgCupomGeral && (!hasCanonicalProduct || !isTituloProduto)
+        isCabecalhoCupom ||
+        (isMsgCupomGeral && (!hasCanonicalProduct || !isTituloProduto || !hasPrecoValido))
       );
 
       const hasProdutoEspecifico = Boolean(
@@ -754,26 +757,28 @@ export async function createServer() {
       }
       const parcelamentoExtraido = extrairParcelamento(text);
 
-      const templateTexto = formatarMensagemReplicada({
-        tipo: tipoDetectado,
-        titulo: dadosOferta.produto || 'Colecionável Pokémon TCG',
-        precoDe: dadosOferta.valorDe,
-        precoPor: dadosOferta.valorPor,
-        precoUnitario: dadosOferta.valorUnitario || extrairPrecoUnitario(text) || undefined,
-        parcelamento: parcelamentoExtraido || undefined,
-        cupom: cupomExtraido,
-        detalhesCupom: tipoDetectado === 'cupom' ? 'Desconto especial no app para colecionáveis' : undefined,
-        linkAfiliado: linkAfiliadoFinal,
-        linkVitrineCurto,
-        textoOriginalHigienizado: result.novoTexto
-      });
+      const templateTexto = isPublicacaoCupomPuro
+        ? result.novoTexto
+        : formatarMensagemReplicada({
+            tipo: tipoDetectado,
+            titulo: dadosOferta.produto || 'Colecionável Pokémon TCG',
+            precoDe: dadosOferta.valorDe,
+            precoPor: dadosOferta.valorPor,
+            precoUnitario: dadosOferta.valorUnitario || extrairPrecoUnitario(text) || undefined,
+            parcelamento: parcelamentoExtraido || undefined,
+            cupom: cupomExtraido,
+            detalhesCupom: undefined,
+            linkAfiliado: linkAfiliadoFinal,
+            linkVitrineCurto,
+            textoOriginalHigienizado: result.novoTexto
+          });
 
       const templateModo = getConfig('template_modo', 'padrao');
 
       return {
         ok: true,
         originalText: text,
-        novoTexto: templateModo === 'padrao' ? templateTexto : result.novoTexto,
+        novoTexto: isPublicacaoCupomPuro ? result.novoTexto : (templateModo === 'padrao' ? templateTexto : result.novoTexto),
         textoOriginalHigienizado: result.novoTexto,
         templateTexto,
         tipoDetectado,

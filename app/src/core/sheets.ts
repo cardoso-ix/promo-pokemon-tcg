@@ -45,6 +45,17 @@ function isLinhaClickbaitOuCabecalho(linha: string): boolean {
     return true;
   }
 
+  // Linhas de regras de desconto ou condições de cupom (ex: "20% OFF acima de R$99", "limitado a R$50")
+  if (
+    /\b\d+%\s*(?:off|de\s+desconto)\b/i.test(l) ||
+    /\b(?:off\b.*acima\s+de|acima\s+de\s*r?\$?\s*\d+)/i.test(l) ||
+    /\blimitado\s+a\s*r?\$?\s*\d+/i.test(l) ||
+    /\b(?:r\$\s*\d+.*off|desconto\s+de\s*r?\$?\s*\d+)/i.test(l) ||
+    /\bcompras\s+acima\s+de\b/i.test(l)
+  ) {
+    return true;
+  }
+
   // Linhas de preços, URLs, cupons, arrobas ou cabeçalhos de lojas
   if (/^de:?|^por:?|^apenas:?|^https?:/i.test(l)) return true;
   if (/^R\$\s*[\d\.,]+/i.test(l)) return true;

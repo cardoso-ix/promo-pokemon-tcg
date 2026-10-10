@@ -906,9 +906,12 @@ export class WhatsAppManager {
       !dadosOferta.produto.toLowerCase().includes('desconto')
     );
 
-    // Se for mensagem geral de cupom sem produto canônico individual (MLB) ou sem título legítimo de produto, é cupom puro
+    const isCabecalhoCupom = /(?:novo|novos)\s+cupo(?:m|ns)|cupo(?:m|ns)\s+(?:no\s+app|de\s+desconto|do\s+mercado|mercado\s+livre|meracdo\s+livre)/i.test(rawText);
+
+    // Se for mensagem geral de cupom com cabeçalho explícito, ou sem produto canônico individual (MLB) ou sem preço válido, é cupom puro
     const isPublicacaoCupomPuro = Boolean(
-      isMsgCupomGeral && (!hasCanonicalProduct || !isTituloProduto)
+      isCabecalhoCupom ||
+      (isMsgCupomGeral && (!hasCanonicalProduct || !isTituloProduto || !hasPrecoValido))
     );
 
     const hasProdutoEspecifico = Boolean(
@@ -964,22 +967,22 @@ export class WhatsAppManager {
     const templateModo = getConfig('template_modo', 'padrao');
     let textoFinalPublicar = novoTexto;
 
-    if (templateModo === 'padrao' && !isComunicadoSemLink) {
-      const tipoMensagem = isPublicacaoCupomPuro
-        ? 'cupom'
-        : determinarTipoMensagem({
-            texto: rawText,
-            hasProdutoEspecifico
-          });
+    if (isPublicacaoCupomPuro) {
+      // REGRA DE OURO PARA COMUNICADOS DE CUPOM MERCADO LIVRE:
+      // Replica fielmente a mesma mensagem original, mantendo regras, emojis e textos,
+      // apenas substituindo o link do concorrente pelo link de afiliado oficial do usuário
+      novoTexto = novoTexto.replace(/https?:\/\/[^\s]+/gi, linkVitrineCurto);
+      textoFinalPublicar = novoTexto;
+    } else if (templateModo === 'padrao' && !isComunicadoSemLink) {
+      const tipoMensagem = determinarTipoMensagem({
+        texto: rawText,
+        hasProdutoEspecifico
+      });
 
       const linkMatches = novoTexto.match(/https?:\/\/[^\s]+/gi);
       let linkAfiliadoFinal = linkMatches && linkMatches.length > 0 ? linkMatches[0] : (dadosOferta.link || linkVitrineCurto);
 
-      if (isPublicacaoCupomPuro || (isCupom && !hasCanonicalProduct)) {
-        // Para comunicados de cupons, o link DEVE ser incondicionalmente a vitrine oficial do Eduardo
-        linkAfiliadoFinal = linkVitrineCurto;
-        novoTexto = novoTexto.replace(/https?:\/\/[^\s]+/gi, linkVitrineCurto);
-      } else if (hasProdutoEspecifico && (linkAfiliadoFinal === linkVitrineCurto || linkAfiliadoFinal.includes('/social/')) && dadosOferta.produto && dadosOferta.produto !== 'Colecionável Pokémon TCG' && dadosOferta.produto !== 'Cupons de Desconto Mercado Livre') {
+      if (hasProdutoEspecifico && (linkAfiliadoFinal === linkVitrineCurto || linkAfiliadoFinal.includes('/social/')) && dadosOferta.produto && dadosOferta.produto !== 'Colecionável Pokémon TCG' && dadosOferta.produto !== 'Cupons de Desconto Mercado Livre') {
         const termoBusca = dadosOferta.produto.replace(/[^\w\s\u00C0-\u00FF-]/gi, ' ').replace(/\s+/g, ' ').trim();
         const slugBusca = encodeURIComponent(termoBusca).replace(/%20/g, '-');
         linkAfiliadoFinal = `https://lista.mercadolivre.com.br/${slugBusca}_OrderId_PRICE_ASC?matt_word=${encodeURIComponent(mattWord)}&matt_tool=${encodeURIComponent(mattTool)}&forceInApp=true`;
@@ -1001,7 +1004,7 @@ export class WhatsAppManager {
         precoUnitario: dadosOferta.valorUnitario || extrairPrecoUnitario(rawText) || undefined,
         parcelamento: parcelamentoExtraido || undefined,
         cupom: cupomExtraido,
-        detalhesCupom: tipoMensagem === 'cupom' ? 'Desconto especial no app para colecionáveis' : undefined,
+        detalhesCupom: undefined,
         linkAfiliado: linkAfiliadoFinal,
         linkVitrineCurto,
         textoOriginalHigienizado: novoTexto

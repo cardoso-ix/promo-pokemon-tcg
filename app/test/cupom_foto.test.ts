@@ -120,4 +120,36 @@ R$ 100 OFF acima de R$799
   assert.ok(formatado.includes('NOVO CUPOM MERCADO LIVRE'));
 });
 
+test('Caso Real do Usuário: NOVO CUPOM MERACDO LIVRE com 20% OFF e SUPERDESCONTO', async () => {
+  const { extrairCupom } = await import('../src/core/anuncio.js');
+  const { extrairDadosOferta } = await import('../src/core/sheets.js');
+
+  const msgReal = `NOVO CUPOM MERACDO LIVRE
+20% OFF acima de R$99
+🎟️ Cupom: SUPERDESCONTO
+🔗 https://meli.la/2j69N6U`;
+
+  // 1. Extração do cupom deve isolar unicamente SUPERDESCONTO sem capturar MERACDO
+  const cupom = extrairCupom(msgReal);
+  assert.strictEqual(cupom, 'SUPERDESCONTO', 'O cupom deve ser estritamente SUPERDESCONTO');
+
+  // 2. Extração da oferta não deve definir "20% OFF acima de R$99" como nome do produto
+  const dados = extrairDadosOferta(msgReal);
+  assert.notStrictEqual(dados.produto, '20% OFF acima de R$99', 'Regra de desconto nunca deve virar nome de produto');
+  assert.strictEqual(dados.produto, 'Cupons de Desconto Mercado Livre');
+
+  // 3. Replicação fiel: a mensagem deve ser a original com link do usuário no lugar do concorrente
+  const linkVitrineCurto = 'https://mercadolivre.com/sec/2rM6RPm';
+  const isCabecalhoCupom = /(?:novo|novos)\s+cupo(?:m|ns)|cupo(?:m|ns)\s+(?:no\s+app|de\s+desconto|do\s+mercado|mercado\s+livre|meracdo\s+livre)/i.test(msgReal);
+  assert.ok(isCabecalhoCupom, 'Deve identificar cabeçalho de cupom');
+
+  const msgReplicada = msgReal.replace(/https?:\/\/[^\s]+/gi, linkVitrineCurto);
+  assert.ok(msgReplicada.includes('SUPERDESCONTO'));
+  assert.ok(msgReplicada.includes('20% OFF acima de R$99'));
+  assert.ok(msgReplicada.includes(linkVitrineCurto));
+  assert.ok(!msgReplicada.includes('https://meli.la/2j69N6U'));
+  assert.ok(!msgReplicada.includes('@pokemon_tcg_promo'), 'Não deve adicionar marca fake');
+  assert.ok(!msgReplicada.includes('📦'), 'Não deve colocar ícone de produto');
+});
+
 
