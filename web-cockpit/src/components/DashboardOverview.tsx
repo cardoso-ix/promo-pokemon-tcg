@@ -500,12 +500,53 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     ? new Date(Date.now() + diasAutonomiaMeta * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
     : 'Hoje';
 
-  // Dados Consolidados de Ontem vs Hoje
-  const itemOntem = balanco?.itens?.find(i => (i.dataLancamento || i.data_lancamento) === '2026-10-07') || balanco?.itens?.[1];
-  const comissaoOntem = itemOntem?.lucroBruto ?? itemOntem?.lucro_bruto ?? 146.83;
-  const vendasOntem = itemOntem?.vendasBrutas ?? itemOntem?.vendas_brutas ?? 2393.97;
-  const gastoCampanhasOntem = itemOntem?.gastoCampanhas ?? itemOntem?.gasto_campanhas ?? 53.07;
-  const saldoLiquidoOntem = itemOntem?.saldoDia ?? Math.max(0, comissaoOntem - gastoCampanhasOntem);
+  // Datas dinâmicas no Fuso Horário Oficial de Brasília (America/Sao_Paulo)
+  const formatIsoBr = (d: Date) =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(d);
+
+  const hojeIso = formatIsoBr(new Date());
+  const ontemDateObj = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const ontemIso = formatIsoBr(ontemDateObj);
+  const labelHojeCurto = `${hojeIso.slice(8, 10)}/${hojeIso.slice(5, 7)}`;
+  const labelOntemCurto = `${ontemIso.slice(8, 10)}/${ontemIso.slice(5, 7)}`;
+
+  const normalizeSaleDateIso = (raw?: string) => {
+    if (!raw) return '';
+    const m = raw.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if (m) {
+      const dd = m[1].padStart(2, '0');
+      const mm = m[2].padStart(2, '0');
+      const yyyy = m[3].length === 2 ? `20${m[3]}` : m[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return raw.slice(0, 10);
+  };
+
+  // Dados Consolidados de Ontem vs Hoje (100% dinâmicos e calibrados contra cancelamentos)
+  const itemOntem = balanco?.itens?.find(i => (i.dataLancamento || i.data_lancamento) === ontemIso);
+  const dailyOntemMeli = affiliateData?.dailyData?.find(d => normalizeSaleDateIso(d.date) === ontemIso);
+  const salesOntemList = (affiliateData?.recentSales || []).filter(s => normalizeSaleDateIso(s.date) === ontemIso);
+  const vendasReaisOntemMeli = Number(
+    salesOntemList
+      .filter(s => Number(s.saleValue) > 0)
+      .reduce((acc, s) => acc + Number(s.saleValue), 0)
+      .toFixed(2)
+  );
+  const canceladasOntemCount = salesOntemList.filter(
+    s => Number(s.saleValue) === 0 && Number(s.commissionValue) === 0
+  ).length;
+
+  const comissaoOntem = dailyOntemMeli?.earnings ?? itemOntem?.lucroBruto ?? itemOntem?.lucro_bruto ?? 0;
+  const vendasOntem = vendasReaisOntemMeli > 0
+    ? vendasReaisOntemMeli
+    : (itemOntem?.vendasBrutas ?? itemOntem?.vendas_brutas ?? (comissaoOntem * 10));
+  const gastoCampanhasOntem = itemOntem?.gastoCampanhas ?? itemOntem?.gasto_campanhas ?? 0;
+  const saldoLiquidoOntem = Number((comissaoOntem - gastoCampanhasOntem).toFixed(2));
 
   // Performance da Campanha Ativa (Lookalike 1% + Criativo 01 - New)
   const auditAd = metaAuditData?.insightsAds?.[0];
@@ -1057,12 +1098,24 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
           <div className="flex items-center gap-3 text-xs font-mono flex-wrap">
             <div className="p-2 rounded-lg bg-white/[0.03] border border-white/[0.05]">
-              <span className="text-[10px] text-slate-400 block">Ontem (07/10):</span>
+              <span className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                <span>Ontem ({labelOntemCurto}):</span>
+                {canceladasOntemCount > 0 && (
+                  <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 font-sans">
+                    {canceladasOntemCount} cancelada{canceladasOntemCount > 1 ? 's' : ''} abatida{canceladasOntemCount > 1 ? 's' : ''}
+                  </span>
+                )}
+              </span>
               <span className="text-amber-300 font-bold">R$ {comissaoOntem.toFixed(2)}</span>
-              <span className="text-[10px] text-slate-400 block">Vendas: R$ {vendasOntem.toFixed(2)} · <span className="text-emerald-400 font-semibold">+R$ {saldoLiquidoOntem.toFixed(2)} líq</span></span>
+              <span className="text-[10px] text-slate-400 block">
+                Vendas: R$ {vendasOntem.toFixed(2)} ·{' '}
+                <span className={saldoLiquidoOntem >= 0 ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                  {saldoLiquidoOntem >= 0 ? `+R$ ${saldoLiquidoOntem.toFixed(2)}` : `-R$ ${Math.abs(saldoLiquidoOntem).toFixed(2)}`} líq
+                </span>
+              </span>
             </div>
             <div className="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25">
-              <span className="text-[10px] text-emerald-300 block">Hoje (08/10):</span>
+              <span className="text-[10px] text-emerald-300 block">Hoje ({labelHojeCurto}):</span>
               <span className="text-white font-bold">{comissoesHoje > 0 ? `R$ ${comissoesHoje.toFixed(2)}` : 'Monitorando ao vivo'}</span>
               <span className="text-[10px] text-emerald-400 block">{comissoesHoje > 0 ? `Vendas: R$ ${(affiliateData?.totalSalesToday || 0).toFixed(2)}` : 'Sincronização atômica'}</span>
             </div>
@@ -1077,28 +1130,31 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               <span className="text-[10px] text-slate-400">{affiliateData.recentSales.length} produtos rastreados</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-              {affiliateData.recentSales.slice(0, 3).map((item) => (
-                <div key={item.id} className="p-2.5 rounded-lg bg-black/30 border border-white/5 text-xs flex items-center gap-2.5">
-                  {item.productImage ? (
-                    <img src={item.productImage} alt={item.productName} className="w-9 h-9 rounded object-cover flex-shrink-0 bg-white/5" />
-                  ) : (
-                    <div className="w-9 h-9 rounded bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
-                      <ShoppingBag className="w-4 h-4" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-200 truncate text-[11px]" title={item.productName}>
-                      {item.productName}
-                    </p>
-                    <div className="flex items-center justify-between mt-0.5 text-[10px]">
-                      <span className="text-slate-400">Venda: R$ {item.saleValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                      <span className="font-mono text-emerald-400 font-bold">
-                        +R$ {item.commissionValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
+              {affiliateData.recentSales
+                .filter(item => Number(item.saleValue) > 0 || Number(item.commissionValue) > 0)
+                .slice(0, 3)
+                .map((item) => (
+                  <div key={item.id} className="p-2.5 rounded-lg bg-black/30 border border-white/5 text-xs flex items-center gap-2.5">
+                    {item.productImage ? (
+                      <img src={item.productImage} alt={item.productName} className="w-9 h-9 rounded object-cover flex-shrink-0 bg-white/5" />
+                    ) : (
+                      <div className="w-9 h-9 rounded bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
+                        <ShoppingBag className="w-4 h-4" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-slate-200 truncate text-[11px]" title={item.productName}>
+                        {item.productName}
+                      </p>
+                      <div className="flex items-center justify-between mt-0.5 text-[10px]">
+                        <span className="text-slate-400">Venda: R$ {item.saleValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        <span className="font-mono text-emerald-400 font-bold">
+                          +R$ {item.commissionValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
         )}

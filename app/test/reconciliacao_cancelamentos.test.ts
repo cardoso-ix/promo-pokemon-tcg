@@ -80,3 +80,140 @@ test('Reconciliação Automática - Ignora dias sem divergência e dias fora da 
   const resultado = meliAffiliateService.reconciliarJanelaRetroativa(mockDailyData, 7);
   assert.equal(resultado.totalReconciliados, 0, 'Não deve fazer updates desnecessários em dados idênticos ou fora da janela');
 });
+
+test('Reconciliação Automática - Calibra vendas_brutas reais (R$ 854,32) e detecta venda cancelada (R$ 0) via recentSales (Caso 11/10)', async () => {
+  const diaOntem = getBrazilDaysAgo(1);
+  const [ano, mes, dia] = diaOntem.split('-');
+  const dataBrOntem = `${dia}/${mes}/${ano}`;
+
+  // Simula estado onde o dia foi salvo inicialmente com estimativa 10x (651.60) em vez da soma real (854.32)
+  db.prepare(`
+    INSERT INTO financas_lancamentos_diarios (
+      data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(data_lancamento) DO UPDATE SET
+      lucro_bruto = excluded.lucro_bruto,
+      vendas_brutas = excluded.vendas_brutas,
+      gasto_campanhas = excluded.gasto_campanhas,
+      origem = excluded.origem,
+      descricao = excluded.descricao
+  `).run(diaOntem, 65.16, 651.60, 77.93, 53, 4896, 'auto', 'Mercado Livre Afiliados (Painel Oficial)', 'mercado_livre');
+
+  const mockDailyData = [
+    {
+      date: diaOntem,
+      orders: 4,
+      quantity: 4,
+      earnings: 65.16,
+      touchpoints: 99,
+      cvr: 0.04040404
+    }
+  ];
+
+  const mockRecentSales = [
+    {
+      id: '2000018927192726',
+      date: dataBrOntem,
+      productName: 'Box Pokémon Com Pôster Celebração De 30 Anos',
+      productImage: '',
+      link: '',
+      storeName: 'ALETAMIAO',
+      saleValue: 0,
+      saleUnits: 1,
+      commissionValue: 0,
+      commissionPercentage: 17
+    },
+    {
+      id: '2000018926611898',
+      date: dataBrOntem,
+      productName: 'Pokemon Tcg - Gemstone Bag Badge Set Booster Chinês',
+      productImage: '',
+      link: '',
+      storeName: 'VALENSTCG',
+      saleValue: 170,
+      saleUnits: 1,
+      commissionValue: 16.73,
+      commissionPercentage: 12
+    },
+    {
+      id: '2000018926504122',
+      date: dataBrOntem,
+      productName: 'Álbum Mundial De Clubes 2025 Fifa Completo',
+      productImage: '',
+      link: '',
+      storeName: 'MARIAAPPARECIDAOLIVEIRA',
+      saleValue: 330,
+      saleUnits: 1,
+      commissionValue: 16.24,
+      commissionPercentage: 6
+    },
+    {
+      id: '2000018925418984',
+      date: dataBrOntem,
+      productName: 'Central Shield Básico 400 Sleeves',
+      productImage: '',
+      link: '',
+      storeName: 'SHOPCAVINI',
+      saleValue: 54.33,
+      saleUnits: 1,
+      commissionValue: 2.67,
+      commissionPercentage: 6
+    },
+    {
+      id: '2000018921598842',
+      date: dataBrOntem,
+      productName: 'Pokemon Combo De Booster Celebracoes 30 Anos',
+      productImage: '',
+      link: '',
+      storeName: 'PHCARVALHOME',
+      saleValue: 299.99,
+      saleUnits: 1,
+      commissionValue: 29.52,
+      commissionPercentage: 12
+    }
+  ];
+
+  const resultado = meliAffiliateService.reconciliarJanelaRetroativa(mockDailyData, 7, mockRecentSales);
+  assert.equal(resultado.totalReconciliados, 1, 'Deve reconciliar o dia para corrigir vendas_brutas e registrar cancelamento');
+  assert.equal(resultado.cancelamentos, 1, 'Deve contabilizar o cancelamento detectado em recentSales');
+
+  const row = db.prepare('SELECT * FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get(diaOntem) as any;
+  assert.equal(Number(row.lucro_bruto), 65.16, 'Comissão de ontem deve ser R$ 65,16');
+  assert.equal(Number(row.vendas_brutas), 854.32, 'Vendas estimadas de ontem devem ser R$ 854,32 (soma real sem a cancelada)');
+  assert.equal(row.origem, 'auto_reconciliado');
+});
+
+test('Reconciliação Automática - Zera lucro_bruto se 100% das vendas do dia anterior forem canceladas (earnings = 0 com touchpoints > 0)', () => {
+  const diaDoisAtras = getBrazilDaysAgo(2);
+
+  db.prepare(`
+    INSERT INTO financas_lancamentos_diarios (
+      data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(data_lancamento) DO UPDATE SET
+      lucro_bruto = excluded.lucro_bruto,
+      vendas_brutas = excluded.vendas_brutas,
+      origem = excluded.origem,
+      categoria = excluded.categoria
+  `).run(diaDoisAtras, 42.50, 350.00, 30.00, 15, 1200, 'auto', 'Comissão inicial', 'mercado_livre');
+
+  const mockDailyData = [
+    {
+      date: diaDoisAtras,
+      orders: 0,
+      quantity: 0,
+      earnings: 0,
+      touchpoints: 85,
+      cvr: 0
+    }
+  ];
+
+  const resultado = meliAffiliateService.reconciliarJanelaRetroativa(mockDailyData, 7);
+  assert.equal(resultado.totalReconciliados, 1, 'Deve reconciliar dia onde todas as vendas foram canceladas');
+  assert.equal(resultado.cancelamentos, 1, 'Deve registrar como cancelamento');
+
+  const row = db.prepare('SELECT * FROM financas_lancamentos_diarios WHERE data_lancamento = ?').get(diaDoisAtras) as any;
+  assert.equal(Number(row.lucro_bruto), 0, 'Lucro bruto deve ser zerado após cancelamento total');
+  assert.equal(Number(row.vendas_brutas), 0, 'Vendas brutas devem ser zeradas após cancelamento total');
+});
+

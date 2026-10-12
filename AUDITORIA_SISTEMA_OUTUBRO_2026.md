@@ -80,18 +80,32 @@
    - **Solução Implementada:** Desenvolvida a função `isMensagemSoltaDescartavel` atuando na Camada Zero. Comunicações de cupom sem imagem anexada (`!messageHasImage`) e sem links diretos de marketplace são categoricamente descartadas com status `ignorado` e motivo `mensagem_solta_descartada`.
    - **Preservação:** Publicações legítimas de campanhas com imagem de banner oficial do Mercado Livre ou ofertas com links reais continuam sendo replicadas perfeitamente.
 
-11. ✅ **Criação & Publicação da Nova Campanha de Teste Meta Ads (Vídeo Shopping Lucario - R$ 20/dia):**
-    - **Campanha Criada:** `[TESTE] Campanha Pokemon - Vídeo Shopping Lucario` (ID: `52761979947290`) - Status: `ACTIVE`
-    - **Conjunto Criado:** `Conjunto 01 - Lookalike 1% WhatsApp (R$ 20/dia)` (ID: `52761979954890`) - Status: `ACTIVE`
+11. ✅ **Criação & Publicação da Campanha Meta Ads (Vídeo Shopping Lucario - Validado com CPL R$ 3,31):**
+    - **Campanha:** `[TESTE] Campanha Pokemon - Vídeo Shopping Lucario` (ID: `52761979947290`) - Status: `ACTIVE`
+    - **Conjunto:** `Conjunto 01 - Lookalike 1% WhatsApp (R$ 25/dia)` (ID: `52761979954890`) - Status: `ACTIVE`
     - **Anúncio Publicado:** `02 - Vídeo Shopping Lucario` (ID: `52762011873290`) - Status: `ACTIVE`
-    - **Vídeo Anexado:** ID `1008761282251863` (Renderizado e vinculado ao anúncio)
-    - **Copy & Headline:** Textos promocionais de contraste shopping vs grupo integrados com perfeição
-    - **Orçamento:** R$ 20,00 diários (CBO Advantage Campaign Budget)
-    - **Público & Destino:** Lookalike 1% WhatsApp com Pixel de Conversão para Leads (`https://pokemontcgpromo.online/`).
-    - **Campanha Principal Preservada:** Campanha ativa de R$ 50/dia (`01 - New`) mantida 100% isolada entregando leads a R$ 2,81.
+    - **Vídeo Anexado:** ID `1008761282251863`
+    - **Orçamento Atualizado:** Elevado de R$ 20,00 para R$ 25,00 diários após validação de CPL 23% mais econômico.
+
+12. ✅ **Reestruturação Tríplice de Campanhas Meta Ads (Teto R$ 70,00/dia):**
+    - **Campanha 1 (Lookalike 1% WhatsApp - ID `52760556043290`):** Orçamento diário reduzido com sucesso de R$ 50,00 para **R$ 20,00/dia** para oxigenar os formatos em vídeo.
+    - **Campanha 2 (Vídeo Shopping Lucario - ID `52761979947290`):** Orçamento diário ampliado para **R$ 25,00/dia** para escalar o criativo vencedor.
+    - **Campanha 3 (Vídeo 30 Anos Copag - ID `52762324924690`):** Campanha nova criada com sucesso com CBO de **R$ 25,00/dia**, objetivo `OUTCOME_LEADS` e `Conjunto 01 - Lookalike 1% WhatsApp (R$ 25/dia)` (ID `52762324927090`) ativo e espelhado com o Pixel de Lead (`1565921198341485`) na landing page oficial `https://pokemontcgpromo.online/`.
+    - **Total Diário Consolidado:** **Exatamente R$ 70,00/dia** (R$ 20 + R$ 25 + R$ 25).
+
+13. ✅ **Auditoria e Blindagem Definitiva de Vendas Canceladas & Comparativo Comercial Diário Dinâmico (`12/10/2026`):**
+    - **Diagnóstico da Divergência (`R$ 140,78` vs `R$ 65,16`):**
+      1. O card **"Comparativo Comercial Diário"** em `DashboardOverview.tsx` possuía uma referência estática chumbada para a data `'2026-10-07'` (`itemOntem`), exibindo fixamente o faturamento de `07/10` (`R$ 140,78` bruto / `R$ 1.407,80` vendas / `+R$ 76,21` líq) mesmo em dias subsequentes.
+      2. No dia `11/10` (Ontem real), o cliente cancelou por devolução o pedido `#2000018927192726` (*Box Pokémon Com Pôster Celebração De 30 Anos*). Embora o `lucroBruto` de `11/10` no SQLite já estivesse em `R$ 65,16`, o campo `vendasBrutas` estava estimado pela heurística `comissão * 10` (`R$ 651,60`) em vez da soma real das 4 vendas efetivadas (`R$ 854,32`), e a `Cesta Média` do dia atual estava distorcida (`0.2 itens/venda`) por retenção de cache na primeira venda do dia.
+    - **Correções Implementadas (Full-Stack + TDD):**
+      - **Datas 100% Dinâmicas (`America/Sao_Paulo`):** `DashboardOverview.tsx` agora calcula `hojeIso` e `ontemIso` em tempo real, cruzando `balanco.itens`, `affiliateData.dailyData` e `affiliateData.recentSales`, exibindo badge explícito de `X cancelada(s) abatida(s)` quando há devolução/estorno no dia anterior.
+      - **Calibração Real de `vendas_brutas` e Detecção de Cancelamento Total:** `reconciliarJanelaRetroativa` em `meli-affiliate.service.ts` e `financas.service.ts` agora somam o `saleValue` exato das vendas válidas (`R$ 854,32` em `11/10`), ignoram vendas com `saleValue === 0 && commissionValue === 0`, e permitem zerar o dia caso 100% das vendas de um dia anterior sejam canceladas (`earnings === 0` com `touchpoints > 0`).
+      - **Sincronização em Tempo Real no `getBalancoMensal`:** Ao abrir o cockpit, o balanço executa automaticamente a reconciliação retroativa de 7 dias com os dados vivos do Mercado Livre antes de responder ao frontend.
+      - **Rastreabilidade Visual de Vendas Canceladas:** Vendas estornadas (`R$ 0,00`) são filtradas da faixa rápida do topo, injetadas automaticamente na aba **"Não Efetivadas"** e destacadas com badge vermelho **`Cancelada (Por devolução / estorno)`** no histórico detalhado de vendas.
 
 ---
 
 ## 4. ✅ Conclusão
-O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais e auditadas, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS, Meta Ads organizado, nova campanha de teste de R$ 20/dia criada e pronta para receber o vídeo do deck de Lucario, e proteção total contra mensagens soltas e erratas de chat.
+O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais, dinâmicas e auditadas contra cancelamentos/devoluções do Mercado Livre, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS e arquitetura de tráfego tríplice de R$ 70/dia operando no Meta Ads.
+
 

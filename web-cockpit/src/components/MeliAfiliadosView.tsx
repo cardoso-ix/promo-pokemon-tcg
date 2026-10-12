@@ -1074,48 +1074,73 @@ export const MeliAfiliadosView: React.FC<MeliAfiliadosViewProps> = ({ onOpenCook
           </div>
 
           <div className="space-y-2.5">
-            {(data?.recentSales || []).map(s => (
-              <div key={s.id} className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-white/[0.04] transition-all">
-                <div className="flex items-center gap-3">
-                  {s.productImage && !imgErrors[s.id] ? (
-                    <img
-                      src={s.productImage}
-                      alt={s.productName}
-                      referrerPolicy="no-referrer"
-                      onError={() => setImgErrors(prev => ({ ...prev, [s.id]: true }))}
-                      className="w-12 h-12 rounded-lg object-contain bg-white/5 p-1 border border-white/10 flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
-                      <ShoppingBag className="w-5 h-5" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-medium text-slate-200 text-xs line-clamp-1">{s.productName}</p>
-                    <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400 font-mono">
-                      <span>Loja: {s.storeName}</span>
-                      <span>•</span>
-                      <span>Data: {s.date}</span>
+            {(data?.recentSales || []).map(s => {
+              const isCancelada = Number(s.saleValue) === 0 && Number(s.commissionValue) === 0;
+              return (
+                <div
+                  key={s.id}
+                  className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                    isCancelada
+                      ? 'bg-rose-500/[0.04] border-rose-500/20 hover:bg-rose-500/[0.07]'
+                      : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {s.productImage && !imgErrors[s.id] ? (
+                      <img
+                        src={s.productImage}
+                        alt={s.productName}
+                        referrerPolicy="no-referrer"
+                        onError={() => setImgErrors(prev => ({ ...prev, [s.id]: true }))}
+                        className="w-12 h-12 rounded-lg object-contain bg-white/5 p-1 border border-white/10 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
+                        <ShoppingBag className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-slate-200 text-xs line-clamp-1">{s.productName}</p>
+                        {isCancelada && (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            Cancelada
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400 font-mono">
+                        <span>Loja: {s.storeName}</span>
+                        <span>•</span>
+                        <span>Data: {s.date}</span>
+                        {s.id && (
+                          <>
+                            <span>•</span>
+                            <span>#{s.id}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-5">
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block">Venda Bruta</span>
-                    <span className="font-bold text-white text-xs">
-                      R$ {s.saleValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-emerald-400 block">Sua Comissão ({s.commissionPercentage}%)</span>
-                    <span className="font-heading font-extrabold text-emerald-400 text-sm">
-                      +R$ {s.commissionValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
+                  <div className="flex items-center justify-between sm:justify-end gap-5">
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block">Venda Bruta</span>
+                      <span className={`font-bold text-xs ${isCancelada ? 'text-slate-500 line-through' : 'text-white'}`}>
+                        R$ {s.saleValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-[10px] block ${isCancelada ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        {isCancelada ? 'Por devolução / estorno' : `Sua Comissão (${s.commissionPercentage}%)`}
+                      </span>
+                      <span className={`font-heading font-extrabold text-sm ${isCancelada ? 'text-rose-400' : 'text-emerald-400'}`}>
+                        {isCancelada ? 'R$ 0,00' : `+R$ ${s.commissionValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

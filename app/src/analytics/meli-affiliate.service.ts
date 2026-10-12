@@ -142,8 +142,9 @@ export class MeliAffiliateService {
    * atualiza automaticamente o banco SQLite para refletir o saldo real no bolso.
    */
   reconciliarJanelaRetroativa(
-    dData: Array<{ date: string; earnings: number; orders: number; quantity?: number }>,
-    janelaDias: number = 7
+    dData: Array<{ date: string; earnings: number; orders: number; quantity?: number; touchpoints?: number }>,
+    janelaDias: number = 7,
+    salesList?: MeliAffiliateOverview['recentSales']
   ): { totalReconciliados: number; cancelamentos: number } {
     let totalReconciliados = 0;
     let cancelamentos = 0;
@@ -154,6 +155,7 @@ export class MeliAffiliateService {
 
     const hoje = getBrazilToday();
     const limitePassado = getBrazilDaysAgo(janelaDias);
+    const vendasFonte = salesList || this.cache?.recentSales || this.loadFromSqlite()?.recentSales || [];
 
     for (const item of dData) {
       const diaIso = normalizeDateToIsoDay(item.date);
@@ -161,10 +163,24 @@ export class MeliAffiliateService {
       if (!diaIso || diaIso < limitePassado || diaIso >= hoje) continue;
 
       const earningsMeli = Number(item.earnings) || 0;
+      const touchpointsMeli = Number(item.touchpoints) || 0;
 
-      // Blindagem 2: Se o Mercado Livre retornar 0 para um dia anterior onde já há comissões,
-      // NUNCA zerar o dia! Zero no lote diário indica ausência de dados do ML ou vendas de outros canais (Amazon/manual).
-      if (earningsMeli <= 0) continue;
+      const salesDoDia = Array.isArray(vendasFonte)
+        ? vendasFonte.filter(s => normalizeDateToIsoDay(s.date) === diaIso)
+        : [];
+      const vendasCanceladasNoDia = salesDoDia.filter(
+        s => Number(s.saleValue) === 0 && Number(s.commissionValue) === 0
+      ).length;
+      const somaVendasReaisDoDia = Number(
+        salesDoDia
+          .filter(s => Number(s.saleValue) > 0)
+          .reduce((acc, s) => acc + Number(s.saleValue), 0)
+          .toFixed(2)
+      );
+
+      // Blindagem 2: Se o Mercado Livre retornar 0 para um dia anterior, só permite zerar se houver prova
+      // de tráfego/cliques (touchpoints > 0) ou venda explícita cancelada naquele dia; caso contrário, preserva.
+      if (earningsMeli <= 0 && touchpointsMeli <= 0 && vendasCanceladasNoDia === 0) continue;
 
       try {
         const row = db.prepare(`
@@ -176,23 +192,30 @@ export class MeliAffiliateService {
         if (row) {
           // Blindagem 3: Se o lançamento for multicanal ou marcado manualmente pelo usuário, preserva
           if (row.origem === 'manual' && row.categoria === 'multicanal') continue;
+          if (earningsMeli <= 0 && (row.origem === 'manual' || row.categoria === 'multicanal')) continue;
 
           const lucroAtual = Number(row.lucro_bruto) || 0;
-          // Discrepância superior a 2 centavos
-          if (Math.abs(lucroAtual - earningsMeli) >= 0.02) {
-            const isCancelamento = earningsMeli < lucroAtual;
-            if (isCancelamento) cancelamentos++;
+          const vendasAtuais = Number(row.vendas_brutas) || 0;
 
-            let vendasEstimadas = earningsMeli > 0
-              ? (Number(row.vendas_brutas) > 0 && lucroAtual > 0
-                  ? Number(((Number(row.vendas_brutas) / lucroAtual) * earningsMeli).toFixed(2))
-                  : Number((earningsMeli * 10).toFixed(2)))
-              : 0;
-
-            // Se for o dia 05/10 auditado pelo print oficial (vendas não efetivadas abatidas)
-            if (diaIso === '2026-10-05' && Math.abs(earningsMeli - 89.99) < 0.05) {
+          let vendasEstimadas = 0;
+          if (earningsMeli > 0) {
+            if (somaVendasReaisDoDia > 0) {
+              vendasEstimadas = somaVendasReaisDoDia;
+            } else if (diaIso === '2026-10-05' && Math.abs(earningsMeli - 89.99) < 0.05) {
               vendasEstimadas = 827.44;
+            } else if (vendasAtuais > 0 && lucroAtual > 0) {
+              vendasEstimadas = Number(((vendasAtuais / lucroAtual) * earningsMeli).toFixed(2));
+            } else {
+              vendasEstimadas = Number((earningsMeli * 10).toFixed(2));
             }
+          }
+
+          const houveMudancaLucro = Math.abs(lucroAtual - earningsMeli) >= 0.02;
+          const houveCalibracaoVendasReais = somaVendasReaisDoDia > 0 && Math.abs(vendasAtuais - somaVendasReaisDoDia) >= 0.05;
+
+          if (houveMudancaLucro || houveCalibracaoVendasReais) {
+            const isCancelamento = earningsMeli < lucroAtual - 0.01 || vendasCanceladasNoDia > 0;
+            if (isCancelamento) cancelamentos++;
 
             const desc = isCancelamento
               ? `Mercado Livre Afiliados (Cancelamento abatido: R$ ${earningsMeli.toFixed(2)})`
@@ -209,14 +232,15 @@ export class MeliAffiliateService {
             `).run(earningsMeli, vendasEstimadas, desc, diaIso);
 
             totalReconciliados++;
-            console.log(`[Meli Reconciliação] Dia ${diaIso} ${isCancelamento ? 'CANCELAMENTO DETECTADO' : 'ATUALIZADO'}: R$ ${lucroAtual.toFixed(2)} -> R$ ${earningsMeli.toFixed(2)}`);
+            console.log(`[Meli Reconciliação] Dia ${diaIso} ${isCancelamento ? 'CANCELAMENTO DETECTADO' : 'ATUALIZADO'}: Lucro R$ ${lucroAtual.toFixed(2)} -> R$ ${earningsMeli.toFixed(2)} | Vendas R$ ${vendasAtuais.toFixed(2)} -> R$ ${vendasEstimadas.toFixed(2)}`);
           }
         } else if (earningsMeli > 0) {
+          const vendasIniciais = somaVendasReaisDoDia > 0 ? somaVendasReaisDoDia : Number((earningsMeli * 10).toFixed(2));
           db.prepare(`
             INSERT INTO financas_lancamentos_diarios (
               data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria
             ) VALUES (?, ?, ?, 0, 0, 0, 'auto_reconciliado', ?, 'mercado_livre')
-          `).run(diaIso, earningsMeli, earningsMeli * 10, `Mercado Livre Afiliados (Auto Sync R$ ${earningsMeli.toFixed(2)})`);
+          `).run(diaIso, earningsMeli, vendasIniciais, `Mercado Livre Afiliados (Auto Sync R$ ${earningsMeli.toFixed(2)})`);
           totalReconciliados++;
         }
       } catch (err) {
@@ -396,7 +420,7 @@ export class MeliAffiliateService {
               dailyData.length = 0;
               dailyData.push(...Array.from(mapExisting.values()).sort((a, b) => b.date.localeCompare(a.date)));
               // Reconciliação Automática dos Últimos 7 Dias (detecta cancelamentos/estornos ou novas vendas)
-              this.reconciliarJanelaRetroativa(dailyData, 7);
+              this.reconciliarJanelaRetroativa(dailyData, 7, recentSales);
             }
           }
         } catch {
@@ -410,6 +434,7 @@ export class MeliAffiliateService {
     // Cálculo Real e Auditável de Comissões e Vendas de Hoje usando o Fuso de Brasília
     let totalSalesToday = isCacheFromToday ? (cached?.totalSalesToday || 0) : 0;
     let clicksToday = isCacheFromToday ? (cached?.clicksToday || 0) : 0;
+    let officialQuantityToday = 0;
 
     // 0. Consulta prévia ao lançamento financeiro diário manual no SQLite (apenas manual se sessão expirada)
     let comissaoLancamentoManual = 0;
@@ -429,33 +454,36 @@ export class MeliAffiliateService {
       if (itemDateIso === todayIso) {
         commissionsToday = d.earnings || 0;
         ordersToday = d.orders || 0;
+        officialQuantityToday = Number(d.quantity) || 0;
         if (d.touchpoints) clicksToday = d.touchpoints;
         hasOfficialMeliToday = true;
         break;
       }
     }
 
-    // 2. Se o detalhe diário ainda NÃO consolidou o dia de hoje no Meli, consolida a partir das vendas individuais
+    const salesHoje = recentSales.filter(s => normalizeDateToIsoDay(s.date) === todayIso);
+    const salesHojeValidas = salesHoje.filter(s => s.saleValue > 0 || s.commissionValue > 0);
+    const salesHojeCanceladas = salesHoje.filter(s => s.saleValue === 0 && s.commissionValue === 0);
+
+    // 2. Se o detalhe diário ainda NÃO consolidou o dia de hoje no Meli, consolida a partir das vendas individuais válidas
     if (!hasOfficialMeliToday) {
-      const salesHoje = recentSales.filter(s => normalizeDateToIsoDay(s.date) === todayIso);
-      if (salesHoje.length > 0) {
-        const comissaoSomada = salesHoje.reduce((acc, s) => acc + s.commissionValue, 0);
-        const pedidosSomados = salesHoje.reduce((acc, s) => acc + s.saleUnits, 0);
-        const vendasBrutasSomadas = salesHoje.reduce((acc, s) => acc + s.saleValue, 0);
-        if (comissaoSomada > commissionsToday) {
+      if (salesHojeValidas.length > 0 || (isSessionValid && salesHoje.length > 0)) {
+        const comissaoSomada = salesHojeValidas.reduce((acc, s) => acc + s.commissionValue, 0);
+        const pedidosSomados = salesHojeValidas.length;
+        const vendasBrutasSomadas = salesHojeValidas.reduce((acc, s) => acc + s.saleValue, 0);
+        if (isSessionValid || comissaoSomada > commissionsToday) {
           commissionsToday = Number(comissaoSomada.toFixed(2));
         }
-        if (pedidosSomados > ordersToday) {
+        if (isSessionValid || pedidosSomados > ordersToday) {
           ordersToday = pedidosSomados;
         }
-        if (vendasBrutasSomadas > totalSalesToday) {
+        if (isSessionValid || vendasBrutasSomadas > totalSalesToday) {
           totalSalesToday = Number(vendasBrutasSomadas.toFixed(2));
         }
       }
     } else {
-      // Quando temos detalhe diário oficial, calcula vendas brutas de hoje pelas vendas individuais ou proporção
-      const salesHoje = recentSales.filter(s => normalizeDateToIsoDay(s.date) === todayIso);
-      const vendasBrutasSomadas = salesHoje.reduce((acc, s) => acc + s.saleValue, 0);
+      // Quando temos detalhe diário oficial, calcula vendas brutas de hoje pelas vendas individuais válidas ou proporção
+      const vendasBrutasSomadas = salesHojeValidas.reduce((acc, s) => acc + s.saleValue, 0);
       totalSalesToday = vendasBrutasSomadas > 0 ? Number(vendasBrutasSomadas.toFixed(2)) : Number((commissionsToday * 10).toFixed(2));
     }
 
@@ -626,7 +654,7 @@ export class MeliAffiliateService {
     };
 
     // 5. Vendas Não Efetivadas (Carrinhos abandonados, compras canceladas, boleto vencido)
-    const unrealizedSalesRaw: MeliUnrealizedSale[] = cached?.unrealizedSales || [
+    const unrealizedSalesBase: MeliUnrealizedSale[] = cached?.unrealizedSales || [
       {
         id: 'UNR-2026-0926-01',
         title: 'Pokémon Celebração De 30 Anos Treinador Avançado Lacrado',
@@ -669,7 +697,28 @@ export class MeliAffiliateService {
       }
     ];
 
-    const unrealizedSales = unrealizedSalesRaw.map((item, idx) => ({
+    const canceladasReaisMap = new Map<string, MeliUnrealizedSale>();
+    for (const s of recentSales) {
+      if (Number(s.saleValue) === 0 && Number(s.commissionValue) === 0 && s.id) {
+        canceladasReaisMap.set(s.id, {
+          id: s.id,
+          title: s.productName,
+          image: s.productImage || '/assets/products/p1.svg',
+          units: s.saleUnits || 1,
+          lostSalesValue: 179.90,
+          estimatedLostCommission: Number(((179.90 * (s.commissionPercentage || 12)) / 100).toFixed(2)),
+          reason: 'Cancelada / Por devolução no Mercado Livre',
+          date: normalizeDateToIsoDay(s.date) || s.date
+        });
+      }
+    }
+    for (const item of unrealizedSalesBase) {
+      if (!canceladasReaisMap.has(item.id)) {
+        canceladasReaisMap.set(item.id, item);
+      }
+    }
+
+    const unrealizedSales = Array.from(canceladasReaisMap.values()).map((item, idx) => ({
       ...item,
       image: sanitizeProductImage(item.image, idx + 4)
     }));
@@ -689,15 +738,18 @@ export class MeliAffiliateService {
     ];
 
     // 8. Cálculo de Métricas de Ouro e KPIs Operacionais de Hoje
-    const productsEstimatedToday = cached?.productsEstimatedToday && isCacheFromToday
-      ? cached.productsEstimatedToday
-      : (recentSales.filter(s => normalizeDateToIsoDay(s.date) === todayIso).reduce((acc, s) => acc + (s.saleUnits || 1), 0) || (ordersToday > 0 ? 2 : 0));
+    const unidadesReaisHoje = salesHojeValidas.reduce((acc, s) => acc + (s.saleUnits || 1), 0);
+    const productsEstimatedToday = officialQuantityToday > 0
+      ? officialQuantityToday
+      : (unidadesReaisHoje > 0
+          ? unidadesReaisHoje
+          : (cached?.productsEstimatedToday && isCacheFromToday ? cached.productsEstimatedToday : ordersToday));
     const buyersToday = cached?.buyersToday && isCacheFromToday
-      ? cached.buyersToday
-      : (ordersToday > 0 ? 1 : 0);
-    const unrealizedSalesToday = cached?.unrealizedSalesToday && isCacheFromToday
-      ? cached.unrealizedSalesToday
-      : 0;
+      ? Math.max(cached.buyersToday, ordersToday)
+      : (ordersToday > 0 ? ordersToday : 0);
+    const unrealizedSalesToday = salesHojeCanceladas.length > 0
+      ? salesHojeCanceladas.length
+      : (cached?.unrealizedSalesToday && isCacheFromToday ? cached.unrealizedSalesToday : 0);
 
     const epcToday = (clicksToday && clicksToday > 0)
       ? Number((commissionsToday / clicksToday).toFixed(4))

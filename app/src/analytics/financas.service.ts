@@ -1,5 +1,5 @@
 import { db } from '../db/database.js';
-import { getBrazilToday, getBrazilDateStr } from '../utils/date.js';
+import { getBrazilToday, getBrazilDateStr, normalizeDateToIsoDay } from '../utils/date.js';
 import { meliAffiliateService } from './meli-affiliate.service.js';
 import { getMetaInsightsStats } from '../db/database.js';
 import path from 'node:path';
@@ -246,17 +246,33 @@ export class FinancasService {
       };
     }
 
-    // Inserir dados de comissões diárias de afiliados
+    // Inserir dados de comissões diárias de afiliados e reconciliar cancelamentos recentes (quando sessão ativa)
     if (affiliate?.dailyData && Array.isArray(affiliate.dailyData)) {
+      if (!affiliate.sessionExpired) {
+        meliAffiliateService.reconciliarJanelaRetroativa(affiliate.dailyData, 7, affiliate.recentSales);
+      }
+
       for (const d of affiliate.dailyData) {
         if (d.date && d.date.startsWith(mesRef)) {
           const dia = d.date;
+          const vendasReaisDoDia = Array.isArray(affiliate.recentSales)
+            ? Number(
+                affiliate.recentSales
+                  .filter(s => normalizeDateToIsoDay(s.date) === dia && Number(s.saleValue) > 0)
+                  .reduce((acc, s) => acc + Number(s.saleValue), 0)
+                  .toFixed(2)
+              )
+            : 0;
+          const vendasDia = vendasReaisDoDia > 0
+            ? vendasReaisDoDia
+            : Number(d.earnings ? Number((d.earnings / 0.10).toFixed(2)) : 0);
+
           if (!mapaDias[dia]) {
             mapaDias[dia] = {
               dataLancamento: dia,
               gastoCampanhas: 0,
               lucroBruto: Number(d.earnings) || 0,
-              vendasBrutas: Number(d.earnings ? d.earnings / 0.10 : 0),
+              vendasBrutas: vendasDia,
               saldoDia: Number(d.earnings) || 0,
               blendedRoas: 0,
               cliquesMeta: 0,
@@ -264,7 +280,7 @@ export class FinancasService {
             };
           } else {
             mapaDias[dia].lucroBruto = Number(d.earnings) || 0;
-            mapaDias[dia].vendasBrutas = Number(d.earnings ? d.earnings / 0.10 : 0);
+            mapaDias[dia].vendasBrutas = vendasDia;
             mapaDias[dia].saldoDia = mapaDias[dia].lucroBruto - mapaDias[dia].gastoCampanhas;
           }
 
@@ -279,7 +295,7 @@ export class FinancasService {
                   lucro_bruto = CASE WHEN financas_lancamentos_diarios.origem NOT IN ('auto_reconciliado', 'manual') THEN excluded.lucro_bruto ELSE financas_lancamentos_diarios.lucro_bruto END,
                   vendas_brutas = CASE WHEN financas_lancamentos_diarios.origem NOT IN ('auto_reconciliado', 'manual') THEN excluded.vendas_brutas ELSE financas_lancamentos_diarios.vendas_brutas END,
                   atualizado_em = CURRENT_TIMESTAMP
-              `).run(dia, Number(d.earnings) || 0, Number(d.earnings ? d.earnings / 0.10 : 0), mapaDias[dia]?.gastoCampanhas || 0, mapaDias[dia]?.cliquesMeta || 0, mapaDias[dia]?.impressoesMeta || 0, 'auto');
+              `).run(dia, Number(d.earnings) || 0, vendasDia, mapaDias[dia]?.gastoCampanhas || 0, mapaDias[dia]?.cliquesMeta || 0, mapaDias[dia]?.impressoesMeta || 0, 'auto');
             } catch {
               // Silencioso
             }
@@ -669,7 +685,7 @@ export class FinancasService {
   async reconciliarCancelamentos(janelaDias: number = 7): Promise<{ totalReconciliados: number; cancelamentos: number }> {
     const affiliate = await meliAffiliateService.getMetrics().catch(() => null);
     if (affiliate?.dailyData && Array.isArray(affiliate.dailyData)) {
-      return meliAffiliateService.reconciliarJanelaRetroativa(affiliate.dailyData, janelaDias);
+      return meliAffiliateService.reconciliarJanelaRetroativa(affiliate.dailyData, janelaDias, affiliate.recentSales);
     }
     return { totalReconciliados: 0, cancelamentos: 0 };
   }
