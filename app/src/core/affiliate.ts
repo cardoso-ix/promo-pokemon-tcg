@@ -468,69 +468,144 @@ export function buildAffiliateUrl(
   }
 }
 
+interface CachedMeliLink {
+  shortUrl: string;
+  expiresAt: number;
+}
+
+const meliShortCache = new Map<string, CachedMeliLink>();
+
+/**
+ * Remove parâmetros desnecessários e de tracking pré-existentes, deixando a URL limpa do produto
+ * para que a API createLink do Mercado Livre processe sem erros de query string.
+ */
+export function cleanUrlForMeliApi(rawUrl: string): string {
+  try {
+    const urlObj = new URL(rawUrl);
+    urlObj.searchParams.delete('matt_word');
+    urlObj.searchParams.delete('matt_tool');
+    urlObj.searchParams.delete('forceInApp');
+    urlObj.searchParams.delete('tracking_id');
+    urlObj.searchParams.delete('af_sub1');
+    urlObj.searchParams.delete('af_sub2');
+    urlObj.searchParams.delete('searchVariation');
+    urlObj.searchParams.delete('attributes');
+    return urlObj.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
+export function getCachedMeliShortUrl(url: string, tag: string): string | null {
+  const key = `${tag}:${cleanUrlForMeliApi(url)}`;
+  const item = meliShortCache.get(key);
+  if (item && item.expiresAt > Date.now()) {
+    return item.shortUrl;
+  }
+  return null;
+}
+
+export function setCachedMeliShortUrl(url: string, tag: string, shortUrl: string): void {
+  const key = `${tag}:${cleanUrlForMeliApi(url)}`;
+  meliShortCache.set(key, {
+    shortUrl,
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 horas
+  });
+}
+
+export function clearMeliShortUrlCache(): void {
+  meliShortCache.clear();
+}
+
 /**
  * Encurta uma URL longa de afiliado utilizando a API interna oficial do Mercado Livre com cookie
+ * Inclui:
+ * - Cache em memória de 24h para entrega instantânea em 0ms
+ * - Sanitização automática da URL (URL limpa do anúncio para a API de Link Builder)
+ * - Retry automático em caso de timeout de rede ou oscilação momentânea
  */
-export async function shortenToMeli(url: string, cookie: string, tag = 'caed1312314'): Promise<string | null> {
+export async function shortenToMeli(
+  url: string,
+  cookie: string,
+  tag = 'caed1312314',
+  maxAttempts = 2
+): Promise<string | null> {
   const cleanCookie = cookie.trim();
   if (!cleanCookie) return null;
 
   const effectiveTag = (tag && tag !== 'myshoplist') ? tag.trim() : 'caed1312314';
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+  // 1. Verificar Cache em Memória (0ms)
+  const cached = getCachedMeliShortUrl(url, effectiveTag);
+  if (cached) {
+    return cached;
+  }
 
-    const res = await fetch('https://www.mercadolivre.com.br/affiliate-program/api/v2/affiliates/createLink', {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-        'content-type': 'application/json',
-        'origin': 'https://www.mercadolivre.com.br',
-        'referer': 'https://www.mercadolivre.com.br/afiliados/linkbuilder',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-        'cookie': cleanCookie
-      },
-      body: JSON.stringify({
-        urls: [url],
-        tag: effectiveTag
-      }),
-      signal: controller.signal
-    });
-    clearTimeout(timeout);
+  // Prepara variações de URL: primeiro a URL limpa do anúncio, depois a URL informada
+  const cleanedUrl = cleanUrlForMeliApi(url);
+  const urlsToTry = cleanedUrl !== url ? [cleanedUrl, url] : [cleanedUrl];
 
-    if (!res.ok) {
-      console.warn(`[Meli Shortener] Resposta HTTP ${res.status} ao encurtar link.`);
-      return null;
-    }
-
-    const text = await res.text();
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const targetUrl = attempt === 1 ? urlsToTry[0] : (urlsToTry[1] || urlsToTry[0]);
 
     try {
-      const data = JSON.parse(text);
-      if (data?.urls?.[0]?.short_url) {
-        return data.urls[0].short_url;
-      }
-      if (data?.short_url) {
-        return data.short_url;
-      }
-      if (data?.urls?.[0]?.url) {
-        return data.urls[0].url;
-      }
-    } catch {}
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6500);
 
-    // Procurar URLs no formato meli.la ou mercadolivre.com/sec/
-    const match = text.match(/https?:\/\/(?:meli\.la|mercadolivre\.com\/sec\/)[a-zA-Z0-9_-]+/i);
-    if (match) {
-      return match[0];
+      const res = await fetch('https://www.mercadolivre.com.br/affiliate-program/api/v2/affiliates/createLink', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json, text/plain, */*',
+          'accept-language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+          'content-type': 'application/json',
+          'origin': 'https://www.mercadolivre.com.br',
+          'referer': 'https://www.mercadolivre.com.br/afiliados/linkbuilder',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+          'cookie': cleanCookie
+        },
+        body: JSON.stringify({
+          urls: [targetUrl],
+          tag: effectiveTag
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        const text = await res.text();
+        let shortUrl: string | null = null;
+
+        try {
+          const data = JSON.parse(text);
+          shortUrl = data?.urls?.[0]?.short_url || data?.short_url || data?.urls?.[0]?.url || null;
+        } catch {}
+
+        if (!shortUrl) {
+          const match = text.match(/https?:\/\/(?:meli\.la|mercadolivre\.com\/sec\/)[a-zA-Z0-9_-]+/i);
+          if (match) shortUrl = match[0];
+        }
+
+        if (shortUrl && (shortUrl.includes('meli.la/') || shortUrl.includes('mercadolivre.com/sec/'))) {
+          setCachedMeliShortUrl(url, effectiveTag, shortUrl);
+          if (cleanedUrl !== url) {
+            setCachedMeliShortUrl(cleanedUrl, effectiveTag, shortUrl);
+          }
+          return shortUrl;
+        }
+      } else {
+        console.warn(`[Meli Shortener] Resposta HTTP ${res.status} na tentativa ${attempt}/${maxAttempts}.`);
+      }
+    } catch (err: any) {
+      console.warn(`[Meli Shortener] Erro na tentativa ${attempt}/${maxAttempts}:`, err?.message || err);
     }
 
-    return null;
-  } catch (err: any) {
-    console.warn('[Meli Shortener] Erro ao chamar API do Mercado Livre:', err?.message || err);
-    return null;
+    // Se falhou na 1ª tentativa e ainda temos retry, aguarda 600ms antes de tentar novamente
+    if (attempt < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 600));
+    }
   }
+
+  return null;
 }
 
 /**
