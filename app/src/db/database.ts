@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import { DB_PATH, CONFIG } from '../config.js';
-import { getBrazilToday } from '../utils/date.js';
+import { getBrazilToday, getBrazilDaysAgo } from '../utils/date.js';
 import { sanearPrecoHistoricoTCG } from '../core/pricing.js';
 
 export interface ModeloAbertura {
@@ -2241,7 +2241,7 @@ export function registrarEventoComunidade(chatId: string, tipo: 'entrada' | 'sai
   try {
     db.prepare(`
       INSERT INTO comunidade_eventos (chat_id, tipo, telefone, timestamp)
-      VALUES (?, ?, ?, datetime('now', 'localtime'))
+      VALUES (?, ?, ?, datetime('now'))
     `).run(chatId, tipo, telefone || null);
   } catch (err: unknown) {
     console.warn('[Database] Erro ao registrar evento de comunidade:', err);
@@ -2252,6 +2252,11 @@ export interface MetricasComunidade {
   totalEntradasHoje: number;
   totalSaidasHoje: number;
   crescimentoLiquidoHoje: number;
+  taxaRetencaoHoje: number;
+  totalEntradasOntem: number;
+  totalSaidasOntem: number;
+  crescimentoLiquidoOntem: number;
+  taxaRetencaoOntem: number;
   ultimosEventos: Array<{
     id: number;
     chat_id: string;
@@ -2261,40 +2266,114 @@ export interface MetricasComunidade {
   }>;
 }
 
+const VIP_GROUP_DEFAULT_ID = '120363429126612309@g.us';
+const TEST_GROUP_AMAZON_ID = '120363429483901666@g.us';
+
 /**
- * Obtém métricas consolidadas de entradas e saídas de membros
+ * Resolve quais IDs de grupo pertencem à Comunidade Oficial VIP para não contaminar
+ * as métricas com entradas/saídas de grupos de terceiros monitorados pelo robô.
+ */
+function resolverGruposComunidadeVip(chatIdExplicito?: string): string[] {
+  if (chatIdExplicito && chatIdExplicito !== 'all') {
+    return [chatIdExplicito];
+  }
+  if (chatIdExplicito === 'all') {
+    return [];
+  }
+
+  const ids = new Set<string>();
+  const salvoConfig = getConfig('comunidade_grupo_id', '').trim();
+  if (salvoConfig) {
+    ids.add(salvoConfig);
+  }
+
+  try {
+    const rotasAtivas = getAllRotas().filter((r) => r.ativa);
+    for (const r of rotasAtivas) {
+      for (const dest of r.destinos) {
+        if (dest && dest !== TEST_GROUP_AMAZON_ID) {
+          ids.add(dest);
+        }
+      }
+    }
+  } catch {
+    // Ignorar se rotas ainda não estiverem disponíveis
+  }
+
+  // Verificar se o grupo VIP oficial padrão já possui eventos registrados
+  const vipCount = db
+    .prepare('SELECT count(*) as c FROM comunidade_eventos WHERE chat_id = ?')
+    .get(VIP_GROUP_DEFAULT_ID) as { c: number } | undefined;
+  if ((vipCount?.c || 0) > 0) {
+    ids.add(VIP_GROUP_DEFAULT_ID);
+  }
+
+  return Array.from(ids);
+}
+
+/**
+ * Obtém métricas consolidadas de entradas, saídas e retenção de membros no fuso de Brasília (UTC-3)
  */
 export function obterMetricasComunidade(chatId?: string): MetricasComunidade {
   try {
-    const hoje = new Date().toISOString().split('T')[0];
+    const hojeBrt = getBrazilToday();
+    const ontemBrt = getBrazilDaysAgo(1);
+    const targetGroups = resolverGruposComunidadeVip(chatId);
 
-    const whereChat = chatId ? 'AND chat_id = ?' : '';
-    const paramsChat = chatId ? [chatId] : [];
+    const hasGroupFilter = targetGroups.length > 0;
+    const placeholders = hasGroupFilter ? targetGroups.map(() => '?').join(', ') : '';
+    const whereChat = hasGroupFilter ? `AND chat_id IN (${placeholders})` : '';
+    const whereChatOnly = hasGroupFilter ? `WHERE chat_id IN (${placeholders})` : '';
 
     const entradasHoje = db.prepare(`
       SELECT count(*) as c FROM comunidade_eventos 
-      WHERE tipo = 'entrada' AND date(timestamp) = date('now', 'localtime') ${whereChat}
-    `).get(...paramsChat) as { c: number } | undefined;
+      WHERE tipo = 'entrada' AND date(timestamp, '-3 hours') = ? ${whereChat}
+    `).get(hojeBrt, ...targetGroups) as { c: number } | undefined;
 
     const saidasHoje = db.prepare(`
       SELECT count(*) as c FROM comunidade_eventos 
-      WHERE tipo = 'saida' AND date(timestamp) = date('now', 'localtime') ${whereChat}
-    `).get(...paramsChat) as { c: number } | undefined;
+      WHERE tipo = 'saida' AND date(timestamp, '-3 hours') = ? ${whereChat}
+    `).get(hojeBrt, ...targetGroups) as { c: number } | undefined;
+
+    const entradasOntem = db.prepare(`
+      SELECT count(*) as c FROM comunidade_eventos 
+      WHERE tipo = 'entrada' AND date(timestamp, '-3 hours') = ? ${whereChat}
+    `).get(ontemBrt, ...targetGroups) as { c: number } | undefined;
+
+    const saidasOntem = db.prepare(`
+      SELECT count(*) as c FROM comunidade_eventos 
+      WHERE tipo = 'saida' AND date(timestamp, '-3 hours') = ? ${whereChat}
+    `).get(ontemBrt, ...targetGroups) as { c: number } | undefined;
 
     const totalEntradasHoje = entradasHoje?.c || 0;
     const totalSaidasHoje = saidasHoje?.c || 0;
     const crescimentoLiquidoHoje = totalEntradasHoje - totalSaidasHoje;
+    const taxaRetencaoHoje = totalEntradasHoje > 0
+      ? Math.max(0, Math.min(100, Number((((totalEntradasHoje - totalSaidasHoje) / totalEntradasHoje) * 100).toFixed(1))))
+      : 100;
+
+    const totalEntradasOntem = entradasOntem?.c || 0;
+    const totalSaidasOntem = saidasOntem?.c || 0;
+    const crescimentoLiquidoOntem = totalEntradasOntem - totalSaidasOntem;
+    const taxaRetencaoOntem = totalEntradasOntem > 0
+      ? Math.max(0, Math.min(100, Number((((totalEntradasOntem - totalSaidasOntem) / totalEntradasOntem) * 100).toFixed(1))))
+      : 100;
 
     const ultimosEventos = db.prepare(`
       SELECT * FROM comunidade_eventos
-      ${chatId ? 'WHERE chat_id = ?' : ''}
+      ${whereChatOnly}
       ORDER BY id DESC LIMIT 20
-    `).all(...paramsChat) as MetricasComunidade['ultimosEventos'];
+    `).all(...targetGroups) as MetricasComunidade['ultimosEventos'];
 
     return {
       totalEntradasHoje,
       totalSaidasHoje,
       crescimentoLiquidoHoje,
+      taxaRetencaoHoje,
+      totalEntradasOntem,
+      totalSaidasOntem,
+      crescimentoLiquidoOntem,
+      taxaRetencaoOntem,
       ultimosEventos
     };
   } catch (err: unknown) {
@@ -2303,6 +2382,11 @@ export function obterMetricasComunidade(chatId?: string): MetricasComunidade {
       totalEntradasHoje: 0,
       totalSaidasHoje: 0,
       crescimentoLiquidoHoje: 0,
+      taxaRetencaoHoje: 100,
+      totalEntradasOntem: 0,
+      totalSaidasOntem: 0,
+      crescimentoLiquidoOntem: 0,
+      taxaRetencaoOntem: 100,
       ultimosEventos: []
     };
   }
@@ -2338,7 +2422,7 @@ export function obterTotalMembrosComunidade(): {
 /**
  * Salva a contagem de membros e carimbo de sincronização do grupo VIP
  */
-export function salvarTotalMembrosComunidade(total: number, grupoNome?: string): void {
+export function salvarTotalMembrosComunidade(total: number, grupoNome?: string, grupoId?: string): void {
   try {
     if (typeof total === 'number' && !isNaN(total) && total > 0) {
       setConfig('comunidade_total_membros', String(total));
@@ -2346,11 +2430,15 @@ export function salvarTotalMembrosComunidade(total: number, grupoNome?: string):
     if (grupoNome) {
       setConfig('comunidade_grupo_nome', grupoNome);
     }
+    if (grupoId) {
+      setConfig('comunidade_grupo_id', grupoId);
+    }
     setConfig('comunidade_membros_sincronizado_em', new Date().toISOString());
   } catch (err) {
     console.warn('[Database] Erro ao salvar total de membros da comunidade:', err);
   }
 }
+
 
 
 

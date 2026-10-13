@@ -634,7 +634,7 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
       }
 
       if (targetGroup && targetGroup.total_membros > 0) {
-        salvarTotalMembrosComunidade(targetGroup.total_membros, targetGroup.nome);
+        salvarTotalMembrosComunidade(targetGroup.total_membros, targetGroup.nome, targetGroup.id);
         return {
           connected: true,
           totalMembros: targetGroup.total_membros,

@@ -624,5 +624,10 @@ export interface MetricasComunidade {
   totalEntradasHoje: number;
   totalSaidasHoje: number;
   crescimentoLiquidoHoje: number;
+  taxaRetencaoHoje?: number;
+  totalEntradasOntem?: number;
+  totalSaidasOntem?: number;
+  crescimentoLiquidoOntem?: number;
+  taxaRetencaoOntem?: number;
   ultimosEventos: EventoComunidadeItem[];
 }

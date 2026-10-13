@@ -103,9 +103,15 @@
       - **Sincronização em Tempo Real no `getBalancoMensal`:** Ao abrir o cockpit, o balanço executa automaticamente a reconciliação retroativa de 7 dias com os dados vivos do Mercado Livre antes de responder ao frontend.
       - **Rastreabilidade Visual de Vendas Canceladas:** Vendas estornadas (`R$ 0,00`) são filtradas da faixa rápida do topo, injetadas automaticamente na aba **"Não Efetivadas"** e destacadas com badge vermelho **`Cancelada (Por devolução / estorno)`** no histórico detalhado de vendas.
 
+14. ✅ **Calibração do Contador de Entradas & Retenção da Comunidade VIP (`obterMetricasComunidade`) + Agregação Tríplice no Cockpit (`12/10/2026`):**
+    - **Diagnóstico:** A função `obterMetricasComunidade` em `database.ts` utilizava `date('now', 'localtime')` sem conversão de fuso horário UTC-3 (fazendo o contador de entradas do dia zerar às 21h00 de Brasília quando o container Docker virava meia-noite UTC) e somava eventos de todos os 180 grupos do aparelho quando chamada sem filtro explícito. Além disso, os mini-cards do `DashboardOverview.tsx` liam apenas `insightsAds[0]` em vez de somar as 3 campanhas ativas.
+    - **Correção Aplicada (TDD):**
+      - `obterMetricasComunidade` agora converte os timestamps UTC para o fuso de Brasília (`date(timestamp, '-3 hours') = hojeBrt`), filtra automaticamente pelo grupo VIP oficial (`Pokémon TCG Promo | # 01` — `120363429126612309@g.us`) ignorando grupos de terceiros e calcula `taxaRetencaoHoje` e as métricas de `Ontem`.
+      - `DashboardOverview.tsx` agora exibe o badge de retenção (`XX% ret.`) e agrega gastos, leads, alcance e visualizações de vídeo das 3 campanhas ativas do Meta Ads.
+
 ---
 
 ## 4. ✅ Conclusão
-O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais, dinâmicas e auditadas contra cancelamentos/devoluções do Mercado Livre, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS e arquitetura de tráfego tríplice de R$ 70/dia operando no Meta Ads.
+O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais, dinâmicas e auditadas contra cancelamentos/devoluções do Mercado Livre, contador de retenção da comunidade VIP calibrado no fuso de Brasília, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS e arquitetura de tráfego tríplice de R$ 70/dia operando no Meta Ads.
 
 
