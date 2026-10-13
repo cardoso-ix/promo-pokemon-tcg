@@ -109,9 +109,15 @@
       - `obterMetricasComunidade` agora converte os timestamps UTC para o fuso de Brasília (`date(timestamp, '-3 hours') = hojeBrt`), filtra automaticamente pelo grupo VIP oficial (`Pokémon TCG Promo | # 01` — `120363429126612309@g.us`) ignorando grupos de terceiros e calcula `taxaRetencaoHoje` e as métricas de `Ontem`.
       - `DashboardOverview.tsx` agora exibe o badge de retenção (`XX% ret.`) e agrega gastos, leads, alcance e visualizações de vídeo das 3 campanhas ativas do Meta Ads.
 
+15. ✅ **Modo "Total Geral (Desde o Início)" na Gestão Financeira & DRE Meta Ads (`12/10/2026`):**
+    - **Necessidade:** Permitir ao usuário consolidar, com 1 clique, **todos os gastos de tráfego (Meta Ads) e todos os lucros/comissões (Mercado Livre + Amazon)** acumulados desde o primeiro dia de operação (`2026-09` + `2026-10` + meses futuros), além da visão mensal individual.
+    - **Implementação Full-Stack + TDD:**
+      - `financas.service.ts` e `routes.ts`: Suporte nativo ao parâmetro `mes=total` em `/api/financas/balanco` e `/api/financas/relatorio-mensal`, consolidando todos os registros históricos de `meta_ad_insights`, `affiliate.dailyData` e `financas_lancamentos_diarios` sem filtro de mês, e isolamento rigoroso da soma mensal quando um mês específico (`YYYY-MM`) é consultado.
+      - `FinancasView.tsx`: Adicionado botão dedicado **`Total Geral (Desde o Início)`** ao lado do seletor `Mês:`, opção **`Σ Total Geral (Todo o Período)`** no seletor de mês e sincronização automática com o botão **`Total Geral (Todos)`** na barra de período, exibindo os 40 dias históricos (`R$ 4.597,28` de Lucro Bruto, `R$ 1.379,41` de Gasto em Campanhas Meta Ads e `+R$ 3.217,87` de Resultado Líquido Acumulado).
+
 ---
 
 ## 4. ✅ Conclusão
-O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais, dinâmicas e auditadas contra cancelamentos/devoluções do Mercado Livre, contador de retenção da comunidade VIP calibrado no fuso de Brasília, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS e arquitetura de tráfego tríplice de R$ 70/dia operando no Meta Ads.
+O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais, dinâmicas e auditadas contra cancelamentos/devoluções do Mercado Livre, visão financeira de **Total Geral Acumulado (Desde o Início)** e mensal, contador de retenção da comunidade VIP calibrado no fuso de Brasília, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS e arquitetura de tráfego tríplice de R$ 70/dia operando no Meta Ads.
 
 

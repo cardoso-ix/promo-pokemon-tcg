@@ -153,7 +153,7 @@ export const FinancasView: React.FC = () => {
         setAmazonManualComissao('');
         setAmazonManualVendas('');
         setAmazonManualDesc('');
-        carregarBalancoELancamentos(mesAtivo);
+        recarregarVisaoAtual();
         setShowModalAmazon(false);
       }
     } catch (err: unknown) {
@@ -173,8 +173,8 @@ export const FinancasView: React.FC = () => {
   };
 
   const abrirRelatorioExecutivo = async (mesAlvo?: string) => {
-    const mesParaBuscar = mesAlvo || mesAtivo;
-    if (mesAlvo && mesAlvo !== mesAtivo) {
+    const mesParaBuscar = mesAlvo || (periodoFiltro === 'todos' ? 'total' : mesAtivo);
+    if (mesAlvo && mesAlvo !== 'total' && mesAlvo !== mesAtivo) {
       setMesAtivo(mesAlvo);
     }
     setShowRelatorioMensalModal(true);
@@ -208,10 +208,10 @@ export const FinancasView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (mesAtivo) {
-      carregarBalancoELancamentos(mesAtivo);
-    }
-  }, [mesAtivo]);
+    if (!mesAtivo) return;
+    const alvo = periodoFiltro === 'todos' ? 'total' : mesAtivo;
+    carregarBalancoELancamentos(alvo);
+  }, [mesAtivo, periodoFiltro]);
 
   const carregarMeses = async () => {
     try {
@@ -241,6 +241,11 @@ export const FinancasView: React.FC = () => {
     }
   };
 
+  const recarregarVisaoAtual = () => {
+    const alvo = periodoFiltro === 'todos' ? 'total' : mesAtivo;
+    carregarBalancoELancamentos(alvo);
+  };
+
   // Salvar ou atualizar lançamento manual diário
   const handleAddLancamento = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,7 +272,7 @@ export const FinancasView: React.FC = () => {
       setNovoGastoMeta('');
       setNovaDescricao('');
       mostrarFeedback('sucesso', 'Lançamento diário registrado com sucesso!');
-      carregarBalancoELancamentos(mesAtivo);
+      recarregarVisaoAtual();
     } catch (err: unknown) {
       mostrarFeedback('erro', err instanceof Error ? err.message : 'Falha ao registrar lançamento');
     }
@@ -295,13 +300,13 @@ export const FinancasView: React.FC = () => {
     try {
       await api.deleteLancamento(idOuData);
       mostrarFeedback('sucesso', 'Lançamento removido com sucesso!');
-      carregarBalancoELancamentos(mesAtivo);
+      recarregarVisaoAtual();
     } catch (err: unknown) {
       mostrarFeedback('erro', err instanceof Error ? err.message : 'Falha ao excluir lançamento');
     }
   };
 
-  // Filtro Dinâmico de Lançamentos por Período (Dia, Semana, Mês)
+  // Filtro Dinâmico de Lançamentos por Período (Dia, Semana, Mês, Total Geral)
   const lancamentosFiltrados = React.useMemo(() => {
     if (periodoFiltro === 'dia') {
       return lancamentos.filter(l => {
@@ -327,25 +332,36 @@ export const FinancasView: React.FC = () => {
     const vendasAmazon = lancamentosFiltrados.reduce((acc, l) => acc + (Number(l.vendasAmazon) || 0), 0);
     const itensAmazon = lancamentosFiltrados.reduce((acc, l) => acc + (Number(l.itensAmazon) || 0), 0);
 
-    if (periodoFiltro === 'mes' && balanco) {
-      const comissaoAmazonMes = balanco.totalComissaoAmazon ?? comissaoAmazon;
-      const vendasAmazonMes = balanco.totalVendasAmazon ?? vendasAmazon;
-      const itensAmazonMes = balanco.totalItensAmazon ?? itensAmazon;
-      const comissaoMeliMes = Math.max(0, (balanco.totalLucroBruto || 0) - comissaoAmazonMes);
+    if ((periodoFiltro === 'mes' || periodoFiltro === 'todos') && balanco) {
+      const comissaoAmazonTotal = balanco.totalComissaoAmazon ?? comissaoAmazon;
+      const vendasAmazonTotal = balanco.totalVendasAmazon ?? vendasAmazon;
+      const itensAmazonTotal = balanco.totalItensAmazon ?? itensAmazon;
+      const lucroBrutoTotal = balanco.totalLucroBruto || 0;
+      const gastoCampanhasTotal = balanco.totalGastoCampanhas || 0;
+      const resultadoLiquidoTotal = balanco.resultadoLiquido ?? (lucroBrutoTotal - gastoCampanhasTotal);
+      const comissaoMeliTotal = Math.max(0, lucroBrutoTotal - comissaoAmazonTotal);
+      const roiCalc = gastoCampanhasTotal > 0
+        ? ((resultadoLiquidoTotal / gastoCampanhasTotal) * 100)
+        : (lucroBrutoTotal > 0 ? 100 : 0);
+      const margemCalc = lucroBrutoTotal > 0
+        ? ((resultadoLiquidoTotal / lucroBrutoTotal) * 100)
+        : 0;
+      const statusCalc: 'lucro' | 'prejuizo' | 'neutro' =
+        resultadoLiquidoTotal > 0 ? 'lucro' : resultadoLiquidoTotal < 0 ? 'prejuizo' : 'neutro';
 
       return {
-        lucroBruto: balanco.totalLucroBruto || 0,
-        comissaoMeli: comissaoMeliMes,
-        comissaoAmazon: comissaoAmazonMes,
-        vendasAmazon: vendasAmazonMes,
-        itensAmazon: itensAmazonMes,
-        gastoCampanhas: balanco.totalGastoCampanhas || 0,
-        resultadoLiquido: balanco.resultadoLiquido || 0,
+        lucroBruto: lucroBrutoTotal,
+        comissaoMeli: comissaoMeliTotal,
+        comissaoAmazon: comissaoAmazonTotal,
+        vendasAmazon: vendasAmazonTotal,
+        itensAmazon: itensAmazonTotal,
+        gastoCampanhas: gastoCampanhasTotal,
+        resultadoLiquido: resultadoLiquidoTotal,
         reinvestimento: balanco.valorReinvestimentoCampanhas || 0,
         lucroDisponivel: balanco.valorLucroDisponivel || 0,
-        roi: balanco.roiPercentual || 0,
-        margem: balanco.margemLiquidaPercentual || 0,
-        status: balanco.status || 'neutro'
+        roi: balanco.roiPercentual ?? roiCalc,
+        margem: balanco.margemLiquidaPercentual ?? (balanco as any).margemPercentual ?? margemCalc,
+        status: balanco.status || statusCalc
       };
     }
 
@@ -443,16 +459,29 @@ export const FinancasView: React.FC = () => {
           </div>
         </div>
 
-        {/* Seletor de Mês & Ações Principais */}
+        {/* Seletor de Mês, Botão Total Geral & Ações Principais */}
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.05] border border-white/10 text-xs">
             <Calendar className="w-4 h-4 text-emerald-400" />
             <span className="text-slate-400 font-medium">Mês:</span>
             <select
-              value={mesAtivo}
-              onChange={e => setMesAtivo(e.target.value)}
+              value={periodoFiltro === 'todos' ? 'total' : mesAtivo}
+              onChange={e => {
+                const val = e.target.value;
+                if (val === 'total') {
+                  setPeriodoFiltro('todos');
+                } else {
+                  setMesAtivo(val);
+                  if (periodoFiltro === 'todos') {
+                    setPeriodoFiltro('mes');
+                  }
+                }
+              }}
               className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
             >
+              <option value="total" className="bg-[#0b1329] text-emerald-300 font-bold">
+                Σ Total Geral (Todo o Período)
+              </option>
               {meses.map(m => (
                 <option key={m} value={m} className="bg-[#0b1329] text-white">
                   {m}
@@ -462,12 +491,26 @@ export const FinancasView: React.FC = () => {
           </div>
 
           <button
+            type="button"
+            onClick={() => setPeriodoFiltro(periodoFiltro === 'todos' ? 'mes' : 'todos')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer border ${
+              periodoFiltro === 'todos'
+                ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/25'
+                : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30'
+            }`}
+            title="Consolidar todos os gastos de tráfego e todos os lucros desde o início da operação"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>{periodoFiltro === 'todos' ? 'Total Geral Ativo (Todos os Meses)' : 'Total Geral (Desde o Início)'}</span>
+          </button>
+
+          <button
             onClick={() => abrirRelatorioExecutivo()}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 hover:from-amber-300 hover:to-emerald-300 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-95 cursor-pointer"
-            title="Gerar Relatório Executivo Consolidado do Mês com métricas arquivadas"
+            title="Gerar Relatório Executivo Consolidado com métricas arquivadas"
           >
             <Sparkles className="w-3.5 h-3.5 text-slate-950" />
-            <span>Gerar Relatório do Mês</span>
+            <span>{periodoFiltro === 'todos' ? 'Relatório Total Geral' : 'Gerar Relatório do Mês'}</span>
           </button>
 
           <button
@@ -498,19 +541,19 @@ export const FinancasView: React.FC = () => {
         </div>
       </div>
 
-      {/* Indicador de Modo e Barra de Filtros Rápidos (Dia, Semana, Mês) */}
+      {/* Indicador de Modo e Barra de Filtros Rápidos (Dia, Semana, Mês, Total Geral) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-sm">
             <BarChart3 className="w-4 h-4" />
             <span>Balanço DRE & Extrato Diário</span>
             <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono">
-              100% Automático via API
+              {periodoFiltro === 'todos' ? `Total Geral (${meses.length} meses)` : '100% Automático via API'}
             </span>
           </div>
         </div>
 
-        {/* Botoes de Filtro de Período (Dia / Semana / Mês) */}
+        {/* Botoes de Filtro de Período (Dia / Semana / Mês / Total Geral) */}
         <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-white/[0.03] border border-white/[0.08] text-xs">
           <button
             type="button"
@@ -557,19 +600,21 @@ export const FinancasView: React.FC = () => {
             }`}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Mês Completo</span>
+            <span>Mês ({mesAtivo})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setPeriodoFiltro('todos')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
               periodoFiltro === 'todos'
                 ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                : 'text-emerald-300/90 hover:text-white hover:bg-emerald-500/15 border border-emerald-500/20'
             }`}
+            title="Somar todos os meses desde o início da operação"
           >
-            <span>Todos</span>
+            <Layers className="w-3.5 h-3.5" />
+            <span>Total Geral (Todos)</span>
           </button>
 
           <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-300 text-[10px] font-mono ml-1">
@@ -579,12 +624,12 @@ export const FinancasView: React.FC = () => {
       </div>
 
       <div className="space-y-6">
-          {/* Grid de KPIs do DRE Mensal */}
+          {/* Grid de KPIs do DRE Mensal / Total Geral */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {/* Card 1: Lucro Bruto / Comissões Multicanal */}
             <div className="glass-panel rounded-2xl p-5 border border-emerald-500/20 bg-gradient-to-br from-emerald-950/20 to-transparent">
               <span className="text-[11px] text-emerald-400 uppercase tracking-wider font-bold">
-                Lucro Bruto (Comissões)
+                Lucro Bruto ({periodoFiltro === 'todos' ? 'Total Geral' : 'Comissões'})
               </span>
               <div className="text-2xl font-heading font-extrabold text-white mt-1">
                 R$ {formatarMoeda(kpisDRE.lucroBruto)}
@@ -599,7 +644,7 @@ export const FinancasView: React.FC = () => {
             {/* Card 2: Investimento Total em Campanhas Meta Ads */}
             <div className="glass-panel rounded-2xl p-5 border border-red-500/20 bg-gradient-to-br from-red-950/20 to-transparent">
               <span className="text-[11px] text-red-400 uppercase tracking-wider font-bold">
-                Gasto em Tráfego (Meta Ads)
+                Gasto em Tráfego ({periodoFiltro === 'todos' ? 'Total Geral' : 'Meta Ads'})
               </span>
               <div className="text-2xl font-heading font-extrabold text-red-400 mt-1">
                 R$ {formatarMoeda(kpisDRE.gastoCampanhas)}
@@ -612,7 +657,15 @@ export const FinancasView: React.FC = () => {
             {/* Card 3: Resultado Líquido Real */}
             <div className="glass-panel rounded-2xl p-5 border border-cyan-500/20 bg-gradient-to-br from-cyan-950/20 to-transparent">
               <span className="text-[11px] text-cyan-400 uppercase tracking-wider font-bold">
-                Resultado Líquido ({periodoFiltro === 'dia' ? 'Dia' : periodoFiltro === 'semana' ? 'Semana' : 'Mês'})
+                Resultado Líquido ({
+                  periodoFiltro === 'dia'
+                    ? 'Dia'
+                    : periodoFiltro === 'semana'
+                    ? 'Semana'
+                    : periodoFiltro === 'todos'
+                    ? 'Total Geral'
+                    : 'Mês'
+                })
               </span>
               <div
                 className={`text-2xl font-heading font-extrabold mt-1 ${
@@ -694,7 +747,7 @@ export const FinancasView: React.FC = () => {
                       : periodoFiltro === 'semana'
                       ? 'Últimos 7 Dias (Semana)'
                       : periodoFiltro === 'todos'
-                      ? 'Geral Acumulado'
+                      ? 'Total Geral Acumulado (Desde o Início)'
                       : `Mês ${mesAtivo}`
                   }
                 </h3>
@@ -703,7 +756,7 @@ export const FinancasView: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => api.exportarBalancoCsv(mesAtivo)}
+                onClick={() => api.exportarBalancoCsv(periodoFiltro === 'todos' ? 'total' : mesAtivo)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 text-xs font-semibold border border-white/10 transition-all self-start sm:self-auto cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5 text-emerald-400" />

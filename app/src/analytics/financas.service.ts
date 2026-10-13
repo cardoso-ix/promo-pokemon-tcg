@@ -200,24 +200,40 @@ export class FinancasService {
   }
 
   /**
-   * Consolida o Balanço Financeiro e DRE completo a partir das bases do Meta Ads e Mercado Livre
+   * Consolida o Balanço Financeiro e DRE completo a partir das bases do Meta Ads e Mercado Livre.
+   * Suporta tanto um mês específico ("YYYY-MM") quanto o acumulado de todo o período ("total" / "all" / "todos").
    */
   async getBalancoMensal(mes?: string): Promise<BalancoMensalResult> {
-    const mesRef = mes && /^\d{4}-\d{2}$/.test(mes) ? mes : getBrazilToday().slice(0, 7);
+    const isTotalGeral = typeof mes === 'string' && ['total', 'all', 'todos'].includes(mes.trim().toLowerCase());
+    const mesRef = isTotalGeral
+      ? 'total'
+      : (mes && /^\d{4}-\d{2}$/.test(mes) ? mes : getBrazilToday().slice(0, 7));
 
-    // 1. Busca gastos diários do Meta Ads arquivados para o mês
-    const metaDailyRows = db.prepare(`
-      SELECT 
-        date,
-        COALESCE(SUM(spend), 0) as spend,
-        COALESCE(SUM(impressions), 0) as impressions,
-        COALESCE(SUM(clicks), 0) as clicks,
-        COALESCE(SUM(purchases), 0) as purchases
-      FROM meta_ad_insights
-      WHERE date LIKE ?
-      GROUP BY date
-      ORDER BY date ASC
-    `).all(`${mesRef}-%`) as Array<{
+    // 1. Busca gastos diários do Meta Ads arquivados para o mês ou para todo o período
+    const metaDailyRows = (isTotalGeral
+      ? db.prepare(`
+          SELECT 
+            date,
+            COALESCE(SUM(spend), 0) as spend,
+            COALESCE(SUM(impressions), 0) as impressions,
+            COALESCE(SUM(clicks), 0) as clicks,
+            COALESCE(SUM(purchases), 0) as purchases
+          FROM meta_ad_insights
+          GROUP BY date
+          ORDER BY date ASC
+        `).all()
+      : db.prepare(`
+          SELECT 
+            date,
+            COALESCE(SUM(spend), 0) as spend,
+            COALESCE(SUM(impressions), 0) as impressions,
+            COALESCE(SUM(clicks), 0) as clicks,
+            COALESCE(SUM(purchases), 0) as purchases
+          FROM meta_ad_insights
+          WHERE date LIKE ?
+          GROUP BY date
+          ORDER BY date ASC
+        `).all(`${mesRef}-%`)) as Array<{
       date: string;
       spend: number;
       impressions: number;
@@ -253,7 +269,7 @@ export class FinancasService {
       }
 
       for (const d of affiliate.dailyData) {
-        if (d.date && d.date.startsWith(mesRef)) {
+        if (d.date && (isTotalGeral || d.date.startsWith(mesRef))) {
           const dia = d.date;
           const vendasReaisDoDia = Array.isArray(affiliate.recentSales)
             ? Number(
@@ -322,21 +338,28 @@ export class FinancasService {
         itens_amazon?: number;
       }
 
-      const lancamentosSalvos = db.prepare(`
-        SELECT data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria,
-               COALESCE(comissao_amazon, 0) as comissao_amazon,
-               COALESCE(vendas_amazon, 0) as vendas_amazon,
-               COALESCE(itens_amazon, 0) as itens_amazon
-        FROM financas_lancamentos_diarios
-        WHERE data_lancamento LIKE ?
-      `).all(`${mesRef}-%`) as LancamentoSalvoRow[];
+      const lancamentosSalvos = (isTotalGeral
+        ? db.prepare(`
+            SELECT data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria,
+                   COALESCE(comissao_amazon, 0) as comissao_amazon,
+                   COALESCE(vendas_amazon, 0) as vendas_amazon,
+                   COALESCE(itens_amazon, 0) as itens_amazon
+            FROM financas_lancamentos_diarios
+          `).all()
+        : db.prepare(`
+            SELECT data_lancamento, lucro_bruto, vendas_brutas, gasto_campanhas, cliques_meta, impressoes_meta, origem, descricao, categoria,
+                   COALESCE(comissao_amazon, 0) as comissao_amazon,
+                   COALESCE(vendas_amazon, 0) as vendas_amazon,
+                   COALESCE(itens_amazon, 0) as itens_amazon
+            FROM financas_lancamentos_diarios
+            WHERE data_lancamento LIKE ?
+          `).all(`${mesRef}-%`)) as LancamentoSalvoRow[];
 
       for (const l of lancamentosSalvos) {
         const dia = l.data_lancamento;
         const origemTipo = (l.origem as 'auto' | 'manual') || 'auto';
         const isHoje = dia === hojeStr;
         const comissaoLiveHoje = isHoje ? (affiliate?.commissionsToday || 0) : 0;
-        // O dia de hoje é dinâmico: se a API ao vivo do ML trouxer comissões superiores, prioriza o fluxo vivo
         const apiTemMaisRecente = isHoje && comissaoLiveHoje > Number(l.lucro_bruto);
         const comissaoAmazon = Number(l.comissao_amazon) || 0;
         const vendasAmazon = Number(l.vendas_amazon) || 0;
@@ -360,19 +383,16 @@ export class FinancasService {
             origem: apiTemMaisRecente ? 'auto' : origemTipo
           };
         } else {
-          // Se houver dados da Amazon persistidos, incorpora
           if (comissaoAmazon > 0) {
             mapaDias[dia].comissaoAmazon = comissaoAmazon;
             mapaDias[dia].vendasAmazon = vendasAmazon;
             mapaDias[dia].itensAmazon = itensAmazon;
-            // Se o lucro bruto acumulado do dia estiver menor que a soma de comissões, ajusta
             if (Number(l.lucro_bruto) > mapaDias[dia].lucroBruto) {
               mapaDias[dia].lucroBruto = Number(l.lucro_bruto);
               mapaDias[dia].vendasBrutas = Number(l.vendas_brutas);
             }
           }
 
-          // Se for auto_reconciliado, prevalece o extrato auditado oficial do Mercado Livre (com cancelamentos abatidos)
           if (l.origem === 'auto_reconciliado') {
             mapaDias[dia].lucroBruto = Number(l.lucro_bruto) || 0;
             mapaDias[dia].vendasBrutas = Number(l.vendas_brutas) || (Number(l.lucro_bruto) ? Number(l.lucro_bruto) * 10 : 0);
@@ -398,14 +418,13 @@ export class FinancasService {
       console.warn('[FinancasService] Erro ao mesclar financas_lancamentos_diarios:', err);
     }
 
-    // Se o mês atual for o ativo, garante que o dia de hoje está perfeitamente sincronizado com o fluxo ao vivo
-    if (hojeStr.startsWith(mesRef)) {
+    // Se o mês atual for o ativo (ou modo Total Geral), garante que o dia de hoje está perfeitamente sincronizado com o fluxo ao vivo
+    if (isTotalGeral || hojeStr.startsWith(mesRef)) {
       const metaHoje = getMetaInsightsStats();
       const itemHoje = mapaDias[hojeStr];
       const liveComissao = affiliate?.commissionsToday || 0;
       const liveVendas = affiliate?.totalSalesToday || (liveComissao > 0 ? liveComissao * 10 : 0);
 
-      // O dia corrente é dinâmico: absorve comissões e vendas em tempo real do Mercado Livre
       const deveAtualizarComLive = liveComissao > 0 && (
         itemHoje?.origem !== 'manual' || liveComissao >= (itemHoje?.lucroBruto || 0)
       );
@@ -432,7 +451,7 @@ export class FinancasService {
         if (deveAtualizarComLive) {
           mapaDias[hojeStr].lucroBruto = liveComissao;
           mapaDias[hojeStr].vendasBrutas = liveVendas;
-          mapaDias[hojeStr].origem = 'auto'; // Transforma para auto para refletir a sincronização
+          mapaDias[hojeStr].origem = 'auto';
         }
         mapaDias[hojeStr].saldoDia = mapaDias[hojeStr].lucroBruto - mapaDias[hojeStr].gastoCampanhas;
         if (mapaDias[hojeStr].gastoCampanhas > 0 && mapaDias[hojeStr].vendasBrutas > 0) {
@@ -472,19 +491,11 @@ export class FinancasService {
       }
     }
 
-    // Se a soma das comissões diárias estiver menor que o total acumulado do mês de afiliados,
-    // distribui a proporção real para conciliar fielmente com o extrato
     const listaItens = Object.values(mapaDias).sort((a, b) => b.dataLancamento.localeCompare(a.dataLancamento));
 
-    let totalGastoCampanhas = listaItens.reduce((acc, i) => acc + i.gastoCampanhas, 0);
-    let totalLucroBruto = listaItens.reduce((acc, i) => acc + i.lucroBruto, 0);
-    let totalVendasBrutas = listaItens.reduce((acc, i) => acc + i.vendasBrutas, 0);
-
-    // Conciliação com o extrato oficial de afiliados
-    if (affiliate && affiliate.totalCommissions > totalLucroBruto && mesRef === hojeStr.slice(0, 7)) {
-      totalLucroBruto = affiliate.totalCommissions;
-      totalVendasBrutas = affiliate.totalSales || totalLucroBruto * 10;
-    }
+    const totalGastoCampanhas = listaItens.reduce((acc, i) => acc + i.gastoCampanhas, 0);
+    const totalLucroBruto = listaItens.reduce((acc, i) => acc + i.lucroBruto, 0);
+    const totalVendasBrutas = listaItens.reduce((acc, i) => acc + i.vendasBrutas, 0);
 
     // Recalcula Blended ROAS diário
     for (const item of listaItens) {
@@ -495,9 +506,10 @@ export class FinancasService {
     const totalVendasAmazon = Number(listaItens.reduce((acc, i) => acc + (i.vendasAmazon || 0), 0).toFixed(2));
     const totalItensAmazon = listaItens.reduce((acc, i) => acc + (i.itensAmazon || 0), 0);
 
-    const resultadoLiquido = Math.max(0, totalLucroBruto - totalGastoCampanhas);
-    const valorReinvestimentoCampanhas = Number((resultadoLiquido * 0.70).toFixed(2));
-    const valorLucroDisponivel = Number((resultadoLiquido * 0.30).toFixed(2));
+    const resultadoLiquido = Number((totalLucroBruto - totalGastoCampanhas).toFixed(2));
+    const baseDistribuicao = Math.max(0, resultadoLiquido);
+    const valorReinvestimentoCampanhas = Number((baseDistribuicao * 0.70).toFixed(2));
+    const valorLucroDisponivel = Number((baseDistribuicao * 0.30).toFixed(2));
     const blendedRoas = totalGastoCampanhas > 0 && totalVendasBrutas > 0 ? Number((totalVendasBrutas / totalGastoCampanhas).toFixed(2)) : 0;
     const totalOrders = affiliate?.totalOrders || 0;
     const avgCac = totalOrders > 0 && totalGastoCampanhas > 0 ? Number((totalGastoCampanhas / totalOrders).toFixed(2)) : 0;
@@ -511,7 +523,7 @@ export class FinancasService {
       totalItensAmazon,
       totalGastoCampanhas: Number(totalGastoCampanhas.toFixed(2)),
       totalVendasBrutas: Number(totalVendasBrutas.toFixed(2)),
-      resultadoLiquido: Number(resultadoLiquido.toFixed(2)),
+      resultadoLiquido,
       valorReinvestimentoCampanhas,
       valorLucroDisponivel,
       blendedRoas,

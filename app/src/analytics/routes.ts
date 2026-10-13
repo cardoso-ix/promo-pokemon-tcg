@@ -727,12 +727,13 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
   app.get('/api/financas/meses', handleGetMeses);
   app.get('/api/bot/financas/meses', handleGetMeses);
 
-  // Balanço Mensal / DRE Consolidado
+  // Balanço Mensal / DRE Consolidado (ou Total Geral Acumulado)
   const handleGetBalanco = async (req: FastifyRequest<{ Querystring: { mes?: string } }>, reply: FastifyReply) => {
     try {
       const mes = req.query?.mes;
       const hojeMes = getBrazilToday().slice(0, 7);
-      if (!mes || mes === hojeMes) {
+      const isTotal = typeof mes === 'string' && ['total', 'all', 'todos'].includes(mes.trim().toLowerCase());
+      if (!mes || mes === hojeMes || isTotal) {
         await financasService.sincronizarDiaHojeComAfiliados().catch(() => null);
       }
       const balanco = await financasService.getBalancoMensal(mes);
@@ -752,20 +753,34 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
       try {
         const hojeStr = getBrazilToday();
         const mesAtualStr = hojeStr.slice(0, 7);
-        const mes = req.query?.mes && /^\d{4}-\d{2}$/.test(req.query.mes) ? req.query.mes : mesAtualStr;
+        const rawQueryMes = req.query?.mes?.trim() || '';
+        const isTotal = ['total', 'all', 'todos'].includes(rawQueryMes.toLowerCase());
+        const mes = isTotal
+          ? 'total'
+          : (/^\d{4}-\d{2}$/.test(rawQueryMes) ? rawQueryMes : mesAtualStr);
 
         const balanco = await financasService.getBalancoMensal(mes);
-        const metaStats = getMetaInsightsStats(`${mes}-01`, `${mes}-31`);
+        const metaStats = isTotal
+          ? getMetaInsightsStats('2020-01-01', '2099-12-31')
+          : getMetaInsightsStats(`${mes}-01`, `${mes}-31`);
 
-        const [anoStr, mesNumStr] = mes.split('-');
-        const ano = parseInt(anoStr, 10);
-        const mesNum = parseInt(mesNumStr, 10);
-        const totalDiasNoMes = new Date(ano, mesNum, 0).getDate();
+        let ano = parseInt(hojeStr.slice(0, 4), 10);
+        let mesNum = parseInt(hojeStr.slice(5, 7), 10);
+        let totalDiasNoMes = Math.max(1, balanco.itens.length);
+        let diasDecorridos = Math.max(1, balanco.itens.length);
+        let statusCompetencia: 'em_andamento' | 'fechado' = 'em_andamento';
 
-        const ehMesAtual = mes === mesAtualStr;
-        const diaAtualNum = parseInt(hojeStr.slice(8, 10), 10);
-        const diasDecorridos = ehMesAtual ? Math.min(diaAtualNum, totalDiasNoMes) : totalDiasNoMes;
-        const statusCompetencia: 'em_andamento' | 'fechado' = ehMesAtual ? 'em_andamento' : 'fechado';
+        if (!isTotal) {
+          const [anoStr, mesNumStr] = mes.split('-');
+          ano = parseInt(anoStr, 10);
+          mesNum = parseInt(mesNumStr, 10);
+          totalDiasNoMes = new Date(ano, mesNum, 0).getDate();
+
+          const ehMesAtual = mes === mesAtualStr;
+          const diaAtualNum = parseInt(hojeStr.slice(8, 10), 10);
+          diasDecorridos = ehMesAtual ? Math.min(diaAtualNum, totalDiasNoMes) : totalDiasNoMes;
+          statusCompetencia = ehMesAtual ? 'em_andamento' : 'fechado';
+        }
 
         // Estatísticas dos dias registrados
         const diasComMovimento = balanco.itens.length;
@@ -799,13 +814,15 @@ export async function registerAnalyticsRoutes(app: FastifyInstance) {
 
         // Gerar resumo pré-formatado para WhatsApp
         const nomeMeses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-        const rotuloMes = `${nomeMeses[mesNum] || mes} de ${ano}`;
+        const rotuloMes = isTotal
+          ? `Acumulado Total Geral (${diasComMovimento} dias)`
+          : `${nomeMeses[mesNum] || mes} de ${ano}`;
         const linkVitrineCurto = getConfig('link_vitrine_curto', 'https://mercadolivre.com/sec/2rM6RPm');
 
         const resumoWhatsapp = [
           `📊 *RELATÓRIO FINANCEIRO EXECUTIVO · ${rotuloMes.toUpperCase()}*`,
           `🏛️ *Promo Pokémon TCG · Auditoria Meta Ads & Mercado Livre*`,
-          `📅 *Status:* ${statusCompetencia === 'em_andamento' ? `Em Andamento (${diasDecorridos}/${totalDiasNoMes} dias decorridos)` : 'Competência Fechada & Consolidada'}`,
+          `📅 *Status:* ${isTotal ? `Histórico Completo Desde o Início (${diasComMovimento} dias)` : (statusCompetencia === 'em_andamento' ? `Em Andamento (${diasDecorridos}/${totalDiasNoMes} dias decorridos)` : 'Competência Fechada & Consolidada')}`,
           ``,
           `💰 *RESUMO OPERACIONAL:*`,
           `• *Faturamento Meli:* R$ ${formatarBRL(balanco.totalVendasBrutas)}`,
