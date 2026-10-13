@@ -21,7 +21,8 @@ import {
   Clock,
   Upload,
   ShoppingBag,
-  FileUp
+  FileUp,
+  Layers
 } from 'lucide-react';
 import {
   BarChart,
