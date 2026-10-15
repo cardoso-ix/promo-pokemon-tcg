@@ -123,9 +123,17 @@
       - **Cache em Memória de 24 Horas:** Resolução instantânea em 0ms para produtos já encurtados recentemente, poupando requisições à API externa e garantindo imunidade a falhas transitórias.
       - **Testes & Deploy:** 196 testes unitários e de integração aprovados (100% verdes) e deploy compilado e publicado com sucesso no container da VPS HostGator via webhook do Coolify v4.
 
+17. ✅ **Otimização Cirúrgica de Tráfego Meta Ads & Escala do Vídeo 30 Anos Copag (`14/10/2026`):**
+    - **Diagnóstico:** A campanha de imagem estática `Lookalike 1% WhatsApp` apresentou fadiga com CTR caindo para `0,68%` e CPL subindo para `R$ 5,18/lead`. Em contrapartida, o criativo em vídeo `[TESTE] Vídeo 30 Anos Copag` entregou performance recorde com CTR de `3,50%`, CPC de `R$ 0,34` e CPL de **R$ 0,86 por lead** (25 dos 37 contatos do dia). A comunidade VIP atingiu **441 membros ativos** com as vendas do dia superando **R$ 1.078,00** no Mercado Livre.
+    - **Ação Executada via Graph API v20.0:**
+      - **Campanha 1 (Lookalike 1% WhatsApp - ID `52760556043290`):** `PAUSED` (economia de R$ 20,00/dia em criativo fadigado).
+      - **Campanha 2 (Vídeo 30 Anos Copag - ID `52762324924690`):** Orçamento CBO ampliado com sucesso de R$ 25,00 para **R$ 40,00/dia** para escalar o criativo de R$ 0,86/lead.
+      - **Campanha 3 (Vídeo Shopping Lucario - ID `52761979947290`):** Mantida ativa em **R$ 25,00/dia** com CPL estável de R$ 2,02.
+      - **Teto Consolidado:** **R$ 65,00/dia**, com 100% da verba concentrada nos formatos em vídeo de alta tração.
+
 ---
 
 ## 4. ✅ Conclusão
-O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais, encurtamento `meli.la` blindado contra oscilações de rede com retry automático e cache, dinâmicas auditadas contra cancelamentos/devoluções do Mercado Livre, visão financeira de **Total Geral Acumulado (Desde o Início)** e mensal, contador de retenção da comunidade VIP calibrado no fuso de Brasília, landing page oficial de máxima atração publicada, Cockpit executivo VIP no ar na VPS e arquitetura de tráfego tríplice de R$ 70/dia operando no Meta Ads.
+O ecossistema completo encontra-se em **perfeito estado de funcionamento e harmonia estética**, com métricas 100% reais, tráfego Meta Ads hiper-otimizado com teto de R$ 65/dia focado nos vídeos vencedores, encurtamento `meli.la` blindado contra oscilações de rede com retry automático e cache, vendas em expansão (> R$ 1.000/dia no Mercado Livre), visão financeira de **Total Geral Acumulado (Desde o Início)** e mensal (+R$ 1.233 líquido no mês), comunidade VIP com 441 membros ativos e saldo Meta Ads abastecido (R$ 255,98).
 
 
