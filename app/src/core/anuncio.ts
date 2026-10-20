@@ -458,8 +458,87 @@ export function gerarCopyPromocional(params: {
 export const AVISO_LEGAL_RODAPE = '⚠️ _Preço e estoque promocional sujeitos a alteração a qualquer momento._';
 
 /**
- * Guardião de Nicho TCG: Aceita Pokémon TCG, Yu-Gi-Oh!, Magic: The Gathering e todo o ecossistema TCG
+ * Guardião Estrito de Nicho: Aceita EXCLUSIVAMENTE produtos da franquia Pokémon TCG
+ * Rejeita qualquer outro card game (Magic, Yu-Gi-Oh, One Piece, Lorcana, etc.) e cupons genéricos sem Pokémon.
  */
+export function isProdutoExclusivoPokemon(texto?: string, titulo?: string, slug?: string): boolean {
+  const combined = `${texto || ''} ${titulo || ''} ${slug || ''}`
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  // 1. Blacklist Estrita de Outros Card Games / Concorrentes de Nicho
+  const blacklistOutrosJogos = [
+    'yu-gi-oh', 'yugioh', 'konami',
+    'magic the gathering', 'magic: the gathering', 'mtg', 'wizards of the coast',
+    'one piece card game', 'one piece tcg', 'bandai',
+    'lorcana', 'disney lorcana',
+    'digimon card game', 'digimon tcg',
+    'dragon ball super card', 'dbs card',
+    'star wars unlimited', 'star wars tcg',
+    'flesh and blood', 'gundam card game'
+  ];
+
+  if (blacklistOutrosJogos.some((termo) => combined.includes(termo))) {
+    return false;
+  }
+
+  // 2. Termos Oficiais da Franquia Pokémon & Copag
+  const termosExclusivosPokemon = [
+    // Franquia, Fabricante e Marcas Oficiais
+    'pokemon', 'copag', 'the pokemon company',
+    'cartas pokemon', 'carta pokemon', 'booster pokemon', 'etb pokemon', 'lata pokemon', 'deck pokemon',
+    'box pokemon',
+
+    // Pokémons Icônicos e Famosos no TCG
+    'pikachu', 'charizard', 'mewtwo', 'eevee',
+    'greninja', 'sylveon', 'umbreon', 'espeon', 'vaporeon', 'jolteon', 'flareon', 'glaceon', 'leafeon',
+    'rayquaza', 'lugia', 'ho-oh', 'mew', 'gengar', 'lucario', 'blastoise', 'venusaur', 'tyranitar',
+    'dragonite', 'arceus', 'giratina', 'dialga', 'palkia', 'meowscarada', 'skeledirge', 'quaquaval',
+    'gardevoir', 'roaring moon', 'iron valiant', 'miraidon', 'koraidon', 'ogerpon', 'terapagos',
+    'snorlax', 'squirtle', 'charmander', 'bulbasaur', 'garchomp', 'mimikyu', 'zapdos', 'articuno', 'moltres',
+    'suicune', 'entei', 'raikou', 'celebi', 'jirachi', 'deoxys', 'darkrai', 'reshiram', 'zekrom', 'kyurem',
+    'xerneas', 'yveltal', 'solgaleo', 'lunala', 'necrozma', 'zacian', 'zamazenta', 'eternatus', 'calyrex',
+    'chiyu', 'chienpao', 'tinglu', 'wochien', 'pecharunt', 'archaludon', 'hydrapple', 'tatsugiri', 'dondozo',
+
+    // Coleções e Linhas Canônicas de Pokémon TCG
+    '30 anos', '25 anos', 'celebracoes', 'celebration', 'celebrations',
+    'evolucoes prismaticas', 'prismatic evolutions',
+    'destinos brilhantes', 'shining fates', 'destinos de paldea', 'paldean fates',
+    'fogo fantasmagorico', 'herois excelsos', 'surging sparks', 'forca temporal', 'temporal forces', 'faixas faiscantes',
+    'mascara do crepusculo', 'twilight masquerade', 'fagulhas cintilantes', 'coroa estelar', 'stellar crown',
+    '151', 'colecao 151',
+    'origem perdida', 'lost origin', 'astros cintilantes', 'brilliant stars',
+    'ceus em evolucao', 'evolving skies', 'golpe fusao', 'fusion strike',
+    'voltagem vivida', 'vivid voltage', 'escuridao incandescente', 'darkness ablaze',
+    'espada e escudo', 'sword and shield', 'escarlate e violeta', 'scarlet and violet',
+    'fenda paradoxo', 'paradox rift', 'tempestade prateada', 'silver tempest',
+    'chamas obsidianas', 'obsidian flames', 'estrelas radiantes', 'astral radiance',
+    'reinado congelante', 'chilling reign', 'estilos de luta', 'battle styles',
+    'caminho do campeao', 'champions path', 'unbroken bonds', 'elo mental', 'uniao de aliados', 'team up',
+    'sol e lua', 'sun and moon', 'xy evolucoes', 'xy evolutions',
+    'poster collection', 'colecao especial', 'colecao premium', 'colecao comemorativa',
+
+    // Formatos e Produtos Exclusivos/Consagrados de Pokémon
+    'treinador avancado', 'elite trainer box'
+  ];
+
+  const temTermoPokemon = termosExclusivosPokemon.some((termo) => combined.includes(termo));
+
+  // Produtos de cartas com marca Pokémon ou Copag
+  const termosProdutoCards = ['booster', 'blister', 'tripack', 'quadpack', 'deck inicial', 'box especial'];
+  const temTermoCards = termosProdutoCards.some((termo) => combined.includes(termo));
+  const temMarcaPokemonOuCopag = combined.includes('pokemon') || combined.includes('copag');
+
+  if (temTermoCards && temMarcaPokemonOuCopag) {
+    return true;
+  }
+
+  // Se houver cupom, só libera se também tiver termo explícito de Pokémon!
+  // Evita vazamento de cupons de air fryer, tênis, eletrônicos, etc.
+  return temTermoPokemon;
+}
+
 export function isProdutoTCG(texto?: string, titulo?: string, slug?: string): boolean {
   const combined = `${texto || ''} ${titulo || ''} ${slug || ''}`
     .toLowerCase()

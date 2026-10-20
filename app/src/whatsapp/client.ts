@@ -31,6 +31,7 @@ import { processMessageText, downloadProductImage, isAmazonUrl, buildAmazonAffil
 import { extrairDadosOferta, registrarOfertaPlanilha } from '../core/sheets.js';
 import {
   isProdutoTCG,
+  isProdutoExclusivoPokemon,
   detectarGatilhoUrgencia,
   detectarMensagemCupom,
   formatarMensagemReplicada,
@@ -814,16 +815,34 @@ export class WhatsAppManager {
     // 5. Extração de dados da oferta (título, preço De/Por, cupom)
     const dadosOferta = extrairDadosOferta(novoTexto, resolvedProductUrl, origemNome);
 
-    // 6. Guardião de Nicho TCG (Filtro Inteligente de Jogos de Cartas)
+    // 6. Guardião de Nicho (Filtro Inteligente: Apenas Pokémon vs TCG Amplo)
     const filtroApenasTcg = getConfig('filtro_apenas_tcg', 'true') === 'true';
+    const filtroApenasPokemon = getConfig('filtro_apenas_pokemon', 'true') === 'true';
+    const filtroModoNicho = getConfig('filtro_modo_nicho', 'apenas_pokemon'); // 'apenas_pokemon' | 'todos_tcg'
+    const modoEstritoPokemon = filtroApenasPokemon || filtroModoNicho === 'apenas_pokemon';
+
     const slugParaFiltro = resolvedProductUrl ? resolvedProductUrl.split('/').pop() || '' : '';
-    const eTCG = isProdutoTCG(rawText, dadosOferta.produto, slugParaFiltro);
+    const ePokemon = isProdutoExclusivoPokemon(rawText, dadosOferta.produto, slugParaFiltro);
+    const eTCGGeral = isProdutoTCG(rawText, dadosOferta.produto, slugParaFiltro);
 
-    // Cupons e comunicados de grupos monitorados são permitidos
-    const liberadoPeloGuardião = eTCG || isCupom || isComunicadoSemLink;
+    let liberadoPeloGuardião = false;
+    let motivoBloqueio = 'fora_nicho_tcg';
 
-    if (filtroApenasTcg && !liberadoPeloGuardião) {
-      console.log(`[Guardião Nicho TCG] Mensagem ignorada: produto "${dadosOferta.produto}" fora do nicho TCG/Card Games.`);
+    if (modoEstritoPokemon) {
+      // No modo estrito Pokémon, NÃO existe bypass cego para cupons de outras categorias ou avisos avulsos.
+      // Cupons só passam se forem expressamente voltados para Pokémon ou com menção a Pokémon.
+      // Comunicados só passam se tiverem menção a Pokémon.
+      liberadoPeloGuardião = ePokemon;
+      motivoBloqueio = 'fora_nicho_pokemon';
+    } else if (filtroApenasTcg) {
+      liberadoPeloGuardião = eTCGGeral || isCupom || isComunicadoSemLink;
+      motivoBloqueio = 'fora_nicho_tcg';
+    } else {
+      liberadoPeloGuardião = true;
+    }
+
+    if (!liberadoPeloGuardião) {
+      console.log(`[Guardião Nicho ${modoEstritoPokemon ? 'Pokémon' : 'TCG'}] Mensagem ignorada: produto "${dadosOferta.produto}" fora do nicho permitido.`);
       const log = {
         origem_chat_id: remoteJid,
         origem_nome: origemNome,
@@ -834,7 +853,7 @@ export class WhatsAppManager {
         tem_foto: Boolean(messageHasImage),
         links_convertidos: linksConvertidos,
         status: 'ignorado' as const,
-        motivo: 'fora_nicho_tcg'
+        motivo: motivoBloqueio
       };
       insertLog(log);
       this.notifyMessage(log);

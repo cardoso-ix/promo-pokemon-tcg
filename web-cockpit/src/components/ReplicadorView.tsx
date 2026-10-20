@@ -1326,11 +1326,33 @@ export const ReplicadorView: React.FC<ReplicadorViewProps> = ({ onOpenCookieModa
               </div>
 
               <div className="space-y-3 text-xs">
+                {/* Switch: Filtro Exclusivo Franquia Pokémon */}
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-cyan-500/20 bg-cyan-950/10">
+                  <div>
+                    <span className="font-semibold text-cyan-200 block flex items-center gap-1.5">
+                      <span>🎯 Somente Franquia Pokémon</span>
+                      <span className="text-[9px] bg-cyan-500/20 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-500/30 font-bold uppercase tracking-wider">Estrito</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400">Posta exclusivamente Pokémon TCG (bloqueia outros jogos e cupons sem relação)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConfigs({ ...configs, filtro_apenas_pokemon: configs['filtro_apenas_pokemon'] === 'false' ? 'true' : 'false' })}
+                    className="cursor-pointer"
+                  >
+                    {configs['filtro_apenas_pokemon'] !== 'false' ? (
+                      <ToggleRight className="w-7 h-7 text-cyan-400" />
+                    ) : (
+                      <ToggleLeft className="w-7 h-7 text-slate-500" />
+                    )}
+                  </button>
+                </div>
+
                 {/* Switch: Filtro Apenas TCG */}
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
                   <div>
-                    <span className="font-semibold text-slate-200 block">Filtro Exclusivo Pokémon TCG</span>
-                    <span className="text-[10px] text-slate-400">Posta apenas produtos com termos de Pokémon TCG Copag</span>
+                    <span className="font-semibold text-slate-200 block">Filtro Geral Card Games (TCG Amplo)</span>
+                    <span className="text-[10px] text-slate-400">Permite outros jogos (Magic, Yu-Gi-Oh) caso o modo estrito Pokémon esteja desligado</span>
                   </div>
                   <button
                     type="button"

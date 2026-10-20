@@ -101,6 +101,7 @@
   const cfgTemplateModo = document.getElementById('cfg-template-modo');
   const cfgCooldownDuplicidade = document.getElementById('cfg-cooldown-duplicidade');
   const cfgFiltroApenasTcg = document.getElementById('cfg-filtro-apenas-tcg');
+  const cfgFiltroApenasPokemon = document.getElementById('cfg-filtro-apenas-pokemon');
   const btnSwitchDisparador = document.getElementById('btn-switch-disparador');
   const btnTestarCookie = document.getElementById('btn-testar-cookie');
   const cookieTestFeedback = document.getElementById('cookie-test-feedback');
@@ -539,6 +540,7 @@
       if (cfgReplicarComunicados) cfgReplicarComunicados.checked = data.configs.replicar_comunicados_texto === 'true';
       if (cfgTemplateModo) cfgTemplateModo.value = data.configs.template_modo || 'padrao';
       if (cfgCooldownDuplicidade) cfgCooldownDuplicidade.value = data.configs.cooldown_duplicidade_minutos || '30';
+      if (cfgFiltroApenasPokemon) cfgFiltroApenasPokemon.checked = data.configs.filtro_apenas_pokemon !== 'false';
       if (cfgFiltroApenasTcg) cfgFiltroApenasTcg.checked = data.configs.filtro_apenas_tcg !== 'false';
       if (cfgSheetsWebhook) cfgSheetsWebhook.value = data.configs.google_sheets_webhook_url || '';
       if (cfgSheetsAtivo) cfgSheetsAtivo.checked = data.configs.google_sheets_ativo !== 'false';
@@ -1118,6 +1120,13 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ chave: 'cooldown_duplicidade_minutos', valor: cfgCooldownDuplicidade.value })
+        });
+      }
+      if (cfgFiltroApenasPokemon) {
+        await fetch('/api/configs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chave: 'filtro_apenas_pokemon', valor: cfgFiltroApenasPokemon.checked ? 'true' : 'false' })
         });
       }
       if (cfgFiltroApenasTcg) {

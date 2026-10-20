@@ -276,6 +276,8 @@ export function initDatabase() {
     template_modo: 'padrao',
     cooldown_duplicidade_minutos: '30',
     filtro_apenas_tcg: 'true',
+    filtro_apenas_pokemon: 'true',
+    filtro_modo_nicho: 'apenas_pokemon',
     google_sheets_webhook_url: '',
     google_sheets_ativo: 'true',
     msg_abertura_ativa: 'true',

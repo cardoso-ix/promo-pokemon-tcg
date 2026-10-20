@@ -41,6 +41,7 @@ import {
 import {
   extrairDadosAnuncio,
   isProdutoTCG,
+  isProdutoExclusivoPokemon,
   detectarGatilhoUrgencia,
   detectarMensagemCupom,
   formatarMensagemReplicada,
@@ -702,6 +703,7 @@ export async function createServer() {
       const dadosOferta = extrairDadosOferta(result.novoTexto, result.resolvedProductUrl);
       const slugParaFiltro = result.resolvedProductUrl ? result.resolvedProductUrl.split('/').pop() || '' : '';
       const isTCG = isProdutoTCG(text, dadosOferta.produto, slugParaFiltro);
+      const isPokemon = isProdutoExclusivoPokemon(text, dadosOferta.produto, slugParaFiltro);
 
       const isMsgCupomGeral = Boolean(
         isCupom ||
@@ -783,6 +785,7 @@ export async function createServer() {
         templateTexto,
         tipoDetectado,
         isTCG,
+        isPokemon,
         canonicalProductId: result.canonicalProductId,
         linksConvertidos: result.linksConvertidos,
         contemMercadoLivre: result.contemMercadoLivre,
