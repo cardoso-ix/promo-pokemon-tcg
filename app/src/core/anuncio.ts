@@ -461,6 +461,30 @@ export const AVISO_LEGAL_RODAPE = '⚠️ _Preço e estoque promocional sujeitos
  * Guardião Estrito de Nicho: Aceita EXCLUSIVAMENTE produtos da franquia Pokémon TCG
  * Rejeita qualquer outro card game (Magic, Yu-Gi-Oh, One Piece, Lorcana, etc.) e cupons genéricos sem Pokémon.
  */
+/**
+ * Detecta se a mensagem é explicitamente de outros TCGs (Magic, Yu-Gi-Oh, One Piece, Lorcana, etc.)
+ * para que o replicador barre exclusivamente essas ofertas e mantenha todo o resto de Pokémon e cupons funcionando.
+ */
+export function isOutroTCGBloqueado(texto?: string, titulo?: string, slug?: string): boolean {
+  const combined = `${texto || ''} ${titulo || ''} ${slug || ''}`
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  const blacklistOutrosJogos = [
+    'yu-gi-oh', 'yugioh', 'konami',
+    'magic the gathering', 'magic: the gathering', 'mtg', 'wizards of the coast',
+    'one piece card game', 'one piece tcg', 'bandai',
+    'lorcana', 'disney lorcana',
+    'digimon card game', 'digimon tcg',
+    'dragon ball super card', 'dbs card',
+    'star wars unlimited', 'star wars tcg',
+    'flesh and blood', 'gundam card game'
+  ];
+
+  return blacklistOutrosJogos.some((termo) => combined.includes(termo));
+}
+
 export function isProdutoExclusivoPokemon(texto?: string, titulo?: string, slug?: string): boolean {
   const combined = `${texto || ''} ${titulo || ''} ${slug || ''}`
     .toLowerCase()
@@ -540,6 +564,11 @@ export function isProdutoExclusivoPokemon(texto?: string, titulo?: string, slug?
 }
 
 export function isProdutoTCG(texto?: string, titulo?: string, slug?: string): boolean {
+  // Se for explicitamente de outros TCGs (Yu-Gi-Oh, Magic, One Piece, Lorcana, Digimon, Star Wars), NÃO replica!
+  if (isOutroTCGBloqueado(texto, titulo, slug)) {
+    return false;
+  }
+
   const combined = `${texto || ''} ${titulo || ''} ${slug || ''}`
     .toLowerCase()
     .normalize('NFD')
@@ -556,35 +585,29 @@ export function isProdutoTCG(texto?: string, titulo?: string, slug?: string): bo
   }
 
   const termosAceitos = [
-    // Franquias e Fabricantes Principais
+    // Franquia Pokémon, Copag e Pokémons Famosos
     'pokemon', 'copag', 'pikachu', 'charizard', 'mewtwo', 'eevee',
     'greninja', 'sylveon', 'umbreon', 'espeon', 'vaporeon', 'jolteon', 'flareon', 'glaceon', 'leafeon',
     'rayquaza', 'lugia', 'ho-oh', 'mew', 'gengar', 'lucario', 'blastoise', 'venusaur', 'tyranitar',
     'dragonite', 'arceus', 'giratina', 'dialga', 'palkia', 'meowscarada', 'skeledirge', 'quaquaval',
     'gardevoir', 'roaring moon', 'iron valiant', 'miraidon', 'koraidon', 'ogerpon', 'terapagos',
-    'yu-gi-oh', 'yugioh', 'konami',
-    'magic the gathering', 'magic: the gathering', 'mtg', 'wizards of the coast',
-    'one piece card game', 'one piece tcg', 'bandai',
-    'lorcana', 'disney lorcana',
-    'digimon card game',
-    'dragon ball super card', 'dbs card',
-    'star wars unlimited',
     // Coleções e Linhas Especiais do TCG
     '30 anos', '25 anos', 'celebracoes', 'celebration',
     'evolucoes prismaticas', 'prismatic evolutions',
-    'destinos brilhantes', 'shining fates',
+    'destinos brilhantes', 'shining fates', 'destinos de paldea', 'paldean fates',
     'fogo fantasmagorico', 'herois excelsos', 'forca temporal', 'faixas faiscantes',
     'mascara do crepusculo', 'fagulhas cintilantes', 'coroa estelar', '151',
     'origem perdida', 'astros cintilantes', 'ceus em evolucao', 'golpe fusao',
     'voltagem vivida', 'escuridao incandescente', 'espada e escudo', 'escarlate e violeta',
     'poster collection', 'colecao especial', 'colecao premium', 'colecao comemorativa',
-    // Termos de Produtos de Card Games
+    'caos ascendente', 'chaos rising', 'mega evolution',
+    // Termos de Produtos e Acessórios de Card Games
     'tcg', 'card game', 'card games', 'trading card',
     'booster', 'boosters', 'booster box',
     'etb', 'elite trainer box', 'treinador avancado',
     'blister', 'tripack', 'triple pack', 'quadpack',
     'fichario', 'pasta para cartas', 'portfolio',
-    'sleeve', 'sleeves', 'shield', 'dragon shield', 'ultra pro',
+    'sleeve', 'sleeves', 'shield', 'dragon shield', 'ultra pro', 'toploader', 'toploaders',
     'deck', 'decks', 'deckbox', 'deck box',
     'playmat', 'play mat', 'tapete para cartas',
     'lata colecionavel', 'lata pokemon',

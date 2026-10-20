@@ -815,44 +815,25 @@ export class WhatsAppManager {
     // 5. Extração de dados da oferta (título, preço De/Por, cupom)
     const dadosOferta = extrairDadosOferta(novoTexto, resolvedProductUrl, origemNome);
 
-    // 6. Guardião de Nicho (Filtro Inteligente: Apenas Pokémon vs TCG Amplo)
+    // 6. Guardião de Nicho (Filtro Inteligente: Bloqueia Outros TCGs e Mantém Cupons e Ofertas Válidas)
     const filtroApenasTcg = getConfig('filtro_apenas_tcg', 'true') === 'true';
-    const filtroApenasPokemon = getConfig('filtro_apenas_pokemon', 'true') === 'true';
-    const filtroModoNicho = getConfig('filtro_modo_nicho', 'apenas_pokemon'); // 'apenas_pokemon' | 'todos_tcg'
-    const modoEstritoPokemon = filtroApenasPokemon || filtroModoNicho === 'apenas_pokemon';
-
     const slugParaFiltro = resolvedProductUrl ? resolvedProductUrl.split('/').pop() || '' : '';
-    const ePokemon = isProdutoExclusivoPokemon(rawText, dadosOferta.produto, slugParaFiltro);
-    const eTCGGeral = isProdutoTCG(rawText, dadosOferta.produto, slugParaFiltro);
 
     // Identificação de grupo de teste:
     // O operador utiliza o grupo de teste para disparar ofertas manuais e testes reais.
-    // O que for enviado do teste DEVE ser replicado para o grupo de ofertas; a regra restritiva de nicho só se aplica para outros grupos monitorados.
+    // O que for enviado do teste DEVE ser replicado para o grupo de ofertas.
     const isOrigemGrupoTeste = Boolean(
       (origemNome && /\bteste\b|\btest\b/i.test(origemNome)) ||
       rotasCorrespondentes.some((r) => /\bteste\b|\btest\b/i.test(r.nome)) ||
       remoteJid === '120363429483901666@g.us'
     );
 
-    let liberadoPeloGuardião = false;
-    let motivoBloqueio = 'fora_nicho_tcg';
+    // REGRA DE OURO DO NICHO:
+    // Só o que for de oferta de TCG de outros nichos que NÃO seja Pokémon (Yu-Gi-Oh, Magic, One Piece, Lorcana, etc.) que NÃO posta!
+    const eOutroTCG = isOutroTCGBloqueado(rawText, dadosOferta.produto, slugParaFiltro);
 
-    if (isOrigemGrupoTeste) {
-      console.log(`[Guardião Nicho] Mensagem originada do grupo de TESTE ("${origemNome}"): permitida replicação para o grupo de ofertas sem restrição de nicho.`);
-      liberadoPeloGuardião = true;
-    } else if (modoEstritoPokemon) {
-      // No modo estrito Pokémon para outros grupos, bloqueia produtos de outros nichos e cupons genéricos
-      liberadoPeloGuardião = ePokemon;
-      motivoBloqueio = 'fora_nicho_pokemon';
-    } else if (filtroApenasTcg) {
-      liberadoPeloGuardião = eTCGGeral || isCupom || isComunicadoSemLink;
-      motivoBloqueio = 'fora_nicho_tcg';
-    } else {
-      liberadoPeloGuardião = true;
-    }
-
-    if (!liberadoPeloGuardião) {
-      console.log(`[Guardião Nicho ${modoEstritoPokemon ? 'Pokémon' : 'TCG'}] Mensagem ignorada: produto "${dadosOferta.produto}" fora do nicho permitido.`);
+    if (eOutroTCG && !isOrigemGrupoTeste) {
+      console.log(`[Guardião Nicho] Mensagem ignorada: produto "${dadosOferta.produto}" pertence a outro TCG concorrente (Yu-Gi-Oh, Magic, One Piece, etc.).`);
       const log = {
         origem_chat_id: remoteJid,
         origem_nome: origemNome,
@@ -863,7 +844,30 @@ export class WhatsAppManager {
         tem_foto: Boolean(messageHasImage),
         links_convertidos: linksConvertidos,
         status: 'ignorado' as const,
-        motivo: motivoBloqueio
+        motivo: 'outro_tcg_bloqueado'
+      };
+      insertLog(log);
+      this.notifyMessage(log);
+      return;
+    }
+
+    // Para todo o restante: funciona exatamente como antes (cupons, alertas de app, Pokémon e produtos de cards)
+    const eTCG = isProdutoTCG(rawText, dadosOferta.produto, slugParaFiltro);
+    const liberadoPeloGuardião = isOrigemGrupoTeste || eTCG || isCupom || isComunicadoSemLink;
+
+    if (filtroApenasTcg && !liberadoPeloGuardião) {
+      console.log(`[Guardião Nicho TCG] Mensagem ignorada: produto "${dadosOferta.produto}" fora do nicho TCG/Card Games.`);
+      const log = {
+        origem_chat_id: remoteJid,
+        origem_nome: origemNome,
+        destino_chat_id: '',
+        hash_conteudo: hashConteudo,
+        texto_original: rawText,
+        texto_publicado: '',
+        tem_foto: Boolean(messageHasImage),
+        links_convertidos: linksConvertidos,
+        status: 'ignorado' as const,
+        motivo: 'fora_nicho_tcg'
       };
       insertLog(log);
       this.notifyMessage(log);
