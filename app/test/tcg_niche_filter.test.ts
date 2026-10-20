@@ -56,3 +56,22 @@ test('Guardião de Nicho TCG Amplo (Retrocompatibilidade) - Mantém comportament
   assert.strictEqual(isProdutoTCG('🎟️ NOVO CUPOM NO APP DO MERCADO LIVRE! Use MELIKIDS para R$ 15 OFF', 'Novo Cupom'), true);
   assert.strictEqual(isProdutoTCG('Fritadeira Sem Óleo Air Fryer Mondial 4L Inox', 'Air Fryer'), false);
 });
+
+test('Regra de Grupo de Teste - Origem identificada como Teste tem liberação irrestrita para replicação', () => {
+  const isGrupoOrigemTeste = (origemNome: string, remoteJid: string, rotas: Array<{ nome: string; origens: string[] }>) => {
+    return Boolean(
+      (origemNome && /\bteste\b|\btest\b/i.test(origemNome)) ||
+      rotas.some((r) => /\bteste\b|\btest\b/i.test(r.nome)) ||
+      remoteJid === '120363429483901666@g.us'
+    );
+  };
+
+  // Grupo com nome 'TESTE'
+  assert.strictEqual(isGrupoOrigemTeste('TESTE', '120363429483901666@g.us', [{ nome: 'Oficial', origens: ['120363429483901666@g.us'] }]), true);
+
+  // Grupo cuja rota é de 'Teste'
+  assert.strictEqual(isGrupoOrigemTeste('Grupo Qualquer', '120000000@g.us', [{ nome: 'Rota Teste', origens: ['120000000@g.us'] }]), true);
+
+  // Grupo de terceiro/concorrente que NÃO é teste (deve cair na validação normal de nicho)
+  assert.strictEqual(isGrupoOrigemTeste('PlayHard Ofertas TCG #63', '120363413903821796@g.us', [{ nome: 'Oficial', origens: ['120363413903821796@g.us'] }]), false);
+});

@@ -825,13 +825,23 @@ export class WhatsAppManager {
     const ePokemon = isProdutoExclusivoPokemon(rawText, dadosOferta.produto, slugParaFiltro);
     const eTCGGeral = isProdutoTCG(rawText, dadosOferta.produto, slugParaFiltro);
 
+    // Identificação de grupo de teste:
+    // O operador utiliza o grupo de teste para disparar ofertas manuais e testes reais.
+    // O que for enviado do teste DEVE ser replicado para o grupo de ofertas; a regra restritiva de nicho só se aplica para outros grupos monitorados.
+    const isOrigemGrupoTeste = Boolean(
+      (origemNome && /\bteste\b|\btest\b/i.test(origemNome)) ||
+      rotasCorrespondentes.some((r) => /\bteste\b|\btest\b/i.test(r.nome)) ||
+      remoteJid === '120363429483901666@g.us'
+    );
+
     let liberadoPeloGuardião = false;
     let motivoBloqueio = 'fora_nicho_tcg';
 
-    if (modoEstritoPokemon) {
-      // No modo estrito Pokémon, NÃO existe bypass cego para cupons de outras categorias ou avisos avulsos.
-      // Cupons só passam se forem expressamente voltados para Pokémon ou com menção a Pokémon.
-      // Comunicados só passam se tiverem menção a Pokémon.
+    if (isOrigemGrupoTeste) {
+      console.log(`[Guardião Nicho] Mensagem originada do grupo de TESTE ("${origemNome}"): permitida replicação para o grupo de ofertas sem restrição de nicho.`);
+      liberadoPeloGuardião = true;
+    } else if (modoEstritoPokemon) {
+      // No modo estrito Pokémon para outros grupos, bloqueia produtos de outros nichos e cupons genéricos
       liberadoPeloGuardião = ePokemon;
       motivoBloqueio = 'fora_nicho_pokemon';
     } else if (filtroApenasTcg) {
@@ -872,7 +882,7 @@ export class WhatsAppManager {
       canonicalProductId = `CUPOM_${cupomExtraido || hashCupom}`;
     }
 
-    if (canonicalProductId) {
+    if (canonicalProductId && !isOrigemGrupoTeste) {
       const cooldownMinutos = parseInt(getConfig('cooldown_duplicidade_minutos', '30'), 10) || 30;
       const cooldownCheck = consultarCooldownProduto(canonicalProductId, precoPorNum, cooldownMinutos);
 
