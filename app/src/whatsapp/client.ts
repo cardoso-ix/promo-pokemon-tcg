@@ -32,6 +32,7 @@ import { extrairDadosOferta, registrarOfertaPlanilha } from '../core/sheets.js';
 import {
   isProdutoTCG,
   isProdutoExclusivoPokemon,
+  isOutroTCGBloqueado,
   detectarGatilhoUrgencia,
   detectarMensagemCupom,
   formatarMensagemReplicada,
